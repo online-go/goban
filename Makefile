@@ -9,3 +9,6 @@ lint:
 
 clean:
 	rm -Rf lib
+
+publish:
+	npm publish ./
