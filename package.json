@@ -30,6 +30,7 @@
     },
     "homepage": "https://github.com/online-go/goban#readme",
     "devDependencies": {
+        "@types/jquery": "^2.0.34",
         "eventemitter3": "^4.0.0",
         "gulp": "^4.0.2",
         "gulp-livereload": "^4.0.2",
