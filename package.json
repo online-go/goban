@@ -4,6 +4,7 @@
     "description": "",
     "main": "lib/index.js",
     "types": "lib/index.js.d.ts",
+    "files": ["lib/"],
     "keywords": [
         "go",
         "baduk",
@@ -23,7 +24,7 @@
         "type": "git",
         "url": "git+https://github.com/online-go/goban.git"
     },
-    "author": "Akita Noek",
+    "author": "Akita Noek  <anoek@online-go.com> (https://online-go.com/)",
     "license": "Apache-2.0",
     "bugs": {
         "url": "https://github.com/online-go/goban/issues"
