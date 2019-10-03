@@ -1,0 +1,41 @@
+{
+    "name": "goban",
+    "version": "0.2.0",
+    "description": "",
+    "main": "lib/index.js",
+    "types": "lib/index.js.d.ts",
+    "keywords": [
+        "go",
+        "baduk",
+        "igo",
+        "weiqi",
+        "online-go",
+        "ogs",
+        "goban"
+    ],
+    "scripts": {
+        "gulp": "gulp",
+        "build": "tsc",
+        "build-watch": "tsc --preserveWatchOutput --watch --pretty",
+        "lint": "tslint -p tsconfig.json"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/online-go/ogs-goban.git"
+    },
+    "author": "Akita Noek",
+    "license": "Apache-2.0",
+    "bugs": {
+        "url": "https://github.com/online-go/ogs-goban/issues"
+    },
+    "homepage": "https://github.com/online-go/ogs-goban#readme",
+    "devDependencies": {
+        "@types/jquery": "^2.0.34",
+        "eventemitter3": "^4.0.0",
+        "gulp": "^4.0.2",
+        "gulp-livereload": "^4.0.2",
+        "gulp-tslint": "^8.1.4",
+        "tslint": "^5.20.0",
+        "typescript": "^3.6.3"
+    }
+}

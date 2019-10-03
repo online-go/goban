@@ -1,0 +1,29 @@
+{
+    "compileOnSave": false,
+    "buildOnSave": false,
+    "compilerOptions": {
+        "target": "es5",
+        "module": "commonjs",
+        "outDir": "./lib/",
+        "moduleResolution": "node",
+        "removeComments": false,
+        "declaration": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "lib": ["es2015", "dom"],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "src/*",
+                "*"
+            ]
+        },
+        "noImplicitAny": false,
+        "sourceMap": true,
+        "jsx": "react"
+    },
+    "files": [
+        "./src/index.ts",
+        "./src/engine.ts"
+    ]
+}
