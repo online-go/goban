@@ -21,16 +21,15 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/online-go/ogs-goban.git"
+        "url": "git+https://github.com/online-go/goban.git"
     },
     "author": "Akita Noek",
     "license": "Apache-2.0",
     "bugs": {
-        "url": "https://github.com/online-go/ogs-goban/issues"
+        "url": "https://github.com/online-go/goban/issues"
     },
-    "homepage": "https://github.com/online-go/ogs-goban#readme",
+    "homepage": "https://github.com/online-go/goban#readme",
     "devDependencies": {
-        "@types/jquery": "^2.0.34",
         "eventemitter3": "^4.0.0",
         "gulp": "^4.0.2",
         "gulp-livereload": "^4.0.2",
