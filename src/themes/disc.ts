@@ -55,7 +55,7 @@ export default function(GoThemes) {
         }
 
         public getBlackTextColor() {
-            return Goban.hooks.discBlackTextColor ? Goban.hooks.discBlackStoneColor() : '#FFFFFF';
+            return Goban.hooks.discBlackTextColor ? Goban.hooks.discBlackTextColor() : '#FFFFFF';
         }
     }
 
@@ -73,7 +73,7 @@ export default function(GoThemes) {
         }
 
         public getWhiteTextColor() {
-            return Goban.hooks.discWhiteTextColor ? Goban.hooks.discWhiteStoneColor() : '#000000';
+            return Goban.hooks.discWhiteTextColor ? Goban.hooks.discWhiteTextColor() : '#000000';
         }
     }
 
