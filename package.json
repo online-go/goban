@@ -1,10 +1,13 @@
 {
     "name": "goban",
-    "version": "0.2.2",
+    "version": "0.3.0",
     "description": "",
     "main": "lib/index.js",
     "types": "lib/index.js.d.ts",
-    "files": ["lib/", "src/"],
+    "files": [
+        "lib/",
+        "src/"
+    ],
     "keywords": [
         "go",
         "baduk",
@@ -15,9 +18,8 @@
         "goban"
     ],
     "scripts": {
-        "gulp": "gulp",
+        "dev": "webpack-dev-server",
         "build": "tsc",
-        "build-watch": "tsc --preserveWatchOutput --watch --pretty",
         "lint": "tslint -p tsconfig.json"
     },
     "repository": {
@@ -33,10 +35,11 @@
     "devDependencies": {
         "@types/jquery": "^2.0.34",
         "eventemitter3": "^4.0.0",
-        "gulp": "^4.0.2",
-        "gulp-livereload": "^4.0.2",
-        "gulp-tslint": "^8.1.4",
         "tslint": "^5.20.0",
+        "ts-loader": "^6.2.0",
+        "webpack": "^4.41.0",
+        "webpack-cli": "^3.3.9",
+        "webpack-dev-server": "^3.8.2",
         "typescript": "^3.6.3"
     }
 }

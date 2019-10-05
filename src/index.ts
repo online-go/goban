@@ -28,3 +28,7 @@ export * from "./ScoreEstimator";
 export * from "./SFXManager";
 export * from "./translate";
 export * from "./TypedEventEmitter";
+
+import { Goban } from './Goban';
+
+window['Goban'] = Goban;

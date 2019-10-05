@@ -1,14 +1,14 @@
-all: 
-	npm run gulp
+all dev: 
+	yarn run dev
 
 build:
-	npm run build
+	yarn run build
 
 lint:
-	npm run lint
+	yarn run lint
 
 clean:
 	rm -Rf lib
 
 publish:
-	npm publish ./
+	yarn publish ./

@@ -1,0 +1,79 @@
+<html>
+    <head>
+        <script src="https://online-go.com/OGSScoreEstimator/OGSScoreEstimator-0.7.0.asm.js" id="ogs_score_estimator_script"></script>
+        <script src="https://cdn.online-go.com/lib/jquery/3.1.1/jquery.js"></script>
+        <script src='/index.js'></script>
+
+        <style>
+            .Goban {
+                position: relative;
+                display: inline-block;
+            }
+
+            .StoneLayer, .ShadowLayer, .PenLayer {
+                position: absolute; 
+                left: 0;
+                right: 0;
+            }
+
+            .ShadowLayer {
+                z-index: 5;
+            }
+            .StoneLayer {
+                z-index: 10;
+            }
+            .PenLayer {
+                z-index: 20;
+            }
+        </style>
+    </head>
+    <body>
+        <script>
+            let gobans = [];
+
+            for (let board_ct = 0; board_ct < 1; ++board_ct) {
+                let div = document.createElement("DIV");
+                div.className="Goban";
+                document.body.appendChild(div);
+
+                let goban = new Goban({
+                    "board_div": div,
+                    "interactive": true,
+                    "mode": "puzzle",
+                    "player_id": 0,
+                    "server_socket": null,
+                    "square_size": 25,
+                    "original_sgf": `
+                        (;FF[4]
+                        CA[UTF-8]
+                        GM[1]
+                        GN[ai japanese hc 9]
+                        PC[https://online-go.com/review/290167]
+                        PB[Black]
+                        PW[White]
+                        BR[3p]
+                        WR[3p]
+                        TM[0]OT[0 none]
+                        RE[?]
+                        SZ[19]
+                        KM[6.5]
+                        RU[Japanese]
+
+                        ;B[sh]
+                        ;W[ok]
+                        ;B[nn]
+                        ;W[op]
+                        )
+                    `
+                });
+                window['global_goban'] = goban;
+                goban.on("update", function() {
+                    console.log("Goban updated");
+                });
+
+                gobans.push(goban);
+            }
+        </script>
+    </body>
+</html>
+

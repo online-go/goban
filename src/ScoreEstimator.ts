@@ -78,21 +78,25 @@ export function init_score_estimator():Promise<boolean> {
 
         //console.log("Sync script");
         let script:HTMLScriptElement = document.getElementById('ogs_score_estimator_script') as HTMLScriptElement;
-        let resolve;
-        let reject;
-        init_promise = new Promise<boolean>((_resolve, _reject) => {
-            resolve = _resolve;
-            reject  = _reject;
-        });
+        if (script) {
+            let resolve;
+            let reject;
+            init_promise = new Promise<boolean>((_resolve, _reject) => {
+                resolve = _resolve;
+                reject  = _reject;
+            });
 
-        script.onload = () => {
-            OGSScoreEstimatorModule = OGSScoreEstimator;
-            OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-            OGSScoreEstimator_initialized = true;
-            resolve(true);
-        };
+            script.onload = () => {
+                OGSScoreEstimatorModule = OGSScoreEstimator;
+                OGSScoreEstimatorModule = OGSScoreEstimatorModule();
+                OGSScoreEstimator_initialized = true;
+                resolve(true);
+            };
 
-        return init_promise;
+            return init_promise;
+        } else {
+            return Promise.reject("score estimator not available");
+        }
     }
 
 
@@ -105,7 +109,7 @@ export function init_score_estimator():Promise<boolean> {
 
 if (CLIENT) {
     init_score_estimator().then((tf) => {
-        console.log('SE Initialized');
+        // console.log('SE Initialized');
     })
     .catch(err => console.error(err));
 }
