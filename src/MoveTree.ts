@@ -38,10 +38,15 @@ export interface MarkInterface {
     color?            : string;
 }
 
+export type MoveTreePenMarks = Array<{
+    color:string;
+    points:Array<number>; /* [x1,y1, x2,y2, ...] */
+}>;
+
 export interface MoveTreeJson {
     x               : number;
     y               : number;
-    pen_marks?      : Array<number>;
+    pen_marks?      : MoveTreePenMarks;
     marks?          : Array<{x: number, y: number, marks: MarkInterface}>;
     text?           : string;
     trunk_next?     : MoveTreeJson;
@@ -117,7 +122,7 @@ export class MoveTree {
     private active_node_number: number;
     public state: GoEngineState;
     private redraw_on_scroll: any;
-    public pen_marks: Array<any> = [];
+    public pen_marks: MoveTreePenMarks = [];
 
     /* These need to be protected by accessor methods now that we're not
      * initializing them on construction */

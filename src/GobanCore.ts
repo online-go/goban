@@ -47,6 +47,12 @@ export interface ColoredCircle {
     border_color? : string;
 }
 
+export interface GobanSelectedThemes {
+    board: string;
+    white: string;
+    black: string;
+}
+
 
 export interface GobanConfig {
 
@@ -119,7 +125,7 @@ export interface GobanHooks {
     getSoundVolume?: () => number;
 
     watchSelectedThemes?: (cb:() => void) => { remove:() => any };
-    getSelectedThemes?: () => {white:string, black:string, board:string};
+    getSelectedThemes?: () => GobanSelectedThemes;
 
     discBlackStoneColor?: () => string;
     discBlackTextColor?: () => string;
@@ -571,7 +577,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         return window.location.pathname;
     }
-    protected getSelectedThemes() {
+    protected getSelectedThemes():GobanSelectedThemes {
         if (GobanCore.hooks.getSelectedThemes) {
             return GobanCore.hooks.getSelectedThemes();
         }

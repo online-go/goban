@@ -22,13 +22,17 @@ let __deviceCanvasScalingRatio = null;
 /* Creates a non-blury canvas object. Most systems don't have an issue with
  * this, but HDPI android devices deal with scaling canvases and images in a
  * retarded fashion and require this hack to get around it. */
-export function createDeviceScaledCanvas(width, height) {
+export function createDeviceScaledCanvas(width:number, height:number):HTMLCanvasElement {
     //return rescaleDeviceScaledCanvas($("<canvas>").attr("width", width).attr("height", height), width, height);
-    return $("<canvas>").attr("width", width).attr("height", height);
+    //return $("<canvas>").attr("width", width).attr("height", height);
+    let canvas = document.createElement("canvas");
+    canvas.setAttribute("width", `${width}px`);
+    canvas.setAttribute("height", `${height}px`);
+    return canvas;
 }
-export function resizeDeviceScaledCanvas(_canvas, width, height) {
-    let canvas = _canvas[0];
-    let context = (canvas as HTMLCanvasElement).getContext("2d");
+
+export function resizeDeviceScaledCanvas(canvas:HTMLCanvasElement, width:number, height:number):HTMLCanvasElement {
+    let context = canvas.getContext("2d");
 
     let devicePixelRatio = window.devicePixelRatio || 1;
     let backingStoreRatio = (context as any).webkitBackingStorePixelRatio ||
@@ -67,7 +71,7 @@ export function resizeDeviceScaledCanvas(_canvas, width, height) {
         canvas.height = height;
     }
 
-    return _canvas;
+    return canvas;
 }
 
 export function deviceCanvasScalingRatio() {

@@ -21,6 +21,7 @@ import { AdHocFormat } from './AdHocFormat';
 import {
     GobanCore,
     GobanConfig,
+    GobanSelectedThemes,
     GOBAN_FONT,
     SCORE_ESTIMATION_TRIALS,
     SCORE_ESTIMATION_TOLERANCE,
@@ -31,6 +32,7 @@ import {
 import {GoEngine, encodeMove, encodeMoves} from "./GoEngine";
 import {GoMath} from "./GoMath";
 import {GoThemes} from "./GoThemes";
+import { MoveTreePenMarks } from "./MoveTree";
 import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingRatio} from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
 import {_, pgettext, interpolate} from "./translate";
@@ -42,28 +44,27 @@ export interface GobanCanvasConfig extends GobanConfig {
 }
 
 export class GobanCanvas extends GobanCore  {
-    //private parent:HTMLElement;
-    protected parent;
-    //private board_div: HTMLElement;
-    private board_div;
-    private board;
+    private parent: HTMLElement;
+    private board_div: HTMLElement;
+    private board: HTMLCanvasElement;
     private __set_board_height;
     private __set_board_width;
+    private ready_to_draw:boolean = false;
 
     constructor(config:GobanCanvasConfig, preloaded_data?:AdHocFormat|JGOF) {
         super(config, preloaded_data);
 
-        this.parent = config["board_div"] ? $(config["board_div"]) : null;
+        this.parent = config["board_div"];
         if (!this.parent) {
             this.no_display = true;
-            this.parent = $("<div>"); /* let a div dangle in no-mans land to prevent null pointer refs */
+            this.parent = document.createElement("div"); /* let a div dangle in no-mans land to prevent null pointer refs */
         }
 
-        this.board = createDeviceScaledCanvas(10, 10).attr("id", "board-canvas").addClass("StoneLayer");
+        this.board = createDeviceScaledCanvas(10, 10);
+        this.board.setAttribute("id", "board-canvas");
+        this.board.className = "StoneLayer";
         this.parent.append(this.board);
         this.bindPointerBindings(this.board);
-
-
 
         this.handleShiftKey = (ev) => {
             if (ev.shiftKey !== this.shift_key_is_down) {
@@ -73,66 +74,71 @@ export class GobanCanvas extends GobanCore  {
                 }
             }
         };
-        $(window).on("keydown", this.handleShiftKey);
-        $(window).on("keyup", this.handleShiftKey);
+        window.addEventListener("keydown", this.handleShiftKey);
+        window.addEventListener("keyup", this.handleShiftKey);
 
+        this.ready_to_draw = true;
+        this.redraw(true);
     }
 
-    public destroy() {
+    public destroy():void {
         super.destroy();
 
         this.board.remove();
         this.detachPenCanvas();
         this.detachShadowLayer();
 
-        $(window).off("keydown", this.handleShiftKey);
-        $(window).off("keyup", this.handleShiftKey);
+        window.removeEventListener("keydown", this.handleShiftKey);
+        window.removeEventListener("keyup", this.handleShiftKey);
     }
-
-    protected detachShadowLayer() {
+    protected detachShadowLayer():void {
         if (this.shadow_layer) {
             this.shadow_layer.remove();
             this.shadow_layer = null;
             this.shadow_ctx = null;
         }
     }
-    protected attachShadowLayer() {
+    protected attachShadowLayer():void {
         if (!this.shadow_layer) {
-            this.shadow_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height).attr("class", "shadow-canvas").addClass("ShadowLayer");
+            this.shadow_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
+            this.shadow_layer.setAttribute("id", "shadow-canvas");
+            this.shadow_layer.className = "ShadowLayer";
+
             this.shadow_layer.insertBefore(this.board);
             this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
             this.shadow_ctx = this.shadow_layer[0].getContext("2d");
             this.bindPointerBindings(this.shadow_layer);
         }
     }
-
-    public detachPenCanvas() {
+    public detachPenCanvas():void {
         if (this.pen_layer) {
             this.pen_layer.remove();
             this.pen_layer = null;
             this.pen_ctx = null;
         }
     }
-    protected attachPenCanvas() {
+    protected attachPenCanvas():void {
         if (!this.pen_layer) {
-            this.pen_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height).attr("id", "pen-canvas").addClass("PenLayer");
+            this.pen_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
+            this.pen_layer.setAttribute("id", "pen-canvas");
+            this.pen_layer.className = "PenLayer";
             this.parent.append(this.pen_layer);
             this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
             this.pen_ctx = this.pen_layer[0].getContext("2d");
             this.bindPointerBindings(this.pen_layer);
         }
     }
-
-    private bindPointerBindings(canvas) {
+    private bindPointerBindings(canvas:HTMLCanvasElement):void {
         if (!this.interactive) {
             return;
         }
 
-        if (canvas.data("pointers-bound")) {
+        if (canvas.getAttribute("data-pointers-bound") === "true") {
             return;
         }
 
-        canvas.data("pointers-bound", true);
+        canvas.setAttribute("data-pointers-bound", "true");
+
 
         let dragging = false;
 
@@ -233,12 +239,13 @@ export class GobanCanvas extends GobanCore  {
 
         let mousedisabled:any = 0;
 
-        canvas.on("click", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, false); } ev.preventDefault(); return false; });
-        canvas.on("dblclick", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, true); } ev.preventDefault(); return false; });
-        canvas.on("mousedown", (ev) => { if (!mousedisabled) { pointerDown(ev); } ev.preventDefault(); return false; });
-        canvas.on("mousemove", (ev) => { if (!mousedisabled) { pointerMove(ev); } ev.preventDefault(); return false; });
-        canvas.on("mouseout", (ev) => { if (!mousedisabled) { pointerOut(ev); } else { ev.preventDefault(); } return false; });
-        canvas.on("focus", (ev) => { ev.preventDefault(); return false; });
+        canvas.addEventListener("click", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, false); } ev.preventDefault(); return false; });
+        canvas.addEventListener("dblclick", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, true); } ev.preventDefault(); return false; });
+        canvas.addEventListener("mousedown", (ev) => { if (!mousedisabled) { pointerDown(ev); } ev.preventDefault(); return false; });
+        canvas.addEventListener("mousemove", (ev) => { if (!mousedisabled) { pointerMove(ev); } ev.preventDefault(); return false; });
+        canvas.addEventListener("mouseout", (ev) => { if (!mousedisabled) { pointerOut(ev); } else { ev.preventDefault(); } return false; });
+        canvas.addEventListener("focus", (ev) => { ev.preventDefault(); return false; });
+
 
         let lastX = 0;
         let lastY = 0;
@@ -311,30 +318,29 @@ export class GobanCanvas extends GobanCore  {
             $(document).off("touchmove", onTouchMove);
         });
     }
-    public clearAnalysisDrawing() {
+    public clearAnalysisDrawing():void {
         this.pen_marks = [];
         if (this.pen_ctx) {
             this.pen_ctx.clearRect(0, 0, this.metrics.width, this.metrics.height);
         }
     }
-
-    private xy2pen(x, y) {
+    private xy2pen(x:number, y:number):[number, number] {
         let lx = this.draw_left_labels ? 0.0 : 1.0;
         let ly = this.draw_top_labels ? 0.0 : 1.0;
         return [Math.round(((x / this.square_size) + lx) * 64), Math.round(((y / this.square_size) + ly) * 64)];
     }
-    private pen2xy(x, y) {
+    private pen2xy(x:number, y:number):[number, number] {
         let lx = this.draw_left_labels ? 0.0 : 1.0;
         let ly = this.draw_top_labels ? 0.0 : 1.0;
 
         return [((x / 64) - lx) * this.square_size, ((y / 64) - ly) * this.square_size];
     }
-    private setPenStyle(color) {
+    private setPenStyle(color:string):void {
         this.pen_ctx.strokeStyle = color;
         this.pen_ctx.lineWidth = Math.max(1, Math.round(this.square_size * 0.1));
         this.pen_ctx.lineCap = "round";
     }
-    private onPenStart(ev) {
+    private onPenStart(ev:MouseEvent):void {
         this.attachPenCanvas();
 
         let pos = getRelativeEventPosition(ev);
@@ -345,7 +351,7 @@ export class GobanCanvas extends GobanCore  {
 
         this.syncReviewMove({"pen": this.analyze_subtool, "pp": this.xy2pen(pos.x, pos.y)});
     }
-    private onPenMove(ev) {
+    private onPenMove(ev:MouseEvent):void {
         let pos = getRelativeEventPosition(ev);
         let start = this.last_pen_position;
         let s = this.pen2xy(start[0], start[1]);
@@ -368,8 +374,7 @@ export class GobanCanvas extends GobanCore  {
 
         this.syncReviewMove({"pp": [dx, dy]});
     }
-
-    public drawPenMarks(penmarks) {
+    public drawPenMarks(penmarks:MoveTreePenMarks):void {
         if (this.review_id && !this.done_loading_review) { return; }
         if (!(penmarks.length || this.pen_layer)) {
             return;
@@ -395,8 +400,7 @@ export class GobanCanvas extends GobanCore  {
             this.pen_ctx.stroke();
         }
     }
-
-    private onTap(event, double_tap) {
+    private onTap(event:MouseEvent, double_tap:boolean):void {
         if (!(this.stone_placement_enabled && (this.player_id || this.engine.black_player_id === 0 || this.mode === "analyze" || this.mode === "pattern search" || this.mode === "puzzle"))) { return; }
 
         let pos = getRelativeEventPosition(event);
@@ -756,13 +760,12 @@ export class GobanCanvas extends GobanCore  {
             this.emit("update");
         }
     }
-
-    private onMouseMove(event) {
+    private onMouseMove(event:MouseEvent):void {
         if (!(this.stone_placement_enabled &&
             (this.player_id || this.engine.black_player_id === 0 || this.mode === "analyze" || this.scoring_mode)
             )) { return; }
 
-        let offset = this.board.offset();
+        let offset = elementOffset(this.board);
         let x = event.pageX - offset.left;
         let y = event.pageY - offset.top;
 
@@ -787,7 +790,7 @@ export class GobanCanvas extends GobanCore  {
             this.drawSquare(pt.i, pt.j);
         }
     }
-    private onMouseOut(event) {
+    private onMouseOut(event:MouseEvent):void {
         if (this.__last_pt.valid) {
             let last_hover = this.last_hover_square;
             this.last_hover_square = null;
@@ -797,15 +800,13 @@ export class GobanCanvas extends GobanCore  {
         }
         this.__last_pt = this.xy2ij(-1, -1);
     }
-
     public drawSquare(i:number, j:number):void {
         if (i < 0 || j < 0) { return; }
         if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
             this.__drawSquare(i, j);
         }
     }
-
-    private __drawSquare(i, j) {
+    private __drawSquare(i:number, j:number):void {
         if (!this.drawing_enabled) { return; }
         if (this.no_display) { return; }
         let ctx = this.ctx;
@@ -1493,10 +1494,7 @@ export class GobanCanvas extends GobanCore  {
 
         this.__draw_state[j][i] = this.drawingHash(i, j);
     }
-
-
-
-    private drawingHash(i, j) {
+    private drawingHash(i:number, j:number):string {
         if (i < 0 || j < 0) {
             return "..";
         }
@@ -1769,8 +1767,10 @@ export class GobanCanvas extends GobanCore  {
 
         return ret;
     }
-
-    public redraw(force_clear?: boolean) {
+    public redraw(force_clear?: boolean):void {
+        if (!this.ready_to_draw) {
+            return;
+        }
         if (!this.drawing_enabled) {
             return;
         }
@@ -1781,11 +1781,15 @@ export class GobanCanvas extends GobanCore  {
         let metrics = this.metrics = this.computeMetrics();
         if (force_clear || !(this.__set_board_width === metrics.width && this.__set_board_height === metrics.height && this.theme_stone_radius === this.computeThemeStoneRadius(metrics))) {
             try {
-                this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
+                //this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
+                this.parent.style.width = metrics.width + "px";
+                this.parent.style.height = metrics.height + "px";
                 resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
 
-                let bo = this.board.offset();
-                let po = this.parent.offset() || {"top": 0, "left": 0};
+                //let bo = this.board.offset();
+                //let po = this.parent.offset() || {"top": 0, "left": 0};
+                let bo = elementOffset(this.board);
+                let po = elementOffset(this.parent) || {"top": 0, "left": 0};
                 let top = bo.top - po.top;
                 let left = bo.left - po.left;
 
@@ -1804,7 +1808,7 @@ export class GobanCanvas extends GobanCore  {
 
                 this.__set_board_width = metrics.width;
                 this.__set_board_height = metrics.height;
-                this.ctx = this.board[0].getContext("2d");
+                this.ctx = this.board.getContext("2d");
 
                 this.setThemes(this.getSelectedThemes(), true);
             } catch (e) {
@@ -1949,9 +1953,7 @@ export class GobanCanvas extends GobanCore  {
             this.redrawMoveTree();
         }
     }
-
-
-    public message(msg, timeout?) {
+    public message(msg:string, timeout:number = 5000):void {
         this.clearMessage();
 
         this.message_div = $("<div>").addClass("GobanMessage");
@@ -1976,7 +1978,7 @@ export class GobanCanvas extends GobanCore  {
             }, timeout);
         }
     }
-    protected clearMessage() {
+    protected clearMessage():void {
         if (this.message_div) {
             this.message_div.remove();
             this.message_div = null;
@@ -1986,10 +1988,7 @@ export class GobanCanvas extends GobanCore  {
             this.message_timeout = null;
         }
     }
-
-
-
-    protected setThemes(themes, dont_redraw) {
+    protected setThemes(themes:GobanSelectedThemes, dont_redraw:boolean):void {
         if (this.no_display) {
             return;
         }
@@ -2040,7 +2039,12 @@ export class GobanCanvas extends GobanCore  {
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
-        this.parent.css(this.theme_board.getBackgroundCSS());
+        //this.parent.css(this.theme_board.getBackgroundCSS());
+        let bgcss = this.theme_board.getBackgroundCSS();
+        for (let key in bgcss) {
+            this.parent.style[key] = bgcss[key];
+        }
+
         if (this.move_tree_div) {
             if (this.engine) {
                 this.engine.move_tree.updateTheme(this);
@@ -2054,8 +2058,21 @@ export class GobanCanvas extends GobanCore  {
             }
         }
     }
+}
 
+function elementOffset(element:HTMLElement) {
+    if (!element) {
+        return null;
+    }
 
+    let rect = element.getBoundingClientRect();
 
+    if (!rect) {
+        return null;
+    }
 
+    return {
+        top: rect.top + document.body.scrollTop,
+        left: rect.left + document.body.scrollLeft
+    };
 }
