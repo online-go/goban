@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-export * from "./Goban";
-export * from "./GobanCanvas";
-export * from "./GoConditionalMove";
-export * from "./GoEngine";
-export * from "./GoError";
-export * from "./GoMath";
-export * from "./GoStoneGroup";
-export * from "./GoTheme";
-export * from "./GoThemes";
-export * from "./GoUtil";
-export * from "./MoveTree";
-export * from "./ScoreEstimator";
-export * from "./SFXManager";
-export * from "./translate";
-export * from "./TypedEventEmitter";
 
-import { Goban } from './Goban';
 
-window['Goban'] = Goban;
+/**
+ * JSON Go Format
+ */
+
+export interface JGOF {
+    /** */
+    black: JGOFPlayer | Array<JGOFPlayer>;
+    white: JGOFPlayer | Array<JGOFPlayer>;
+}
+
+export interface JGOFPlayer {
+    name: string;
+    user_id?: string;
+}

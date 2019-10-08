@@ -1,5 +1,7 @@
 <html>
     <head>
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.1.5/pixi.js'></script>
+
         <script src="https://online-go.com/OGSScoreEstimator/OGSScoreEstimator-0.7.0.asm.js" id="ogs_score_estimator_script"></script>
         <script src="https://cdn.online-go.com/lib/jquery/3.1.1/jquery.js"></script>
         <script src='/index.js'></script>
@@ -31,7 +33,7 @@
         <script>
             let gobans = [];
 
-            for (let board_ct = 0; board_ct < 1; ++board_ct) {
+            for (let board_ct = 0; board_ct < 10; ++board_ct) {
                 let div = document.createElement("DIV");
                 div.className="Goban";
                 document.body.appendChild(div);
@@ -71,9 +73,52 @@
                     console.log("Goban updated");
                 });
 
+
+
                 gobans.push(goban);
             }
+
+            let i=0;
+            setInterval(() => {
+                i++;
+                if (i >= 300) {
+                    if (i === 300) {
+                        console.log("Done");
+                    }
+                    return;
+                }
+                for (let goban of gobans) {
+                    goban.engine.place(Math.floor(i / 19), Math.floor(i % 19));
+                    goban.redraw(true);
+                }
+            }, 1);
         </script>
+
+
+          <script type="text/javascript">
+    let type = "WebGL"
+    if(!PIXI.utils.isWebGLSupported()){
+      type = "canvas"
+    }
+
+    PIXI.utils.sayHello(type)
+  </script>
+
+  <script>
+//Create a Pixi Application
+let app = new PIXI.Application({ 
+    width: 256,         // default: 800
+    height: 256,        // default: 600
+    antialias: true,    // default: false
+    transparent: false, // default: false
+    resolution: 1       // default: 1
+  }
+);
+
+//Add the canvas that Pixi automatically created for you to the HTML document
+document.body.appendChild(app.view);
+  </script>
+
     </body>
 </html>
 

@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-export * from "./Goban";
-export * from "./GobanCanvas";
-export * from "./GoConditionalMove";
-export * from "./GoEngine";
-export * from "./GoError";
-export * from "./GoMath";
-export * from "./GoStoneGroup";
-export * from "./GoTheme";
-export * from "./GoThemes";
-export * from "./GoUtil";
-export * from "./MoveTree";
-export * from "./ScoreEstimator";
-export * from "./SFXManager";
-export * from "./translate";
-export * from "./TypedEventEmitter";
 
-import { Goban } from './Goban';
 
-window['Goban'] = Goban;
+/**
+ * The to-be-deprecated format used by Online-Go.com, will be replaced by JGOF
+ * as we develop a migration plan
+ */
+
+export interface AdHocFormat {
+    /** */
+    black: AdHocPlayer;
+    white: AdHocPlayer;
+}
+
+export interface AdHocPlayer {
+    name: string;
+    id: number;
+}

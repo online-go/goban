@@ -67,6 +67,10 @@ module.exports = {
         maxEntrypointSize: 1024 * 1024 * 2.5,
     },
 
+    externals: {
+        "pixi.js": "PIXI", // can't seem to import anyways
+    },
+
     plugins: plugins,
 
     devtool: 'source-map',
