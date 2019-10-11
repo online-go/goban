@@ -26,10 +26,12 @@ import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingR
 } from "./GoUtil";
 import {TypedEventEmitter} from "./TypedEventEmitter";
 import {_, pgettext, interpolate} from "./translate";
+import { JGOFClock, JGOFTimeControl, JGOFPlayerClock, JGOFTimeControlSystem } from './JGOF';
+import { AdHocClock, AdHocPlayerClock  } from './AdHocFormat';
 
+declare let swal;
 
 export const GOBAN_FONT =  "Verdana,Arial,sans-serif";
-declare let swal;
 
 export const SCORE_ESTIMATION_TRIALS = 1000;
 export const SCORE_ESTIMATION_TOLERANCE = 0.30;
@@ -39,7 +41,6 @@ export const MARK_TYPES = ["letter", "circle", "square", "triangle", "sub_triang
 
 let last_goban_id = 0;
 
-type time_control_system_value = "fischer" | "byoyomi" | "canadian" | "simple" | "absolute" | "none";
 export interface ColoredCircle {
     move          : string;
     color         : string;
@@ -57,6 +58,8 @@ export interface GobanSelectedThemes {
 export interface GobanConfig {
 
 }
+
+
 
 interface Events {
     "destroy": never;
@@ -104,9 +107,10 @@ interface Events {
         seconds_left: number;
         player_to_move: number;
         clock_player: number;
-        time_control_system: time_control_system_value;
+        time_control_system: JGOFTimeControlSystem;
         in_overtime: boolean;
     };
+    "clock": JGOFClock;
 }
 
 export interface GobanHooks {
@@ -133,6 +137,9 @@ export interface GobanHooks {
     discWhiteTextColor?: () => string;
     plainBoardColor?: () => string;
     plainBoardLineColor?: () => string;
+
+    addCoordinatesToChatInput?: (coordinates:string) => void;
+    updateScoreEstimation?: (est_winning_color:"black"|"white", number_of_points:number) => void;
 }
 
 
@@ -149,7 +156,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public draw_top_labels:boolean;
     public engine: GoEngine;
     public height:number;
-    public last_clock: any = null;
+    public last_clock:AdHocClock = null;
     public mode:string;
     public one_click_submit: boolean;
     public pen_marks:Array<any>;
@@ -167,7 +174,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     protected __board_redraw_pen_layer_timer;
     protected __borders_initialized;
-    protected __clock_timer;
+    protected __clock_timer:any = null; /* number for web, Timeout for node - I don't think we can make them both happy so just 'any' */
     protected __draw_state;
     protected __last_pt;
     protected __update_move_tree;
@@ -224,10 +231,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected last_stone_sound;
     protected layer_offset_left;
     protected layer_offset_top;
-    protected message_div;
-    protected message_td;
-    protected message_text;
-    protected message_timeout;
     protected metrics;
     protected move_number;
     protected move_selected;
@@ -250,8 +253,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected review_had_gamedata;
     protected scoring_mode;
     protected selectedThemeWatcher;
-    protected shadow_ctx;
-    protected shadow_layer;
     protected shift_key_is_down;
     protected show_move_numbers;
     protected show_variation_move_numbers;
@@ -282,11 +283,20 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected white_clock;
     protected white_name;
 
-    public static hooks:GobanHooks = {};
+    /** GobanCore calls some abstract methods as part of the construction
+     *  process. Because our subsclasses might (and do) need to do some of their
+     *  own config before these are called, we set this function to be called
+     *  by our subclass after it's done it's own internal config stuff. */
+    protected post_config_constructor:() => void;
 
+    public static hooks:GobanHooks = {
+        getClockDrift: () => 0,
+        getNetworkLatency: () => 0,
+    };
 
     constructor(config, preloaded_data?) {
         super();
+        console.log("Constructing goban core");
 
         this.goban_id = ++last_goban_id;
 
@@ -430,59 +440,59 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.square_size = Math.floor(this.display_width / n_squares);
         }
 
-        let first_pass = true;
-        let watcher = this.watchSelectedThemes((themes) => {
-            this.setThemes(themes, first_pass ? true : false);
-            first_pass = false;
-        });
-        this.on("destroy", () => watcher.remove());
-        this.message_div = null;
-        this.message_timeout = null;
-
-        this.current_cmove = null; /* set in setConditionalTree */
-        this.currently_my_cmove = false;
-        this.setConditionalTree(null);
-
-        this.last_hover_square = null;
-        this.__last_pt = this.xy2ij(-1, -1);
-        if (preloaded_data) {
-            this.load(preloaded_data);
-        } else {
-            this.load(config);
-        }
-
-        this.game_connection_data = {
-            "game_id": config.game_id,
-            "player_id": config.player_id,
-            "chat": config.connect_to_chat || 0,
-            //"game_type": ("game_type" in config ? config.game_type : "temporary")
-        };
-
-        if ("auth" in config) {
-            this.game_connection_data.auth = config.auth;
-        }
-        if ("archive_id" in config) {
-            this.game_connection_data.archive_id = config.archive_id;
-        }
-
-        this.review_connection_data = {
-            "auth": config.auth,
-            "review_id": config.review_id,
-            "player_id": config.player_id
-        };
-
-        if ("server_socket" in config && config["server_socket"]) {
-            if (!preloaded_data) {
-                this.message(_("Loading..."), -1);
-            }
-            this.connect(config["server_socket"]);
-        } else {
-            this.load(config);
-        }
-
         this.__update_move_tree = null;
-
         this.shift_key_is_down = false;
+
+        this.post_config_constructor = () => {
+
+            let first_pass = true;
+            let watcher = this.watchSelectedThemes((themes) => {
+                this.setThemes(themes, first_pass ? true : false);
+                first_pass = false;
+            });
+            this.on("destroy", () => watcher.remove());
+
+            this.current_cmove = null; /* set in setConditionalTree */
+            this.currently_my_cmove = false;
+            this.setConditionalTree(null);
+
+            this.last_hover_square = null;
+            this.__last_pt = this.xy2ij(-1, -1);
+            if (preloaded_data) {
+                this.load(preloaded_data);
+            } else {
+                this.load(config);
+            }
+
+            this.game_connection_data = {
+                "game_id": config.game_id,
+                "player_id": config.player_id,
+                "chat": config.connect_to_chat || 0,
+                //"game_type": ("game_type" in config ? config.game_type : "temporary")
+            };
+
+            if ("auth" in config) {
+                this.game_connection_data.auth = config.auth;
+            }
+            if ("archive_id" in config) {
+                this.game_connection_data.archive_id = config.archive_id;
+            }
+
+            this.review_connection_data = {
+                "auth": config.auth,
+                "review_id": config.review_id,
+                "player_id": config.player_id
+            };
+
+            if ("server_socket" in config && config["server_socket"]) {
+                if (!preloaded_data) {
+                    this.message(_("Loading..."), -1);
+                }
+                this.connect(config["server_socket"]);
+            } else {
+                this.load(config);
+            }
+        }
     }
 
     protected _socket_on(event, cb) {
@@ -940,7 +950,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 this.load(obj.gamedata);
                 this.review_had_gamedata = true;
-                $("#option-review-sgf-download-a").removeClass("hidden");
             }
 
             if ("owner" in obj) {
@@ -1142,18 +1151,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         /* Clear various timeouts that may be running */
-        if (this.__clock_timer) {
-            clearTimeout(this.__clock_timer);
-            this.__clock_timer = null;
-        }
+        this.setGameClock(null);
         if (this.submitBlinkTimer) {
             clearTimeout(this.submitBlinkTimer);
         }
         this.submitBlinkTimer = null;
-        if (this.message_timeout) {
-            clearTimeout(this.message_timeout);
-            this.message_timeout = null;
-        }
     }
     protected disconnect() {
         this.emit("destroy");
@@ -1454,9 +1456,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     protected abstract setThemes(themes, dont_redraw);
     public redrawMoveTree() {
-        let d = $(this.move_tree_div);
-        let c = $(this.move_tree_canvas);
-        if (d.length && c.length) {
+        //let d = $(this.move_tree_div);
+        //let c = $(this.move_tree_canvas);
+        let d = document.getElementById(this.move_tree_div);
+        let c = document.getElementById(this.move_tree_canvas);
+        if (d && c) {
             this.engine.move_tree.redraw({
                 "board": this,
                 "active_path_end": this.engine.cur_move,
@@ -2378,9 +2382,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.score_estimate) {
             let est = this.score_estimate.estimated_hard_score - this.engine.komi;
             let color;
-            if (est > 0) { color = _("Black"); }
-            else         { color = _("White"); }
-            $("#score-estimation").text(interpolate(pgettext("Score estimation result", "Estimation: %s by %s"), [color, Math.abs(est).toFixed(1)]));
+            if (GobanCore.hooks.updateScoreEstimation) {
+                GobanCore.hooks.updateScoreEstimation(
+                    est > 0 ? "black" : "white",
+                    Math.abs(est)
+                );
+            }
         }
     }
     public autoScore() {
@@ -2459,43 +2466,85 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
 
-    public setGameClock(clock) {
-        //console.log('Setting clock: ', clock);
-        if (!this.white_clock || !this.black_clock) { return; }
-
-        this.last_clock = clock;
-        let white_clock = $(this.white_clock);
-        let black_clock = $(this.black_clock);
-        let _white_clock = white_clock;
-        let _black_clock = black_clock;
-
-        if (white_clock.hasClass("in-game-clock")) {
-            white_clock = white_clock.children(".full-time");
-        }
-        if (black_clock.hasClass("in-game-clock")) {
-            black_clock = black_clock.children(".full-time");
+    public setGameClock(original_clock:AdHocClock):void {
+        if (this.__clock_timer) {
+            clearTimeout(this.__clock_timer);
+            this.__clock_timer = null;
         }
 
-        if (clock == null) {
-            white_clock.children(".clock-component").text("");
-            black_clock.children(".clock-component").text("");
-            _black_clock.find(".main-time").empty();
-            _white_clock.find(".main-time").empty();
-            _white_clock.find(".periods").empty();
-            _white_clock.find(".period-time").empty();
-            _black_clock.find(".periods").empty();
-            _black_clock.find(".period-time").empty();
+        if (original_clock == null) {
+            this.emit('clock', null);
             return;
         }
+        this.last_clock = original_clock;
 
-        if ("pause" in clock) {
-            if (clock.pause.paused) {
-                this.engine.paused_since = clock.pause.paused_since;
-                this.engine.pause_control = clock.pause.pause_control;
+        let time_control:JGOFTimeControl = this.config.time_control;
+
+        let current_server_time:number = null;
+        function update_current_server_time() {
+            let server_time_offset =  GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
+            current_server_time = Date.now() - server_time_offset;
+        }
+        update_current_server_time();
+
+        //this.last_clock = original_clock;
+
+        let clock:JGOFClock = {
+            current_player: original_clock.current_player === original_clock.black_player_id ? 'black' : 'white',
+            time_of_last_move: original_clock.last_move,
+            paused_since: original_clock.paused_since,
+            black_clock: null,
+            white_clock: null,
+        };
+
+        if (original_clock.pause) {
+            if (original_clock.pause.paused) {
+                this.engine.paused_since = original_clock.pause.paused_since;
+                this.engine.pause_control = original_clock.pause.pause_control;
 
                 /* correct for when we used to store paused_since in terms of seconds instead of ms */
                 if (this.engine.paused_since < 2000000000) {
                     this.engine.paused_since *= 1000;
+                }
+
+                clock.paused_since = original_clock.pause.paused_since;
+                clock.pause_state = { }
+                for (let k in original_clock.pause.pause_control) {
+                    if (/vacation-([0-9]+)/.test(k)) {
+                        let player_id = k.match(/vacation-([0-9]+)/)[1];
+                        if (!clock.pause_state.vacation) {
+                            clock.pause_state.vacation = {};
+                        }
+                        clock.pause_state.vacation[player_id] = true;
+                    } else {
+                        switch (k) {
+                            case 'stone-removal':
+                                clock.pause_state.stone_removal = true;
+                                break;
+
+                            case 'weekend':
+                                clock.pause_state.weekend = true;
+                                break;
+
+                            case 'server':
+                                clock.pause_state.server = true;
+                                break;
+
+                            case 'paused':
+                                clock.pause_state.player = {
+                                    player_id: original_clock.pause.pause_control.paused.pausing_player_id.toString(),
+                                    pauses_left: original_clock.pause.pause_control.paused.pauses_left,
+                                };
+                                break;
+                            case 'moderator_paused':
+                                clock.pause_state.moderator = original_clock.pause.pause_control.moderator_paused.moderator_id.toString();
+                                break;
+
+                            default:
+                                throw new Error(`Unhandled pause control key: ${k}`);
+                        }
+
+                    }
                 }
             } else {
                 delete this.engine.paused_since;
@@ -2503,329 +2552,129 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         }
 
-        let now;
-        let use_short_format = this.config.use_short_format_clock;
-        //let now_delta = Date.now() - clock.now;
 
-        let updateClockDisplay = (clock_div, time, base_time: number, player_id?: number):number => {
-            let next_clock_update = 60000;
-            let ms;
-            let time_suffix = "";
-            let periods_left = 0;
+        const make_player_clock = (
+            original_clock:AdHocPlayerClock,
+            original_clock_expiration:number,
+            is_current_player:boolean,
+            time_elapsed:number
+        ):JGOFPlayerClock => {
+            let ret:JGOFPlayerClock = {
+                main_time: 0,
+            };
 
-            /*** New game clock displays ***/
-            let main_time_div       = null;
-            let periods_div         = null;
-            let period_time_div     = null;
-            let overtime_div        = null;
-            let overtime_parent_div = null;
-            let byo_yomi_periods    = null;
+            let tcs:string = "" + (time_control.system);
+            switch (time_control.system) {
+                case 'simple':
+                    ret.main_time = is_current_player
+                        ?  Math.max(0, (original_clock_expiration - time_elapsed) - current_server_time)
+                        : time_control.per_move;
+                    break;
 
-            if (clock_div.hasClass("in-game-clock")) {
-                main_time_div = clock_div.find(".main-time");
-                if (clock.start_mode) {
-                    main_time_div.addClass("start_clock");
-                } else {
-                    main_time_div.removeClass("start_clock");
-                }
-                periods_div = clock_div.find(".periods");
-                period_time_div = clock_div.find(".period-time");
-                overtime_div = clock_div.find(".overtime");
-                overtime_parent_div = overtime_div.parent();
-                byo_yomi_periods = clock_div.children(".byo-yomi-periods");
-                clock_div = clock_div.children(".full-time");
-            }
+                case 'none':
+                    ret.main_time = 0;
+                    break;
 
-            // Prepare to be able to not-play the voice countdown in main time of byo-yomi
-            let timing_type = null;
-            let in_overtime = false;
+                case 'absolute':
+                    ret.main_time = is_current_player
+                        ?  Math.max(0, (original_clock_expiration - time_elapsed) - current_server_time)
+                        : original_clock_expiration;
+                    break;
 
-            if (typeof(time) === "object") {
-                ms = (base_time + (time.thinking_time) * 1000) - now;
-                if ("moves_left" in time) { /* canadian */
-                    timing_type = "canadian";
-                    if ("block_time" in time) {
-                        if (time.moves_left) {
-                            time_suffix = "<span class='time_suffix'> + " + shortDurationString(time.block_time) + "/" + time.moves_left + "</span>";
-                        }
-                    }
-                    if (time.thinking_time > 0) {
-                        periods_left = 1;
-                    }
-                    if (ms < 0 || (time.thinking_time === 0 && "block_time" in time)) {
-                        in_overtime = true;
-                        if (overtime_parent_div) {
-                            overtime_parent_div.addClass("in-overtime");
-                        }
-                        ms = (base_time + (time.thinking_time + time.block_time) * 1000) - now;
-                        if (time.moves_left) {
-                            time_suffix = "<span class='time_suffix'>/ " + time.moves_left + "</span>";
-                        }
-                    }
+                case 'fischer':
+                    ret.main_time = is_current_player
+                        ?  Math.max(0, (original_clock.thinking_time - time_elapsed))
+                        : original_clock.thinking_time;
+                    break;
 
-                    let moves_done = this.engine.time_control.stones_per_period - time.moves_left;
-                    if (periods_div) {
-                        periods_div.text(moves_done + " / " + this.engine.time_control.stones_per_period);
-                    }
+                case 'byoyomi':
+                    if (is_current_player) {
+                        ret.main_time = original_clock.thinking_time - time_elapsed;
+                        ret.periods_left = original_clock.periods;
+                        ret.period_time_left = time_control.period_time;
+                        if (ret.main_time < 0) {
+                            let overtime_usage = - ret.main_time;
+                            ret.main_time = 0;
 
-                    if (period_time_div) {
-                        period_time_div.text(shortDurationString(this.engine.time_control.period_time));
-                    }
-                }
-                if ("periods" in time) { /* byo yomi */
-                    timing_type = 'byoyomi';
-                    let period_offset = 0;
-                    let period_text = "ERR";
-                    let period_class = "";
-                    if (ms < 0 || time.thinking_time === 0) {
-                        if (overtime_parent_div) {
-                            in_overtime = true;
-                            overtime_parent_div.addClass("in-overtime");
-                        }
+                            let periods_used = Math.floor(overtime_usage / time_control.period_time);
+                            ret.periods_left -= periods_used;
+                            ret.period_time_left = overtime_usage - (periods_used * time_control.period_time);
 
-                        period_offset = Math.floor((-ms / 1000) / time.period_time);
-                        if (period_offset < 0) {
-                            period_offset = 0;
-                        }
-
-                        while (ms < 0) {
-                            ms += time.period_time * 1000;
-                        }
-
-                        if (player_id !== clock.current_player) {
-                            ms = time.period_time * 1000;
-                        }
-                        periods_left = time.periods - period_offset;
-                        if (periods_left >= 1) {
-                            if (periods_left === 1) {
-                                period_text = " " + pgettext("Final byo-yomi period (Sudden Death)", "SD");
-                                period_class = "sudden-death";
-                            } else {
-                                period_text = ` (${periods_left})`;
+                            if (ret.periods_left < 0) {
+                                ret.periods_left = 0;
                             }
 
-                            if (period_time_div) {
-                                //period_time_div.text(shortDurationString(time.period_time));
-                                //period_time_div.text(shortDurationString(time.period_time));
-                                period_time_div.text("");
+                            if (ret.period_time_left < 0) {
+                                ret.period_time_left = 0;
                             }
-                        } else {
-                            ms = 0;
-                            period_text = "";
                         }
                     } else {
-                        periods_left = time.periods;
-                        //time_suffix = "<span class='time_suffix'>+" + (time.periods) + "x" + (shortDurationString(time.period_time)).trim() + "</span>";
-                        period_text = ` + ${time.periods}x${shortDurationString(time.period_time).trim()}`;
-                        /*
-                        if (period_time_div) {
-                            period_time_div.text(shortDurationString(time.period_time));
-                        }
-                        */
+                        ret.main_time = original_clock.thinking_time;
+                        ret.periods_left = original_clock.periods;
+                        ret.period_time_left = time_control.period_time;
                     }
+                    break;
 
-                    time_suffix = `<span class='time_suffix'> ${period_text}</span>`;
-                    if (byo_yomi_periods) {
-                        byo_yomi_periods.text(period_text);
-                        if (period_class !== "") {
-                            byo_yomi_periods.addClass(period_class);
-                        } else {
-                            byo_yomi_periods.removeClass("sudden-death");
-                        }
-                    }
+                case 'canadian':
+                    if (is_current_player) {
+                        ret.main_time = original_clock.thinking_time - time_elapsed;
+                        ret.moves_left = original_clock.moves_left;
+                        ret.block_time_left = original_clock.block_time;
 
+                        if (ret.main_time < 0) {
+                            let overtime_usage = - ret.main_time;
+                            ret.main_time = 0;
 
-                    /*
-                    if (periods_div) {
-                        periods_div.text(periods_left);
-                    }
-                    */
-                }
-            } else {
-                /* time is just a raw number */
-                ms = time - now;
-            }
+                            ret.block_time_left -= overtime_usage;
 
-            let seconds = Math.ceil((ms - 1) / 1000);
-            let days = Math.floor(seconds / 86400); seconds -= days * 86400;
-            let hours = Math.floor(seconds / 3600); seconds -= hours * 3600;
-            let minutes = Math.floor(seconds / 60); seconds -= minutes * 60;
-
-            let html = "";
-            let cls = "plenty_of_time";
-            if (ms <= 0 || isNaN(ms)) {
-                next_clock_update = 0;
-                cls = "out_of_time";
-                html = "0.0";
-            } else if (days > 1) {
-                html = plurality(days, _("Day"), _("Days")) + " " + (hours ? plurality(hours, _("Hour"), _("Hours")) : "");
-                next_clock_update = 60000;
-            } else if (hours || days === 1) {
-                next_clock_update = 60000;
-                if (days === 1) {
-                    hours += 24;
-                }
-                html = days === 0 ? interpolate(pgettext("Game clock: Hours and minutes", "%sh %sm"), [hours, minutes]) : interpolate(pgettext("Game clock: hours", "%sh"), [hours]);
-            } else {
-                next_clock_update = ms % 1000; /* once per second, right after the clock rolls over */
-                if (next_clock_update === 0) {
-                    next_clock_update = 1000;
-                }
-                if (this.engine.paused_since) {
-                    next_clock_update = 60000;
-                }
-                html = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-                if (minutes === 0 && seconds <= 10) {
-                    if (seconds % 2 === 0) {
-                        cls += " low_time";
-                    }
-
-                    if (this.on_game_screen && player_id) {
-                        if (window["user"] && player_id === window["user"].id && window["user"].id === this.engine.playerToMove()) {
-                            this.byoyomi_label = "" + seconds;
-                            let last_byoyomi_label = this.byoyomi_label;
-                            if (this.last_hover_square) {
-                                this.drawSquare(this.last_hover_square.x, this.last_hover_square.y);
+                            if (ret.block_time_left < 0) {
+                                ret.block_time_left = 0;
                             }
-                            setTimeout(() => {
-                                if (this.byoyomi_label === last_byoyomi_label) {
-                                    this.byoyomi_label = null;
-                                    if (this.last_hover_square) {
-                                        this.drawSquare(this.last_hover_square.x, this.last_hover_square.y);
-                                    }
-                                }
-                            }, 1100);
                         }
-
-                        if (this.mode === "play") {
-                            this.emit('audio-clock', {
-                                seconds_left: seconds,
-                                player_to_move: this.engine.playerToMove(),
-                                clock_player: player_id,
-                                time_control_system: timing_type,
-                                in_overtime: in_overtime,
-                            });
-                        }
+                    } else {
+                        ret.main_time = original_clock.thinking_time;
+                        ret.moves_left = original_clock.moves_left;
+                        ret.block_time_left = original_clock.block_time;
                     }
-                }
+                    break;
+
+                default:
+                    throw new Error(`Unsupported time control system: ${tcs}`);
             }
 
-            if (clock.start_mode) {
-                cls += " start_clock";
-            }
-            if (this.engine.paused_since) {
-                cls += " paused";
-            }
-
-            if (main_time_div) {
-                main_time_div.html(html);
-            }
-            clock_div.html(`<span class='clock ${cls}'>${html}<span>${(use_short_format ? "" : time_suffix)}`);
-            return next_clock_update;
+            return ret;
         };
 
-        let updateTime = () => {
-            now = Date.now();
+        const do_update = () => {
+            update_current_server_time();
 
-            /* correct for when we used to store paused_since in terms of seconds instead of ms */
-            if (this.engine.paused_since > 0 && this.engine.paused_since < 2000000000) {
-                this.engine.paused_since *= 1000;
-            }
+            let next_update_time:number = 100;
+            const elapsed:number = current_server_time - original_clock.last_move;
 
-            let now_delta = this.getClockDrift();
-            let lag = this.getNetworkLatency();
+            clock.black_clock = make_player_clock(
+                typeof(original_clock.black_time) === 'number' ? null : original_clock.black_time as AdHocPlayerClock,
+                original_clock.expiration,
+                clock.current_player === 'black' && !clock.start_mode,
+                elapsed
+            );
 
-            if (this.engine.phase !== "play" && this.engine.phase !== "stone removal") {
-                white_clock.empty();
-                black_clock.empty();
-                return;
-            }
-
-            black_clock.empty();
-            white_clock.empty();
-            let next_clock_update = 1000;
+            clock.white_clock = make_player_clock(
+                typeof(original_clock.white_time) === 'number' ? null : original_clock.white_time as AdHocPlayerClock,
+                original_clock.expiration,
+                clock.current_player === 'white' && !clock.start_mode,
+                elapsed
+            );
 
             if (clock.start_mode) {
-                next_clock_update = updateClockDisplay(clock.black_player_id === clock.current_player ? _black_clock : _white_clock, clock.expiration + now_delta, clock.last_move);
-            } else if (clock.stone_removal_mode) {
-                if (this.stone_removal_clock) {
-                    let sr_clock = $(this.stone_removal_clock);
-                    updateClockDisplay(sr_clock, clock.stone_removal_expiration + now_delta, clock.now);
-                }
-            } else {
-                let white_pause_text = null;
-                let black_pause_text = null;
-
-                if (this.engine.paused_since) {
-                    white_pause_text = _("Paused");
-                    black_pause_text = _("Paused");
-                    if (this.engine.pause_control) {
-                        let pause_control = this.engine.pause_control;
-                        if ("weekend" in pause_control) {
-                            black_pause_text = _("Weekend");
-                            white_pause_text = _("Weekend");
-                        }
-                        if ("system" in pause_control) {
-                            black_pause_text = _("Paused by Server");
-                            white_pause_text = _("Paused by Server");
-                        }
-                        if (("vacation-" + clock.black_player_id) in pause_control) {
-                            black_pause_text = _("Vacation");
-                        }
-                        if (("vacation-" + clock.white_player_id) in pause_control) {
-                            white_pause_text = _("Vacation");
-                        }
-                    }
-                }
-                if (white_pause_text !== this.white_pause_text || black_pause_text !== this.black_pause_text) {
-                    this.white_pause_text = white_pause_text;
-                    this.black_pause_text = black_pause_text;
-                    this.emit("pause-text", {white_pause_text: white_pause_text, black_pause_text: black_pause_text});
-                }
-
-                let white_base_time;
-                let black_base_time;
-                let pause_delta = clock.pause_delta || 0;
-                if (this.engine.paused_since) {
-                    white_base_time = (clock.current_player === clock.white_player_id ? (now - pause_delta)  - lag : now);
-                    black_base_time = (clock.current_player === clock.black_player_id ? (now - pause_delta)  - lag : now);
-                } else {
-                    white_base_time = (clock.current_player === clock.white_player_id ? (clock.last_move + now_delta) - lag : now);
-                    black_base_time = (clock.current_player === clock.black_player_id ? (clock.last_move + now_delta) - lag : now);
-                }
-
-                if (clock.white_time) {
-                    let white_next_update = updateClockDisplay(_white_clock, clock.white_time, white_base_time, clock.white_player_id);
-                    if (clock.current_player === clock.white_player_id) {
-                        next_clock_update = white_next_update;
-                    }
-                }
-                if (clock.black_time) {
-                    let black_next_update = updateClockDisplay(_black_clock, clock.black_time, black_base_time, clock.black_player_id);
-                    if (clock.current_player === clock.black_player_id) {
-                        next_clock_update = black_next_update;
-                    }
-                }
+                clock.start_time_left = original_clock.expiration - current_server_time;
             }
 
-            if (this.engine.phase === "stone removal") {
-                next_clock_update = 1000;
-            }
+            this.emit('clock', clock);
 
-            if (next_clock_update) {
-                if (this.__clock_timer) {
-                    clearTimeout(this.__clock_timer);
-                    this.__clock_timer = null;
-                }
-                this.__clock_timer = setTimeout(updateTime, next_clock_update);
-            }
+            this.__clock_timer = setTimeout(do_update, next_update_time);
         };
 
-        try {
-            updateTime();
-        } catch (e) {
-            console.error(e);
-        }
+        do_update();
     }
     public syncReviewMove(msg_override?, node_text?) {
         if (this.review_id && (this.isPlayerController() || (this.isPlayerOwner() && msg_override && msg_override.controller)) && this.done_loading_review) {

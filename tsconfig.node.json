@@ -1,0 +1,28 @@
+{
+    "compileOnSave": false,
+    "buildOnSave": false,
+    "compilerOptions": {
+        "target": "es2017",
+        "module": "commonjs",
+        "outDir": "./node/",
+        "moduleResolution": "node",
+        "removeComments": false,
+        "declaration": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "lib": ["es2017", "dom"],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "src/*",
+                "*"
+            ]
+        },
+        "noImplicitAny": false,
+        "sourceMap": true,
+        "jsx": "react"
+    },
+    "files": [
+        "./src/engine.ts"
+    ]
+}

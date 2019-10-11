@@ -1,12 +1,12 @@
 'use strict';
 
-var path = require('path');
-let fs = require('fs');
-var webpack = require('webpack');
+const path = require('path');
+const fs = require('fs');
+const webpack = require('webpack');
 const pkg = require('./package.json');
+const TypedocWebpackPlugin = require('typedoc-webpack-plugin');
 
 const production = process.env.PRODUCTION ? true : false;
-
 
 let plugins = [];
 
@@ -26,40 +26,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 `));
 
-let defines = {
-    PRODUCTION: production,
-    CLIENT: true,
-    SERVER: false,
-};
 
-plugins.push(new webpack.DefinePlugin(defines));
-
-module.exports = {
+const common = {
     mode: production ? 'production' : 'development',
-    entry: {
-        'index': './src/index.ts',
-        'engine': './src/engine.ts',
-    },
+
     resolve: {
         modules: [
             'src',
             'node_modules'
         ],
         extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
-    },
-    output: {
-        path: __dirname + '/lib',
-        filename: production ? '[name].min.js' : '[name].js'
-    },
-    module: {
-        rules: [
-            // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
-            {
-                test: /\.tsx?$/,
-                loader: "ts-loader",
-                exclude: /node_modules/,
-            }
-        ]
     },
 
     performance: {
@@ -71,17 +47,101 @@ module.exports = {
         "pixi.js": "PIXI", // can't seem to import anyways
     },
 
-    plugins: plugins,
-
     devtool: 'source-map',
-
-    devServer: {
-        contentBase: [
-            path.join(__dirname, 'test'),
-            path.join(__dirname, 'lib'),
-        ],
-        index: 'index.html',
-        compress: true,
-        port: 9000
-    }
 };
+
+module.exports = [
+    /* web */
+    Object.assign({}, common, {
+        'target': 'web',
+        entry: {
+            'index': './src/index.ts',
+            'engine': './src/engine.ts',
+        },
+
+        output: {
+            path: __dirname + '/lib',
+            filename: production ? '[name].min.js' : '[name].js'
+        },
+
+        module: {
+            rules: [
+                // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
+                {
+                    test: /\.tsx?$/,
+                    loader: "ts-loader",
+                    exclude: /node_modules/,
+                    options: {
+                        configFile: 'tsconfig.web.json',
+                    }
+                }
+            ]
+        },
+
+        plugins: plugins.concat([
+            new webpack.DefinePlugin({
+                PRODUCTION: production,
+                CLIENT: true,
+                SERVER: false,
+            }),
+
+            new TypedocWebpackPlugin({
+                name: 'Goban',
+                mode: 'file',
+                out: 'doc/',
+                theme: 'minimal',
+                includeDeclarations: true,
+                ignoreCompilerErrors: false,
+            })
+        ]),
+
+        devServer: {
+            contentBase: [
+                path.join(__dirname, 'test'),
+                path.join(__dirname, 'lib'),
+            ],
+            index: 'index.html',
+            compress: true,
+            port: 9000,
+            writeToDisk: true,
+            hot: false,
+            inline: false,
+        }
+    }),
+
+    /* node */
+    Object.assign({}, common, {
+        'target': 'node',
+
+        entry: {
+            'engine': './src/engine.ts',
+        },
+
+        module: {
+            rules: [
+                // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
+                {
+                    test: /\.tsx?$/,
+                    loader: "ts-loader",
+                    exclude: /node_modules/,
+                    options: {
+                        configFile: 'tsconfig.node.json',
+                    }
+                }
+            ]
+        },
+
+        output: {
+            path: __dirname + '/node',
+            filename: '[name].js'
+        },
+
+        plugins: plugins.concat([
+            new webpack.DefinePlugin({
+                PRODUCTION: production,
+                CLIENT: false,
+                SERVER: true,
+            }),
+        ]),
+    })
+];

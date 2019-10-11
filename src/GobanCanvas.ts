@@ -33,14 +33,14 @@ import {GoEngine, encodeMove, encodeMoves} from "./GoEngine";
 import {GoMath} from "./GoMath";
 import {GoThemes} from "./GoThemes";
 import { MoveTreePenMarks } from "./MoveTree";
-import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingRatio} from "./GoUtil";
+import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingRatio, elementOffset} from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
 import {_, pgettext, interpolate} from "./translate";
 
 let __theme_cache = {"black": {}, "white": {}};
 
 export interface GobanCanvasConfig extends GobanConfig {
-    "board_div": HTMLElement;
+    board_div: HTMLElement;
 }
 
 export class GobanCanvas extends GobanCore  {
@@ -50,6 +50,13 @@ export class GobanCanvas extends GobanCore  {
     private __set_board_height;
     private __set_board_width;
     private ready_to_draw:boolean = false;
+    private message_div:HTMLDivElement;
+    private message_td:HTMLElement;
+    private message_text:HTMLDivElement;
+    private message_timeout:number;
+    private shadow_layer:HTMLCanvasElement;
+    private shadow_ctx:CanvasRenderingContext2D;
+
 
     constructor(config:GobanCanvasConfig, preloaded_data?:AdHocFormat|JGOF) {
         super(config, preloaded_data);
@@ -77,6 +84,8 @@ export class GobanCanvas extends GobanCore  {
         window.addEventListener("keydown", this.handleShiftKey);
         window.addEventListener("keyup", this.handleShiftKey);
 
+        this.post_config_constructor();
+
         this.ready_to_draw = true;
         this.redraw(true);
     }
@@ -87,6 +96,11 @@ export class GobanCanvas extends GobanCore  {
         this.board.remove();
         this.detachPenCanvas();
         this.detachShadowLayer();
+
+        if (this.message_timeout) {
+            clearTimeout(this.message_timeout);
+            this.message_timeout = null;
+        }
 
         window.removeEventListener("keydown", this.handleShiftKey);
         window.removeEventListener("keyup", this.handleShiftKey);
@@ -99,14 +113,18 @@ export class GobanCanvas extends GobanCore  {
         }
     }
     protected attachShadowLayer():void {
-        if (!this.shadow_layer) {
+        if (!this.shadow_layer && this.parent) {
             this.shadow_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
             this.shadow_layer.setAttribute("id", "shadow-canvas");
             this.shadow_layer.className = "ShadowLayer";
 
-            this.shadow_layer.insertBefore(this.board);
-            this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.shadow_ctx = this.shadow_layer[0].getContext("2d");
+            this.parent.insertBefore(this.shadow_layer, this.board);
+            //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
+            this.shadow_layer.style.left = this.layer_offset_left;
+            this.shadow_layer.style.top = this.layer_offset_top;
+
+
+            this.shadow_ctx = this.shadow_layer.getContext("2d");
             this.bindPointerBindings(this.shadow_layer);
         }
     }
@@ -123,8 +141,10 @@ export class GobanCanvas extends GobanCore  {
             this.pen_layer.setAttribute("id", "pen-canvas");
             this.pen_layer.className = "PenLayer";
             this.parent.append(this.pen_layer);
-            this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.pen_ctx = this.pen_layer[0].getContext("2d");
+            //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
+            this.pen_layer.style.left = this.layer_offset_left;
+            this.pen_layer.style.top = this.layer_offset_top;
+            this.pen_ctx = this.pen_layer.getContext("2d");
             this.bindPointerBindings(this.pen_layer);
         }
     }
@@ -168,12 +188,8 @@ export class GobanCanvas extends GobanCore  {
                 try {
                     let pos = getRelativeEventPosition(ev);
                     let pt = this.xy2ij(pos.x, pos.y);
-                    let chat_input = $(".chat-input");
-                    if (!chat_input.attr("disabled")) {
-                        if (pt.i >= 0 && pt.i < this.engine.width && pt.j >= 0 && pt.j < this.engine.height) {
-                            let txt = (chat_input.val().trim() + " " + this.engine.prettyCoords(pt.i, pt.j)).trim();
-                            chat_input.val(txt);
-                        }
+                    if (GobanCore.hooks.addCoordinatesToChatInput) {
+                        GobanCore.hooks.addCoordinatesToChatInput(this.engine.prettyCoords(pt.i, pt.j));
                     }
                 } catch (e) {
                     console.error(e);
@@ -252,34 +268,29 @@ export class GobanCanvas extends GobanCore  {
         let startX = 0;
         let startY = 0;
 
-        const onTouchStart = (ev) => {
+        const onTouchStart = (ev:TouchEvent) => {
             if (mousedisabled) {
                 clearTimeout(mousedisabled);
             }
             mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
 
-            if (ev.target === canvas[0]) {
-                let target = $(ev.target);
-                lastX = ev.originalEvent.touches[0].pageX;
-                lastY = ev.originalEvent.touches[0].pageY;
-                startX = ev.originalEvent.touches[0].pageX;
-                startY = ev.originalEvent.touches[0].pageY;
+            if (ev.target === canvas) {
+                lastX = ev.touches[0].pageX;
+                lastY = ev.touches[0].pageY;
+                startX = ev.touches[0].pageX;
+                startY = ev.touches[0].pageY;
                 pointerDown(ev);
             } else if (dragging) {
                 pointerOut(ev);
             }
         };
-        const onTouchEnd = (ev) => {
+        const onTouchEnd = (ev:TouchEvent) => {
             if (mousedisabled) {
                 clearTimeout(mousedisabled);
             }
             mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
 
-            if (ev.target === canvas[0]) {
-                let target = $(ev.target);
-                ev.pageX = lastX;
-                ev.pageY = lastY;
-
+            if (ev.target === canvas) {
                 if (Math.sqrt((startX - lastX) * (startX - lastX) + (startY - lastY) * (startY - lastY)) > 10) {
                     pointerOut(ev);
                 } else {
@@ -289,16 +300,15 @@ export class GobanCanvas extends GobanCore  {
                 pointerOut(ev);
             }
         };
-        const onTouchMove = (ev) => {
+        const onTouchMove = (ev:TouchEvent) => {
             if (mousedisabled) {
                 clearTimeout(mousedisabled);
             }
             mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
 
-            if (ev.target === canvas[0]) {
-                let target = $(ev.target);
-                lastX = ev.originalEvent.touches[0].pageX;
-                lastY = ev.originalEvent.touches[0].pageY;
+            if (ev.target === canvas) {
+                lastX = ev.touches[0].pageX;
+                lastY = ev.touches[0].pageY;
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
                     pointerMove(ev);
                     ev.preventDefault();
@@ -309,13 +319,13 @@ export class GobanCanvas extends GobanCore  {
             }
         };
 
-        $(document).on("touchstart", onTouchStart);
-        $(document).on("touchend", onTouchEnd);
-        $(document).on("touchmove", onTouchMove);
+        document.addEventListener("touchstart", onTouchStart);
+        document.addEventListener("touchend", onTouchEnd);
+        document.addEventListener("touchmove", onTouchMove);
         this.on("destroy", () => {
-            $(document).off("touchstart", onTouchStart);
-            $(document).off("touchend", onTouchEnd);
-            $(document).off("touchmove", onTouchMove);
+            document.removeEventListener("touchstart", onTouchStart);
+            document.removeEventListener("touchend", onTouchEnd);
+            document.removeEventListener("touchmove", onTouchMove);
         });
     }
     public clearAnalysisDrawing():void {
@@ -439,8 +449,6 @@ export class GobanCanvas extends GobanCore  {
         }
 
         this.setSubmit(null);
-        $("#pass-resign-buttons span").removeClass("hidden-by-submit");
-        $("#ctrl-play-submit").addClass("hidden");
         if (this.submitBlinkTimer) {
             clearTimeout(this.submitBlinkTimer);
         }
@@ -473,9 +481,7 @@ export class GobanCanvas extends GobanCore  {
          * unless the board is a demo board (thus black_player_id is 0).  */
         try {
             let force_redraw = false;
-            if (this.mode === "play") {
-                $("#pass-resign-buttons").removeClass("hidden");
-            }
+
             if ((this.engine.phase === "stone removal" || this.scoring_mode) && this.isParticipatingPlayer()) {
                 let arrs;
                 if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
@@ -1799,8 +1805,10 @@ export class GobanCanvas extends GobanCore  {
                 if (this.pen_layer) {
                     if (this.pen_marks.length) {
                         resizeDeviceScaledCanvas(this.pen_layer, metrics.width, metrics.height);
-                        this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                        this.pen_ctx = this.pen_layer[0].getContext("2d");
+                        //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
+                        this.pen_layer.style.left = this.layer_offset_left;
+                        this.pen_layer.style.top = this.layer_offset_top;
+                        this.pen_ctx = this.pen_layer.getContext("2d");
                     } else {
                         this.detachPenCanvas();
                     }
@@ -1956,13 +1964,20 @@ export class GobanCanvas extends GobanCore  {
     public message(msg:string, timeout:number = 5000):void {
         this.clearMessage();
 
-        this.message_div = $("<div>").addClass("GobanMessage");
-        this.message_td = $("<td>");
-        this.message_div.append($("<table>").append($("<tr>").append(this.message_td)));
-        this.message_text = $("<div>").html(msg);
+        this.message_div = document.createElement('div');
+        this.message_div.className = "GobanMessage";
+        this.message_td = document.createElement("td");
+        let table = document.createElement("table");
+        let tr = document.createElement("tr");
+        tr.appendChild(this.message_td);
+        table.appendChild(tr);
+        this.message_div.appendChild(table);
+        this.message_text = document.createElement("div");
+        this.message_text.innerHTML = msg;
         this.message_td.append(this.message_text);
         this.parent.append(this.message_div);
-        this.message_div.click(() => {
+
+        this.message_div.addEventListener("click", () => {
             if (timeout > 0) {
                 this.clearMessage();
             }
@@ -1973,7 +1988,7 @@ export class GobanCanvas extends GobanCore  {
         }
 
         if (timeout > 0) {
-            this.message_timeout = setTimeout(() => {
+            this.message_timeout = window.setTimeout(() => {
                 this.clearMessage();
             }, timeout);
         }
@@ -2011,8 +2026,10 @@ export class GobanCanvas extends GobanCore  {
         if (this.theme_white.stoneCastsShadow(this.theme_stone_radius) || this.theme_black.stoneCastsShadow(this.theme_stone_radius)) {
             if (this.shadow_layer) {
                 resizeDeviceScaledCanvas(this.shadow_layer, this.metrics.width, this.metrics.height);
-                this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                this.shadow_ctx = this.shadow_layer[0].getContext("2d");
+                //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
+                this.shadow_layer.style.left = this.layer_offset_left;
+                this.shadow_layer.style.top = this.layer_offset_top;
+                this.shadow_ctx = this.shadow_layer.getContext("2d");
             } else {
                 this.attachShadowLayer();
             }
@@ -2060,19 +2077,3 @@ export class GobanCanvas extends GobanCore  {
     }
 }
 
-function elementOffset(element:HTMLElement) {
-    if (!element) {
-        return null;
-    }
-
-    let rect = element.getBoundingClientRect();
-
-    if (!rect) {
-        return null;
-    }
-
-    return {
-        top: rect.top + document.body.scrollTop,
-        left: rect.left + document.body.scrollLeft
-    };
-}

@@ -20,7 +20,8 @@
     "scripts": {
         "dev": "webpack-dev-server",
         "build": "tsc",
-        "lint": "tslint -p tsconfig.json"
+        "lint": "tslint -p tsconfig.json",
+        "typedoc": "typedoc"
     },
     "repository": {
         "type": "git",
@@ -33,16 +34,15 @@
     },
     "homepage": "https://github.com/online-go/goban#readme",
     "devDependencies": {
-        "@types/jquery": "^2.0.34",
         "eventemitter3": "^4.0.0",
+        "pixi.js": "^5.1.5",
         "ts-loader": "^6.2.0",
         "tslint": "^5.20.0",
+        "typedoc": "^0.15.0",
+        "typedoc-webpack-plugin": "^1.1.4",
         "typescript": "^3.6.3",
         "webpack": "^4.41.0",
         "webpack-cli": "^3.3.9",
         "webpack-dev-server": "^3.8.2"
-    },
-    "dependencies": {
-        "pixi.js": "^5.1.5"
     }
 }

@@ -92,32 +92,36 @@ export function deviceCanvasScalingRatio() {
     return __deviceCanvasScalingRatio;
 }
 
-export function getRelativeEventPosition(event) {
-    let x;
-    let y;
-    let offset = $(event.target).offset();
+export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
+    let x = -1000;
+    let y = -1000;
+    let offset = elementOffset(event.target as HTMLElement);
 
-    if (event.originalEvent.touches && event.originalEvent.touches.length) {
-        x = event.originalEvent.touches[0].pageX - offset.left;
-        y = event.originalEvent.touches[0].pageY - offset.top;
-    } else if (event.touches && event.touches.length) {
-        x = event.touches[0].pageX - offset.left;
-        y = event.touches[0].pageY - offset.top;
-    } else if (event.pageX) {
-        x = event.pageX - offset.left;
-        y = event.pageY - offset.top;
-    } else {
-        console.log("Missing event tap/click location:", event);
-        x = -1000;
-        y = -1000;
+    if (event instanceof TouchEvent) {
+        if (event.touches && event.touches.length) {
+            x = event.touches[0].pageX - offset.left;
+            y = event.touches[0].pageY - offset.top;
+        } else if (event.touches && event.touches.length) {
+            x = event.touches[0].pageX - offset.left;
+            y = event.touches[0].pageY - offset.top;
+        } else {
+            console.log("Missing event tap location:", event);
+        }
+    } else if (event instanceof MouseEvent) {
+        if (event.pageX) {
+            x = event.pageX - offset.left;
+            y = event.pageY - offset.top;
+        } else {
+            console.log("Missing event click location:", event);
+        }
     }
 
     return {"x": x, "y": y};
 }
-export function getRandomInt(min, max) {
+export function getRandomInt(min:number, max:number) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
-export function shortDurationString(seconds) {
+export function shortDurationString(seconds:number) {
     let weeks = Math.floor(seconds / (86400 * 7)); seconds -= weeks * 86400 * 7;
     let days = Math.floor(seconds / 86400); seconds -= days * 86400;
     let hours = Math.floor(seconds / 3600); seconds -= hours * 3600;
@@ -184,4 +188,21 @@ export function deepEqual(a: any, b: any) {
     } else {
         return a === b;
     }
+}
+
+export function elementOffset(element:HTMLElement) {
+    if (!element) {
+        return null;
+    }
+
+    let rect = element.getBoundingClientRect();
+
+    if (!rect) {
+        return null;
+    }
+
+    return {
+        top: rect.top + document.body.scrollTop,
+        left: rect.left + document.body.scrollLeft
+    };
 }

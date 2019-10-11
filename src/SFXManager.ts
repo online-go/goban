@@ -157,11 +157,11 @@ export class SFXManager {
 
         this.sfx[name] = this.loaded[pathname] = audio;
 
-        let elt = $(this.sfx[name]);
+        let elt:HTMLAudioElement = this.sfx[name];
         this.play_state[name] = 'stopped';
-        elt.on("playing", x => this.play_state[name] = 'playing');
-        elt.on("ended", x => this.play_state[name] = 'stopped');
-        elt.on("pause", x => this.play_state[name] = 'stopped');
+        elt.addEventListener("playing", x => this.play_state[name] = 'playing');
+        elt.addEventListener("ended", x => this.play_state[name] = 'stopped');
+        elt.addEventListener("pause", x => this.play_state[name] = 'stopped');
     }
 
 }
