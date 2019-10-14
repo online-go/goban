@@ -21,7 +21,7 @@
         "dev": "webpack-dev-server",
         "build": "tsc",
         "lint": "tslint -p tsconfig.json",
-        "typedoc": "typedoc"
+        "typedoc": "typedoc --mode file --out doc/ --theme minimal --tsconfig tsconfig.web.json --excludeExternals --externalPattern '**/node_modules/**' --includeDeclarations src/"
     },
     "repository": {
         "type": "git",
@@ -39,7 +39,6 @@
         "ts-loader": "^6.2.0",
         "tslint": "^5.20.0",
         "typedoc": "^0.15.0",
-        "typedoc-webpack-plugin": "^1.1.4",
         "typescript": "^3.6.3",
         "webpack": "^4.41.0",
         "webpack-cli": "^3.3.9",

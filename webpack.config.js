@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const webpack = require('webpack');
 const pkg = require('./package.json');
-const TypedocWebpackPlugin = require('typedoc-webpack-plugin');
 
 const production = process.env.PRODUCTION ? true : false;
 
@@ -84,15 +83,6 @@ module.exports = [
                 CLIENT: true,
                 SERVER: false,
             }),
-
-            new TypedocWebpackPlugin({
-                name: 'Goban',
-                mode: 'file',
-                out: 'doc/',
-                theme: 'minimal',
-                includeDeclarations: true,
-                ignoreCompilerErrors: false,
-            })
         ]),
 
         devServer: {
