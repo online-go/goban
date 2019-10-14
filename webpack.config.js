@@ -5,8 +5,6 @@ const fs = require('fs');
 const webpack = require('webpack');
 const pkg = require('./package.json');
 
-const production = process.env.PRODUCTION ? true : false;
-
 let plugins = [];
 
 plugins.push(new webpack.BannerPlugin(
@@ -25,113 +23,120 @@ See the License for the specific language governing permissions and
 limitations under the License.
 `));
 
+module.exports = (env, argv) => {
+    const production = argv.mode === 'production';
 
-const common = {
-    mode: production ? 'production' : 'development',
+    plugins.push(new webpack.EnvironmentPlugin({
+        NODE_ENV: production ? 'production' : 'development',
+        DEBUG: false
+    }));
 
-    resolve: {
-        modules: [
-            'src',
-            'node_modules'
-        ],
-        extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
-    },
+    const common = {
+        mode: production ? 'production' : 'development',
 
-    performance: {
-        maxAssetSize: 1024 * 1024 * 2.5,
-        maxEntrypointSize: 1024 * 1024 * 2.5,
-    },
-
-    externals: {
-        "pixi.js": "PIXI", // can't seem to import anyways
-    },
-
-    devtool: 'source-map',
-};
-
-module.exports = [
-    /* web */
-    Object.assign({}, common, {
-        'target': 'web',
-        entry: {
-            'index': './src/index.ts',
-            'engine': './src/engine.ts',
-        },
-
-        output: {
-            path: __dirname + '/lib',
-            filename: production ? '[name].min.js' : '[name].js'
-        },
-
-        module: {
-            rules: [
-                // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
-                {
-                    test: /\.tsx?$/,
-                    loader: "ts-loader",
-                    exclude: /node_modules/,
-                    options: {
-                        configFile: 'tsconfig.web.json',
-                    }
-                }
-            ]
-        },
-
-        plugins: plugins.concat([
-            new webpack.DefinePlugin({
-                PRODUCTION: production,
-                CLIENT: true,
-                SERVER: false,
-            }),
-        ]),
-
-        devServer: {
-            contentBase: [
-                path.join(__dirname, 'test'),
-                path.join(__dirname, 'lib'),
+        resolve: {
+            modules: [
+                'src',
+                'node_modules'
             ],
-            index: 'index.html',
-            compress: true,
-            port: 9000,
-            writeToDisk: true,
-            hot: false,
-            inline: false,
-        }
-    }),
-
-    /* node */
-    Object.assign({}, common, {
-        'target': 'node',
-
-        entry: {
-            'engine': './src/engine.ts',
+            extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
         },
 
-        module: {
-            rules: [
-                // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
-                {
-                    test: /\.tsx?$/,
-                    loader: "ts-loader",
-                    exclude: /node_modules/,
-                    options: {
-                        configFile: 'tsconfig.node.json',
+        performance: {
+            maxAssetSize: 1024 * 1024 * 2.5,
+            maxEntrypointSize: 1024 * 1024 * 2.5,
+        },
+
+        externals: {
+            "pixi.js": "PIXI", // can't seem to import anyways
+        },
+
+        devtool: 'source-map',
+    };
+
+
+    return [
+        /* web */
+        Object.assign({}, common, {
+            'target': 'web',
+            entry: {
+                'goban': './src/index.ts',
+                'engine': './src/engine.ts',
+            },
+
+            output: {
+                path: __dirname + '/lib',
+                filename: production ? '[name].min.js' : '[name].js'
+            },
+
+            module: {
+                rules: [
+                    // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
+                    {
+                        test: /\.tsx?$/,
+                        loader: "ts-loader",
+                        exclude: /node_modules/,
+                        options: {
+                            configFile: 'tsconfig.web.json',
+                        }
                     }
-                }
-            ]
-        },
+                ]
+            },
 
-        output: {
-            path: __dirname + '/node',
-            filename: '[name].js'
-        },
+            plugins: plugins.concat([
+                new webpack.DefinePlugin({
+                    CLIENT: true,
+                    SERVER: false,
+                }),
+            ]),
 
-        plugins: plugins.concat([
-            new webpack.DefinePlugin({
-                PRODUCTION: production,
-                CLIENT: false,
-                SERVER: true,
-            }),
-        ]),
-    })
-];
+            devServer: {
+                contentBase: [
+                    path.join(__dirname, 'test'),
+                    path.join(__dirname, 'lib'),
+                ],
+                index: 'index.html',
+                compress: true,
+                port: 9000,
+                writeToDisk: true,
+                hot: false,
+                inline: false,
+            }
+        }),
+
+        /* node */
+        Object.assign({}, common, {
+            'target': 'node',
+
+            entry: {
+                'engine': './src/engine.ts',
+            },
+
+            module: {
+                rules: [
+                    // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
+                    {
+                        test: /\.tsx?$/,
+                        loader: "ts-loader",
+                        exclude: /node_modules/,
+                        options: {
+                            configFile: 'tsconfig.node.json',
+                        }
+                    }
+                ]
+            },
+
+            output: {
+                path: __dirname + '/node',
+                filename: '[name].js'
+            },
+
+            plugins: plugins.concat([
+                new webpack.DefinePlugin({
+                    CLIENT: false,
+                    SERVER: true,
+                }),
+            ]),
+        })
+    ];
+}

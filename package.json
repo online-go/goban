@@ -2,8 +2,8 @@
     "name": "goban",
     "version": "0.3.0",
     "description": "",
-    "main": "lib/index.js",
-    "types": "lib/index.js.d.ts",
+    "main": "lib/goban.js",
+    "types": "lib/goban.js.d.ts",
     "files": [
         "lib/",
         "src/"
@@ -19,7 +19,8 @@
     ],
     "scripts": {
         "dev": "webpack-dev-server",
-        "build": "tsc",
+        "build-debug": "webpack",
+        "build-production": "webpack --mode production",
         "lint": "tslint -p tsconfig.json",
         "typedoc": "typedoc --mode file --out doc/ --theme minimal --tsconfig tsconfig.web.json --excludeExternals --externalPattern '**/node_modules/**' --includeDeclarations src/"
     },
