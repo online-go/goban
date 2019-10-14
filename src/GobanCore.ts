@@ -260,7 +260,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected socket_event_bindings = [];
     protected square_size:number;
     protected stone_placement_enabled;
-    protected stone_removal_clock;
     protected submitBlinkTimer;
     protected syncToCurrentReviewMove;
     public  theme_black;            /* public for access by our MoveTree render methods */
@@ -325,9 +324,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.bounded_width = this.bounds ? (this.bounds.right - this.bounds.left) + 1 : this.width;
         this.bounded_height = this.bounds ? (this.bounds.bottom - this.bounds.top) + 1 : this.height;
         this.title_div = config["title_div"];
-        this.black_clock = config["black_clock"];
-        this.white_clock = config["white_clock"];
-        this.stone_removal_clock = config["stone_removal_clock"];
         this.black_name = config["black_name"];
         this.white_name = config["white_name"];
         this.move_number = config["move_number"];
@@ -2568,7 +2564,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 case 'simple':
                     ret.main_time = is_current_player
                         ?  Math.max(0, (original_clock_expiration - time_elapsed) - current_server_time)
-                        : time_control.per_move;
+                        : time_control.per_move * 1000;
                     break;
 
                 case 'none':
@@ -2578,27 +2574,27 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 case 'absolute':
                     ret.main_time = is_current_player
                         ?  Math.max(0, (original_clock_expiration - time_elapsed) - current_server_time)
-                        : original_clock_expiration;
+                        : Math.max(0, original_clock_expiration - current_server_time);
                     break;
 
                 case 'fischer':
                     ret.main_time = is_current_player
-                        ?  Math.max(0, (original_clock.thinking_time - time_elapsed))
-                        : original_clock.thinking_time;
+                        ?  Math.max(0, (original_clock.thinking_time * 1000 - time_elapsed))
+                        : original_clock.thinking_time*1000;
                     break;
 
                 case 'byoyomi':
                     if (is_current_player) {
-                        ret.main_time = original_clock.thinking_time - time_elapsed;
+                        ret.main_time = original_clock.thinking_time * 1000 - time_elapsed;
                         ret.periods_left = original_clock.periods;
-                        ret.period_time_left = time_control.period_time;
+                        ret.period_time_left = time_control.period_time * 1000;
                         if (ret.main_time < 0) {
                             let overtime_usage = - ret.main_time;
                             ret.main_time = 0;
 
-                            let periods_used = Math.floor(overtime_usage / time_control.period_time);
+                            let periods_used = Math.floor(overtime_usage / time_control.period_time * 1000);
                             ret.periods_left -= periods_used;
-                            ret.period_time_left = overtime_usage - (periods_used * time_control.period_time);
+                            ret.period_time_left = overtime_usage - (periods_used * time_control.period_time * 1000);
 
                             if (ret.periods_left < 0) {
                                 ret.periods_left = 0;
@@ -2609,17 +2605,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             }
                         }
                     } else {
-                        ret.main_time = original_clock.thinking_time;
+                        ret.main_time = original_clock.thinking_time * 1000;
                         ret.periods_left = original_clock.periods;
-                        ret.period_time_left = time_control.period_time;
+                        ret.period_time_left = time_control.period_time * 1000;
                     }
                     break;
 
                 case 'canadian':
                     if (is_current_player) {
-                        ret.main_time = original_clock.thinking_time - time_elapsed;
+                        ret.main_time = original_clock.thinking_time * 1000 - time_elapsed;
                         ret.moves_left = original_clock.moves_left;
-                        ret.block_time_left = original_clock.block_time;
+                        ret.block_time_left = original_clock.block_time * 1000;
 
                         if (ret.main_time < 0) {
                             let overtime_usage = - ret.main_time;
@@ -2632,9 +2628,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             }
                         }
                     } else {
-                        ret.main_time = original_clock.thinking_time;
+                        ret.main_time = original_clock.thinking_time * 1000;
                         ret.moves_left = original_clock.moves_left;
-                        ret.block_time_left = original_clock.block_time;
+                        ret.block_time_left = original_clock.block_time * 1000;
                     }
                     break;
 
