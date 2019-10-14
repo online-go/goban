@@ -97,7 +97,7 @@ export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
     let y = -1000;
     let offset = elementOffset(event.target as HTMLElement);
 
-    if (event instanceof TouchEvent) {
+    if (typeof(TouchEvent) !== "undefined" && event instanceof TouchEvent) {
         if (event.touches && event.touches.length) {
             x = event.touches[0].pageX - offset.left;
             y = event.touches[0].pageY - offset.top;
