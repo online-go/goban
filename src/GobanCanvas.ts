@@ -56,6 +56,8 @@ export class GobanCanvas extends GobanCore  {
     private message_timeout:number;
     private shadow_layer:HTMLCanvasElement;
     private shadow_ctx:CanvasRenderingContext2D;
+    private handleShiftKey:(ev:KeyboardEvent) => void;
+
 
 
     constructor(config:GobanCanvasConfig, preloaded_data?:AdHocFormat|JGOF) {
@@ -89,6 +91,12 @@ export class GobanCanvas extends GobanCore  {
         this.ready_to_draw = true;
         this.redraw(true);
     }
+    public enablePen():void {
+        this.attachPenCanvas();
+    }
+    public disablePen():void {
+        this.detachPenCanvas();
+    }
 
     public destroy():void {
         super.destroy();
@@ -105,14 +113,14 @@ export class GobanCanvas extends GobanCore  {
         window.removeEventListener("keydown", this.handleShiftKey);
         window.removeEventListener("keyup", this.handleShiftKey);
     }
-    protected detachShadowLayer():void {
+    private detachShadowLayer():void {
         if (this.shadow_layer) {
             this.shadow_layer.remove();
             this.shadow_layer = null;
             this.shadow_ctx = null;
         }
     }
-    protected attachShadowLayer():void {
+    private attachShadowLayer():void {
         if (!this.shadow_layer && this.parent) {
             this.shadow_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
             this.shadow_layer.setAttribute("id", "shadow-canvas");
@@ -128,14 +136,14 @@ export class GobanCanvas extends GobanCore  {
             this.bindPointerBindings(this.shadow_layer);
         }
     }
-    public detachPenCanvas():void {
+    private detachPenCanvas():void {
         if (this.pen_layer) {
             this.pen_layer.remove();
             this.pen_layer = null;
             this.pen_ctx = null;
         }
     }
-    protected attachPenCanvas():void {
+    private attachPenCanvas():void {
         if (!this.pen_layer) {
             this.pen_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
             this.pen_layer.setAttribute("id", "pen-canvas");
@@ -1993,7 +2001,7 @@ export class GobanCanvas extends GobanCore  {
             }, timeout);
         }
     }
-    protected clearMessage():void {
+    public clearMessage():void {
         if (this.message_div) {
             this.message_div.remove();
             this.message_div = null;

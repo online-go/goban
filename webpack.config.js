@@ -55,13 +55,14 @@ module.exports = (env, argv) => {
     };
 
 
-    return [
+    let ret = [
         /* web */
         Object.assign({}, common, {
             'target': 'web',
             entry: {
                 'goban': './src/index.ts',
                 'engine': './src/engine.ts',
+                'test': './src/test.tsx',
             },
 
             output: {
@@ -92,6 +93,7 @@ module.exports = (env, argv) => {
 
             devServer: {
                 contentBase: [
+                    path.join(__dirname, 'assets'),
                     path.join(__dirname, 'test'),
                     path.join(__dirname, 'lib'),
                 ],
@@ -102,8 +104,11 @@ module.exports = (env, argv) => {
                 hot: false,
                 inline: false,
             }
-        }),
+        })
+    ];
 
+    if (production) {
+        ret.push(
         /* node */
         Object.assign({}, common, {
             'target': 'node',
@@ -137,6 +142,8 @@ module.exports = (env, argv) => {
                     SERVER: true,
                 }),
             ]),
-        })
-    ];
+        }));
+    }
+
+    return ret;
 }

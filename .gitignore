@@ -62,3 +62,5 @@ typings/
 
 lib/
 node/
+doc/
+deployment-staging-area/

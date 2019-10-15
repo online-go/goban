@@ -56,7 +56,10 @@ export interface GobanSelectedThemes {
 
 
 export interface GobanConfig {
-
+    interactive?: boolean;
+    mode?: 'puzzle';
+    square_size?: number;
+    original_sgf?: string;
 }
 
 
@@ -209,7 +212,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected game_type;
     protected getPuzzlePlacementSetting;
     protected goban_id: number;
-    protected handleShiftKey;
     protected has_new_official_move;
     protected highlight_movetree_moves;
     protected interactive;
@@ -287,6 +289,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
      *  own config before these are called, we set this function to be called
      *  by our subclass after it's done it's own internal config stuff. */
     protected post_config_constructor:() => void;
+
+    public abstract enablePen();
+    public abstract disablePen();
+    public abstract clearAnalysisDrawing();
+    public abstract drawPenMarks(penmarks);
+    public abstract message(msg, timeout?);
+    public abstract clearMessage();
+    protected abstract setThemes(themes, dont_redraw);
+    public abstract drawSquare(i:number, j:number):void;
+    public abstract redraw(force_clear?: boolean);
 
     public static hooks:GobanHooks = {
         getClockDrift: () => 0,
@@ -587,7 +599,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (GobanCore.hooks.getSelectedThemes) {
             return GobanCore.hooks.getSelectedThemes();
         }
-        return {white:'Plain', black:'Plain', board:'Plain'};
+        //return {white:'Plain', black:'Plain', board:'Plain'};
+        return {white:'Plain', black:'Plain', board:'Granite'};
     }
     protected connect(server_socket) {
         let socket = this.socket = server_socket;
@@ -1209,8 +1222,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.socket.send(where, msg);
     }
-    public abstract message(msg, timeout?);
-    protected abstract clearMessage();
 
     protected setTitle(title) {
         this.title = title;
@@ -1262,18 +1273,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.setLabelCharacterFromMarks(this.analyze_subtool);
 
         if (tool === "draw") {
-            this.attachPenCanvas();
+            this.enablePen();
         }
     }
-
-    protected abstract attachPenCanvas();
-    public abstract detachPenCanvas();
-    public abstract clearAnalysisDrawing();
-    public abstract drawPenMarks(penmarks);
-    protected abstract attachShadowLayer();
-    protected abstract detachShadowLayer();
-
-
 
 
     protected putOrClearLabel(x, y, mode?) {
@@ -1434,10 +1436,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
     }
 
-    public abstract drawSquare(i:number, j:number):void;
-
-
-    public abstract redraw(force_clear?: boolean);
 
     protected computeThemeStoneRadius(metrics) {
         // Scale proportionally in general
@@ -1450,7 +1448,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         return Math.max(1, r);
     }
-    protected abstract setThemes(themes, dont_redraw);
     public redrawMoveTree() {
         //let d = $(this.move_tree_div);
         //let c = $(this.move_tree_canvas);
@@ -1965,9 +1962,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         if (this.mode !== "analyze" || this.analyze_tool !== "draw") {
-            this.detachPenCanvas();
+            this.disablePen();
         } else {
-            this.attachPenCanvas();
+            this.enablePen();
         }
 
         if (mode === "play" && this.engine.phase !== "finished") {

@@ -1,6 +1,6 @@
 {
     "name": "goban",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "",
     "main": "lib/goban.js",
     "types": "lib/goban.js.d.ts",
@@ -35,6 +35,10 @@
     },
     "homepage": "https://github.com/online-go/goban#readme",
     "devDependencies": {
+        "@types/react": "^16.9.2",
+        "@types/react-dom": "^16.9.0",
+        "react": "^16.9.0",
+        "react-dom": "^16.9.0",
         "eventemitter3": "^4.0.0",
         "pixi.js": "^5.1.5",
         "ts-loader": "^6.2.0",

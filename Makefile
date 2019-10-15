@@ -15,7 +15,7 @@ clean:
 publish push:
 	yarn run build-debug
 	yarn run build-production
-	#yarn publish ./
+	yarn publish ./
 	rm -Rf deployment-staging-area;
 	mkdir deployment-staging-area;
 	cp lib/goban.js* deployment-staging-area
@@ -23,10 +23,5 @@ publish push:
 	cp lib/engine.js* deployment-staging-area
 	cp lib/engine.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/$(VERSION)/
-
-
-
-version:
-	#echo $(VERSION)
 
 .PHONY: doc

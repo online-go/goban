@@ -80,7 +80,7 @@ export class GoTheme {
     }
 
     /* Returns a set of CSS styles that should be applied to the background layer (ie the board) */
-    public getBackgroundCSS() {
+    public getBackgroundCSS():{'background-color': string, 'background-image': string} {
         return {
             "background-color": "#DCB35C",
             "background-image": ""
