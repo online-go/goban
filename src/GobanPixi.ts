@@ -61,11 +61,6 @@ export class GobanPixi extends GobanCore  {
 
     // possibly deprecated
 
-    private __set_board_height;
-    private __set_board_width;
-
-    private shadow_layer:HTMLCanvasElement;
-    private shadow_ctx:CanvasRenderingContext2D;
     private ready_to_draw:boolean = false;
     private message_div:HTMLDivElement;
     private message_td:HTMLElement;
@@ -165,234 +160,7 @@ export class GobanPixi extends GobanCore  {
         window.removeEventListener("keydown", this.handleShiftKey);
         window.removeEventListener("keyup", this.handleShiftKey);
     }
-    /*
-    private detachShadowLayer():void {
-        if (this.shadow_layer) {
-            this.shadow_layer.remove();
-            this.shadow_layer = null;
-            this.shadow_ctx = null;
-        }
-    }
-    private attachShadowLayer():void {
-        if (!this.shadow_layer && this.parent) {
-            this.shadow_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
-            this.shadow_layer.setAttribute("id", "shadow-canvas");
-            this.shadow_layer.className = "ShadowLayer";
 
-            this.parent.insertBefore(this.shadow_layer, this.board);
-            //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.shadow_layer.style.left = this.layer_offset_left;
-            this.shadow_layer.style.top = this.layer_offset_top;
-
-
-            this.shadow_ctx = this.shadow_layer.getContext("2d");
-            this.bindPointerBindings(this.shadow_layer);
-        }
-    }
-    private detachPenCanvas():void {
-        if (this.pen_layer) {
-            this.pen_layer.remove();
-            this.pen_layer = null;
-            this.pen_ctx = null;
-        }
-    }
-    private attachPenCanvas():void {
-        if (!this.pen_layer) {
-            this.pen_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
-            this.pen_layer.setAttribute("id", "pen-canvas");
-            this.pen_layer.className = "PenLayer";
-            this.parent.append(this.pen_layer);
-            //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.pen_layer.style.left = this.layer_offset_left;
-            this.pen_layer.style.top = this.layer_offset_top;
-            this.pen_ctx = this.pen_layer.getContext("2d");
-            this.bindPointerBindings(this.pen_layer);
-        }
-    }
-    */
-
-    /*
-    private bindPointerBindings(canvas:HTMLCanvasElement):void {
-        if (!this.interactive) {
-            return;
-        }
-
-        if (canvas.getAttribute("data-pointers-bound") === "true") {
-            return;
-        }
-
-        canvas.setAttribute("data-pointers-bound", "true");
-
-
-        let dragging = false;
-
-        let last_click_square = this.xy2ij(0, 0);
-
-        let pointerUp = (ev, double_clicked) => {
-            if (!dragging) {
-                // if we didn't start the click in the canvas, don't respond to it
-                return;
-            }
-
-            dragging = false;
-
-            if (this.scoring_mode) {
-                let pos = getRelativeEventPosition(ev);
-                let pt = this.xy2ij(pos.x, pos.y);
-                if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
-                    if (this.score_estimate) {
-                        this.score_estimate.handleClick(pt.i, pt.j, ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey);
-                    }
-                    this.emit("update");
-                }
-                return;
-            }
-
-            if (ev.ctrlKey || ev.metaKey || ev.altKey) {
-                try {
-                    let pos = getRelativeEventPosition(ev);
-                    let pt = this.xy2ij(pos.x, pos.y);
-                    if (GobanCore.hooks.addCoordinatesToChatInput) {
-                        GobanCore.hooks.addCoordinatesToChatInput(this.engine.prettyCoords(pt.i, pt.j));
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-                return;
-            }
-
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                // might want to interpret this as a start/stop of a line segment
-            } else {
-                let pos = getRelativeEventPosition(ev);
-                let pt = this.xy2ij(pos.x, pos.y);
-                if (!double_clicked) {
-                    last_click_square = pt;
-                } else {
-                    if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
-                        this.onMouseOut(ev);
-                        return;
-                    }
-                }
-
-                this.onTap(ev, double_clicked);
-                this.onMouseOut(ev);
-            }
-        };
-
-        let pointerDown = (ev) => {
-            dragging = true;
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                this.onPenStart(ev);
-            }
-            else if (this.mode === "analyze" && this.analyze_tool === "label") {
-                if (ev.shiftKey) {
-                    if (this.analyze_subtool === "letters") {
-                        let label_char = prompt(_("Enter the label you want to add to the board"), "");
-                        if (label_char) {
-                            this.label_character = label_char.substring(0, 3);
-                            dragging = false;
-                            return;
-                        }
-                    }
-                }
-
-                this.onLabelingStart(ev);
-            }
-        };
-
-        let pointerMove = (ev) => {
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                if (!dragging) { return; }
-                this.onPenMove(ev);
-            } else if (dragging && this.mode === "analyze" && this.analyze_tool === "label") {
-                this.onLabelingMove(ev);
-            } else {
-                 this.onMouseMove(ev);
-            }
-        };
-
-        let pointerOut = (ev) => {
-            dragging = false;
-            this.onMouseOut(ev);
-        };
-
-        let mousedisabled:any = 0;
-
-        canvas.addEventListener("click", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, false); } ev.preventDefault(); return false; });
-        canvas.addEventListener("dblclick", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, true); } ev.preventDefault(); return false; });
-        canvas.addEventListener("mousedown", (ev) => { if (!mousedisabled) { pointerDown(ev); } ev.preventDefault(); return false; });
-        canvas.addEventListener("mousemove", (ev) => { if (!mousedisabled) { pointerMove(ev); } ev.preventDefault(); return false; });
-        canvas.addEventListener("mouseout", (ev) => { if (!mousedisabled) { pointerOut(ev); } else { ev.preventDefault(); } return false; });
-        canvas.addEventListener("focus", (ev) => { ev.preventDefault(); return false; });
-
-
-        let lastX = 0;
-        let lastY = 0;
-        let startX = 0;
-        let startY = 0;
-
-        const onTouchStart = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-
-            if (ev.target === canvas) {
-                lastX = ev.touches[0].pageX;
-                lastY = ev.touches[0].pageY;
-                startX = ev.touches[0].pageX;
-                startY = ev.touches[0].pageY;
-                pointerDown(ev);
-            } else if (dragging) {
-                pointerOut(ev);
-            }
-        };
-        const onTouchEnd = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-
-            if (ev.target === canvas) {
-                if (Math.sqrt((startX - lastX) * (startX - lastX) + (startY - lastY) * (startY - lastY)) > 10) {
-                    pointerOut(ev);
-                } else {
-                    pointerUp(ev, false);
-                }
-            } else if (dragging) {
-                pointerOut(ev);
-            }
-        };
-        const onTouchMove = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-
-            if (ev.target === canvas) {
-                lastX = ev.touches[0].pageX;
-                lastY = ev.touches[0].pageY;
-                if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                    pointerMove(ev);
-                    ev.preventDefault();
-                    return false;
-                }
-            } else if (dragging) {
-                pointerOut(ev);
-            }
-        };
-
-        document.addEventListener("touchstart", onTouchStart);
-        document.addEventListener("touchend", onTouchEnd);
-        document.addEventListener("touchmove", onTouchMove);
-        this.on("destroy", () => {
-            document.removeEventListener("touchstart", onTouchStart);
-            document.removeEventListener("touchend", onTouchEnd);
-            document.removeEventListener("touchmove", onTouchMove);
-        });
-    }
-    */
     public clearAnalysisDrawing():void {
         this.pen_marks = [];
         /* TODO
@@ -895,8 +663,6 @@ export class GobanPixi extends GobanCore  {
         }
         */
     }
-    private __drawSquare(i:number, j:number):void {
-    }
     public redraw(force_clear?: boolean):void {
         if (!this.ready_to_draw) {
             return;
@@ -910,48 +676,14 @@ export class GobanPixi extends GobanCore  {
 
         let metrics = this.metrics = this.computeMetrics();
         if (force_clear ||
-            !(this.__set_board_width === metrics.width
-                && this.__set_board_height === metrics.height
+            !(parseInt(this.parent.style.width) === metrics.width
+                && parseInt(this.parent.style.height) === metrics.height
                 && this.theme_stone_radius === this.computeThemeStoneRadius(metrics)))
         {
             try {
-                //this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
                 this.parent.style.width = metrics.width + "px";
                 this.parent.style.height = metrics.height + "px";
-                //resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
                 this.board.resize();
-                //this.board.stage.width = metrics.width;
-                //this.board.stage.height = metrics.height;
-
-                //let bo = this.board.offset();
-                //let po = this.parent.offset() || {"top": 0, "left": 0};
-                /*
-                let bo = elementOffset(this.board);
-                let po = elementOffset(this.parent) || {"top": 0, "left": 0};
-                let top = bo.top - po.top;
-                let left = bo.left - po.left;
-
-                this.layer_offset_left = 0;
-                this.layer_offset_top = 0;
-
-                if (this.pen_layer) {
-                    if (this.pen_marks.length) {
-                        resizeDeviceScaledCanvas(this.pen_layer, metrics.width, metrics.height);
-                        //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                        this.pen_layer.style.left = this.layer_offset_left;
-                        this.pen_layer.style.top = this.layer_offset_top;
-                        this.pen_ctx = this.pen_layer.getContext("2d");
-                    } else {
-                        this.detachPenCanvas();
-                    }
-                }
-
-                this.ctx = this.board.getContext("2d");
-                */
-
-                this.__set_board_width = metrics.width;
-                this.__set_board_height = metrics.height;
-
                 this.setThemes(this.getSelectedThemes(), true);
             } catch (e) {
                 setTimeout(() => { throw e; }, 1);
@@ -1336,3 +1068,188 @@ function text_sprite(application:PIXI.Application, ch, style:PIXI.TextStyle):PIX
     }
     return new PIXI.Sprite(PIXI.utils.TextureCache[key]);
 }
+
+
+
+    /*
+    private bindPointerBindings(canvas:HTMLCanvasElement):void {
+        if (!this.interactive) {
+            return;
+        }
+
+        if (canvas.getAttribute("data-pointers-bound") === "true") {
+            return;
+        }
+
+        canvas.setAttribute("data-pointers-bound", "true");
+
+
+        let dragging = false;
+
+        let last_click_square = this.xy2ij(0, 0);
+
+        let pointerUp = (ev, double_clicked) => {
+            if (!dragging) {
+                // if we didn't start the click in the canvas, don't respond to it
+                return;
+            }
+
+            dragging = false;
+
+            if (this.scoring_mode) {
+                let pos = getRelativeEventPosition(ev);
+                let pt = this.xy2ij(pos.x, pos.y);
+                if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
+                    if (this.score_estimate) {
+                        this.score_estimate.handleClick(pt.i, pt.j, ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey);
+                    }
+                    this.emit("update");
+                }
+                return;
+            }
+
+            if (ev.ctrlKey || ev.metaKey || ev.altKey) {
+                try {
+                    let pos = getRelativeEventPosition(ev);
+                    let pt = this.xy2ij(pos.x, pos.y);
+                    if (GobanCore.hooks.addCoordinatesToChatInput) {
+                        GobanCore.hooks.addCoordinatesToChatInput(this.engine.prettyCoords(pt.i, pt.j));
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+                return;
+            }
+
+            if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                // might want to interpret this as a start/stop of a line segment
+            } else {
+                let pos = getRelativeEventPosition(ev);
+                let pt = this.xy2ij(pos.x, pos.y);
+                if (!double_clicked) {
+                    last_click_square = pt;
+                } else {
+                    if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
+                        this.onMouseOut(ev);
+                        return;
+                    }
+                }
+
+                this.onTap(ev, double_clicked);
+                this.onMouseOut(ev);
+            }
+        };
+
+        let pointerDown = (ev) => {
+            dragging = true;
+            if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                this.onPenStart(ev);
+            }
+            else if (this.mode === "analyze" && this.analyze_tool === "label") {
+                if (ev.shiftKey) {
+                    if (this.analyze_subtool === "letters") {
+                        let label_char = prompt(_("Enter the label you want to add to the board"), "");
+                        if (label_char) {
+                            this.label_character = label_char.substring(0, 3);
+                            dragging = false;
+                            return;
+                        }
+                    }
+                }
+
+                this.onLabelingStart(ev);
+            }
+        };
+
+        let pointerMove = (ev) => {
+            if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                if (!dragging) { return; }
+                this.onPenMove(ev);
+            } else if (dragging && this.mode === "analyze" && this.analyze_tool === "label") {
+                this.onLabelingMove(ev);
+            } else {
+                 this.onMouseMove(ev);
+            }
+        };
+
+        let pointerOut = (ev) => {
+            dragging = false;
+            this.onMouseOut(ev);
+        };
+
+        let mousedisabled:any = 0;
+
+        canvas.addEventListener("click", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, false); } ev.preventDefault(); return false; });
+        canvas.addEventListener("dblclick", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, true); } ev.preventDefault(); return false; });
+        canvas.addEventListener("mousedown", (ev) => { if (!mousedisabled) { pointerDown(ev); } ev.preventDefault(); return false; });
+        canvas.addEventListener("mousemove", (ev) => { if (!mousedisabled) { pointerMove(ev); } ev.preventDefault(); return false; });
+        canvas.addEventListener("mouseout", (ev) => { if (!mousedisabled) { pointerOut(ev); } else { ev.preventDefault(); } return false; });
+        canvas.addEventListener("focus", (ev) => { ev.preventDefault(); return false; });
+
+
+        let lastX = 0;
+        let lastY = 0;
+        let startX = 0;
+        let startY = 0;
+
+        const onTouchStart = (ev:TouchEvent) => {
+            if (mousedisabled) {
+                clearTimeout(mousedisabled);
+            }
+            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+
+            if (ev.target === canvas) {
+                lastX = ev.touches[0].pageX;
+                lastY = ev.touches[0].pageY;
+                startX = ev.touches[0].pageX;
+                startY = ev.touches[0].pageY;
+                pointerDown(ev);
+            } else if (dragging) {
+                pointerOut(ev);
+            }
+        };
+        const onTouchEnd = (ev:TouchEvent) => {
+            if (mousedisabled) {
+                clearTimeout(mousedisabled);
+            }
+            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+
+            if (ev.target === canvas) {
+                if (Math.sqrt((startX - lastX) * (startX - lastX) + (startY - lastY) * (startY - lastY)) > 10) {
+                    pointerOut(ev);
+                } else {
+                    pointerUp(ev, false);
+                }
+            } else if (dragging) {
+                pointerOut(ev);
+            }
+        };
+        const onTouchMove = (ev:TouchEvent) => {
+            if (mousedisabled) {
+                clearTimeout(mousedisabled);
+            }
+            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+
+            if (ev.target === canvas) {
+                lastX = ev.touches[0].pageX;
+                lastY = ev.touches[0].pageY;
+                if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                    pointerMove(ev);
+                    ev.preventDefault();
+                    return false;
+                }
+            } else if (dragging) {
+                pointerOut(ev);
+            }
+        };
+
+        document.addEventListener("touchstart", onTouchStart);
+        document.addEventListener("touchend", onTouchEnd);
+        document.addEventListener("touchmove", onTouchMove);
+        this.on("destroy", () => {
+            document.removeEventListener("touchstart", onTouchStart);
+            document.removeEventListener("touchend", onTouchEnd);
+            document.removeEventListener("touchmove", onTouchMove);
+        });
+    }
+    */

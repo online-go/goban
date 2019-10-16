@@ -225,6 +225,10 @@ function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x): GobanClass}, pro
             goban.draw_left_labels = base_config.draw_left_labels;
             goban.draw_right_labels = base_config.draw_right_labels;
             goban.draw_bottom_labels = base_config.draw_bottom_labels;
+            goban.config.draw_top_labels = base_config.draw_top_labels;
+            goban.config.draw_left_labels = base_config.draw_left_labels;
+            goban.config.draw_right_labels = base_config.draw_right_labels;
+            goban.config.draw_bottom_labels = base_config.draw_bottom_labels;
             goban.setBounds(base_config.bounds);
             goban.redraw(true);
         });
