@@ -54,12 +54,24 @@ export interface GobanSelectedThemes {
     black: string;
 }
 
+export interface GobanBounds {
+    top: number;
+    left: number;
+    right: number;
+    bottom: number;
+}
 
 export interface GobanConfig {
     interactive?: boolean;
     mode?: 'puzzle';
     square_size?: number;
     original_sgf?: string;
+
+    draw_top_labels?: boolean;
+    draw_left_labels?: boolean;
+    draw_bottom_labels?: boolean;
+    draw_right_labels?: boolean;
+    bounds?: GobanBounds;
 }
 
 
@@ -188,7 +200,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected black_name;
     protected bounded_height:number;
     protected bounded_width:number;
-    protected bounds;
+    protected bounds:GobanBounds;
     protected byoyomi_label;
     protected conditional_path;
     public config;
@@ -307,7 +319,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     constructor(config, preloaded_data?) {
         super();
-        console.log("Constructing goban core");
 
         this.goban_id = ++last_goban_id;
 
@@ -600,7 +611,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             return GobanCore.hooks.getSelectedThemes();
         }
         //return {white:'Plain', black:'Plain', board:'Plain'};
-        return {white:'Plain', black:'Plain', board:'Granite'};
+        //return {white:'Plain', black:'Plain', board:'Kaya'};
+        return {white:'Shell', black:'Slate', board:'Kaya'};
     }
     protected connect(server_socket) {
         let socket = this.socket = server_socket;
@@ -1471,6 +1483,28 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         } else {
             this.updateMoveTree();
         }
+    }
+
+    public setBounds(bounds:GobanBounds) {
+        this.bounds = bounds || {top: 0, left: 0, bottom: this.height - 1, right: this.width - 1};
+
+        if (this.bounds) {
+            this.bounded_width = (this.bounds.right - this.bounds.left) + 1;
+            this.bounded_height = (this.bounds.bottom - this.bounds.top) + 1;
+        } else {
+            this.bounded_width = this.width;
+            this.bounded_height = this.height;
+        }
+
+        this.draw_left_labels = this.config.draw_left_labels;
+        this.draw_right_labels = this.config.draw_right_labels;
+        this.draw_top_labels = this.config.draw_top_labels;
+        this.draw_bottom_labels = this.config.draw_bottom_labels;
+
+        if (this.bounds.left > 0) { this.draw_left_labels = false; }
+        if (this.bounds.top > 0) { this.draw_top_labels = false; }
+        if (this.bounds.right < this.width - 1) { this.draw_right_labels = false; }
+        if (this.bounds.bottom < this.height - 1) { this.draw_bottom_labels = false; }
     }
 
     public load(config) {

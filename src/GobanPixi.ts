@@ -56,6 +56,8 @@ export class GobanPixi extends GobanCore  {
     private board: PIXI.Application;
     private board_texture: PIXI.Texture = PIXI.Texture.EMPTY;
     private board_sprite: PIXI.Sprite;
+    private graphics:PIXI.Graphics;
+    private lines_and_text:PIXI.Container;
 
     // possibly deprecated
 
@@ -82,12 +84,9 @@ export class GobanPixi extends GobanCore  {
         let devicePixelRatio = 1;
         try {
             devicePixelRatio = window.devicePixelRatio;
-            console.log("Device pixel ratio: ", devicePixelRatio);
         } catch (e) {
             // ignore
         }
-
-        console.log(config);
 
         this.board = new PIXI.Application({
             width: 1,
@@ -104,9 +103,13 @@ export class GobanPixi extends GobanCore  {
 
         this.board_sprite = new PIXI.Sprite(this.board_texture);
         this.board.stage.addChild(this.board_sprite);
+        this.lines_and_text = new PIXI.Container();
+        this.board.stage.addChild(this.lines_and_text);
 
-        window.addEventListener("keydown", this.handleShiftKey);
-        window.addEventListener("keyup", this.handleShiftKey);
+
+        if (config['interactive']) {
+            this.makeInteractive();
+        }
 
         this.post_config_constructor();
 
@@ -118,6 +121,22 @@ export class GobanPixi extends GobanCore  {
     }
     public disablePen():void {
         //this.detachPenCanvas();
+    }
+
+    public makeInteractive():void {
+        window.addEventListener("keydown", this.handleShiftKey);
+        window.addEventListener("keyup", this.handleShiftKey);
+
+        //let cursor = new PIXI.Sprite(PIXI.Texture.from('/img/granite.jpg'));
+        //this.board.stage.addChild(cursor);
+
+        this.board.stage.interactive = true;
+        this.board.stage.on('mousemove', (ev:PIXI.interaction.InteractionEvent) => {
+            //cursor.setTransform(ev.data.global.x, ev.data.global.y);
+        });
+
+
+
     }
 
     private handleShiftKey = (ev:KeyboardEvent):void => {
@@ -901,6 +920,8 @@ export class GobanPixi extends GobanCore  {
                 this.parent.style.height = metrics.height + "px";
                 //resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
                 this.board.resize();
+                //this.board.stage.width = metrics.width;
+                //this.board.stage.height = metrics.height;
 
                 //let bo = this.board.offset();
                 //let po = this.parent.offset() || {"top": 0, "left": 0};
@@ -938,102 +959,121 @@ export class GobanPixi extends GobanCore  {
             }
         }
 
-        /*
-        let ctx = this.ctx;
 
 
-        let place = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y
-            let metrics = ctx.measureText(ch);
-            let xx = x - metrics.width / 2;
-            let yy = y;
-            ctx.fillText(ch, xx, yy);
-        };
-        let vplace = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y, with text going down vertically.
-            for (let i = 0; i < ch.length; ++i) {
-                let metrics = ctx.measureText(ch[i]);
-                let xx = x - metrics.width / 2;
-                let yy = y;
-                let H = metrics.width; // should be height in an ideal world, measureText doesn't seem to return it though. For our purposes this works well enough though.
-
-                if (ch.length === 2) {
-                    yy = yy - H + (i * H);
-                }
-                if (ch.length === 3) {
-                    yy = yy - (H * 1.5) + (i * H);
-                }
-
-                ctx.fillText(ch[i], xx, yy);
-            }
-        };
-
-        let drawHorizontal = (i, j) => {
-            switch (this.getCoordinateDisplaySystem()) {
-                case 'A1':
-                    for (let c = 0; c < this.width; ++i, ++c) {
-                        let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
-                        let y = j * this.square_size + this.square_size / 2;
-                        place("ABCDEFGHJKLMNOPQRSTUVWXYZ"[c], x, y);
-                    }
-                    break;
-                case '1-1':
-                    for (let c = 0; c < this.width; ++i, ++c) {
-                        let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
-                        let y = j * this.square_size + this.square_size / 2;
-                        place('' + (c + 1), x, y);
-                    }
-                    break;
-            }
-        };
-
-        let drawVertical = (i, j) => {
-            switch (this.getCoordinateDisplaySystem()) {
-                case 'A1':
-                    for (let c = 0; c < this.height; ++j, ++c) {
-                        let x = i * this.square_size + this.square_size / 2;
-                        let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
-                        place("" + (this.height - c), x, y);
-                    }
-                    break;
-                case '1-1':
-                    let chinese_japanese_numbers = [
-                        "一", "二", "三", "四", "五",
-                        "六", "七", "八", "九", "十",
-                        "十一", "十二", "十三", "十四", "十五",
-                        "十六", "十七", "十八", "十九", "二十",
-                        "二十一", "二十二", "二十三", "二十四", "二十五",
-                    ];
-                    for (let c = 0; c < this.height; ++j, ++c) {
-                        let x = i * this.square_size + this.square_size / 2;
-                        let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
-                        vplace(chinese_japanese_numbers[c], x, y);
-                    }
-                    break;
-            }
-        };
 
         if (force_clear || !this.__borders_initialized) {
+            this.lines_and_text.removeChildren();
             this.__borders_initialized = true;
+
+            // Draw labels
+            let fontSize = Math.round(this.square_size * 0.5);
+            let fontWeight = 'bold';
+            if (this.getCoordinateDisplaySystem() === '1-1') {
+                fontSize *= 0.7;
+                fontWeight = 'normal';
+
+                if (this.height > 20) {
+                    fontSize *= 0.7;
+                }
+            }
+
+            let style = new PIXI.TextStyle({
+                fontFamily: GOBAN_FONT,
+                fontSize: fontSize,
+                fontWeight: fontWeight,
+                //textBaseline: "middle",
+                textBaseline: "bottom",
+                //fill: this.theme_board.getLabelTextColor(),
+                fill: this.theme_board.getLabelTextColor(),
+                //align: 'center',
+            });
+
+            let cache = {};
+
+            const place = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y
+                //let metrics = PIXI.TextMetrics.measureText(ch, style);
+                //let text = new PIXI.Text(ch, style);
+                let text = text_sprite(this.board, ch, style);
+                //text.x = Math.round(x - metrics.width / 2);
+                //text.y = Math.round(y - (metrics.height * 0.4));
+                text.x = Math.round(x - text.width / 2);
+                text.y = Math.round(y - (text.height * 0.4));
+                this.lines_and_text.addChild(text);
+            };
+            const vplace = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y, with text going down vertically.
+                for (let i = 0; i < ch.length; ++i) {
+                    let metrics = PIXI.TextMetrics.measureText(ch[i], style);
+                    let xx = x - metrics.width / 2;
+                    let yy = y - metrics.height * 0.4;
+                    let H = metrics.width; // should be height in an ideal world, measureText doesn't seem to return it though. For our purposes this works well enough though.
+
+                    if (ch.length === 2) {
+                        yy = yy - H + (i * H);
+                    }
+                    if (ch.length === 3) {
+                        yy = yy - (H * 1.5) + (i * H);
+                    }
+
+                    let text = new PIXI.Text(ch, style);
+                    text.x = Math.round(xx);
+                    text.y = Math.round(yy);
+                    this.lines_and_text.addChild(text);
+                }
+            };
+
+            const drawHorizontal = (i, j) => {
+                switch (this.getCoordinateDisplaySystem()) {
+                    case 'A1':
+                        for (let c = 0; c < this.width; ++i, ++c) {
+                            let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
+                            let y = j * this.square_size + this.square_size / 2;
+                            place("ABCDEFGHJKLMNOPQRSTUVWXYZ"[c], x, y);
+                        }
+                        break;
+                    case '1-1':
+                        for (let c = 0; c < this.width; ++i, ++c) {
+                            let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
+                            let y = j * this.square_size + this.square_size / 2;
+                            place('' + (c + 1), x, y);
+                        }
+                        break;
+                }
+            };
+
+            const drawVertical = (i, j) => {
+                switch (this.getCoordinateDisplaySystem()) {
+                    case 'A1':
+                        for (let c = 0; c < this.height; ++j, ++c) {
+                            let x = i * this.square_size + this.square_size / 2;
+                            let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
+                            place("" + (this.height - c), x, y);
+                        }
+                        break;
+                    case '1-1':
+                        let chinese_japanese_numbers = [
+                            "一", "二", "三", "四", "五",
+                            "六", "七", "八", "九", "十",
+                            "十一", "十二", "十三", "十四", "十五",
+                            "十六", "十七", "十八", "十九", "二十",
+                            "二十一", "二十二", "二十三", "二十四", "二十五",
+                        ];
+                        for (let c = 0; c < this.height; ++j, ++c) {
+                            let x = i * this.square_size + this.square_size / 2;
+                            let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
+                            vplace(chinese_japanese_numbers[c], x, y);
+                        }
+                        break;
+                }
+            };
+
+            /*
             if (this.shadow_ctx) {
                 this.shadow_ctx.clearRect (0, 0, metrics.width, metrics.height);
             }
             ctx.clearRect (0, 0, metrics.width, metrics.height);
+            */
 
-            // Draw labels
-            let text_size = Math.round(this.square_size * 0.5);
-            let bold = 'bold';
-            if (this.getCoordinateDisplaySystem() === '1-1') {
-                text_size *= 0.7;
-                bold = '';
-
-                if (this.height > 20) {
-                    text_size *= 0.7;
-                }
-            }
-
-            ctx.font = `${bold} ${text_size}px ${GOBAN_FONT}`;
-            ctx.textBaseline = "middle";
-            ctx.fillStyle = this.theme_board.getLabelTextColor();
-            ctx.save();
 
             if (this.draw_top_labels && this.bounds.top === 0) {
                 drawHorizontal(this.draw_left_labels, 0);
@@ -1048,27 +1088,72 @@ export class GobanPixi extends GobanCore  {
                 drawVertical(+this.draw_left_labels + this.bounded_width, +this.draw_top_labels);
             }
 
-            ctx.restore();
+            // Lines
+            let graphics = new PIXI.Graphics();
+            this.lines_and_text.addChild(graphics);
+            let d = graphics.lineStyle(1.0, this.theme_board.getLineColor());
+            let ox = this.draw_left_labels ? this.square_size : 0;
+            let ex = this.draw_right_labels ? -this.square_size : 0;
+            let oy = this.draw_top_labels ? this.square_size : 0;
+            let ey = this.draw_bottom_labels ? -this.square_size : 0;
+
+            let half_square = this.square_size / 2.0;
+            let left_edge_offset = this.bounds.left === 0 ? this.square_size / 2 : 0;
+            let right_edge_offset = this.bounds.right === (this.width - 1) ? this.square_size / 2 : this.square_size;
+            let top_edge_offset = this.bounds.top === 0 ? this.square_size / 2 : 0;
+            let bottom_edge_offset = this.bounds.bottom === (this.height - 1) ? this.square_size / 2 : this.square_size;
+
+            for (let j = 0; j <= this.bounds.bottom - this.bounds.top; ++j) {
+                d.moveTo(
+                    Math.round(ox + left_edge_offset) + 0.5,
+                    Math.round(oy + this.square_size * j + half_square) + 0.5
+                );
+                d.lineTo(
+                    Math.round(ox + this.square_size * (this.bounds.right  - this.bounds.left) + right_edge_offset) + 0.5,
+                    Math.round(oy + this.square_size * j + half_square) + 0.5
+                );
+            }
+            //for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
+            for (let i = 0; i <=  this.bounds.right - this.bounds.left; ++i) {
+                d.moveTo(
+                    Math.round(ox + this.square_size * i + half_square) + 0.5,
+                    Math.round(oy + top_edge_offset) + 0.5
+                );
+                d.lineTo(
+                    Math.round(ox + this.square_size * i + half_square) + 0.5,
+                    Math.round(oy + this.square_size * (this.bounds.bottom  - this.bounds.top) + bottom_edge_offset) + 0.5
+                );
+            }
         }
 
+
+
+
         // Draw squares
+        /*
         if (!this.__draw_state || force_clear || this.__draw_state.length !== this.height || this.__draw_state[0].length !== this.width) {
             this.__draw_state = GoMath.makeMatrix(this.width, this.height);
         }
+        */
 
 
         // Set font for text overlay
+        /*
         {
             let text_size = Math.round(this.square_size * 0.45);
             ctx.font = "bold " + text_size + "px " + GOBAN_FONT;
         }
+        */
 
+        /*
         for (let j = this.bounds.top; j <= this.bounds.bottom; ++j) {
             for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
                 this.drawSquare(i, j);
             }
         }
+        */
 
+        /*
         let stop = new Date();
         this.drawPenMarks(this.pen_marks);
 
@@ -1077,54 +1162,7 @@ export class GobanPixi extends GobanCore  {
         }
         */
     }
-    public message(msg:string, timeout:number = 5000):void {
-        /*
-        this.clearMessage();
-
-        this.message_div = document.createElement('div');
-        this.message_div.className = "GobanMessage";
-        this.message_td = document.createElement("td");
-        let table = document.createElement("table");
-        let tr = document.createElement("tr");
-        tr.appendChild(this.message_td);
-        table.appendChild(tr);
-        this.message_div.appendChild(table);
-        this.message_text = document.createElement("div");
-        this.message_text.innerHTML = msg;
-        this.message_td.append(this.message_text);
-        this.parent.append(this.message_div);
-
-        this.message_div.addEventListener("click", () => {
-            if (timeout > 0) {
-                this.clearMessage();
-            }
-        });
-
-        if (!timeout) {
-            timeout = 5000;
-        }
-
-        if (timeout > 0) {
-            this.message_timeout = window.setTimeout(() => {
-                this.clearMessage();
-            }, timeout);
-        }
-        */
-    }
-    public clearMessage():void {
-        /*
-        if (this.message_div) {
-            this.message_div.remove();
-            this.message_div = null;
-        }
-        if (this.message_timeout) {
-            clearTimeout(this.message_timeout);
-            this.message_timeout = null;
-        }
-        */
-    }
     protected setThemes(themes:GobanSelectedThemes, dont_redraw:boolean):void {
-        console.log(themes);
         if (this.no_display) {
             return;
         }
@@ -1134,9 +1172,6 @@ export class GobanPixi extends GobanCore  {
         this.theme_board = new (GoThemes["board"][themes.board])();
         this.theme_white = new (GoThemes["white"][themes.white])(this.theme_board);
         this.theme_black = new (GoThemes["black"][themes.black])(this.theme_board);
-        console.log(this.theme_board);
-        console.log(this.theme_white);
-        console.log(this.theme_black);
 
         if (!this.metrics) {
             this.metrics = this.computeMetrics();
@@ -1152,6 +1187,27 @@ export class GobanPixi extends GobanCore  {
             this.board_texture = PIXI.Texture.EMPTY;
         }
         this.board_sprite.texture = this.board_texture;
+
+        // resize board sprite to cover the background
+        var containerWidth = this.board.renderer.width;
+        var containerHeight = this.board.renderer.height;
+
+        var imageRatio = this.board_sprite.width / this.board_sprite.height;
+        var containerRatio = containerWidth / containerHeight;
+
+        if (containerRatio > imageRatio) {
+            this.board_sprite.height = this.board_sprite.height / (this.board_sprite.width / containerWidth);
+            this.board_sprite.width = containerWidth;
+            this.board_sprite.position.x = 0;
+            this.board_sprite.position.y = (containerHeight - this.board_sprite.height) / 2;
+        } else {
+            this.board_sprite.width = this.board_sprite.width / (this.board_sprite.height / containerHeight);
+            this.board_sprite.height = containerHeight;
+            this.board_sprite.position.y = 0;
+            this.board_sprite.position.x = (containerWidth - this.board_sprite.width) / 2;
+        }
+
+
 
 
         /*
@@ -1213,6 +1269,53 @@ export class GobanPixi extends GobanCore  {
         }
         */
     }
+    public message(msg:string, timeout:number = 5000):void {
+        console.error(msg);
+        /*
+        this.clearMessage();
+
+        this.message_div = document.createElement('div');
+        this.message_div.className = "GobanMessage";
+        this.message_td = document.createElement("td");
+        let table = document.createElement("table");
+        let tr = document.createElement("tr");
+        tr.appendChild(this.message_td);
+        table.appendChild(tr);
+        this.message_div.appendChild(table);
+        this.message_text = document.createElement("div");
+        this.message_text.innerHTML = msg;
+        this.message_td.append(this.message_text);
+        this.parent.append(this.message_div);
+
+        this.message_div.addEventListener("click", () => {
+            if (timeout > 0) {
+                this.clearMessage();
+            }
+        });
+
+        if (!timeout) {
+            timeout = 5000;
+        }
+
+        if (timeout > 0) {
+            this.message_timeout = window.setTimeout(() => {
+                this.clearMessage();
+            }, timeout);
+        }
+        */
+    }
+    public clearMessage():void {
+        /*
+        if (this.message_div) {
+            this.message_div.remove();
+            this.message_div = null;
+        }
+        if (this.message_timeout) {
+            clearTimeout(this.message_timeout);
+            this.message_timeout = null;
+        }
+        */
+    }
 }
 
 
@@ -1222,4 +1325,14 @@ function color2number(hex_color:string):number {
 /** url('http://blah.com/foo.jpg') => http://blah.com/foo.jpg */
 function stripCSSUrl(css_url_string:string):string {
     return css_url_string.replace("')",'').replace("url('",'');
+}
+
+function text_sprite(application:PIXI.Application, ch, style:PIXI.TextStyle):PIXI.Sprite {
+    let key = `text-${ch}-${style.fill}-${style.toFontString()}`;
+    if (!(key in PIXI.utils.TextureCache)) {
+        let text = new PIXI.Text(ch, style);
+        application.renderer.render(text);
+        PIXI.Texture.addToCache(text.texture, key);
+    }
+    return new PIXI.Sprite(PIXI.utils.TextureCache[key]);
 }

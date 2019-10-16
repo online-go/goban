@@ -101,8 +101,10 @@ module.exports = (env, argv) => {
                 compress: true,
                 port: 9000,
                 writeToDisk: true,
+
                 hot: false,
-                inline: false,
+                //inline: false,
+                inline: true,
             }
         })
     ];
