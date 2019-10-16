@@ -691,9 +691,6 @@ export class GobanPixi extends GobanCore  {
             }
         }
 
-
-
-
         if (force_clear || !this.__borders_initialized) {
             this.lines_and_text.removeChildren();
             this.__borders_initialized = true;
@@ -714,31 +711,23 @@ export class GobanPixi extends GobanCore  {
                 fontFamily: GOBAN_FONT,
                 fontSize: fontSize,
                 fontWeight: fontWeight,
-                //textBaseline: "middle",
-                textBaseline: "bottom",
-                //fill: this.theme_board.getLabelTextColor(),
                 fill: this.theme_board.getLabelTextColor(),
-                //align: 'center',
             });
 
             let cache = {};
 
             const place = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y
-                //let metrics = PIXI.TextMetrics.measureText(ch, style);
-                //let text = new PIXI.Text(ch, style);
                 let text = text_sprite(this.board, ch, style);
-                //text.x = Math.round(x - metrics.width / 2);
-                //text.y = Math.round(y - (metrics.height * 0.4));
                 text.x = Math.round(x - text.width / 2);
                 text.y = Math.round(y - (text.height * 0.4));
                 this.lines_and_text.addChild(text);
             };
             const vplace = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y, with text going down vertically.
                 for (let i = 0; i < ch.length; ++i) {
-                    let metrics = PIXI.TextMetrics.measureText(ch[i], style);
-                    let xx = x - metrics.width / 2;
-                    let yy = y - metrics.height * 0.4;
-                    let H = metrics.width; // should be height in an ideal world, measureText doesn't seem to return it though. For our purposes this works well enough though.
+                    let text = text_sprite(this.board, ch[i], style);
+                    let xx = x - text.width / 2;
+                    let yy = y - text.height * 0.4;
+                    let H = text.width;
 
                     if (ch.length === 2) {
                         yy = yy - H + (i * H);
@@ -747,7 +736,7 @@ export class GobanPixi extends GobanCore  {
                         yy = yy - (H * 1.5) + (i * H);
                     }
 
-                    let text = new PIXI.Text(ch, style);
+                    //let text = new PIXI.Text(ch, style);
                     text.x = Math.round(xx);
                     text.y = Math.round(yy);
                     this.lines_and_text.addChild(text);
@@ -798,14 +787,6 @@ export class GobanPixi extends GobanCore  {
                         break;
                 }
             };
-
-            /*
-            if (this.shadow_ctx) {
-                this.shadow_ctx.clearRect (0, 0, metrics.width, metrics.height);
-            }
-            ctx.clearRect (0, 0, metrics.width, metrics.height);
-            */
-
 
             if (this.draw_top_labels && this.bounds.top === 0) {
                 drawHorizontal(this.draw_left_labels, 0);

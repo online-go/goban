@@ -16,7 +16,7 @@
 
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { GobanCore, GobanConfig } from './GobanCore';
+import { GobanCore, GobanConfig, GobanHooks } from './GobanCore';
 import { GobanPixi } from './GobanPixi';
 import { GobanCanvas } from './GobanCanvas';
 import { EventEmitter } from 'eventemitter3';
@@ -67,6 +67,11 @@ let base_config:GobanConfig = stored_config || {
         bottom: 18,
     },
 };
+
+const hooks:GobanHooks = {
+    getCoordinateDisplaySystem: () => '1-1',
+};
+GobanCore.setHooks(hooks);
 
 
 function save() {
