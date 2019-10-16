@@ -692,7 +692,9 @@ export class GobanPixi extends GobanCore  {
         }
 
         if (force_clear || !this.__borders_initialized) {
+            let graphics = new PIXI.Graphics();
             this.lines_and_text.removeChildren();
+            this.lines_and_text.addChild(graphics);
             this.__borders_initialized = true;
 
             // Draw labels
@@ -719,14 +721,14 @@ export class GobanPixi extends GobanCore  {
             const place = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y
                 let text = text_sprite(this.board, ch, style);
                 text.x = Math.round(x - text.width / 2);
-                text.y = Math.round(y - (text.height * 0.4));
+                text.y = Math.round(y - (text.height * 0.5));
                 this.lines_and_text.addChild(text);
             };
             const vplace = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y, with text going down vertically.
                 for (let i = 0; i < ch.length; ++i) {
                     let text = text_sprite(this.board, ch[i], style);
                     let xx = x - text.width / 2;
-                    let yy = y - text.height * 0.4;
+                    let yy = y - text.height * 0.5;
                     let H = text.width;
 
                     if (ch.length === 2) {
@@ -736,7 +738,6 @@ export class GobanPixi extends GobanCore  {
                         yy = yy - (H * 1.5) + (i * H);
                     }
 
-                    //let text = new PIXI.Text(ch, style);
                     text.x = Math.round(xx);
                     text.y = Math.round(yy);
                     this.lines_and_text.addChild(text);
@@ -801,9 +802,8 @@ export class GobanPixi extends GobanCore  {
                 drawVertical(+this.draw_left_labels + this.bounded_width, +this.draw_top_labels);
             }
 
+
             // Lines
-            let graphics = new PIXI.Graphics();
-            this.lines_and_text.addChild(graphics);
             let d = graphics.lineStyle(1.0, this.theme_board.getLineColor());
             let ox = this.draw_left_labels ? this.square_size : 0;
             let ex = this.draw_right_labels ? -this.square_size : 0;
@@ -836,6 +836,50 @@ export class GobanPixi extends GobanCore  {
                     Math.round(ox + this.square_size * i + half_square) + 0.5,
                     Math.round(oy + this.square_size * (this.bounds.bottom  - this.bounds.top) + bottom_edge_offset) + 0.5
                 );
+            }
+
+            // star points
+            {
+                let star_radius;
+                if (this.square_size < 5) {
+                    star_radius = 0.5;
+                } else {
+                    star_radius = Math.max(2, (this.metrics.mid - 1.5) * 0.16);
+                }
+
+                let pts:Array<{x:number, y:number}> = [];
+
+                if (this.width === 19 && this.height === 19) {
+                    pts = [
+                        {x: 3, y: 3} , {x: 9, y: 3} , {x: 15, y: 3},
+                        {x: 3, y: 9} , {x: 9, y: 9} , {x: 15, y: 9},
+                        {x: 3, y: 15}, {x: 9, y: 15}, {x: 15, y: 15},
+                    ];
+                }
+                if (this.width === 13 && this.height === 13) {
+                    pts = [
+                        {x: 3, y: 3} , {x: 9, y: 3},
+                        {x: 6, y: 6} ,
+                        {x: 3, y: 9} , {x: 9, y: 9},
+                    ];
+                }
+                if (this.width === 9 && this.height === 9) {
+                    pts = [
+                        {x: 2, y: 2} , {x: 6, y: 2},
+                        {x: 4, y: 4} ,
+                        {x: 2, y: 6} , {x: 6, y: 6},
+                    ];
+                }
+
+                let d = graphics.lineStyle(1.0, this.theme_board.getLineColor());
+
+                for (let pt of pts) {
+                    let cx = Math.round(((pt.x + (this.draw_left_labels ? 1 : 0)) + 0.5) * this.square_size)+0.5;
+                    let cy = Math.round(((pt.y + (this.draw_top_labels ? 1 : 0)) + 0.5) * this.square_size)+0.5;
+                    d.beginFill(this.theme_board.getLineColor())
+                     .drawCircle(cx, cy, star_radius)
+                     .endFill();
+                }
             }
         }
 

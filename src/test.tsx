@@ -69,7 +69,8 @@ let base_config:GobanConfig = stored_config || {
 };
 
 const hooks:GobanHooks = {
-    getCoordinateDisplaySystem: () => '1-1',
+    //getCoordinateDisplaySystem: () => '1-1',
+    getCoordinateDisplaySystem: () => 'A1',
 };
 GobanCore.setHooks(hooks);
 
