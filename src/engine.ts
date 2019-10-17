@@ -17,7 +17,6 @@
 export * from "./GoError";
 export * from "./GoStoneGroup";
 export * from "./GoUtil";
-export * from "./GoThemes";
 export * from "./GoMath";
 export * from "./GoEngine";
 export * from "./MoveTree";

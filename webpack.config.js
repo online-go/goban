@@ -47,11 +47,6 @@ module.exports = (env, argv) => {
             maxEntrypointSize: 1024 * 1024 * 2.5,
         },
 
-        /*
-        externals: {
-            "pixi.js": "PIXI",
-        },
-        */
 
         devtool: 'source-map',
     };
@@ -139,6 +134,11 @@ module.exports = (env, argv) => {
             output: {
                 path: __dirname + '/node',
                 filename: '[name].js'
+            },
+
+            externals: {
+                "pixi.js": "PIXI",
+                "pixi.js-legacy": "PIXI",
             },
 
             plugins: plugins.concat([
