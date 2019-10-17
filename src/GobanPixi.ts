@@ -15,7 +15,7 @@
  */
 
 
-import * as PIXI from 'pixi.js';
+import * as PIXI from 'pixi.js-legacy';
 import { JGOF } from './JGOF';
 import { AdHocFormat } from './AdHocFormat';
 
@@ -58,6 +58,7 @@ export class GobanPixi extends GobanCore  {
     private board_sprite: PIXI.Sprite;
     private graphics:PIXI.Graphics;
     private lines_and_text:PIXI.Container;
+    private sprites:{[id:string]: PIXI.Sprite} = {};
 
     // possibly deprecated
 
@@ -89,9 +90,12 @@ export class GobanPixi extends GobanCore  {
             antialias: true,
             transparent: false,
             backgroundColor: 0xDCB35C,
+            //forceCanvas: true,
             powerPreference: 'low-power',
             resolution: devicePixelRatio,
             resizeTo: this.parent,
+            //sharedLoader: true,
+            //sharedTicker: true,
         })
         this.parent.append(this.board.view);
         //this.bindPointerBindings(this.board);
@@ -655,14 +659,8 @@ export class GobanPixi extends GobanCore  {
         this.__last_pt = this.xy2ij(-1, -1);
         */
     }
-    public drawSquare(i:number, j:number):void {
-        /*
-        if (i < 0 || j < 0) { return; }
-        if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
-            this.__drawSquare(i, j);
-        }
-        */
-    }
+
+
     public redraw(force_clear?: boolean):void {
         if (!this.ready_to_draw) {
             return;
@@ -691,234 +689,457 @@ export class GobanPixi extends GobanCore  {
             }
         }
 
+        /* Redraw the lines and labels on the board */
         if (force_clear || !this.__borders_initialized) {
-            let graphics = new PIXI.Graphics();
-            this.lines_and_text.removeChildren();
-            this.lines_and_text.addChild(graphics);
             this.__borders_initialized = true;
-
-            // Draw labels
-            let fontSize = Math.round(this.square_size * 0.5);
-            let fontWeight = 'bold';
-            if (this.getCoordinateDisplaySystem() === '1-1') {
-                fontSize *= 0.7;
-                fontWeight = 'normal';
-
-                if (this.height > 20) {
-                    fontSize *= 0.7;
-                }
-            }
-
-            let style = new PIXI.TextStyle({
-                fontFamily: GOBAN_FONT,
-                fontSize: fontSize,
-                fontWeight: fontWeight,
-                fill: this.theme_board.getLabelTextColor(),
-            });
-
-            let cache = {};
-
-            const place = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y
-                let text = text_sprite(this.board, ch, style);
-                text.x = Math.round(x - text.width / 2);
-                text.y = Math.round(y - (text.height * 0.5));
-                this.lines_and_text.addChild(text);
-            };
-            const vplace = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y, with text going down vertically.
-                for (let i = 0; i < ch.length; ++i) {
-                    let text = text_sprite(this.board, ch[i], style);
-                    let xx = x - text.width / 2;
-                    let yy = y - text.height * 0.5;
-                    let H = text.width;
-
-                    if (ch.length === 2) {
-                        yy = yy - H + (i * H);
-                    }
-                    if (ch.length === 3) {
-                        yy = yy - (H * 1.5) + (i * H);
-                    }
-
-                    text.x = Math.round(xx);
-                    text.y = Math.round(yy);
-                    this.lines_and_text.addChild(text);
-                }
-            };
-
-            const drawHorizontal = (i, j) => {
-                switch (this.getCoordinateDisplaySystem()) {
-                    case 'A1':
-                        for (let c = 0; c < this.width; ++i, ++c) {
-                            let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
-                            let y = j * this.square_size + this.square_size / 2;
-                            place("ABCDEFGHJKLMNOPQRSTUVWXYZ"[c], x, y);
-                        }
-                        break;
-                    case '1-1':
-                        for (let c = 0; c < this.width; ++i, ++c) {
-                            let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
-                            let y = j * this.square_size + this.square_size / 2;
-                            place('' + (c + 1), x, y);
-                        }
-                        break;
-                }
-            };
-
-            const drawVertical = (i, j) => {
-                switch (this.getCoordinateDisplaySystem()) {
-                    case 'A1':
-                        for (let c = 0; c < this.height; ++j, ++c) {
-                            let x = i * this.square_size + this.square_size / 2;
-                            let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
-                            place("" + (this.height - c), x, y);
-                        }
-                        break;
-                    case '1-1':
-                        let chinese_japanese_numbers = [
-                            "一", "二", "三", "四", "五",
-                            "六", "七", "八", "九", "十",
-                            "十一", "十二", "十三", "十四", "十五",
-                            "十六", "十七", "十八", "十九", "二十",
-                            "二十一", "二十二", "二十三", "二十四", "二十五",
-                        ];
-                        for (let c = 0; c < this.height; ++j, ++c) {
-                            let x = i * this.square_size + this.square_size / 2;
-                            let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
-                            vplace(chinese_japanese_numbers[c], x, y);
-                        }
-                        break;
-                }
-            };
-
-            if (this.draw_top_labels && this.bounds.top === 0) {
-                drawHorizontal(this.draw_left_labels, 0);
-            }
-            if (this.draw_bottom_labels && this.bounds.bottom === this.height - 1) {
-                drawHorizontal(this.draw_left_labels, +this.draw_top_labels + this.bounded_height);
-            }
-            if (this.draw_left_labels && this.bounds.left === 0) {
-                drawVertical(0, this.draw_top_labels);
-            }
-            if (this.draw_right_labels && this.bounds.right === this.width - 1) {
-                drawVertical(+this.draw_left_labels + this.bounded_width, +this.draw_top_labels);
-            }
-
-
-            // Lines
-            let d = graphics.lineStyle(1.0, this.theme_board.getLineColor());
-            let ox = this.draw_left_labels ? this.square_size : 0;
-            let ex = this.draw_right_labels ? -this.square_size : 0;
-            let oy = this.draw_top_labels ? this.square_size : 0;
-            let ey = this.draw_bottom_labels ? -this.square_size : 0;
-
-            let half_square = this.square_size / 2.0;
-            let left_edge_offset = this.bounds.left === 0 ? this.square_size / 2 : 0;
-            let right_edge_offset = this.bounds.right === (this.width - 1) ? this.square_size / 2 : this.square_size;
-            let top_edge_offset = this.bounds.top === 0 ? this.square_size / 2 : 0;
-            let bottom_edge_offset = this.bounds.bottom === (this.height - 1) ? this.square_size / 2 : this.square_size;
-
-            for (let j = 0; j <= this.bounds.bottom - this.bounds.top; ++j) {
-                d.moveTo(
-                    Math.round(ox + left_edge_offset) + 0.5,
-                    Math.round(oy + this.square_size * j + half_square) + 0.5
-                );
-                d.lineTo(
-                    Math.round(ox + this.square_size * (this.bounds.right  - this.bounds.left) + right_edge_offset) + 0.5,
-                    Math.round(oy + this.square_size * j + half_square) + 0.5
-                );
-            }
-            //for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
-            for (let i = 0; i <=  this.bounds.right - this.bounds.left; ++i) {
-                d.moveTo(
-                    Math.round(ox + this.square_size * i + half_square) + 0.5,
-                    Math.round(oy + top_edge_offset) + 0.5
-                );
-                d.lineTo(
-                    Math.round(ox + this.square_size * i + half_square) + 0.5,
-                    Math.round(oy + this.square_size * (this.bounds.bottom  - this.bounds.top) + bottom_edge_offset) + 0.5
-                );
-            }
-
-            // star points
-            {
-                let star_radius;
-                if (this.square_size < 5) {
-                    star_radius = 0.5;
-                } else {
-                    star_radius = Math.max(2, (this.metrics.mid - 1.5) * 0.16);
-                }
-
-                let pts:Array<{x:number, y:number}> = [];
-
-                if (this.width === 19 && this.height === 19) {
-                    pts = [
-                        {x: 3, y: 3} , {x: 9, y: 3} , {x: 15, y: 3},
-                        {x: 3, y: 9} , {x: 9, y: 9} , {x: 15, y: 9},
-                        {x: 3, y: 15}, {x: 9, y: 15}, {x: 15, y: 15},
-                    ];
-                }
-                if (this.width === 13 && this.height === 13) {
-                    pts = [
-                        {x: 3, y: 3} , {x: 9, y: 3},
-                        {x: 6, y: 6} ,
-                        {x: 3, y: 9} , {x: 9, y: 9},
-                    ];
-                }
-                if (this.width === 9 && this.height === 9) {
-                    pts = [
-                        {x: 2, y: 2} , {x: 6, y: 2},
-                        {x: 4, y: 4} ,
-                        {x: 2, y: 6} , {x: 6, y: 6},
-                    ];
-                }
-
-                let d = graphics.lineStyle(1.0, this.theme_board.getLineColor());
-
-                for (let pt of pts) {
-                    let cx = Math.round(((pt.x + (this.draw_left_labels ? 1 : 0)) + 0.5) * this.square_size)+0.5;
-                    let cy = Math.round(((pt.y + (this.draw_top_labels ? 1 : 0)) + 0.5) * this.square_size)+0.5;
-                    d.beginFill(this.theme_board.getLineColor())
-                     .drawCircle(cx, cy, star_radius)
-                     .endFill();
-                }
-            }
+            this.redrawBoard();
         }
 
-
-
-
-        // Draw squares
-        /*
-        if (!this.__draw_state || force_clear || this.__draw_state.length !== this.height || this.__draw_state[0].length !== this.width) {
-            this.__draw_state = GoMath.makeMatrix(this.width, this.height);
-        }
-        */
-
-
-        // Set font for text overlay
-        /*
-        {
-            let text_size = Math.round(this.square_size * 0.45);
-            ctx.font = "bold " + text_size + "px " + GOBAN_FONT;
-        }
-        */
-
-        /*
         for (let j = this.bounds.top; j <= this.bounds.bottom; ++j) {
             for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
                 this.drawSquare(i, j);
             }
         }
-        */
 
-        /*
-        let stop = new Date();
         this.drawPenMarks(this.pen_marks);
 
         if (this.move_tree_div) {
             this.redrawMoveTree();
         }
-        */
+
+        //console.log("Number of sprites: ", Object.keys(this.sprites).length);
     }
+    private redrawBoard():void {
+        let graphics = new PIXI.Graphics();
+        this.lines_and_text.removeChildren();
+        this.lines_and_text.addChild(graphics);
+
+        // Draw labels
+        let fontSize = Math.round(this.square_size * 0.5);
+        let fontWeight = 'bold';
+        if (this.getCoordinateDisplaySystem() === '1-1') {
+            fontSize *= 0.7;
+            fontWeight = 'normal';
+
+            if (this.height > 20) {
+                fontSize *= 0.7;
+            }
+        }
+
+        let style = new PIXI.TextStyle({
+            fontFamily: GOBAN_FONT,
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            fill: this.theme_board.getLabelTextColor(),
+        });
+
+        let cache = {};
+
+        const place = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y
+            let text = text_sprite(this.board, ch, style);
+            text.x = Math.round(x - text.width / 2);
+            text.y = Math.round(y - (text.height * 0.5));
+            this.lines_and_text.addChild(text);
+        };
+        const vplace = (ch, x, y) => { // places centered (horizontally & veritcally) text at x,y, with text going down vertically.
+            for (let i = 0; i < ch.length; ++i) {
+                let text = text_sprite(this.board, ch[i], style);
+                let xx = x - text.width / 2;
+                let yy = y - text.height * 0.5;
+                let H = text.width;
+
+                if (ch.length === 2) {
+                    yy = yy - H + (i * H);
+                }
+                if (ch.length === 3) {
+                    yy = yy - (H * 1.5) + (i * H);
+                }
+
+                text.x = Math.round(xx);
+                text.y = Math.round(yy);
+                this.lines_and_text.addChild(text);
+            }
+        };
+
+        const drawHorizontal = (i, j) => {
+            switch (this.getCoordinateDisplaySystem()) {
+                case 'A1':
+                    for (let c = 0; c < this.width; ++i, ++c) {
+                        let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
+                        let y = j * this.square_size + this.square_size / 2;
+                        place("ABCDEFGHJKLMNOPQRSTUVWXYZ"[c], x, y);
+                    }
+                    break;
+                case '1-1':
+                    for (let c = 0; c < this.width; ++i, ++c) {
+                        let x = (i - this.bounds.left - (this.bounds.left > 0 ? +this.draw_left_labels : 0)) * this.square_size + this.square_size / 2;
+                        let y = j * this.square_size + this.square_size / 2;
+                        place('' + (c + 1), x, y);
+                    }
+                    break;
+            }
+        };
+
+        const drawVertical = (i, j) => {
+            switch (this.getCoordinateDisplaySystem()) {
+                case 'A1':
+                    for (let c = 0; c < this.height; ++j, ++c) {
+                        let x = i * this.square_size + this.square_size / 2;
+                        let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
+                        place("" + (this.height - c), x, y);
+                    }
+                    break;
+                case '1-1':
+                    let chinese_japanese_numbers = [
+                        "一", "二", "三", "四", "五",
+                        "六", "七", "八", "九", "十",
+                        "十一", "十二", "十三", "十四", "十五",
+                        "十六", "十七", "十八", "十九", "二十",
+                        "二十一", "二十二", "二十三", "二十四", "二十五",
+                    ];
+                    for (let c = 0; c < this.height; ++j, ++c) {
+                        let x = i * this.square_size + this.square_size / 2;
+                        let y = (j - this.bounds.top - (this.bounds.top > 0 ? +this.draw_top_labels : 0)) * this.square_size + this.square_size / 2;
+                        vplace(chinese_japanese_numbers[c], x, y);
+                    }
+                    break;
+            }
+        };
+
+        if (this.draw_top_labels && this.bounds.top === 0) {
+            drawHorizontal(this.draw_left_labels, 0);
+        }
+        if (this.draw_bottom_labels && this.bounds.bottom === this.height - 1) {
+            drawHorizontal(this.draw_left_labels, +this.draw_top_labels + this.bounded_height);
+        }
+        if (this.draw_left_labels && this.bounds.left === 0) {
+            drawVertical(0, this.draw_top_labels);
+        }
+        if (this.draw_right_labels && this.bounds.right === this.width - 1) {
+            drawVertical(+this.draw_left_labels + this.bounded_width, +this.draw_top_labels);
+        }
+
+
+
+        // Lines
+        let d = graphics.lineStyle(1.0, this.theme_board.getLineColor());
+        let ox = this.draw_left_labels ? this.square_size : 0;
+        let ex = this.draw_right_labels ? -this.square_size : 0;
+        let oy = this.draw_top_labels ? this.square_size : 0;
+        let ey = this.draw_bottom_labels ? -this.square_size : 0;
+
+        let half_square = this.square_size / 2.0;
+        let left_edge_offset = this.bounds.left === 0 ? this.square_size / 2 : 0;
+        let right_edge_offset = this.bounds.right === (this.width - 1) ? this.square_size / 2 : this.square_size;
+        let top_edge_offset = this.bounds.top === 0 ? this.square_size / 2 : 0;
+        let bottom_edge_offset = this.bounds.bottom === (this.height - 1) ? this.square_size / 2 : this.square_size;
+
+        for (let j = 0; j <= this.bounds.bottom - this.bounds.top; ++j) {
+            d.moveTo(
+                Math.round(ox + left_edge_offset) + 0.5,
+                Math.round(oy + this.square_size * j + half_square) + 0.5
+            );
+            d.lineTo(
+                Math.round(ox + this.square_size * (this.bounds.right  - this.bounds.left) + right_edge_offset) + 0.5,
+                Math.round(oy + this.square_size * j + half_square) + 0.5
+            );
+        }
+        //for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
+        for (let i = 0; i <=  this.bounds.right - this.bounds.left; ++i) {
+            d.moveTo(
+                Math.round(ox + this.square_size * i + half_square) + 0.5,
+                Math.round(oy + top_edge_offset) + 0.5
+            );
+            d.lineTo(
+                Math.round(ox + this.square_size * i + half_square) + 0.5,
+                Math.round(oy + this.square_size * (this.bounds.bottom  - this.bounds.top) + bottom_edge_offset) + 0.5
+            );
+        }
+
+        // star points
+        {
+            let star_radius;
+            if (this.square_size < 5) {
+                star_radius = 0.5;
+            } else {
+                star_radius = Math.max(2, (this.metrics.mid - 1.5) * 0.16);
+            }
+
+            let pts:Array<{x:number, y:number}> = [];
+
+            if (this.width === 19 && this.height === 19) {
+                pts = [
+                    {x: 3, y: 3} , {x: 9, y: 3} , {x: 15, y: 3},
+                    {x: 3, y: 9} , {x: 9, y: 9} , {x: 15, y: 9},
+                    {x: 3, y: 15}, {x: 9, y: 15}, {x: 15, y: 15},
+                ];
+            }
+            if (this.width === 13 && this.height === 13) {
+                pts = [
+                    {x: 3, y: 3} , {x: 9, y: 3},
+                    {x: 6, y: 6} ,
+                    {x: 3, y: 9} , {x: 9, y: 9},
+                ];
+            }
+            if (this.width === 9 && this.height === 9) {
+                pts = [
+                    {x: 2, y: 2} , {x: 6, y: 2},
+                    {x: 4, y: 4} ,
+                    {x: 2, y: 6} , {x: 6, y: 6},
+                ];
+            }
+
+            let d = graphics.lineStyle(1.0, this.theme_board.getLineColor());
+
+            for (let pt of pts) {
+                let cx = Math.round(((pt.x + (this.draw_left_labels ? 1 : 0)) + 0.5) * this.square_size)+0.5;
+                let cy = Math.round(((pt.y + (this.draw_top_labels ? 1 : 0)) + 0.5) * this.square_size)+0.5;
+                d.beginFill(this.theme_board.getLineColor())
+                 .drawCircle(cx, cy, star_radius)
+                 .endFill();
+            }
+        }
+
+    }
+    public drawSquare(i:number, j:number):void {
+        if (!this.drawing_enabled) {
+            return;
+        }
+        if (this.no_display) {
+            return;
+        }
+        if (i < 0 || j < 0 || i > (this.width - 1) || j > (this.height - 1)) {
+            return;
+        }
+
+        if (i < 0 || j < 0) { return; }
+        let s = this.square_size;
+        let ox = this.draw_left_labels ? s : 0;
+        let oy = this.draw_top_labels ? s : 0;
+        if (this.bounds.left > 0) {
+            ox = -s * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -s * this.bounds.top;
+        }
+
+        let cx = i * s + ox;
+        let cy = j * s + oy;
+        let draw_last_move = !this.dont_draw_last_move;
+
+        let stone_color = 0;
+        if (this.engine) {
+            stone_color = this.engine.board[j][i];
+        }
+
+        /* Figure out marks for this spot */
+        let pos = this.getMarks(i, j);
+        if (!pos) {
+            console.error("No position for ", j, i);
+            pos = {};
+        }
+        let altmarking = null;
+        if (this.engine && this.engine.cur_move && (this.mode !== "play" || (typeof(this.isInPushedAnalysis()) !== "undefined" && this.isInPushedAnalysis()))) {
+            for (let cur = this.engine.cur_move; !cur.trunk; cur = cur.parent) {
+                if (cur.x === i && cur.y === j) {
+                    let move_diff = cur.getMoveNumberDifferenceFromTrunk();
+                    if (move_diff !== cur.move_number) {
+                        altmarking = cur.edited ? null : (this.show_move_numbers ? cur.getMoveNumberDifferenceFromTrunk() : null);
+                    }
+                }
+            }
+        }
+
+        let movetree_contains_this_square = false;
+        if (this.engine && this.engine.cur_move.lookupMove(i, j, this.engine.player, false)) {
+            movetree_contains_this_square = true;
+        }
+
+        let have_text_to_draw = false;
+        let text_color = this.theme_blank_text_color;
+        for (let key in pos) {
+            if (key.length <= 3) {
+                have_text_to_draw = true;
+            }
+        }
+        if (pos.circle || pos.triangle || pos.chat_triangle || pos.sub_triangle || pos.cross || pos.square) {
+            have_text_to_draw = true;
+        }
+        if (pos.letter && pos.letter.length > 0) {
+            have_text_to_draw = true;
+        }
+
+
+        // heatmap
+        // square highlights
+        // colored stones
+
+
+        // stones and hovers
+        {
+            if (stone_color  /* if there is really a stone here */
+                || (this.stone_placement_enabled
+                    && (this.last_hover_square && this.last_hover_square.x === i && this.last_hover_square.y === j)
+                    && (this.mode !== "analyze" || this.analyze_tool === "stone")
+                    && this.engine
+                    && !this.scoring_mode
+                    && (this.engine.phase === "play" || (this.engine.phase === "finished" && this.mode === "analyze"))
+                    && ((this.engine.puzzle_player_move_mode !== "fixed" || movetree_contains_this_square)
+                        || this.getPuzzlePlacementSetting().mode !== "play")
+                   )
+                || (this.scoring_mode
+                    && this.score_estimate
+                    && this.score_estimate.board[j][i]
+                    && this.score_estimate.removal[j][i]
+                   )
+                || (this.engine
+                    && this.engine.phase === "stone removal"
+                    && this.engine.board[j][i]
+                    && this.engine.removal[j][i]
+                   )
+                || pos.black
+                || pos.white
+            ) {
+                //let color = stone_color ? stone_color : (this.move_selected ? this.engine.otherPlayer() : this.engine.player);
+                let transparent = false;
+                let color;
+                if (this.scoring_mode
+                    && this.score_estimate
+                    && this.score_estimate.board[j][i]
+                    && this.score_estimate.removal[j][i]
+                ) {
+                    color = this.score_estimate.board[j][i];
+                    transparent = true;
+                }
+                else if (this.engine && (this.engine.phase === "stone removal" || (this.engine.phase === "finished" && this.mode !== "analyze"))
+                    && this.engine.board && this.engine.removal
+                    && this.engine.board[j][i]
+                    && this.engine.removal[j][i]
+                ) {
+                    color = this.engine.board[j][i];
+                    transparent = true;
+                }
+                else if (stone_color) {
+                    color = stone_color;
+                }
+                else if (this.mode === "edit" || (this.mode === "analyze" && this.analyze_tool === "stone" && this.analyze_subtool !== "alternate")) {
+                    color = this.edit_color === "black" ? 1 : 2;
+                    if (this.shift_key_is_down) {
+                        color = this.edit_color === "black" ? 2 : 1;
+                    }
+                }
+                else if (this.move_selected) {
+                    if (this.engine.handicapMovesLeft() <= 0) {
+                        color = this.engine.otherPlayer();
+                    }   else {
+                            color = this.engine.player;
+                    }
+                }
+                else if (this.mode === "puzzle") {
+                    if (this.getPuzzlePlacementSetting) {
+                        let s = this.getPuzzlePlacementSetting();
+                        if (s.mode === "setup") {
+                            color = s.color;
+                            if (this.shift_key_is_down) {
+                                color = color === 1 ? 2 : 1;
+                            }
+                        } else {
+                            color = this.engine.player;
+                        }
+                    } else {
+                        color = this.engine.player;
+                    }
+
+                }
+                else if (pos.black || pos.white) {
+                    color = pos.black ? 1 : 2;
+                    transparent = true;
+                }
+                else {
+                    color = this.engine.player;
+
+                    if (this.mode === "pattern search" && this.pattern_search_color) {
+                        color = this.pattern_search_color;
+                    }
+                }
+
+
+                if (!(this.autoplaying_puzzle_move && !stone_color)) {
+                    text_color = color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+
+                    /*
+                    if (!this.theme_black_stones) {
+                        let err = new Error(`Goban.theme_black_stones not set. Current themes is ${JSON.stringify(this.themes)}`);
+                        setTimeout(() => { throw err; }, 1);
+                        return;
+                    }
+                    if (!this.theme_white_stones) {
+                        let err = new Error(`Goban.theme_white_stones not set. Current themes is ${JSON.stringify(this.themes)}`);
+                        setTimeout(() => { throw err; }, 1);
+                        return;
+                    }
+                    */
+
+                    let texture:PIXI.Texture = null;
+                    if (color === 1) {
+                        texture = this.theme_black.blackStoneTexture(this.board, this.theme_stone_radius, ((i + 1) * 53) * ((j + 1) * 97));
+                    } else {
+                        texture = this.theme_white.whiteStoneTexture(this.board, this.theme_stone_radius, ((i + 1) * 53) * ((j + 1) * 97));
+                    }
+                    let alpha = (!stone_color || transparent) ? 0.6 : 1.0;
+                    let sprite = this.getOrCreateSprite(`stone-${i}-${j}`, texture, cx, cy, alpha);
+                }
+            }
+            else {
+                this.removeSprite(`stone-${i}-${j}`);
+            }
+        }
+
+
+
+
+        // delete X's
+        // scores
+        // letters and numbers
+        // special symbols (triangles etc)
+        // last move circle
+        // score estimation
+    }
+
+    private removeSprite(key:string):void {
+        if (key in this.sprites) {
+            let sprite = this.sprites[key];
+            sprite.destroy({texture: false, baseTexture: false});
+            delete this.sprites[key];
+        }
+    }
+
+    private getOrCreateSprite(key:string, texture:PIXI.Texture, x:number, y:number, alpha:number):PIXI.Sprite {
+        let addToStage = false;
+        if (!(key in this.sprites)) {
+            this.sprites[key] = new PIXI.Sprite(texture);
+            addToStage = true;
+        }
+        let ret = this.sprites[key];
+        if (ret.texture !== texture) {
+            ret.texture = texture;
+        }
+        if (ret.x !== x) {
+            ret.x = x;
+        }
+        if (ret.y !== y) {
+            ret.y = y;
+        }
+        if (ret.alpha !== alpha) {
+            ret.alpha = alpha;
+        }
+        if (addToStage) {
+            this.board.stage.addChild(ret);
+        }
+        return ret;
+    }
+
+
     protected setThemes(themes:GobanSelectedThemes, dont_redraw:boolean):void {
         if (this.no_display) {
             return;
@@ -1073,6 +1294,8 @@ export class GobanPixi extends GobanCore  {
         }
         */
     }
+
+
 }
 
 
@@ -1090,191 +1313,7 @@ function text_sprite(application:PIXI.Application, ch, style:PIXI.TextStyle):PIX
         let text = new PIXI.Text(ch, style);
         application.renderer.render(text);
         PIXI.Texture.addToCache(text.texture, key);
+        text.destroy({texture: false, baseTexture: false});
     }
     return new PIXI.Sprite(PIXI.utils.TextureCache[key]);
 }
-
-
-
-    /*
-    private bindPointerBindings(canvas:HTMLCanvasElement):void {
-        if (!this.interactive) {
-            return;
-        }
-
-        if (canvas.getAttribute("data-pointers-bound") === "true") {
-            return;
-        }
-
-        canvas.setAttribute("data-pointers-bound", "true");
-
-
-        let dragging = false;
-
-        let last_click_square = this.xy2ij(0, 0);
-
-        let pointerUp = (ev, double_clicked) => {
-            if (!dragging) {
-                // if we didn't start the click in the canvas, don't respond to it
-                return;
-            }
-
-            dragging = false;
-
-            if (this.scoring_mode) {
-                let pos = getRelativeEventPosition(ev);
-                let pt = this.xy2ij(pos.x, pos.y);
-                if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
-                    if (this.score_estimate) {
-                        this.score_estimate.handleClick(pt.i, pt.j, ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey);
-                    }
-                    this.emit("update");
-                }
-                return;
-            }
-
-            if (ev.ctrlKey || ev.metaKey || ev.altKey) {
-                try {
-                    let pos = getRelativeEventPosition(ev);
-                    let pt = this.xy2ij(pos.x, pos.y);
-                    if (GobanCore.hooks.addCoordinatesToChatInput) {
-                        GobanCore.hooks.addCoordinatesToChatInput(this.engine.prettyCoords(pt.i, pt.j));
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-                return;
-            }
-
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                // might want to interpret this as a start/stop of a line segment
-            } else {
-                let pos = getRelativeEventPosition(ev);
-                let pt = this.xy2ij(pos.x, pos.y);
-                if (!double_clicked) {
-                    last_click_square = pt;
-                } else {
-                    if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
-                        this.onMouseOut(ev);
-                        return;
-                    }
-                }
-
-                this.onTap(ev, double_clicked);
-                this.onMouseOut(ev);
-            }
-        };
-
-        let pointerDown = (ev) => {
-            dragging = true;
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                this.onPenStart(ev);
-            }
-            else if (this.mode === "analyze" && this.analyze_tool === "label") {
-                if (ev.shiftKey) {
-                    if (this.analyze_subtool === "letters") {
-                        let label_char = prompt(_("Enter the label you want to add to the board"), "");
-                        if (label_char) {
-                            this.label_character = label_char.substring(0, 3);
-                            dragging = false;
-                            return;
-                        }
-                    }
-                }
-
-                this.onLabelingStart(ev);
-            }
-        };
-
-        let pointerMove = (ev) => {
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                if (!dragging) { return; }
-                this.onPenMove(ev);
-            } else if (dragging && this.mode === "analyze" && this.analyze_tool === "label") {
-                this.onLabelingMove(ev);
-            } else {
-                 this.onMouseMove(ev);
-            }
-        };
-
-        let pointerOut = (ev) => {
-            dragging = false;
-            this.onMouseOut(ev);
-        };
-
-        let mousedisabled:any = 0;
-
-        canvas.addEventListener("click", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, false); } ev.preventDefault(); return false; });
-        canvas.addEventListener("dblclick", (ev) => { if (!mousedisabled) { dragging = true; pointerUp(ev, true); } ev.preventDefault(); return false; });
-        canvas.addEventListener("mousedown", (ev) => { if (!mousedisabled) { pointerDown(ev); } ev.preventDefault(); return false; });
-        canvas.addEventListener("mousemove", (ev) => { if (!mousedisabled) { pointerMove(ev); } ev.preventDefault(); return false; });
-        canvas.addEventListener("mouseout", (ev) => { if (!mousedisabled) { pointerOut(ev); } else { ev.preventDefault(); } return false; });
-        canvas.addEventListener("focus", (ev) => { ev.preventDefault(); return false; });
-
-
-        let lastX = 0;
-        let lastY = 0;
-        let startX = 0;
-        let startY = 0;
-
-        const onTouchStart = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-
-            if (ev.target === canvas) {
-                lastX = ev.touches[0].pageX;
-                lastY = ev.touches[0].pageY;
-                startX = ev.touches[0].pageX;
-                startY = ev.touches[0].pageY;
-                pointerDown(ev);
-            } else if (dragging) {
-                pointerOut(ev);
-            }
-        };
-        const onTouchEnd = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-
-            if (ev.target === canvas) {
-                if (Math.sqrt((startX - lastX) * (startX - lastX) + (startY - lastY) * (startY - lastY)) > 10) {
-                    pointerOut(ev);
-                } else {
-                    pointerUp(ev, false);
-                }
-            } else if (dragging) {
-                pointerOut(ev);
-            }
-        };
-        const onTouchMove = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-
-            if (ev.target === canvas) {
-                lastX = ev.touches[0].pageX;
-                lastY = ev.touches[0].pageY;
-                if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                    pointerMove(ev);
-                    ev.preventDefault();
-                    return false;
-                }
-            } else if (dragging) {
-                pointerOut(ev);
-            }
-        };
-
-        document.addEventListener("touchstart", onTouchStart);
-        document.addEventListener("touchend", onTouchEnd);
-        document.addEventListener("touchmove", onTouchMove);
-        this.on("destroy", () => {
-            document.removeEventListener("touchstart", onTouchStart);
-            document.removeEventListener("touchend", onTouchEnd);
-            document.removeEventListener("touchmove", onTouchMove);
-        });
-    }
-    */

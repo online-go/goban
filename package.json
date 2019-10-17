@@ -40,7 +40,7 @@
         "react": "^16.9.0",
         "react-dom": "^16.9.0",
         "eventemitter3": "^4.0.0",
-        "pixi.js": "^5.1.5",
+        "pixi.js-legacy": "^5.1.5",
         "ts-loader": "^6.2.0",
         "tslint": "^5.20.0",
         "typedoc": "^0.15.0",

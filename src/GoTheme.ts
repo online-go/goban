@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import * as PIXI from 'pixi.js-legacy';
+
 export class GoTheme {
     public name: string;
     protected parent: GoTheme; // An optional parent theme
@@ -37,7 +39,7 @@ export class GoTheme {
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
-    public placeWhiteStone(ctx, shadow_ctx, stone, cx, cy, radius) {
+    public placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:any, cx:number, cy:number, radius:number) {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getWhiteStoneColor();
         ctx.beginPath();
@@ -45,12 +47,48 @@ export class GoTheme {
         ctx.fill();
     }
 
-    public placeBlackStone(ctx, shadow_ctx, stone, cx, cy, radius) {
+    public placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:any, cx:number, cy:number, radius:number) {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getBlackStoneColor();
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
         ctx.fill();
+    }
+
+    /** Returns a PIXI sprite for a white stone of the given radius using the given seed */
+    public whiteStoneTexture(application:PIXI.Application, radius:number, seed:number):PIXI.Texture {
+        let key = `white-disc-${radius}`;
+        if (!(key in PIXI.utils.TextureCache)) {
+            let graphics = new PIXI.Graphics();
+            graphics
+                .lineStyle(1.0, color2number(this.getBlackStoneColor()))
+                .beginFill(color2number(this.getWhiteStoneColor()))
+                .drawCircle(radius/2, radius/2, radius)
+                .endFill();
+            let texture = application.renderer.generateTexture(graphics, PIXI.SCALE_MODES.LINEAR, 1);
+            PIXI.Texture.addToCache(texture, key);
+            graphics.destroy({texture: false, baseTexture:false});
+        }
+
+        return PIXI.utils.TextureCache[key];
+    }
+
+    /** Returns a PIXI sprite for a white stone of the given radius using the given seed */
+    public blackStoneTexture(application:PIXI.Application, radius:number, seed:number):PIXI.Texture {
+        let key = `black-disc-${radius}`;
+        if (!(key in PIXI.utils.TextureCache)) {
+            let graphics = new PIXI.Graphics();
+            graphics
+                .lineStyle(1.0, color2number(this.getBlackStoneColor()))
+                .beginFill(color2number(this.getBlackStoneColor()))
+                .drawCircle(radius/2, radius/2, radius)
+                .endFill();
+            let texture = application.renderer.generateTexture(graphics, PIXI.SCALE_MODES.LINEAR, 1);
+            PIXI.Texture.addToCache(texture, key);
+            graphics.destroy({texture: false, baseTexture:false});
+        }
+
+        return PIXI.utils.TextureCache[key];
     }
 
     /* Should return true if you would like the shadow layer to be present. False
@@ -124,3 +162,8 @@ export class GoTheme {
         return "#000000";
     }
 }
+
+function color2number(hex_color:string):number {
+    return parseInt(hex_color.replace('#','0x'));
+}
+

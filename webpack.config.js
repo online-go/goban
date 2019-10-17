@@ -47,9 +47,11 @@ module.exports = (env, argv) => {
             maxEntrypointSize: 1024 * 1024 * 2.5,
         },
 
+        /*
         externals: {
-            "pixi.js": "PIXI", // can't seem to import anyways
+            "pixi.js": "PIXI",
         },
+        */
 
         devtool: 'source-map',
     };
@@ -99,6 +101,7 @@ module.exports = (env, argv) => {
                 ],
                 index: 'index.html',
                 compress: true,
+                host: '0.0.0.0',
                 port: 9000,
                 writeToDisk: true,
 

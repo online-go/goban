@@ -204,8 +204,13 @@ function Main():JSX.Element {
     </div>
 
 
-        {true && <ReactGobanPixi /> }
-        {true && <ReactGobanCanvas /> }
+        {false && <ReactGobanPixi /> }
+        {false && <ReactGobanPixi /> }
+        {[
+        //1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+        1,2,3,4,5,6,7,8,9,10,11,12
+        ].map((_, idx) => <ReactGobanCanvas key={idx} />)}
+        {false && <ReactGobanCanvas /> }
 
     </div>
     );
@@ -223,10 +228,14 @@ function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x): GobanClass}, pro
         goban = new ctor(Object.assign({}, base_config, { "board_div": container.current }));
 
         fiddler.on('setSquareSize', (ss) => {
+            const start = Date.now();
             goban.setSquareSize(ss)
+            const end = Date.now();
+            console.log("SSS time: ", end - start);
         });
 
         fiddler.on('redraw', () => {
+            const start = Date.now();
             goban.draw_top_labels = base_config.draw_top_labels;
             goban.draw_left_labels = base_config.draw_left_labels;
             goban.draw_right_labels = base_config.draw_right_labels;
@@ -237,12 +246,31 @@ function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x): GobanClass}, pro
             goban.config.draw_bottom_labels = base_config.draw_bottom_labels;
             goban.setBounds(base_config.bounds);
             goban.redraw(true);
+            const end = Date.now();
+            console.log("Redraw time: ", end - start);
         });
 
         return () => {
             goban.destroy();
         };
     }, [container]);
+
+
+    let i=0;
+    let start = Date.now();
+    let interval = setInterval(() => {
+        i++;
+        if (i >= 300) {
+            if (i === 300) {
+                let end = Date.now();
+                console.log("Done in ", end - start);
+            }
+            clearInterval(interval);
+            return;
+        }
+        goban.engine.place(Math.floor(i / 19), Math.floor(i % 19));
+        //goban.redraw(true);
+    }, 1);
 
     return (
         <div className='Goban'>
