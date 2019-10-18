@@ -703,9 +703,7 @@ export class GobanPixi extends GobanCore  {
 
         this.drawPenMarks(this.pen_marks);
 
-        if (this.move_tree_div) {
-            this.redrawMoveTree();
-        }
+        this.move_tree_redraw();
 
         //console.log("Number of sprites: ", Object.keys(this.sprites).length);
     }
@@ -1296,6 +1294,24 @@ export class GobanPixi extends GobanCore  {
     }
 
 
+
+    //
+    // Move tree
+    //
+    public move_tree_redraw(no_warp?:boolean):void {
+        /*
+        let d = document.getElementById(this.move_tree_div.replace('#', ''));
+        let c = document.getElementById(this.move_tree_canvas.replace('#', ''));
+        if (d && c) {
+            this.engine.move_tree.redraw({
+                "board": this,
+                "active_path_end": this.engine.cur_move,
+                "div": d,
+                "canvas": c
+            });
+        }
+        */
+    }
 }
 
 

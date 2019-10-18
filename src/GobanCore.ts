@@ -138,7 +138,7 @@ export interface GobanHooks {
     getLocation?: () => string;
     getShowMoveNumbers?: () => boolean;
     getShowVariationMoveNumbers?: () => boolean;
-    getMoveTreeNumbering?: () => string;
+    getMoveTreeNumbering?: () => "move-coordinates" | "none" | "move-number";
     getCDNReleaseBase?: () => string;
     getSoundEnabled?: () => boolean;
     getSoundVolume?: () => number;
@@ -248,8 +248,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected metrics;
     protected move_number;
     protected move_selected;
-    protected move_tree_canvas;
-    protected move_tree_div;
     protected no_display;
     protected onError;
     protected onPendingResignation;
@@ -311,6 +309,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected abstract setThemes(themes, dont_redraw);
     public abstract drawSquare(i:number, j:number):void;
     public abstract redraw(force_clear?: boolean);
+    public abstract move_tree_redraw(no_warp?:boolean):void;
 
     public static hooks:GobanHooks = {
         getClockDrift: () => 0,
@@ -369,8 +368,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.square_size = config["square_size"] || "auto";
         this.interactive = "interactive" in config ? config["interactive"] : false;
         this.pen_marks = [];
-        this.move_tree_div = config.move_tree_div || null;
-        this.move_tree_canvas = config.move_tree_canvas || null;
 
         this.engine = null;
         this.last_move = null;
@@ -1011,7 +1008,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
                     this.engine.setAsCurrentReviewMove();
                     if (this.done_loading_review) {
-                        this.redrawMoveTree();
+                        this.move_tree_redraw();
                     }
                 }
 
@@ -1026,7 +1023,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
                     this.engine.setAsCurrentReviewMove();
                     if (this.done_loading_review) {
-                        this.redrawMoveTree();
+                        this.move_tree_redraw();
                     }
                 }
 
@@ -1057,7 +1054,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.engine.setAsCurrentReviewMove();
                         this.scheduleRedrawPenLayer();
                         if (this.done_loading_review) {
-                            this.redrawMoveTree();
+                            this.move_tree_redraw();
                         }
                     }
                     if ("pen" in obj) { /* start pen */
@@ -1079,7 +1076,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (this.done_loading_review) {
                     if (!follow) {
                         this.engine.jumpTo(curmove);
-                        this.redrawMoveTree();
+                        this.move_tree_redraw();
                     } else {
                         if (do_redraw) {
                             this.redraw(true);
@@ -1149,7 +1146,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.drawPenMarks(this.engine.cur_move.pen_marks);
                     this.emit("review.load-end");
                     this.emit("review.updated");
-                    this.redrawMoveTree();
+                    this.move_tree_redraw();
                     this.redraw(true);
 
                 } catch (e) {
@@ -1460,26 +1457,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         return Math.max(1, r);
     }
-    public redrawMoveTree() {
-        //let d = $(this.move_tree_div);
-        //let c = $(this.move_tree_canvas);
-        let d = document.getElementById(this.move_tree_div);
-        let c = document.getElementById(this.move_tree_canvas);
-        if (d && c) {
-            this.engine.move_tree.redraw({
-                "board": this,
-                "active_path_end": this.engine.cur_move,
-                "div": d,
-                "canvas": c
-            });
-        }
-    }
+
     protected updateMoveTree() {
-        this.redrawMoveTree();
+        this.move_tree_redraw();
     }
     protected updateOrRedrawMoveTree() {
-        if (MoveTree.layout_dirty) {
-            this.redrawMoveTree();
+        if (this.engine.move_tree_layout_dirty) {
+            this.move_tree_redraw();
         } else {
             this.updateMoveTree();
         }
@@ -1801,7 +1785,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
             this.engine.deleteCurMove();
             this.emit("update");
-            this.redrawMoveTree();
+            this.move_tree_redraw();
         }
     }
 
@@ -2058,9 +2042,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             });
         } else {
             this.syncReviewMove();
-            if (this.move_tree_div) {
-                this.redrawMoveTree();
-            }
+            this.move_tree_redraw();
         }
     }
     public requestUndo() {

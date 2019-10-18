@@ -31,6 +31,7 @@ import {
 } from './GobanCore';
 import {GoEngine, encodeMove, encodeMoves} from "./GoEngine";
 import {GoMath} from "./GoMath";
+import {MoveTree} from "./MoveTree";
 import {GoThemes} from "./GoThemes";
 import { MoveTreePenMarks } from "./MoveTree";
 import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingRatio, elementOffset} from "./GoUtil";
@@ -41,6 +42,15 @@ let __theme_cache = {"black": {}, "white": {}};
 
 export interface GobanCanvasConfig extends GobanConfig {
     board_div: HTMLElement;
+}
+
+interface ViewPortInterface {
+    offset_x: number;
+    offset_y: number;
+    minx: number;
+    miny: number;
+    maxx: number;
+    maxy: number;
 }
 
 export class GobanCanvas extends GobanCore  {
@@ -58,6 +68,10 @@ export class GobanCanvas extends GobanCore  {
     private shadow_ctx:CanvasRenderingContext2D;
     private handleShiftKey:(ev:KeyboardEvent) => void;
 
+    public move_tree_container: HTMLElement;
+    private move_tree_inner_container: HTMLDivElement;
+    private move_tree_canvas: HTMLCanvasElement;
+
 
 
     constructor(config:GobanCanvasConfig, preloaded_data?:AdHocFormat|JGOF) {
@@ -74,6 +88,8 @@ export class GobanCanvas extends GobanCore  {
         this.board.className = "StoneLayer";
         this.parent.append(this.board);
         this.bindPointerBindings(this.board);
+
+        this.move_tree_container = config["move_tree_container"];
 
         this.handleShiftKey = (ev) => {
             if (ev.shiftKey !== this.shift_key_is_down) {
@@ -1964,10 +1980,7 @@ export class GobanCanvas extends GobanCore  {
 
         let stop = new Date();
         this.drawPenMarks(this.pen_marks);
-
-        if (this.move_tree_div) {
-            this.redrawMoveTree();
-        }
+        this.move_tree_redraw();
     }
     public message(msg:string, timeout:number = 5000):void {
         this.clearMessage();
@@ -2055,6 +2068,14 @@ export class GobanCanvas extends GobanCore  {
             __theme_cache.black[themes.black][this.theme_stone_radius] = this.theme_black.preRenderBlack(this.theme_stone_radius, 2081);
         }
 
+        if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
+            __theme_cache.white[themes.white][MoveTree.stone_radius] = this.theme_white.preRenderWhite(MoveTree.stone_radius, 23434);
+        }
+        if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
+            __theme_cache.black[themes.black][MoveTree.stone_radius] = this.theme_black.preRenderBlack(MoveTree.stone_radius, 2081);
+        }
+
+
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];
         this.theme_black_stones = __theme_cache.black[themes.black][this.theme_stone_radius];
         this.theme_line_color = this.theme_board.getLineColor();
@@ -2070,18 +2091,391 @@ export class GobanCanvas extends GobanCore  {
             this.parent.style[key] = bgcss[key];
         }
 
-        if (this.move_tree_div) {
-            if (this.engine) {
-                this.engine.move_tree.updateTheme(this);
+        if (!dont_redraw) {
+            this.redraw(true);
+            this.move_tree_redraw();
+        }
+    }
+
+
+    //
+    // Move tree
+    //
+    //private redraw_on_scroll: any;
+    private move_tree_on_scroll: (event:Event) => void;
+
+    public move_tree_redraw(no_warp?:boolean):void {
+        if (!this.move_tree_container) {
+            return;
+        }
+
+        if (!this.move_tree_inner_container) {
+            this.move_tree_inner_container = document.createElement('div');
+            this.move_tree_canvas = document.createElement('canvas');
+            this.move_tree_inner_container.appendChild(this.move_tree_canvas);
+            this.move_tree_container.appendChild(this.move_tree_inner_container);
+            this.move_tree_bindCanvasEvents(this.move_tree_canvas);
+            this.move_tree_container.style.position = 'relative';
+            this.move_tree_canvas.style.position = 'absolute';
+
+            let move_tree_on_scroll = (event:Event) => {
+                this.move_tree_redraw(true);
+            };
+            this.move_tree_container.addEventListener('scroll', move_tree_on_scroll);
+            this.on('destroy', () => {
+                this.move_tree_container.removeEventListener('scroll', move_tree_on_scroll);
+            });
+        }
+
+        if (this.move_tree_inner_container.parentNode !== this.move_tree_container) {
+            this.move_tree_container.appendChild(this.move_tree_inner_container);
+        }
+
+
+        /*
+        if (this.move_tree_canvas.width !== this.move_tree_container.outerWidth ||
+            this.move_tree_canvas.height !== this.move_tree_container.outerHeight
+        ) {
+            console.log(this.move_tree_canvas.width, this.move_tree_container.outerWidth,
+                this.move_tree_canvas.height, this.move_tree_container.outerHeight);
+            this.move_tree_canvas.width = this.move_tree_container.outerWidth;
+            this.move_tree_canvas.height = this.move_tree_container.outerHeight;
+            this.move_tree_canvas.style.width = this.move_tree_container.outerWidth + "px";
+            this.move_tree_canvas.style.height = this.move_tree_container.outerHeight + "px";
+        }
+        */
+
+
+        this.engine.move_tree.recomputeIsobranches();
+        let active_path_end = this.engine.cur_move;
+
+        this.engine.move_tree_layout_dirty = false;
+
+        active_path_end.setActivePath(++MoveTree.active_path_number);
+
+        /*
+        if (!this.move_tree_container.data("move-tree-redraw-on-scroll")) {
+            let debounce = false;
+            this.redraw_on_scroll = () => {
+                MoveTree.redraw_root.redraw(MoveTree.redraw_config, true);
+            };
+            this.move_tree_container.data("move-tree-redraw-on-scroll", this.redraw_on_scroll);
+            this.move_tree_container.scroll(this.redraw_on_scroll);
+        }
+        */
+
+        let canvas = this.move_tree_canvas;
+        let engine = this.engine;
+        let stone_radius = MoveTree.stone_radius;
+
+        let dimensions = {"x": 1, "y": 1};
+        this.engine.move_tree_layout_vector = [];
+        let layout_hash = {};
+        this.engine.move_tree.layout(0, 0, layout_hash, 0);
+        this.engine.move_tree_layout_hash = layout_hash;
+        let max_height = 0;
+        for (let i = 0; i < this.engine.move_tree_layout_vector.length; ++i) {
+            max_height = Math.max(this.engine.move_tree_layout_vector[i] + 1, max_height);
+        }
+
+        let div_width = this.move_tree_container.offsetWidth;
+        let div_height = this.move_tree_container.offsetHeight;
+        //let div_width = this.move_tree_container.width();
+        //let div_height = this.move_tree_container.height();
+        let width = Math.max(div_width - 15, this.engine.move_tree_layout_vector.length * MoveTree.stone_square_size);
+        let height = Math.max(div_height - 15, max_height * MoveTree.stone_square_size);
+
+        //resizeDeviceScaledCanvas(canvas, width, height);
+
+
+        //let div_scroll_left = this.move_tree_container.scrollLeft();
+        //let div_scroll_top = this.move_tree_container.scrollTop();
+        let div_scroll_top = this.move_tree_container.scrollTop;
+        let div_scroll_left = this.move_tree_container.scrollLeft;
+
+        canvas.style.top = div_scroll_top + 'px';
+        canvas.style.left = div_scroll_left + 'px';
+        if (canvas.width !== div_width || canvas.height !== div_height) {
+            resizeDeviceScaledCanvas(canvas, div_width, div_height);
+        }
+
+        this.move_tree_inner_container.style.width = width + 'px';
+        this.move_tree_inner_container.style.height = height + 'px';
+
+
+        if (!no_warp) {
+            /* make sure our active stone is visible, but don't scroll around unnecessarily */
+            if (div_scroll_left > active_path_end.layout_cx || div_scroll_left + div_width - 20 < active_path_end.layout_cx
+                || div_scroll_top > active_path_end.layout_cy || div_scroll_top + div_height - 20 < active_path_end.layout_cy
+            ) {
+                this.move_tree_container.scrollLeft = active_path_end.layout_cx - div_width / 2;
+                this.move_tree_container.scrollTop = active_path_end.layout_cy - div_height / 2;
             }
         }
 
-        if (!dont_redraw) {
-            this.redraw(true);
-            if (this.move_tree_div) {
-                this.redrawMoveTree();
+
+        let viewport = {
+            "offset_x": div_scroll_left,
+            "offset_y": div_scroll_top,
+            "minx": div_scroll_left - MoveTree.stone_square_size,
+            "miny": div_scroll_top - MoveTree.stone_square_size,
+            "maxx": div_scroll_left + div_width + MoveTree.stone_square_size,
+            "maxy": div_scroll_top + div_height + MoveTree.stone_square_size,
+        };
+
+        let ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, div_width, div_height);
+
+        this.move_tree_hilightNode(ctx, active_path_end, "#6BAADA", viewport);
+
+        if (engine.cur_review_move && engine.cur_review_move.id !== active_path_end.id) {
+            this.move_tree_hilightNode(ctx, engine.cur_review_move, "#6BDA6B", viewport);
+        }
+
+
+        ctx.save();
+        ctx.lineWidth = 1.0;
+        ctx.strokeStyle = this.theme_line_color;
+        this.move_tree_recursiveDrawPath(ctx, this.engine.move_tree, viewport);
+        ctx.restore();
+
+
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        let text_size = 10;
+        ctx.font = `bold ${text_size}px Verdana,Arial,sans-serif`;
+        ctx.textBaseline = "middle";
+        this.move_tree_drawRecursive(ctx, this.engine.move_tree, MoveTree.active_path_number, viewport);
+        ctx.restore();
+    }
+    public move_tree_bindCanvasEvents(canvas:HTMLCanvasElement):void {
+        let handler = (event:TouchEvent | MouseEvent) => {
+            let ox = this.move_tree_container.scrollLeft;
+            let oy = this.move_tree_container.scrollTop;
+            let offset = elementOffset(canvas);
+            let x = 0;
+            let y = 0;
+            if (typeof(TouchEvent) !== "undefined" && event instanceof TouchEvent) {
+                x = Math.round(event.touches[0].pageX) - offset.left;
+                y = Math.round(event.touches[0].pageY) - offset.top;
             }
+            else if (event instanceof MouseEvent) {
+                x = Math.round(event.pageX) - offset.left;
+                y = Math.round(event.pageY) - offset.top;
+            }
+            x += ox;
+            y += oy;
+            let i = Math.floor(x / MoveTree.stone_square_size);
+            let j = Math.floor(y / MoveTree.stone_square_size);
+            let node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
+            if (node) {
+                if (this.engine.cur_move.id !== node.id) {
+                    this.engine.jumpTo(node);
+                    this.setLabelCharacterFromMarks();
+                    this.updateTitleAndStonePlacement();
+                    this.emit("update");
+                    this.syncReviewMove();
+                    this.redraw();
+                }
+            }
+        };
+
+        canvas.addEventListener("touchstart", handler);
+        canvas.addEventListener("mousedown", handler);
+
+        this.on("destroy", () => {
+            canvas.removeEventListener("touchstart", handler);
+            canvas.removeEventListener("mousedown", handler);
+        });
+    }
+
+    move_tree_drawStone(ctx:CanvasRenderingContext2D, node:MoveTree, active_path_number:number, viewport:ViewPortInterface):void {
+        let stone_idx = node.move_number * 31;
+        let cx = node.layout_cx - viewport.offset_x;
+        let cy = node.layout_cy - viewport.offset_y;
+        let color = node.player;
+        let on_path = node.active_path_number === active_path_number;
+
+        if (!on_path) {
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+        }
+
+        let theme_white_stones = __theme_cache.white[this.themes.white][MoveTree.stone_radius];
+        let theme_black_stones = __theme_cache.black[this.themes.black][MoveTree.stone_radius];
+
+        if (color === 1) {
+            let stone = theme_black_stones[stone_idx % theme_black_stones.length];
+            this.theme_black.placeBlackStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
+        } else if (color === 2) {
+            let stone = theme_white_stones[stone_idx % theme_white_stones.length];
+            this.theme_white.placeWhiteStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
+        } else {
+            return;
+        }
+
+        let text_color = color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+
+
+        let label = "";
+        switch (GobanCore.hooks.getMoveTreeNumbering ? GobanCore.hooks.getMoveTreeNumbering() : 'move-number') {
+            case "move-coordinates":
+                label = node.pretty_coordinates;
+                break;
+
+            case "none":
+                label = "";
+                break;
+
+            case "move-number":
+            default:
+                label = String(node.move_number);
+                break;
+        }
+
+        if (node.label !== label) {
+            node.label = label;
+            node.label_metrics = null;
+        }
+
+
+        ctx.fillStyle = text_color;
+        //ctx.strokeStyle=text_outline_color;
+        if (node.label_metrics == null) {
+            node.label_metrics = ctx.measureText(node.label);
+        }
+        let metrics = node.label_metrics;
+        let xx = cx - metrics.width / 2;
+        let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? MoveTree.stone_radius * -0.01 : 1); /* middle centering is different on firefox */
+        //ctx.strokeText(node.label, xx, yy);
+        ctx.fillText(node.label, xx, yy);
+
+        if (!on_path) {
+            ctx.restore();
+        }
+
+        let ring_color = null;
+
+        if (node.text) {
+            ring_color = "#3333ff";
+        }
+        if (node.correct_answer) {
+            ring_color = "#33ff33";
+        }
+        if (node.wrong_answer) {
+            ring_color = "#ff3333";
+        }
+        if (ring_color) {
+            ctx.beginPath();
+            ctx.strokeStyle = ring_color;
+            ctx.lineWidth = 2.0;
+            ctx.arc(cx, cy, MoveTree.stone_radius, 0, 2 * Math.PI, true);
+            ctx.stroke();
         }
     }
+    move_tree_drawRecursive(ctx:CanvasRenderingContext2D, node:MoveTree, active_path_number:number, viewport:ViewPortInterface):void {
+        if (node.trunk_next) {
+            this.move_tree_drawRecursive(ctx, node.trunk_next, active_path_number, viewport);
+        }
+        for (let i = 0; i < node.branches.length; ++i) {
+            this.move_tree_drawRecursive(ctx, node.branches[i], active_path_number, viewport);
+        }
+
+        if (viewport == null || (node.layout_cx >= viewport.minx && node.layout_cx <= viewport.maxx && node.layout_cy >= viewport.miny && node.layout_cy <= viewport.maxy)) {
+            this.move_tree_drawStone(ctx, node, active_path_number, viewport);
+        }
+    }
+    move_tree_hilightNode(ctx:CanvasRenderingContext2D, node:MoveTree, color:string, viewport:ViewPortInterface):void {
+        ctx.beginPath();
+        let sx = Math.round(node.layout_cx - MoveTree.stone_square_size * 0.5) - viewport.offset_x;
+        let sy = Math.round(node.layout_cy - MoveTree.stone_square_size * 0.5) - viewport.offset_y;
+        ctx.rect(sx, sy, MoveTree.stone_square_size, MoveTree.stone_square_size);
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+
+    move_tree_drawPath(ctx:CanvasRenderingContext2D, node:MoveTree, viewport:ViewPortInterface):void {
+
+        if (node.parent) {
+            if (node.parent.layout_cx < viewport.minx && node.layout_cx < viewport.minx) { return; }
+            if (node.parent.layout_cy < viewport.miny && node.layout_cy < viewport.miny) { return; }
+            if (node.parent.layout_cx > viewport.maxx && node.layout_cx > viewport.maxx) { return; }
+            if (node.parent.layout_cy > viewport.maxy && node.layout_cy > viewport.maxy) { return; }
+
+            ctx.beginPath();
+            ctx.strokeStyle = node.trunk ? "#000000" : MoveTree.line_colors[node.line_color];
+            let ox = viewport.offset_x;
+            let oy = viewport.offset_y;
+            ctx.moveTo(node.parent.layout_cx - ox, node.parent.layout_cy - oy);
+            ctx.quadraticCurveTo(
+                node.layout_cx - MoveTree.stone_square_size * 0.5 - ox, node.layout_cy - oy,
+                node.layout_cx - ox, node.layout_cy - oy
+            );
+            ctx.stroke();
+        }
+    }
+    move_tree_drawIsoBranchTo(ctx:CanvasRenderingContext2D, from_node:MoveTree, to_node:MoveTree, viewport:ViewPortInterface):void {
+        let A:MoveTree = from_node;
+        let B:MoveTree = to_node;
+
+        /* don't render if it's off screen */
+        if (A.layout_cx < viewport.minx && B.layout_cx < viewport.minx) { return; }
+        if (A.layout_cy < viewport.miny && B.layout_cy < viewport.miny) { return; }
+        if (A.layout_cx > viewport.maxx && B.layout_cx > viewport.maxx) { return; }
+        if (A.layout_cy > viewport.maxy && B.layout_cy > viewport.maxy) { return; }
+
+        /*
+        let isStrong = (a, b):boolean => {
+            return a.trunk_next == null && a.branches.length === 0 && (b.trunk_next != null || b.branches.length !== 0);
+        };
+        */
+
+        // isStrong(B, A)) {
+        if (B.trunk_next == null && B.branches.length === 0 && (A.trunk_next !== null || A.branches.length !== 0)) {
+            let t = A;
+            A = B;
+            B = t;
+        }
+
+        //isStrong(A, B);
+        let strong = A.trunk_next == null && A.branches.length === 0 && (B.trunk_next !== null || B.branches.length !== 0);
+
+        let ox = viewport.offset_x;
+        let oy = viewport.offset_y;
+        ctx.beginPath();
+        ctx.strokeStyle = MoveTree.isobranch_colors[strong ? "strong" : "weak"];
+        let cur_line_width = ctx.lineWidth;
+        ctx.lineWidth = 2;
+        ctx.moveTo(B.layout_cx - ox, B.layout_cy - oy);
+        let my = strong ? B.layout_cy : (A.layout_cy + B.layout_cy) / 2;
+        let mx = (A.layout_cx + B.layout_cx) / 2 + MoveTree.stone_square_size * 0.5;
+        ctx.quadraticCurveTo(
+            mx - ox, my - oy,
+            A.layout_cx - ox, A.layout_cy - oy
+        );
+        ctx.stroke();
+        ctx.lineWidth = cur_line_width;
+    }
+    move_tree_recursiveDrawPath(ctx:CanvasRenderingContext2D, node:MoveTree,  viewport:ViewPortInterface):void {
+        if (node.trunk_next) {
+            this.move_tree_recursiveDrawPath(ctx, node.trunk_next, viewport);
+        }
+        for (let i = 0; i < node.branches.length; ++i) {
+            this.move_tree_recursiveDrawPath(ctx, node.branches[i], viewport);
+        }
+
+        if (node.isobranches) {
+            for (let i = 0; i < node.isobranches.length; ++i) {
+                this.move_tree_drawIsoBranchTo(ctx, node, node.isobranches[i], viewport);
+            }
+        }
+
+        /* only consider x, since lines can extend awhile on the y */
+        //if (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx) {
+        this.move_tree_drawPath(ctx, node, viewport);
+        //}
+    }
+
+
 }
 

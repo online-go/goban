@@ -68,6 +68,9 @@ export class GoEngine {
     public komi:number;
     public last_official_move:MoveTree;
     public move_tree:MoveTree;
+    public move_tree_layout_vector:Array<number> = []; /* For use by MoveTree layout and rendering */
+    public move_tree_layout_hash: {[coords:string]:MoveTree} = {}; /* For use by MoveTree layout and rendering */
+    public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
     public readonly name: string;
     public outcome:string;
     public pause_control:any;

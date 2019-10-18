@@ -55,54 +55,20 @@ export interface MoveTreeJson {
     wrong_answer?   : boolean;
 }
 
-interface ViewPortInterface {
-    minx: number;
-    miny: number;
-    maxx: number;
-    maxy: number;
-}
-
-interface BoardInterface {
-    theme_board: any;
-    theme_black: any;
-    theme_white: any;
-    theme_black_text_color: string;
-    theme_white_text_color: string;
-    themes: {
-        black: string;
-        white: string;
-        board: string;
-    };
-}
-
 let __move_tree_id = 0;
 let __isobranches_state_hash = {}; /* used while finding isobranches */
 
 /* TODO: If we're on the server side, we shouldn't be doing anything with marks */
 export class MoveTree {
-    private static theme_cache = {"black": {}, "white": {}};
-    private static layout_vector = [];
-    private static stone_radius = 11;
-    private static stone_padding = 3;
-    private static stone_square_size = (MoveTree.stone_radius + MoveTree.stone_padding) * 2;
+    public static readonly stone_radius = 11;
+    public static readonly stone_padding = 3;
+    public static readonly stone_square_size = (MoveTree.stone_radius + MoveTree.stone_padding) * 2;
 
-    private static layout_hash: {[coords:string]:MoveTree} = {};
-    private static theme_black_stones: any;
-    private static theme_white_stones: any;
-    private static theme_line_color: any;
-    public static layout_dirty: boolean;
-    private static labeling: "move-coordinates" | "none" | "move-number";
-    private static last_cur_move: any;
-    private static last_review_move: any;
 
-    private layout_cx: number;
-    private layout_cy: number;
-    private layout_x: number;
-    private layout_y: number;
-    private label_metrics: TextMetrics;
-    private label: string;
+    public label: string;
+
     public move_number: number;
-    private pretty_coordinates: string;
+    public readonly pretty_coordinates: string;
     public parent: MoveTree;
     public readonly id: number;
     public trunk_next: MoveTree;
@@ -111,24 +77,30 @@ export class MoveTree {
     public wrong_answer: boolean;
     private hint_next: MoveTree;
     public player: number;
-    private line_color: any;
+    public line_color: number;
     public trunk: boolean;
     public text: string;
-    private active_path_number: number;
-    private engine: GoEngine;
+    private readonly engine: GoEngine;
     public x: number;
     public y: number;
     public edited: boolean;
     private active_node_number: number;
     public state: GoEngineState;
-    private redraw_on_scroll: any;
     public pen_marks: MoveTreePenMarks = [];
+
+    /* public for use by renderer */
+    public active_path_number: number;
+    public layout_cx: number;
+    public layout_cy: number;
+    public layout_x: number;
+    public layout_y: number;
+    public label_metrics: TextMetrics;
 
     /* These need to be protected by accessor methods now that we're not
      * initializing them on construction */
     private chatlog: Array<any>;
     private marks: Array<Array<MarkInterface>>;
-    private isobranches: any;
+    public isobranches: any;
     private isobranch_hash : string;
 
     constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:number, move_number:number, parent:MoveTree, state:GoEngineState) {
@@ -311,7 +283,7 @@ export class MoveTree {
             return m;
         }
 
-        MoveTree.layout_dirty = true;
+        this.engine.move_tree_layout_dirty = true;
 
         if (trunk) {
             if (!this.trunk) {
@@ -675,15 +647,15 @@ export class MoveTree {
 
 
     layout(x:number, min_y:number, layout_hash:{[coords:string]:MoveTree}, line_color:number):number {
-        if (!MoveTree.layout_vector[x]) {
-            MoveTree.layout_vector[x] = 0;
+        if (!this.engine.move_tree_layout_vector[x]) {
+            this.engine.move_tree_layout_vector[x] = 0;
         }
 
         if (x === 0 && min_y === 0) {
             MoveTree.current_line_color = 0;
         }
 
-        min_y = Math.max(MoveTree.layout_vector[x] + 1, min_y);
+        min_y = Math.max(this.engine.move_tree_layout_vector[x] + 1, min_y);
 
         if (this.trunk_next) {
             this.trunk_next.layout(x + 1, 0, layout_hash, (this.move_number + 1) % MoveTree.line_colors.length);
@@ -720,96 +692,19 @@ export class MoveTree {
         this.layout_cx = Math.floor((this.layout_x + 0.5) * MoveTree.stone_square_size) + 0.5;
         this.layout_cy = Math.floor((this.layout_y + 0.5) * MoveTree.stone_square_size) + 0.5;
 
-        MoveTree.layout_vector[x] = Math.max(min_y, MoveTree.layout_vector[x]);
+        this.engine.move_tree_layout_vector[x] = Math.max(min_y, this.engine.move_tree_layout_vector[x]);
         if (x) { /* allocate space for our branch lines */
-            MoveTree.layout_vector[x - 1] = Math.max(min_y - 1, MoveTree.layout_vector[x - 1]);
+            this.engine.move_tree_layout_vector[x - 1] = Math.max(min_y - 1, this.engine.move_tree_layout_vector[x - 1]);
         }
 
         return min_y;
     }
     getNodeAtLayoutPosition(layout_x:number, layout_y:number):MoveTree {
         let key = layout_x  + "," + layout_y;
-        if (key in MoveTree.layout_hash) {
-            return MoveTree.layout_hash[key];
+        if (key in this.engine.move_tree_layout_hash) {
+            return this.engine.move_tree_layout_hash[key];
         }
         return null;
-    }
-    _drawPath(ctx:CanvasRenderingContext2D, viewport:ViewPortInterface):void {
-
-        if (this.parent) {
-            if (this.parent.layout_cx < viewport.minx && this.layout_cx < viewport.minx) { return; }
-            if (this.parent.layout_cy < viewport.miny && this.layout_cy < viewport.miny) { return; }
-            if (this.parent.layout_cx > viewport.maxx && this.layout_cx > viewport.maxx) { return; }
-            if (this.parent.layout_cy > viewport.maxy && this.layout_cy > viewport.maxy) { return; }
-
-            ctx.beginPath();
-            ctx.strokeStyle = this.trunk ? "#000000" : MoveTree.line_colors[this.line_color];
-            ctx.moveTo(this.parent.layout_cx, this.parent.layout_cy);
-            ctx.quadraticCurveTo(
-                this.layout_cx - MoveTree.stone_square_size * 0.5, this.layout_cy,
-                this.layout_cx, this.layout_cy
-            );
-            ctx.stroke();
-        }
-    }
-    drawIsoBranchTo(ctx:CanvasRenderingContext2D, node:MoveTree, viewport:ViewPortInterface):void {
-        let A:MoveTree = this;
-        let B:MoveTree = node;
-
-        /* don't render if it's off screen */
-        if (A.layout_cx < viewport.minx && B.layout_cx < viewport.minx) { return; }
-        if (A.layout_cy < viewport.miny && B.layout_cy < viewport.miny) { return; }
-        if (A.layout_cx > viewport.maxx && B.layout_cx > viewport.maxx) { return; }
-        if (A.layout_cy > viewport.maxy && B.layout_cy > viewport.maxy) { return; }
-
-        /*
-        let isStrong = (a, b):boolean => {
-            return a.trunk_next == null && a.branches.length === 0 && (b.trunk_next != null || b.branches.length !== 0);
-        };
-        */
-
-        // isStrong(B, A)) {
-        if (B.trunk_next == null && B.branches.length === 0 && (A.trunk_next !== null || A.branches.length !== 0)) {
-            let t = A;
-            A = B;
-            B = t;
-        }
-
-        //isStrong(A, B);
-        let strong = A.trunk_next == null && A.branches.length === 0 && (B.trunk_next !== null || B.branches.length !== 0);
-
-        ctx.beginPath();
-        ctx.strokeStyle = MoveTree.isobranch_colors[strong ? "strong" : "weak"];
-        let cur_line_width = ctx.lineWidth;
-        ctx.lineWidth = 2;
-        ctx.moveTo(B.layout_cx, B.layout_cy);
-        let my = strong ? B.layout_cy : (A.layout_cy + B.layout_cy) / 2;
-        let mx = (A.layout_cx + B.layout_cx) / 2 + MoveTree.stone_square_size * 0.5;
-        ctx.quadraticCurveTo(
-            mx, my,
-            A.layout_cx, A.layout_cy
-        );
-        ctx.stroke();
-        ctx.lineWidth = cur_line_width;
-    }
-    recursiveDrawPath(ctx:CanvasRenderingContext2D, viewport:ViewPortInterface):void {
-        if (this.trunk_next) {
-            this.trunk_next.recursiveDrawPath(ctx, viewport);
-        }
-        for (let i = 0; i < this.branches.length; ++i) {
-            this.branches[i].recursiveDrawPath(ctx, viewport);
-        }
-
-        if (this.isobranches) {
-            for (let i = 0; i < this.isobranches.length; ++i) {
-                this.drawIsoBranchTo(ctx, this.isobranches[i], viewport);
-            }
-        }
-
-        /* only consider x, since lines can extend awhile on the y */
-        //if (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx) {
-        this._drawPath(ctx, viewport);
-        //}
     }
     findStrongIsobranches():Array<MoveTree> {
         let c:MoveTree = this;
@@ -830,291 +725,7 @@ export class MoveTree {
 
         return ret;
     }
-    /*
-    // draws path from children to node, and from node to parent
-    drawPath(ctx:CanvasRenderingContext2D, viewport:ViewPortInterface):void {
-        if (this.trunk_next) {
-            this.trunk_next._drawPath(ctx, viewport);
-        }
-        for (let i = 0; i < this.branches.length; ++i) {
-            this.branches[i]._drawPath(ctx, viewport);
-        }
 
-        this._drawPath(ctx, viewport);
-    }
-    reverseDrawPath(ctx:CanvasRenderingContext2D, viewport:ViewPortInterface):void {
-        this._drawPath(ctx, viewport);
-        if (this.parent) {
-            this.parent.reverseDrawPath(ctx, viewport);
-        }
-    }
-    */
-    drawStone(ctx:CanvasRenderingContext2D, board:BoardInterface, active_path_number:number):void {
-        let stone_idx = this.move_number * 31;
-        let cx = this.layout_cx;
-        let cy = this.layout_cy;
-        let color = this.player;
-        let on_path = this.active_path_number === active_path_number;
-
-        if (!on_path) {
-            ctx.save();
-            ctx.globalAlpha = 0.4;
-        }
-
-        if (color === 1) {
-            let stone = MoveTree.theme_black_stones[stone_idx % MoveTree.theme_black_stones.length];
-            board.theme_black.placeBlackStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
-        } else if (color === 2) {
-            let stone = MoveTree.theme_white_stones[stone_idx % MoveTree.theme_white_stones.length];
-            board.theme_white.placeWhiteStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
-        } else {
-            return;
-        }
-
-        let text_color = color === 1 ? board.theme_black_text_color : board.theme_white_text_color;
-        //var text_outline_color = color === 2 ? board.theme_black_text_color : board.theme_white_text_color;
-
-
-        let label = "";
-        switch (MoveTree.labeling) {
-            case "move-coordinates": label = this.pretty_coordinates; break;
-            case "none": label = ""; break;
-            case "move-number": label = String(this.move_number); break;
-            default: label = String(this.move_number); break;
-        }
-
-        if (this.label !== label) {
-            this.label = label;
-            this.label_metrics = null;
-        }
-
-
-        ctx.fillStyle = text_color;
-        //ctx.strokeStyle=text_outline_color;
-        if (this.label_metrics == null) {
-            this.label_metrics = ctx.measureText(this.label);
-        }
-        let metrics = this.label_metrics;
-        let xx = cx - metrics.width / 2;
-        let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? MoveTree.stone_radius * -0.01 : 1); /* middle centering is different on firefox */
-        //ctx.strokeText(this.label, xx, yy);
-        ctx.fillText(this.label, xx, yy);
-
-        if (!on_path) {
-            ctx.restore();
-        }
-
-        let ring_color = null;
-
-        if (this.text) {
-            ring_color = "#3333ff";
-        }
-        if (this.correct_answer) {
-            ring_color = "#33ff33";
-        }
-        if (this.wrong_answer) {
-            ring_color = "#ff3333";
-        }
-        if (ring_color) {
-            ctx.beginPath();
-            ctx.strokeStyle = ring_color;
-            ctx.lineWidth = 2.0;
-            ctx.arc(cx, cy, MoveTree.stone_radius, 0, 2 * Math.PI, true);
-            ctx.stroke();
-        }
-    }
-    recursiveDrawStones(ctx:CanvasRenderingContext2D, board:BoardInterface, active_path_number:number, viewport:ViewPortInterface):void {
-        if (this.trunk_next) {
-            this.trunk_next.recursiveDrawStones(ctx, board, active_path_number, viewport);
-        }
-        for (let i = 0; i < this.branches.length; ++i) {
-            this.branches[i].recursiveDrawStones(ctx, board, active_path_number, viewport);
-        }
-
-        if (viewport == null || (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx && this.layout_cy >= viewport.miny && this.layout_cy <= viewport.maxy)) {
-            this.drawStone(ctx, board, active_path_number);
-        }
-    }
-    highlight(ctx:CanvasRenderingContext2D, color:string):void {
-        ctx.beginPath();
-        let sx = Math.round(this.layout_cx - MoveTree.stone_square_size * 0.5);
-        let sy = Math.round(this.layout_cy - MoveTree.stone_square_size * 0.5);
-        ctx.rect(sx, sy, MoveTree.stone_square_size, MoveTree.stone_square_size);
-        ctx.fillStyle = color;
-        ctx.fill();
-    }
-    updateDrawing(config:any):void {
-        this.redraw(config);
-    }
-
-    static redraw_root = null;
-    static redraw_config = null;
-    redraw(config:any, no_warp?:boolean):void {
-        this.recomputeIsobranches();
-
-        MoveTree.redraw_root = this;
-        MoveTree.redraw_config = config;
-
-        MoveTree.layout_dirty = false;
-        this.updateTheme(config.board);
-        MoveTree.labeling = 'move-number';
-
-        config.active_path_end.setActivePath(++MoveTree.active_path_number);
-
-        if (!config.div.data("move-tree-redraw-on-scroll")) {
-            let debounce = false;
-            this.redraw_on_scroll = () => {
-                //if (!debounce) {
-                //    debounce = true;
-                //    setTimeout(function() { MoveTree.redraw_root.redraw(config, true); debounce = false; }, 1);
-                //}
-                MoveTree.redraw_root.redraw(MoveTree.redraw_config, true);
-            };
-            config.div.data("move-tree-redraw-on-scroll", this.redraw_on_scroll);
-            config.div.scroll(this.redraw_on_scroll);
-        }
-
-        let board = config.board;
-        let canvas = config.canvas;
-        let engine = board.engine;
-        let stone_radius = MoveTree.stone_radius;
-        this.addBindings(canvas);
-
-        let dimensions = {"x": 1, "y": 1};
-        MoveTree.layout_vector = [];
-        let layout_hash = {};
-        this.layout(0, 0, layout_hash, 0);
-        MoveTree.layout_hash = layout_hash;
-        let max_height = 0;
-        for (let i = 0; i < MoveTree.layout_vector.length; ++i) {
-            max_height = Math.max(MoveTree.layout_vector[i] + 1, max_height);
-        }
-        //canvas.data("movetree-layout", layout_hash);
-        canvas.data("movetree-goengine", engine);
-        canvas.data("movetree-goban", board);
-
-        let div_width = config.div.width();
-        let div_height = config.div.height();
-        let width = Math.max(div_width - 15, MoveTree.layout_vector.length * MoveTree.stone_square_size);
-        let height = Math.max(div_height - 15, max_height * MoveTree.stone_square_size);
-        //canvas.attr("width", width).attr("height", height);
-        resizeDeviceScaledCanvas(canvas, width, height);
-        //canvas.attr("width", width).attr("height", height);
-
-        let div_scroll_left = config.div.scrollLeft();
-        let div_scroll_top = config.div.scrollTop();
-        if (!no_warp) {
-            /* make sure our active stone is visible, but don't scroll around unnecessarily */
-            if (div_scroll_left > config.active_path_end.layout_cx || div_scroll_left + div_width - 20 < config.active_path_end.layout_cx
-                || div_scroll_top > config.active_path_end.layout_cy || div_scroll_top + div_height - 20 < config.active_path_end.layout_cy
-            ) {
-                config.div.scrollLeft(config.active_path_end.layout_cx - div_width / 2);
-                config.div.scrollTop(config.active_path_end.layout_cy - div_height / 2);
-            }
-        }
-
-
-        let viewport = {"minx": div_scroll_left - MoveTree.stone_square_size, "miny": div_scroll_top - MoveTree.stone_square_size,
-            "maxx": div_scroll_left + div_width + MoveTree.stone_square_size, "maxy": div_scroll_top + div_height + MoveTree.stone_square_size};
-
-        let ctx = canvas[0].getContext("2d");
-        ctx.clearRect(div_scroll_left, div_scroll_top, div_width, div_height);
-
-        config.active_path_end.highlight(ctx, "#6BAADA");
-        MoveTree.last_cur_move = config.active_path_end;
-
-        if (engine.cur_review_move && engine.cur_review_move.id !== config.active_path_end.id) {
-            engine.cur_review_move.highlight(ctx, "#6BDA6B");
-            MoveTree.last_review_move = config.cur_review_move;
-        }
-
-
-        ctx.save();
-        //ctx.beginPath();
-        ctx.lineWidth = 1.0;
-        //ctx.globalAlpha = 0.8;
-        ctx.strokeStyle = MoveTree.theme_line_color;
-        this.recursiveDrawPath(ctx, viewport);
-        //ctx.stroke();
-        ctx.restore();
-
-        /*
-           ctx.save();
-           ctx.beginPath();
-           ctx.lineWidth=2.0;
-           ctx.globalAlpha = 1.0;
-           ctx.strokeStyle=MoveTree.theme_line_color;
-           config.active_path_end.reverseDrawPath(ctx);
-           ctx.stroke();
-           ctx.restore();
-         */
-
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        let text_size = 10;
-        ctx.font = `bold ${text_size}px Verdana,Arial,sans-serif`;
-        ctx.textBaseline = "middle";
-        this.recursiveDrawStones(ctx, board, MoveTree.active_path_number, viewport);
-        ctx.restore();
-    }
-    updateTheme(board:BoardInterface):void {
-        let white_theme = board.themes.white;
-        let black_theme = board.themes.black;
-        let radius = MoveTree.stone_radius;
-
-        if (!(white_theme in MoveTree.theme_cache.white)) { MoveTree.theme_cache.white[white_theme] = {}; }
-        if (!(black_theme in MoveTree.theme_cache.black)) { MoveTree.theme_cache.black[black_theme] = {}; }
-        if (!(radius in MoveTree.theme_cache.white[white_theme])) {
-            MoveTree.theme_cache.white[white_theme][radius] = board.theme_white.preRenderWhite(radius, 23434);
-        }
-        if (!(radius in MoveTree.theme_cache.black[black_theme])) {
-            MoveTree.theme_cache.black[black_theme][radius] = board.theme_black.preRenderBlack(radius, 2081);
-        }
-
-        MoveTree.theme_line_color = board.theme_board.getLineColor();
-        MoveTree.theme_white_stones = MoveTree.theme_cache.white[white_theme][radius];
-        MoveTree.theme_black_stones = MoveTree.theme_cache.black[black_theme][radius];
-    }
-    addBindings(canvas):void {
-        let mt = canvas.data("movetree-bindings");
-        if (!mt) {
-            canvas.bind("touchstart mousedown", (event) => {
-                //var layout = canvas.data("movetree-layout");
-                let offs = canvas.offset();
-                let x = Math.round((event.touches ? event.touches[0].pageX : event.pageX) - offs.left);
-                let y = Math.round((event.touches ? event.touches[0].pageY : event.pageY) - offs.top);
-                let i = Math.floor(x / MoveTree.stone_square_size);
-                let j = Math.floor(y / MoveTree.stone_square_size);
-                let node = this.getNodeAtLayoutPosition(i, j);
-                if (node) {
-                    let board = canvas.data("movetree-goban");
-                    if (board.engine.cur_move.id !== node.id) {
-                        board.engine.jumpTo(node);
-                        board.setLabelCharacterFromMarks();
-                        board.updateTitleAndStonePlacement();
-                        board.emit("update");
-                        board.syncReviewMove();
-                        board.redraw();
-                    }
-                }
-                /*
-                   var key = i + "," + j;
-                   if (key in layout) {
-                   var board = canvas.data("movetree-goban");
-                   if (board.engine.cur_move.id !== layout[key].id) {
-                   board.engine.jumpTo(layout[key]);
-                   board.setLabelCharacterFromMarks();
-                   board.updateTitleAndStonePlacement();
-                   board.onUpdate();
-                   board.redraw();
-                   }
-                   }
-                 */
-            });
-
-            canvas.data("movetree-bindings", true);
-        }
-    }
 
     nextSibling():MoveTree {
         let ret = null;

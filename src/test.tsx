@@ -208,9 +208,9 @@ function Main():JSX.Element {
         {false && <ReactGobanPixi /> }
         {[
         //1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
-        1,2,3,4,5,6,7,8,9,10,11,12
+        //1,2,3,4,5,6,7,8,9,10,11,12
         ].map((_, idx) => <ReactGobanCanvas key={idx} />)}
-        {false && <ReactGobanCanvas /> }
+        {true && <ReactGobanCanvas /> }
 
     </div>
     );
@@ -222,10 +222,14 @@ interface ReactGobanProps {
 
 function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x): GobanClass}, props:ReactGobanProps):JSX.Element {
     const container = React.useRef(null);
+    const move_tree_container = React.useRef(null);
     let goban:GobanCore;
 
     React.useEffect(() => {
-        goban = new ctor(Object.assign({}, base_config, { "board_div": container.current }));
+        goban = new ctor(Object.assign({}, base_config, {
+            "board_div": container.current,
+            "move_tree_container": move_tree_container.current
+        }));
 
         fiddler.on('setSquareSize', (ss) => {
             const start = Date.now();
@@ -250,33 +254,41 @@ function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x): GobanClass}, pro
             console.log("Redraw time: ", end - start);
         });
 
+        let i=0;
+        let start = Date.now();
+        let interval = setInterval(() => {
+            i++;
+            if (i >= 300) {
+                if (i === 300) {
+                    let end = Date.now();
+                    console.log("Done in ", end - start);
+                }
+                clearInterval(interval);
+                return;
+            }
+            goban.engine.place(Math.floor(i / 19), Math.floor(i % 19));
+            //goban.redraw(true);
+        }, 1);
+
+
         return () => {
             goban.destroy();
         };
     }, [container]);
 
 
-    let i=0;
-    let start = Date.now();
-    let interval = setInterval(() => {
-        i++;
-        if (i >= 300) {
-            if (i === 300) {
-                let end = Date.now();
-                console.log("Done in ", end - start);
-            }
-            clearInterval(interval);
-            return;
-        }
-        goban.engine.place(Math.floor(i / 19), Math.floor(i % 19));
-        //goban.redraw(true);
-    }, 1);
 
     return (
-        <div className='Goban'>
-            <div ref={container}>
+        <React.Fragment>
+            <div className='Goban'>
+                <div ref={container}>
+                </div>
             </div>
-        </div>
+
+            <div>
+                <div className='move-tree-container' ref={move_tree_container} />
+            </div>
+        </React.Fragment>
     );
 }
 

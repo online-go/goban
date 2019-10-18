@@ -101,8 +101,8 @@ module.exports = (env, argv) => {
                 writeToDisk: true,
 
                 hot: false,
-                //inline: false,
-                inline: true,
+                inline: false,
+                //inline: true,
             }
         })
     ];
