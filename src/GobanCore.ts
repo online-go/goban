@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import {GoEngine, encodeMove, encodeMoves} from "./GoEngine";
+import {
+    GoEngine,
+    encodeMove,
+    encodeMoves,
+    PuzzleOpponentMoveMode,
+    PuzzlePlayerMoveMode
+} from "./GoEngine";
 import {GoMath} from "./GoMath";
 import {GoStoneGroup} from "./GoStoneGroup";
 import {GoConditionalMove} from "./GoConditionalMove";
@@ -41,6 +47,9 @@ export const MARK_TYPES = ["letter", "circle", "square", "triangle", "sub_triang
 
 let last_goban_id = 0;
 
+export type PlayerColor = 'black' | 'white';
+export type GobanModes = 'play' | 'puzzle' | "score estimation" | 'analyze' | 'conditional';
+
 export interface ColoredCircle {
     move          : string;
     color         : string;
@@ -62,9 +71,15 @@ export interface GobanBounds {
 }
 
 export interface GobanConfig {
+    game_id?: number;
+    player_id?: number;
+    width?: number;
+    height?: number;
+    display_width?: number;
+    initial_player?: PlayerColor;
     interactive?: boolean;
     mode?: 'puzzle';
-    square_size?: number;
+    square_size?: number | (() => number) | 'auto';
     original_sgf?: string;
 
     draw_top_labels?: boolean;
@@ -72,6 +87,13 @@ export interface GobanConfig {
     draw_bottom_labels?: boolean;
     draw_right_labels?: boolean;
     bounds?: GobanBounds;
+
+    puzzle_opponent_move_mode?: PuzzleOpponentMoveMode;
+    puzzle_player_move_mode?: PuzzlePlayerMoveMode;
+    getPuzzlePlacementSetting?: () => {'mode': GobanModes};
+
+    // deprecated
+    server_socket?: any;
 }
 
 
@@ -310,6 +332,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public abstract drawSquare(i:number, j:number):void;
     public abstract redraw(force_clear?: boolean);
     public abstract move_tree_redraw(no_warp?:boolean):void;
+    public abstract setMoveTreeContainer(container:HTMLElement):void;
 
     public static hooks:GobanHooks = {
         getClockDrift: () => 0,
@@ -590,7 +613,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         return { remove: () => {} };
     }
-    protected isAnalysisDisabled(perGameSettingAppliesToNonPlayers:boolean = false):boolean {
+    public isAnalysisDisabled(perGameSettingAppliesToNonPlayers:boolean = false):boolean {
         if (GobanCore.hooks.isAnalysisDisabled) {
             return GobanCore.hooks.isAnalysisDisabled(this, perGameSettingAppliesToNonPlayers);
         }
@@ -1942,10 +1965,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
 
-    public setModeDeferred(mode) {
+    public setModeDeferred(mode:GobanModes) {
         setTimeout(() => { this.setMode(mode); }, 1);
     }
-    public setMode(mode, dont_jump_to_official_move?) {
+    public setMode(mode:GobanModes, dont_jump_to_official_move?:boolean) {
         if (mode === "conditional" && this.player_id === this.engine.playerToMove()) {
             /* this shouldn't ever get called, but incase we screw up.. */
             swal("Can't enter conditional move planning when it's your turn");

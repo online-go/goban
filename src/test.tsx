@@ -110,7 +110,7 @@ function Main():JSX.Element {
             <div className='setting'>
                 <span>Square size:</span>
                 <input type='range'
-                    value={base_config.square_size}
+                    value={base_config.square_size as number}
                     onChange={(ev) => {
                         let ss = Math.max(1, parseInt(ev.target.value));
                         //console.log(ss);

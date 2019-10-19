@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+export * from "./GobanCore";
 export * from "./GobanCanvas";
 export * from "./GoConditionalMove";
 export * from "./GoEngine";
@@ -28,6 +29,11 @@ export * from "./ScoreEstimator";
 export * from "./SFXManager";
 export * from "./translate";
 export * from "./TypedEventEmitter";
-export { GobanCanvas as Goban } from './GobanCanvas';
+export * from "./JGOF";
+export * from "./AdHocFormat";
+export {
+    GobanCanvas as Goban,
+    GobanCanvasConfig as GobanConfig
+} from './GobanCanvas';
 
 window['goban'] = module.exports;

@@ -32,6 +32,9 @@ export interface GoEngineState {
     isobranch_hash?: string;
 }
 
+export type PuzzlePlayerMoveMode = 'free' | 'fixed';
+export type PuzzleOpponentMoveMode = 'manual'|'automatic';
+
 let __currentMarker = 0;
 
 export function encodeMove(x, y?) {
@@ -80,8 +83,8 @@ export class GoEngine {
     public players:{black:any, white:any};
     public puzzle_collection:any;
     public puzzle_description:string;
-    public puzzle_opponent_move_mode:'manual'|'automatic';
-    public puzzle_player_move_mode:'free'|'fixed';
+    public puzzle_opponent_move_mode: PuzzleOpponentMoveMode;
+    public puzzle_player_move_mode: PuzzlePlayerMoveMode;
     public puzzle_rank:number;
     public puzzle_type:string;
     public readonly config:any;

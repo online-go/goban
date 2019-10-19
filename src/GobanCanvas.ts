@@ -2105,6 +2105,11 @@ export class GobanCanvas extends GobanCore  {
     //private redraw_on_scroll: any;
     private move_tree_on_scroll: (event:Event) => void;
 
+    public setMoveTreeContainer(container:HTMLElement):void {
+        this.move_tree_container = container;
+        this.move_tree_redraw();
+    }
+
     public move_tree_redraw(no_warp?:boolean):void {
         if (!this.move_tree_container) {
             return;
