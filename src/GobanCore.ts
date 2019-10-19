@@ -32,8 +32,8 @@ import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingR
 } from "./GoUtil";
 import {TypedEventEmitter} from "./TypedEventEmitter";
 import {_, pgettext, interpolate} from "./translate";
-import { JGOFClock, JGOFTimeControl, JGOFPlayerClock, JGOFTimeControlSystem } from './JGOF';
-import { AdHocClock, AdHocPlayerClock  } from './AdHocFormat';
+import { JGOFClock, JGOFTimeControl, JGOFPlayerClock, JGOFTimeControlSystem, JGOFPauseState} from './JGOF';
+import { AdHocClock, AdHocPlayerClock, AdHocPauseControl  } from './AdHocFormat';
 
 declare let swal;
 
@@ -121,10 +121,6 @@ interface Events {
         show_moves_made_count?: boolean;
     };
     "advance-to-next-board": never;
-    "pause-text": {
-        white_pause_text: string;
-        black_pause_text: string;
-    };
     "auto-resign": {
         game_id: number;
         player_id: number;
@@ -2540,44 +2536,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 }
 
                 clock.paused_since = original_clock.pause.paused_since;
-                clock.pause_state = { }
-                for (let k in original_clock.pause.pause_control) {
-                    if (/vacation-([0-9]+)/.test(k)) {
-                        let player_id = k.match(/vacation-([0-9]+)/)[1];
-                        if (!clock.pause_state.vacation) {
-                            clock.pause_state.vacation = {};
-                        }
-                        clock.pause_state.vacation[player_id] = true;
-                    } else {
-                        switch (k) {
-                            case 'stone-removal':
-                                clock.pause_state.stone_removal = true;
-                                break;
-
-                            case 'weekend':
-                                clock.pause_state.weekend = true;
-                                break;
-
-                            case 'server':
-                                clock.pause_state.server = true;
-                                break;
-
-                            case 'paused':
-                                clock.pause_state.player = {
-                                    player_id: original_clock.pause.pause_control.paused.pausing_player_id.toString(),
-                                    pauses_left: original_clock.pause.pause_control.paused.pauses_left,
-                                };
-                                break;
-                            case 'moderator_paused':
-                                clock.pause_state.moderator = original_clock.pause.pause_control.moderator_paused.moderator_id.toString();
-                                break;
-
-                            default:
-                                throw new Error(`Unhandled pause control key: ${k}`);
-                        }
-
-                    }
-                }
+                clock.pause_state = AdHocPauseControl2JGOFPauseState(original_clock.pause.pause_control);
             } else {
                 delete this.engine.paused_since;
                 delete this.engine.pause_control;
@@ -2699,6 +2658,32 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             if (clock.start_mode) {
                 clock.start_time_left = original_clock.expiration - current_server_time;
+            }
+
+            if (this.engine.paused_since) {
+                /*
+                white_pause_text = _("Paused");
+                black_pause_text = _("Paused");
+                if (this.engine.pause_control) {
+                    let pause_control = this.engine.pause_control;
+                    if ("weekend" in pause_control) {
+                        black_pause_text = _("Weekend");
+                        white_pause_text = _("Weekend");
+                    }
+                    if ("system" in pause_control) {
+                        black_pause_text = _("Paused by Server");
+                        white_pause_text = _("Paused by Server");
+                    }
+                    if (("vacation-" + clock.black_player_id) in pause_control) {
+                        black_pause_text = _("Vacation");
+                    }
+                    if (("vacation-" + clock.white_player_id) in pause_control) {
+                        white_pause_text = _("Vacation");
+                    }
+                }
+                */
+                clock.paused_since = this.engine.paused_since;
+                clock.pause_state = AdHocPauseControl2JGOFPauseState(this.engine.pause_control);
             }
 
             this.emit('clock', clock);
@@ -2837,4 +2822,48 @@ function uuid(): string {
         let v = c === "x" ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
+}
+
+function AdHocPauseControl2JGOFPauseState(pause_control:AdHocPauseControl) {
+    let ret:JGOFPauseState = {};
+
+    for (let k in pause_control) {
+        if (/vacation-([0-9]+)/.test(k)) {
+            let player_id = k.match(/vacation-([0-9]+)/)[1];
+            if (!ret.vacation) {
+                ret.vacation = {};
+            }
+            ret.vacation[player_id] = true;
+        } else {
+            switch (k) {
+                case 'stone-removal':
+                    ret.stone_removal = true;
+                    break;
+
+                case 'weekend':
+                    ret.weekend = true;
+                    break;
+
+                case 'server':
+                    ret.server = true;
+                    break;
+
+                case 'paused':
+                    ret.player = {
+                        player_id: pause_control.paused.pausing_player_id.toString(),
+                        pauses_left: pause_control.paused.pauses_left,
+                    };
+                    break;
+
+                case 'moderator_paused':
+                    ret.moderator = pause_control.moderator_paused.moderator_id.toString();
+                    break;
+
+                default:
+                    throw new Error(`Unhandled pause control key: ${k}`);
+            }
+        }
+    }
+
+    return ret;
 }
