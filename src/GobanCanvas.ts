@@ -39,6 +39,7 @@ import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
 import {_, pgettext, interpolate} from "./translate";
 
 let __theme_cache = {"black": {}, "white": {}};
+declare var ResizeObserver;
 
 export interface GobanCanvasConfig extends GobanConfig {
     board_div: HTMLElement;
@@ -2125,6 +2126,15 @@ export class GobanCanvas extends GobanCore  {
             this.on('destroy', () => {
                 this.move_tree_container.removeEventListener('scroll', move_tree_on_scroll);
             });
+
+            try {
+                let observer = new ResizeObserver(() => {
+                    this.move_tree_redraw(true);
+                }).observe(this.move_tree_container);
+                this.on('destroy', () => { observer.disconnect(); });
+            } catch (e) {
+                // ResizeObserver is still fairly new and might not exist
+            }
         }
 
         if (this.move_tree_inner_container.parentNode !== this.move_tree_container) {
@@ -2178,25 +2188,22 @@ export class GobanCanvas extends GobanCore  {
             max_height = Math.max(this.engine.move_tree_layout_vector[i] + 1, max_height);
         }
 
-        let div_width = this.move_tree_container.offsetWidth;
-        let div_height = this.move_tree_container.offsetHeight;
-        //let div_width = this.move_tree_container.width();
-        //let div_height = this.move_tree_container.height();
-        let width = Math.max(div_width - 15, this.engine.move_tree_layout_vector.length * MoveTree.stone_square_size);
-        let height = Math.max(div_height - 15, max_height * MoveTree.stone_square_size);
+        let div_clientWidth = this.move_tree_container.clientWidth;
+        let div_clientHeight = this.move_tree_container.clientHeight;
+        let width = Math.max(div_clientWidth, this.engine.move_tree_layout_vector.length * MoveTree.stone_square_size);
+        let height = Math.max(div_clientHeight, max_height * MoveTree.stone_square_size);
 
-        //resizeDeviceScaledCanvas(canvas, width, height);
-
-
-        //let div_scroll_left = this.move_tree_container.scrollLeft();
-        //let div_scroll_top = this.move_tree_container.scrollTop();
         let div_scroll_top = this.move_tree_container.scrollTop;
         let div_scroll_left = this.move_tree_container.scrollLeft;
 
         canvas.style.top = div_scroll_top + 'px';
         canvas.style.left = div_scroll_left + 'px';
-        if (canvas.width !== div_width || canvas.height !== div_height) {
-            resizeDeviceScaledCanvas(canvas, div_width, div_height);
+        if (canvas.width !== div_clientWidth || canvas.height !== div_clientHeight) {
+            resizeDeviceScaledCanvas(
+                canvas,
+                this.move_tree_container.clientWidth,
+                this.move_tree_container.clientHeight
+            );
         }
 
         this.move_tree_inner_container.style.width = width + 'px';
@@ -2205,11 +2212,11 @@ export class GobanCanvas extends GobanCore  {
 
         if (!no_warp) {
             /* make sure our active stone is visible, but don't scroll around unnecessarily */
-            if (div_scroll_left > active_path_end.layout_cx || div_scroll_left + div_width - 20 < active_path_end.layout_cx
-                || div_scroll_top > active_path_end.layout_cy || div_scroll_top + div_height - 20 < active_path_end.layout_cy
+            if (div_scroll_left > active_path_end.layout_cx || div_scroll_left + div_clientWidth - 20 < active_path_end.layout_cx
+                || div_scroll_top > active_path_end.layout_cy || div_scroll_top + div_clientHeight - 20 < active_path_end.layout_cy
             ) {
-                this.move_tree_container.scrollLeft = active_path_end.layout_cx - div_width / 2;
-                this.move_tree_container.scrollTop = active_path_end.layout_cy - div_height / 2;
+                this.move_tree_container.scrollLeft = active_path_end.layout_cx - div_clientWidth / 2;
+                this.move_tree_container.scrollTop = active_path_end.layout_cy - div_clientHeight / 2;
             }
         }
 
@@ -2219,12 +2226,12 @@ export class GobanCanvas extends GobanCore  {
             "offset_y": div_scroll_top,
             "minx": div_scroll_left - MoveTree.stone_square_size,
             "miny": div_scroll_top - MoveTree.stone_square_size,
-            "maxx": div_scroll_left + div_width + MoveTree.stone_square_size,
-            "maxy": div_scroll_top + div_height + MoveTree.stone_square_size,
+            "maxx": div_scroll_left + div_clientWidth + MoveTree.stone_square_size,
+            "maxy": div_scroll_top + div_clientHeight + MoveTree.stone_square_size,
         };
 
         let ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, div_width, div_height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         this.move_tree_hilightNode(ctx, active_path_end, "#6BAADA", viewport);
 
@@ -2475,7 +2482,4 @@ export class GobanCanvas extends GobanCore  {
         this.move_tree_drawPath(ctx, node, viewport);
         //}
     }
-
-
 }
-
