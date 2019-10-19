@@ -15,4 +15,3 @@
  */
 
 export { GobanCanvas as Goban } from './GobanCanvas';
-

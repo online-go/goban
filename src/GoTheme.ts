@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import * as PIXI from 'pixi.js-legacy';
+//import * as PIXI from 'pixi.js-legacy';
 
 export class GoTheme {
     public name: string;
@@ -56,6 +56,7 @@ export class GoTheme {
     }
 
     /** Returns a PIXI sprite for a white stone of the given radius using the given seed */
+    /*
     public whiteStoneTexture(application:PIXI.Application, radius:number, seed:number):PIXI.Texture {
         let key = `white-disc-${radius}`;
         if (!(key in PIXI.utils.TextureCache)) {
@@ -72,8 +73,10 @@ export class GoTheme {
 
         return PIXI.utils.TextureCache[key];
     }
+    */
 
     /** Returns a PIXI sprite for a white stone of the given radius using the given seed */
+    /*
     public blackStoneTexture(application:PIXI.Application, radius:number, seed:number):PIXI.Texture {
         let key = `black-disc-${radius}`;
         if (!(key in PIXI.utils.TextureCache)) {
@@ -90,6 +93,7 @@ export class GoTheme {
 
         return PIXI.utils.TextureCache[key];
     }
+    */
 
     /* Should return true if you would like the shadow layer to be present. False
      * speeds up rendering typically */

@@ -17,7 +17,7 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { GobanCore, GobanConfig, GobanHooks } from './GobanCore';
-import { GobanPixi } from './GobanPixi';
+//import { GobanPixi } from './GobanPixi';
 import { GobanCanvas } from './GobanCanvas';
 import { EventEmitter } from 'eventemitter3';
 
@@ -71,6 +71,7 @@ let base_config:GobanConfig = stored_config || {
 const hooks:GobanHooks = {
     //getCoordinateDisplaySystem: () => '1-1',
     getCoordinateDisplaySystem: () => 'A1',
+    getCDNReleaseBase: () => '',
 };
 GobanCore.setHooks(hooks);
 
@@ -204,8 +205,7 @@ function Main():JSX.Element {
     </div>
 
 
-        {false && <ReactGobanPixi /> }
-        {false && <ReactGobanPixi /> }
+        {/*false && <ReactGobanPixi /> */}
         {[
         //1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
         //1,2,3,4,5,6,7,8,9,10,11,12
@@ -292,9 +292,11 @@ function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x): GobanClass}, pro
     );
 }
 
+/*
 function ReactGobanPixi(props:ReactGobanProps):JSX.Element {
     return ReactGoban<GobanPixi>(GobanPixi, props);
 }
+*/
 
 function ReactGobanCanvas(props:ReactGobanProps):JSX.Element {
     return ReactGoban<GobanCanvas>(GobanCanvas, props);

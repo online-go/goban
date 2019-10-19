@@ -88,6 +88,11 @@ module.exports = (env, argv) => {
                 }),
             ]),
 
+            externals: {
+                "react": "React",
+                "react-dom": "ReactDOM",
+            },
+
             devServer: {
                 contentBase: [
                     path.join(__dirname, 'assets'),

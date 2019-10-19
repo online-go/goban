@@ -15,9 +15,15 @@
  */
 
 import { GoTheme } from "../GoTheme";
-import {_} from "../translate";
-import {Goban} from '../Goban';
+import { _ } from "../translate";
+import { GobanCore } from '../GobanCore';
 
+function getCDNReleaseBase() {
+    if (GobanCore.hooks.getCDNReleaseBase) {
+        return GobanCore.hooks.getCDNReleaseBase();
+    }
+    return '';
+}
 
 export default function(GoThemes) {
     class Kaya extends GoTheme {
@@ -25,7 +31,7 @@ export default function(GoThemes) {
         getBackgroundCSS() {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + Goban.getCDNReleaseBase() + "/img/kaya.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')"
             };
         }
         getLineColor() { return "#000000"; }
@@ -45,7 +51,7 @@ export default function(GoThemes) {
         getBackgroundCSS() {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + Goban.getCDNReleaseBase() + "/img/oak.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/oak.jpg')"
             };
         }
         getLineColor() { return "#000000"; }
@@ -67,7 +73,7 @@ export default function(GoThemes) {
         getBackgroundCSS() {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + Goban.getCDNReleaseBase() + "/img/persimmon.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/persimmon.jpg')"
             };
         }
         getLineColor() { return "#000000"; }
@@ -88,7 +94,7 @@ export default function(GoThemes) {
         getBackgroundCSS() {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + Goban.getCDNReleaseBase() + "/img/black_walnut.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/black_walnut.jpg')"
             };
         }
         getLineColor() { return "#000000"; }
@@ -109,7 +115,7 @@ export default function(GoThemes) {
         getBackgroundCSS() {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + Goban.getCDNReleaseBase() + "/img/granite.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/granite.jpg')"
             };
         }
         getLineColor() { return "#cccccc"; }
