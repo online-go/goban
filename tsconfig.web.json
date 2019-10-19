@@ -23,7 +23,7 @@
         "jsx": "react"
     },
     "files": [
-        "./src/index.ts",
+        "./src/goban.ts",
         "./src/engine.ts"
     ]
 }

@@ -15,7 +15,7 @@
  */
 
 import { GoTheme } from "../GoTheme";
-import { Goban } from "../Goban";
+import { GobanCore } from "../GobanCore";
 import {_} from "../translate";
 
 // Converts a six-digit hex string to rgba() notation
@@ -36,16 +36,16 @@ export default function(GoThemes) {
         sort() { return 0; }
         getBackgroundCSS() {
             return {
-                "background-color": Goban.hooks.plainBoardColor ? Goban.hooks.plainBoardColor() : '#DCB35C',
+                "background-color": GobanCore.hooks.plainBoardColor ? GobanCore.hooks.plainBoardColor() : '#DCB35C',
                 "background-image": ""
             };
         }
-        getLineColor() { return Goban.hooks.plainBoardLineColor ? Goban.hooks.plainBoardLineColor() : '#000000'; }
-        getFadedLineColor() { return hexToRgba(Goban.hooks.plainBoardLineColor ? Goban.hooks.plainBoardLineColor() : '#000000', 0.5); }
-        getStarColor() { return Goban.hooks.plainBoardLineColor ? Goban.hooks.plainBoardLineColor() : '#000000'; }
-        getFadedStarColor() { return hexToRgba(Goban.hooks.plainBoardLineColor ? Goban.hooks.plainBoardLineColor() : '#000000', 0.5); }
-        getBlankTextColor() { return Goban.hooks.plainBoardLineColor ? Goban.hooks.plainBoardLineColor() : '#000000'; }
-        getLabelTextColor() { return hexToRgba(Goban.hooks.plainBoardLineColor ? Goban.hooks.plainBoardLineColor() : '#000000', 0.75); }
+        getLineColor() { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
+        getFadedLineColor() { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.5); }
+        getStarColor() { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
+        getFadedStarColor() { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.5); }
+        getBlankTextColor() { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
+        getLabelTextColor() { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.75); }
     }
 
 

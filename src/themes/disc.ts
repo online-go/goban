@@ -15,7 +15,7 @@
  */
 
 import { GoTheme } from "../GoTheme";
-import { Goban } from "../Goban";
+import { GobanCore } from "../GobanCore";
 import {_} from "../translate";
 
 export default function(GoThemes) {
@@ -51,11 +51,11 @@ export default function(GoThemes) {
         }
 
         public getBlackStoneColor() {
-            return Goban.hooks.discBlackStoneColor ? Goban.hooks.discBlackStoneColor() : '#000000';
+            return GobanCore.hooks.discBlackStoneColor ? GobanCore.hooks.discBlackStoneColor() : '#000000';
         }
 
         public getBlackTextColor() {
-            return Goban.hooks.discBlackTextColor ? Goban.hooks.discBlackTextColor() : '#FFFFFF';
+            return GobanCore.hooks.discBlackTextColor ? GobanCore.hooks.discBlackTextColor() : '#FFFFFF';
         }
     }
 
@@ -69,11 +69,11 @@ export default function(GoThemes) {
         }
 
         public getWhiteStoneColor() {
-            return Goban.hooks.discWhiteStoneColor ? Goban.hooks.discWhiteStoneColor() : '#FFFFFF';
+            return GobanCore.hooks.discWhiteStoneColor ? GobanCore.hooks.discWhiteStoneColor() : '#FFFFFF';
         }
 
         public getWhiteTextColor() {
-            return Goban.hooks.discWhiteTextColor ? Goban.hooks.discWhiteTextColor() : '#000000';
+            return GobanCore.hooks.discWhiteTextColor ? GobanCore.hooks.discWhiteTextColor() : '#000000';
         }
     }
 

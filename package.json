@@ -3,7 +3,7 @@
     "version": "0.4.0",
     "description": "",
     "main": "lib/goban.js",
-    "types": "lib/goban.js.d.ts",
+    "types": "lib/goban.d.ts",
     "files": [
         "lib/",
         "src/"

@@ -57,7 +57,7 @@ module.exports = (env, argv) => {
         Object.assign({}, common, {
             'target': 'web',
             entry: {
-                'goban': './src/index.ts',
+                'goban': './src/goban.ts',
                 'engine': './src/engine.ts',
                 'test': './src/test.tsx',
             },

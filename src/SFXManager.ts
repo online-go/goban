@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {Goban} from './Goban';
+import {GobanCore} from './GobanCore';
 
 export class SFXManager {
     private enabled = false;
@@ -37,7 +37,7 @@ export class SFXManager {
     public sync() {
         if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
 
-        if (Goban.getSoundEnabled() || (this.volume_override != null && this.volume_override > 0)) {
+        if (GobanCore.getSoundEnabled() || (this.volume_override != null && this.volume_override > 0)) {
             for (let i = 10; i >= 1; i--) {
                 this.addAudio(i, "female-en-" + i);
             }
@@ -61,12 +61,12 @@ export class SFXManager {
         if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
         this.sync();
 
-        if (Goban.getSoundEnabled() || (this.volume_override != null && this.volume_override > 0)) {
+        if (GobanCore.getSoundEnabled() || (this.volume_override != null && this.volume_override > 0)) {
             if (this.volume_override != null && this.volume_override === 0)  {
                 return;
             }
             try {
-                let volume = Goban.getSoundVolume();
+                let volume = GobanCore.getSoundVolume();
                 if (this.volume_override != null) {
                     volume = this.volume_override;
                 }
@@ -143,9 +143,9 @@ export class SFXManager {
         audio.setAttribute('preload', 'auto');
 
         for (let attrs of [
-            {'type': 'audio/ogg', 'src': Goban.getCDNReleaseBase() + "/sound/" + pathname + ".ogg"},
-            {'type': 'audio/mpeg', 'src': Goban.getCDNReleaseBase() + "/sound/" + pathname + ".mp3"},
-            {'type': 'audio/wav', 'src': Goban.getCDNReleaseBase() + "/sound/" + pathname + ".wav"}
+            {'type': 'audio/ogg', 'src': GobanCore.getCDNReleaseBase() + "/sound/" + pathname + ".ogg"},
+            {'type': 'audio/mpeg', 'src': GobanCore.getCDNReleaseBase() + "/sound/" + pathname + ".mp3"},
+            {'type': 'audio/wav', 'src': GobanCore.getCDNReleaseBase() + "/sound/" + pathname + ".wav"}
         ]) {
             let source = document.createElement('source');
             source.setAttribute('type', attrs['type']);
@@ -172,7 +172,7 @@ window['sfx'] = sfx;
 
 let I = setInterval(() => {
     /* postpone downloading stuff till more important things have begun loading */
-    if (Goban.getCDNReleaseBase()) {
+    if (GobanCore.getCDNReleaseBase()) {
         clearInterval(I);
         sfx.enable();
     }
