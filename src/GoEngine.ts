@@ -75,7 +75,8 @@ export interface GoEnginePlayerEntry {
 }
 
 export interface GoEngineConfig {
-    game_id?: number;
+    game_id?: number | string;
+    review_id?: number;
     game_name?: string;
     player_id?: number;
     tournament_id?: number;

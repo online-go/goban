@@ -112,12 +112,12 @@ export class GoTheme {
     }
 
     /* Returns the color that should be used for text over white stones */
-    public getWhiteTextColor(color) {
+    public getWhiteTextColor(color?:string):string {
         return "#000000";
     }
 
     /* Returns the color that should be used for text over black stones */
-    public getBlackTextColor(color) {
+    public getBlackTextColor(color?:string):string {
         return "#ffffff";
     }
 
@@ -163,6 +163,11 @@ export class GoTheme {
 
     /* Returns the color that text should be over empty intersections */
     public getBlankTextColor() {
+        return "#000000";
+    }
+
+    /** Returns the color that should be used for labels */
+    public getLabelTextColor() {
         return "#000000";
     }
 }

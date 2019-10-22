@@ -31,6 +31,8 @@ export interface Intersection {
 }
 
 export type Group = Array<Intersection>;
+export type NumberMatrix = Array<Array<number>>;
+export type StringMatrix = Array<Array<string>>;
 
 export interface BoardState {
     width: number;
@@ -135,8 +137,18 @@ export class GoMath {
     //    return this.groups[this.group_id_map[y][x]];
     //};
 
-    public static makeMatrix(width:number, height:number, initialValue:number = 0):Array<Array<number>> {
-        let ret = [];
+    public static makeMatrix(width:number, height:number, initialValue:number = 0):NumberMatrix {
+        let ret:NumberMatrix = [];
+        for (let y = 0; y < height; ++y) {
+            ret.push([]);
+            for (let x = 0; x < width; ++x) {
+                ret[y].push(initialValue);
+            }
+        }
+        return ret;
+    }
+    public static makeStringMatrix(width:number, height:number, initialValue:string = ''):StringMatrix {
+        let ret:StringMatrix = [];
         for (let y = 0; y < height; ++y) {
             ret.push([]);
             for (let x = 0; x < width; ++x) {

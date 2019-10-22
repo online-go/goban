@@ -32,6 +32,7 @@ import {
 import {GoEngine, NumericPlayerColor, encodeMove, encodeMoves} from "./GoEngine";
 import {GoMath} from "./GoMath";
 import {MoveTree} from "./MoveTree";
+import {GoTheme} from "./GoTheme";
 import {GoThemes} from "./GoThemes";
 import { MoveTreePenMarks } from "./MoveTree";
 import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingRatio, elementOffset} from "./GoUtil";
@@ -43,6 +44,7 @@ declare var ResizeObserver;
 
 export interface GobanCanvasConfig extends GobanConfig {
     board_div: HTMLElement;
+    title_div?: HTMLElement;
 }
 
 interface ViewPortInterface {
@@ -73,7 +75,41 @@ export class GobanCanvas extends GobanCore  {
     private move_tree_inner_container: HTMLDivElement;
     private move_tree_canvas: HTMLCanvasElement;
 
+    private __borders_initialized:boolean;
+    private autoplaying_puzzle_move:boolean;
+    private byoyomi_label:string;
+    private ctx:CanvasRenderingContext2D;
+    private current_pen_mark:{"color": string, "points": [number, number]};
+    private labeling_mode:'put' | 'clear';
+    private last_label_position:{i:number, j:number};
+    private last_pen_position:[number, number];
+    private last_sent_move:string;
 
+    private layer_offset_left:number;
+    private layer_offset_top:number;
+    private pattern_search_color:NumericPlayerColor;
+
+    private drawing_enabled:boolean = true;
+    private pen_ctx:CanvasRenderingContext2D;
+    private pen_layer:HTMLCanvasElement;
+    public title:string;
+    protected title_div:HTMLElement;
+
+    private themes:GobanSelectedThemes;
+    private theme_black:GoTheme;
+    private theme_black_stones;
+    private theme_black_text_color;
+    private theme_blank_text_color;
+    private theme_board:GoTheme;
+    private theme_faded_line_color;
+    private theme_faded_star_color;
+    private theme_faded_text_color;
+    private theme_line_color;
+    private theme_star_color;
+    private theme_stone_radius;
+    private theme_white:GoTheme;
+    private theme_white_stones;
+    private theme_white_text_color;
 
     constructor(config:GobanCanvasConfig, preloaded_data?:AdHocFormat|JGOF) {
         super(config, preloaded_data);
@@ -84,6 +120,7 @@ export class GobanCanvas extends GobanCore  {
             this.parent = document.createElement("div"); /* let a div dangle in no-mans land to prevent null pointer refs */
         }
 
+        this.title_div = config["title_div"];
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
@@ -102,6 +139,13 @@ export class GobanCanvas extends GobanCore  {
         };
         window.addEventListener("keydown", this.handleShiftKey);
         window.addEventListener("keyup", this.handleShiftKey);
+
+        let first_pass = true;
+        let watcher = this.watchSelectedThemes((themes) => {
+            this.setThemes(themes, first_pass ? true : false);
+            first_pass = false;
+        });
+        this.on("destroy", () => watcher.remove());
 
         this.post_config_constructor();
 
@@ -145,8 +189,8 @@ export class GobanCanvas extends GobanCore  {
 
             this.parent.insertBefore(this.shadow_layer, this.board);
             //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.shadow_layer.style.left = this.layer_offset_left;
-            this.shadow_layer.style.top = this.layer_offset_top;
+            this.shadow_layer.style.left = this.layer_offset_left + 'px';
+            this.shadow_layer.style.top = this.layer_offset_top + 'px';
 
 
             this.shadow_ctx = this.shadow_layer.getContext("2d");
@@ -167,8 +211,8 @@ export class GobanCanvas extends GobanCore  {
             this.pen_layer.className = "PenLayer";
             this.parent.append(this.pen_layer);
             //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.pen_layer.style.left = this.layer_offset_left;
-            this.pen_layer.style.top = this.layer_offset_top;
+            this.pen_layer.style.left = this.layer_offset_left + 'px';
+            this.pen_layer.style.top = this.layer_offset_top + 'px';
             this.pen_ctx = this.pen_layer.getContext("2d");
             this.bindPointerBindings(this.pen_layer);
         }
@@ -500,7 +544,7 @@ export class GobanCanvas extends GobanCore  {
             });
             this.setTitle(_("Submitting..."));
             this.disableStonePlacement();
-            this.move_selected = false;
+            this.move_selected = null;
         };
         /* we disable clicking if we've been initialized with the view user,
          * unless the board is a demo board (thus black_player_id is 0).  */
@@ -562,9 +606,13 @@ export class GobanCanvas extends GobanCore  {
                 if (this.getPuzzlePlacementSetting) {
                     let s = this.getPuzzlePlacementSetting();
                     puzzle_mode = s.mode;
-                    color = s.color;
-                    if (this.shift_key_is_down) {
-                        color = color === 1 ? 2 : 1;
+                    if (s.mode === 'setup') {
+                        color = s.color;
+                        if (this.shift_key_is_down) {
+                            color = color === 1 ? 2 : 1;
+                        }
+                    } else {
+                        throw new Error("Unexpected mode while attempting to setup puzzle");
                     }
                 }
 
@@ -668,7 +716,7 @@ export class GobanCanvas extends GobanCore  {
                     /* If same stone is clicked again, simply remove it */
                     let same_stone_clicked = false;
                     if ((this.move_selected.x === x && this.move_selected.y === y)) {
-                        this.move_selected = false;
+                        this.move_selected = null;
                         same_stone_clicked = true;
                     }
 
@@ -735,7 +783,7 @@ export class GobanCanvas extends GobanCore  {
                         force_redraw = true;
                     }
                 } catch (e) {
-                    this.move_selected = false;
+                    this.move_selected = null;
                     this.updatePlayerToMoveTitle();
                     throw e;
                 }
@@ -753,18 +801,18 @@ export class GobanCanvas extends GobanCore  {
                         }
                         break;
                     case "analyze":
-                        this.move_selected = false;
+                        this.move_selected = null;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
                         break;
                     case "conditional":
                         this.followConditionalSegment(x, y);
-                        this.move_selected = false;
+                        this.move_selected = null;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
                         break;
                     case "edit":
-                        this.move_selected = false;
+                        this.move_selected = null;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
 
@@ -784,7 +832,7 @@ export class GobanCanvas extends GobanCore  {
             }
 
         } catch (e) {
-            this.move_selected = false;
+            this.move_selected = null;
             console.info(e);
             this.errorHandler(e);
             this.emit("error");
@@ -830,6 +878,12 @@ export class GobanCanvas extends GobanCore  {
             }
         }
         this.__last_pt = this.xy2ij(-1, -1);
+    }
+    protected enableDrawing():void {
+        this.drawing_enabled = true;
+    }
+    protected disableDrawing():void {
+        this.drawing_enabled = false;
     }
     public drawSquare(i:number, j:number):void {
         if (i < 0 || j < 0) { return; }
@@ -1810,7 +1864,7 @@ export class GobanCanvas extends GobanCore  {
         let start = new Date();
 
         let metrics = this.metrics = this.computeMetrics();
-        if (force_clear || !(this.__set_board_width === metrics.width && this.__set_board_height === metrics.height && this.theme_stone_radius === this.computeThemeStoneRadius(metrics))) {
+        if (force_clear || !(this.__set_board_width === metrics.width && this.__set_board_height === metrics.height && this.theme_stone_radius === this.computeThemeStoneRadius())) {
             try {
                 //this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
                 this.parent.style.width = metrics.width + "px";
@@ -1831,8 +1885,8 @@ export class GobanCanvas extends GobanCore  {
                     if (this.pen_marks.length) {
                         resizeDeviceScaledCanvas(this.pen_layer, metrics.width, metrics.height);
                         //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                        this.pen_layer.style.left = this.layer_offset_left;
-                        this.pen_layer.style.top = this.layer_offset_top;
+                        this.pen_layer.style.left = this.layer_offset_left + 'px';
+                        this.pen_layer.style.top = this.layer_offset_top + 'px';
                         this.pen_ctx = this.pen_layer.getContext("2d");
                     } else {
                         this.detachPenCanvas();
@@ -1963,7 +2017,7 @@ export class GobanCanvas extends GobanCore  {
 
         /* Draw squares */
         if (!this.__draw_state || force_clear || this.__draw_state.length !== this.height || this.__draw_state[0].length !== this.width) {
-            this.__draw_state = GoMath.makeMatrix(this.width, this.height);
+            this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
         }
 
 
@@ -2039,7 +2093,7 @@ export class GobanCanvas extends GobanCore  {
         if (!this.metrics) {
             this.metrics = this.computeMetrics();
         }
-        this.theme_stone_radius = this.computeThemeStoneRadius(this.metrics);
+        this.theme_stone_radius = this.computeThemeStoneRadius();
         if (isNaN(this.theme_stone_radius)) {
             console.error("setThemes was not able to find the board size, metrics were: ", JSON.stringify(this.metrics));
             throw new Error("invalid stone radius computed");
@@ -2049,8 +2103,8 @@ export class GobanCanvas extends GobanCore  {
             if (this.shadow_layer) {
                 resizeDeviceScaledCanvas(this.shadow_layer, this.metrics.width, this.metrics.height);
                 //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                this.shadow_layer.style.left = this.layer_offset_left;
-                this.shadow_layer.style.top = this.layer_offset_top;
+                this.shadow_layer.style.left = this.layer_offset_left + 'px';
+                this.shadow_layer.style.top = this.layer_offset_top + 'px';
                 this.shadow_ctx = this.shadow_layer.getContext("2d");
             } else {
                 this.attachShadowLayer();
@@ -2139,6 +2193,26 @@ export class GobanCanvas extends GobanCore  {
         }
     }
 
+    protected setTitle(title:string):void {
+        this.title = title;
+        if (this.title_div) {
+            //if (typeof(title) === "string") {
+                this.title_div.innerHTML = title;
+            /*
+            } else {
+                this.title_div.empty();
+                this.title_div.append(title);
+            }
+            */
+        }
+        this.emit('title', title);
+    }
+    protected watchSelectedThemes(cb):{ remove:() => any } {
+        if (GobanCore.hooks.watchSelectedThemes) {
+            return GobanCore.hooks.watchSelectedThemes(cb);
+        }
+        return { remove: () => {} };
+    }
 
     //
     // Move tree
