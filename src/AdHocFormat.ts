@@ -30,7 +30,6 @@ export interface AdHocFormat {
     pause_control: AdHocPauseControl;
 }
 
-
 export interface AdHocPlayer {
     name: string;
     id: number;

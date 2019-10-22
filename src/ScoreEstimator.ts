@@ -16,7 +16,7 @@
 
 import {dup} from "./GoUtil";
 import {GoMath} from "./GoMath";
-import {GoEngine, encodeMove, encodeMoves} from "./GoEngine";
+import {GoEngine, encodeMove, encodeMoves, Score} from "./GoEngine";
 import {_} from "./translate";
 
 declare const CLIENT;
@@ -559,7 +559,7 @@ export class ScoreEstimator {
      * manually mark removed/dame, etc..  it does an official scoring from the
      * remaining territory.
      */
-    score() {
+    score():Score {
         this.white = {
                 "total": 0,
                 "stones": 0,

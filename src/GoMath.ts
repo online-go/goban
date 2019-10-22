@@ -15,12 +15,12 @@
  */
 
 import {GoStoneGroup} from "./GoStoneGroup";
-import {GoEngine} from './GoEngine';
+import {GoEngine, NumericPlayerColor} from './GoEngine';
 
 export interface Move {
     x: number;
     y: number;
-    color?: number;
+    color?: NumericPlayerColor;
     timedelta?: number;
     edited?: boolean;
 }
@@ -173,7 +173,7 @@ export class GoMath {
         }
         return ret;
     }
-    public static decodeMoves(move_obj:MoveArray | string, width?:number, height?:number): Array<Move> {
+    public static decodeMoves(move_obj:MoveArray | string | [object], width?:number, height?:number): Array<Move> {
         let ret: Array<Move> = [];
 
         function decodeSingleMoveArray(arr) {
@@ -237,10 +237,10 @@ export class GoMath {
 
                 for (let i = 0; i < move_string.length - 1; i += 2) {
                     let edited = false;
-                    let color = 0;
+                    let color:NumericPlayerColor = 0;
                     if (move_string[i + 0] === "!") {
                         edited = true;
-                        color = parseInt(move_string[i + 1]);
+                        color = parseInt(move_string[i + 1]) as NumericPlayerColor;
                         i += 2;
                     }
 

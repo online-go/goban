@@ -16,20 +16,19 @@
 
 import {
     GoEngine,
+    GoEngineConfig,
     encodeMove,
     encodeMoves,
+    PlayerColor,
     PuzzleOpponentMoveMode,
     PuzzlePlayerMoveMode
 } from "./GoEngine";
-import {GoMath} from "./GoMath";
+import {GoMath, MoveArray} from "./GoMath";
 import {GoStoneGroup} from "./GoStoneGroup";
 import {GoConditionalMove} from "./GoConditionalMove";
-import {GoThemes} from "./GoThemes";
 import {MoveTree} from "./MoveTree";
 import {init_score_estimator, ScoreEstimator} from "./ScoreEstimator";
-import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingRatio,
-    deepEqual, getRelativeEventPosition, getRandomInt, shortDurationString, dup
-} from "./GoUtil";
+import { deepEqual, dup } from "./GoUtil";
 import {TypedEventEmitter} from "./TypedEventEmitter";
 import {_, pgettext, interpolate} from "./translate";
 import { JGOFClock, JGOFTimeControl, JGOFPlayerClock, JGOFTimeControlSystem, JGOFPauseState} from './JGOF';
@@ -47,7 +46,6 @@ export const MARK_TYPES = ["letter", "circle", "square", "triangle", "sub_triang
 
 let last_goban_id = 0;
 
-export type PlayerColor = 'black' | 'white';
 export type GobanModes = 'play' | 'puzzle' | "score estimation" | 'analyze' | 'conditional';
 
 export interface ColoredCircle {
@@ -70,17 +68,21 @@ export interface GobanBounds {
     bottom: number;
 }
 
-export interface GobanConfig {
-    game_id?: number;
-    player_id?: number;
-    width?: number;
-    height?: number;
+export type GobanChatLog = Array<{
+    channel: 'main' | 'spectator' | 'malkovich';
+    lines: Array<{
+        chat_id: string;
+        // TODO: there are other fields in here, we need to flesh them out, and/or
+        // figure out if we even still need this
+    }>;
+}>
+
+export interface GobanConfig extends GoEngineConfig {
     display_width?: number;
-    initial_player?: PlayerColor;
+
     interactive?: boolean;
     mode?: 'puzzle';
     square_size?: number | (() => number) | 'auto';
-    original_sgf?: string;
 
     draw_top_labels?: boolean;
     draw_left_labels?: boolean;
@@ -92,10 +94,13 @@ export interface GobanConfig {
     puzzle_player_move_mode?: PuzzlePlayerMoveMode;
     getPuzzlePlacementSetting?: () => {'mode': GobanModes};
 
+    chat_log?:GobanChatLog;
+    spectator_log?:GobanChatLog;
+    malkovich_log?:GobanChatLog;
+
     // deprecated
     server_socket?: any;
 }
-
 
 export interface AudioClockEvent {
     /** The number of seconds left until the clock runs out of time */
@@ -1027,7 +1032,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 if ("om" in obj) { /* Official move [comes from live review of game] */
                     let t = this.engine.cur_review_move || this.engine.cur_move;
-                    let mv = this.engine.decodeMoves([obj.om])[0];
+                    let mv = this.engine.decodeMoves([obj.om] as any)[0];
                     let follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.place(mv.x, mv.y, false, false, true, true, true);
@@ -1349,47 +1354,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.syncReviewMove();
         return ret;
     }
-    protected onLabelingStart(ev) {
-        let pos = getRelativeEventPosition(ev);
-        this.last_label_position = this.xy2ij(pos.x, pos.y);
-
-        {
-            let x = this.last_label_position.i;
-            let y = this.last_label_position.j;
-            if (!((x >= 0 && x < this.width) && (y >= 0 && y < this.height))) {
-                return;
-            }
-        }
-
-        this.labeling_mode = this.putOrClearLabel(this.last_label_position.i, this.last_label_position.j) ? "put" : "clear";
-
-        /* clear hover */
-        if (this.__last_pt.valid) {
-            let last_hover = this.last_hover_square;
-            this.last_hover_square = null;
-            this.drawSquare(last_hover.x, last_hover.y);
-        }
-        this.__last_pt = this.xy2ij(-1, -1);
-        this.drawSquare(this.last_label_position.i, this.last_label_position.j);
-    }
-    protected onLabelingMove(ev) {
-        let pos = getRelativeEventPosition(ev);
-        let cur = this.xy2ij(pos.x, pos.y);
-
-        {
-            let x = cur.i;
-            let y = cur.j;
-            if (!((x >= 0 && x < this.width) && (y >= 0 && y < this.height))) {
-                return;
-            }
-        }
-
-        if (cur.i !== this.last_label_position.i || cur.j !== this.last_label_position.j) {
-            this.last_label_position = cur;
-            this.putOrClearLabel(cur.i, cur.j, this.labeling_mode);
-            this.setLabelCharacterFromMarks();
-        }
-    }
     public setSquareSize(new_ss) {
         let redraw = this.square_size !== new_ss;
         this.square_size = new_ss;
@@ -1466,7 +1430,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected disableDrawing() {
         this.drawing_enabled = false;
     }
-    protected markDirty() {
+    public markDirty() {
         if (!this.dirty_redraw) {
             this.dirty_redraw = setTimeout(() => {
                 this.dirty_redraw = null;
@@ -1521,7 +1485,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.bounds.bottom < this.height - 1) { this.draw_bottom_labels = false; }
     }
 
-    public load(config) {
+    public load(config:GobanConfig) {
         for (let k in config) {
             this.config[k] = config[k];
         }
@@ -1623,10 +1587,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             (this as any).autoScore();
         }
     }
-    protected set(x, y, player) {
+    public set(x, y, player) {
         this.markDirty();
     }
-    protected setForRemoval(x, y, removed) {
+    public setForRemoval(x, y, removed) {
         if (removed) {
             this.getMarks(x, y).stone_removed = true;
             this.getMarks(x, y).remove = true;

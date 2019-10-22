@@ -17,7 +17,7 @@
 import {GoMath} from "./GoMath";
 import {GoEngine, GoEngineState} from "./GoEngine";
 import {resizeDeviceScaledCanvas} from "./GoUtil";
-import {encodeMove} from "./GoEngine";
+import {encodeMove, NumericPlayerColor} from "./GoEngine";
 
 export interface MarkInterface {
     triangle?         : boolean;
@@ -76,7 +76,7 @@ export class MoveTree {
     public correct_answer: boolean;
     public wrong_answer: boolean;
     private hint_next: MoveTree;
-    public player: number;
+    public player: NumericPlayerColor;
     public line_color: number;
     public trunk: boolean;
     public text: string;
@@ -103,7 +103,7 @@ export class MoveTree {
     public isobranches: any;
     private isobranch_hash : string;
 
-    constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:number, move_number:number, parent:MoveTree, state:GoEngineState) {
+    constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:NumericPlayerColor, move_number:number, parent:MoveTree, state:GoEngineState) {
         this.id = ++__move_tree_id;
         this.x = x;
         this.y = y;
@@ -267,7 +267,7 @@ export class MoveTree {
 
             return null;
     }
-    move(x:number, y:number, trunk:boolean, edited:boolean, player:number, move_number:number, state:any):MoveTree {
+    move(x:number, y:number, trunk:boolean, edited:boolean, player:NumericPlayerColor, move_number:number, state:any):MoveTree {
         if (typeof(player) === "undefined") {
             throw new Error("Invalid player");
         }

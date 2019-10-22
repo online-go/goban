@@ -15,22 +15,153 @@
  */
 
 import {GoError} from "./GoError";
-import {MoveTree} from "./MoveTree";
-import {GoMath, Move} from "./GoMath";
+import {MoveTree, MoveTreeJson} from "./MoveTree";
+import {GoMath, Move, MoveArray} from "./GoMath";
 import {GoStoneGroup} from "./GoStoneGroup";
 import {ScoreEstimator} from "./ScoreEstimator";
+import {GobanCore} from './GobanCore';
+import {AdHocPauseControl} from './AdHocFormat';
+import {JGOFTimeControl} from './JGOF';
 import {_} from "./translate";
 
 
-export interface GoEngineState {
-    player: number;
-    board_is_repeating: boolean;
-    white_prisoners: any;
-    black_prisoners: any;
-    udata_state: any;
-    board: Array<Array<number>>;
-    isobranch_hash?: string;
+export interface Intersection {
+    x:number;
+    y:number;
 }
+
+export type Group = Array<Intersection>;
+export type GoEnginePhase = 'play'|'stone removal'|'finished';
+export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz'
+
+export interface PlayerScore {
+    total: number;
+    stones: number;
+    territory: number;
+    prisoners: number;
+    scoring_positions: string;
+    handicap: number;
+    komi: number;
+}
+export interface Score {
+    white: PlayerScore;
+    black: PlayerScore;
+}
+
+export interface GoEngineState {
+    player: NumericPlayerColor;
+    board_is_repeating: boolean;
+    white_prisoners: number;
+    black_prisoners: number;
+    board: Array<Array<NumericPlayerColor>>;
+    isobranch_hash?: string;
+
+    /** User data state, the Goban's usually want to store some state in here, which is
+     *  obtained and set by calling the getState_callback */
+    udata_state: any;
+}
+
+export interface GoEnginePlayerEntry {
+    id?:number;
+    username?:string;
+    country?:string;
+    rank?:number;
+
+    /** The accepted stones for the stone removal phase that the player has accepted */
+    accepted_stones?: string;
+
+    /** Whether or not the player has accepted scoring with strict seki mode on or not */
+    accepted_strict_seki_mode?: boolean;
+}
+
+export interface GoEngineConfig {
+    game_id?: number;
+    game_name?: string;
+    player_id?: number;
+    tournament_id?: number;
+    ladder_id?: number;
+    initial_player?: PlayerColor;
+    width?: number;
+    height?: number;
+    disable_analysis?: boolean;
+    handicap?: number;
+    komi?: number;
+    rules?: GoEngineRules;
+    phase?: GoEnginePhase;
+    initial_state?: GoEngineInitialState;
+    players?: {
+        'black': GoEnginePlayerEntry;
+        'white': GoEnginePlayerEntry;
+    };
+    //time_control?:JGOFTimeControl;
+    moves?:MoveArray;
+    move_tree?:MoveTreeJson;
+    ranked?: boolean;
+    original_disable_analysis?: boolean;
+    original_sgf?: string;
+    free_handicap_placement?:boolean;
+    score?:Score;
+
+    allow_self_capture?:boolean;
+    automatic_stone_removal?:boolean;
+    allow_ko?:boolean;
+    allow_superko?:boolean;
+    score_territory?:boolean;
+    score_territory_in_seki?:boolean;
+    strict_seki_mode?:boolean;
+    score_stones?:boolean;
+    score_passes?:boolean;
+    score_prisoners?:boolean;
+    white_must_pass_last?:boolean;
+
+    /** Removed stones in stone removal phase */
+    removed?: string;
+
+    // this is weird, we should migrate away from this
+    ogs?: {
+        black_stones: string;
+        black_territory: string;
+        black_seki_eyes: string;
+        black_dead_stones: string;
+        white_stones: string;
+        white_territory: string;
+        white_seki_eyes: string;
+        white_dead_stones: string;
+    };
+    time_per_move?:number;
+
+    // unknown if we use this
+    errors?:Array<{error: string, stack:any}>;
+
+    /** Deprecated, I dno't think we need this anymore, but need to be sure */
+    ogs_import?: boolean
+
+    // deprecated, normalized out
+    ladder?: number;
+}
+
+export interface GoEngineInitialState {
+    black?: string;
+    white?: string;
+}
+
+export interface PuzzleConfig {
+    mode: "puzzle";
+    name: string;
+    puzzle_type: string;
+    width: number;
+    height: number;
+    initial_state: GoEngineInitialState;
+    puzzle_opponent_move_mode: PuzzleOpponentMoveMode;
+    puzzle_player_move_mode: PuzzlePlayerMoveMode;
+
+    puzzle_rank: number;
+    puzzle_description: string;
+    puzzle_collection: number;
+    initial_player: PlayerColor;
+    move_tree: MoveTreeJson;
+}
+
 
 export type PuzzlePlayerMoveMode = 'free' | 'fixed';
 export type PuzzleOpponentMoveMode = 'manual'|'automatic';
@@ -58,16 +189,18 @@ export function encodeMoves(lst) {
     return ret;
 }
 
-type PlayerColor = 0|1|2; /* 0 empty, 1 black, 2 white */
+export type PlayerColor = 'black' | 'white';
+/** 0 empty, 1 black, 2 white */
+export type NumericPlayerColor = 0|1|2;
 
 export class GoEngine {
     public readonly black_player_id:number;
-    public board:Array<Array<PlayerColor>>;
+    public board:Array<Array<NumericPlayerColor>>;
     public cur_move:MoveTree;
     public cur_review_move:MoveTree;
     public getState_callback:() => any;
     public handicap:number;
-    public initial_state:{black?: string, white?:string};
+    public initial_state:GoEngineInitialState;
     public komi:number;
     public last_official_move:MoveTree;
     public move_tree:MoveTree;
@@ -76,26 +209,29 @@ export class GoEngine {
     public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
     public readonly name: string;
     public outcome:string;
-    public pause_control:any;
+    public pause_control:AdHocPauseControl;
     public paused_since: number;
-    public phase:'play'|'stone removal'|'finished';
-    public player:PlayerColor;
-    public players:{black:any, white:any};
-    public puzzle_collection:any;
+    public phase:GoEnginePhase;
+    public player:NumericPlayerColor;
+    public players:{
+        'black': GoEnginePlayerEntry;
+        'white': GoEnginePlayerEntry;
+    };
+    public puzzle_collection:number;
     public puzzle_description:string;
     public puzzle_opponent_move_mode: PuzzleOpponentMoveMode;
     public puzzle_player_move_mode: PuzzlePlayerMoveMode;
     public puzzle_rank:number;
     public puzzle_type:string;
-    public readonly config:any;
+    public readonly config:GoEngineConfig;
     public readonly disable_analysis:boolean;
     public readonly height:number;
-    public readonly rules:'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz';
+    public readonly rules:GoEngineRules;
     public readonly width:number;
     public removal:Array<Array<-1|0|1>>;
     public setState_callback:(state) => void;
     public strict_seki_mode:boolean;
-    public time_control:any;
+    public time_control:JGOFTimeControl;
     public undo_requested: number;
     public readonly white_player_id:number;
     public winner:'black'|'white';
@@ -103,29 +239,28 @@ export class GoEngine {
     public decoded_moves:Array<Move>;
     public automatic_stone_removal:boolean;
 
-    private aga_handicap_scoring;
-    private allow_ko;
-    private allow_self_capture;
-    private allow_superko;
-    private black_prisoners;
-    private board_is_repeating;
-    private cb;
-    private dontStoreBoardHistory;
-    public free_handicap_placement;
-    private loading_sgf;
-    private marks;
-    private move_before_jump;
-    private mv;
-    private score;
-    private score_prisoners;
-    private score_stones;
-    private score_handicap;
-    private score_territory;
-    private score_territory_in_seki;
-    private white_prisoners;
+    private aga_handicap_scoring:boolean;
+    private allow_ko:boolean;
+    private allow_self_capture:boolean;
+    private allow_superko:boolean;
+    private black_prisoners:number;
+    private white_prisoners:number;
+    private board_is_repeating:boolean;
+    private goban_callback:GobanCore;
+    private dontStoreBoardHistory:boolean;
+    public free_handicap_placement:boolean;
+    private loading_sgf:boolean;
+    private marks:Array<Array<number>>;
+    private move_before_jump:MoveTree;
+    private mv:Move;
+    private score_prisoners:boolean;
+    private score_stones:boolean;
+    private score_handicap:boolean;
+    private score_territory:boolean;
+    private score_territory_in_seki:boolean;
 
 
-    constructor(config, cb?, dontStoreBoardHistory?) {
+    constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?) {
         try {
             /* We had a bug where we were filling in some initial state data incorrectly when we were dealing with
              * sgfs, so this code exists for sgf 'games' < 800k in the database.. -anoek 2014-08-13 */
@@ -150,9 +285,9 @@ export class GoEngine {
         this.config = config;
         this.dontStoreBoardHistory = dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
 
-        this.cb = cb;
-        if (this.cb) {
-            this.cb.engine = this;
+        this.goban_callback = goban_callback;
+        if (this.goban_callback) {
+            this.goban_callback.engine = this;
         }
         this.board = [];
         this.removal = [];
@@ -292,7 +427,7 @@ export class GoEngine {
             }
         }
 
-        function unpackMoveTree(cur, tree) {
+        function unpackMoveTree(cur:MoveTree, tree:MoveTreeJson):void {
             cur.loadJsonForThisNode(tree);
             if (tree.trunk_next) {
                 let n = tree.trunk_next;
@@ -312,7 +447,7 @@ export class GoEngine {
         }
     }
 
-    public decodeMoves(move_obj) {
+    public decodeMoves(move_obj:MoveArray | string | [object]):Array<Move> {
         return GoMath.decodeMoves(move_obj, this.width, this.height);
     }
     private getState():GoEngineState {
@@ -335,7 +470,7 @@ export class GoEngine {
 
         return state;
     }
-    private setState(state) {
+    private setState(state:GoEngineState):GoEngineState {
         this.player = state.player;
         this.white_prisoners = state.white_prisoners;
         this.black_prisoners = state.black_prisoners;
@@ -351,8 +486,8 @@ export class GoEngine {
             for (let x = 0; x < this.width; ++x) {
                 if (this.board[y][x] !== state.board[y][x] || (this.cur_move.x === x && this.cur_move.y === y)) {
                     this.board[y][x] = state.board[y][x];
-                    if (this.cb) {
-                        this.cb.set(x, y, this.board[y][x]);
+                    if (this.goban_callback) {
+                        this.goban_callback.set(x, y, this.board[y][x]);
                     }
                     redrawn[x + "," + y] = true;
                 }
@@ -361,7 +496,7 @@ export class GoEngine {
 
         return state;
     }
-    private statesAreTheSame(state1, state2) {
+    private statesAreTheSame(state1:GoEngineState, state2:GoEngineState):boolean {
         if (state1.player !== state2.player) { return false; }
         if (state1.white_prisoners !== state2.white_prisoners) { return false; }
         if (state1.black_prisoners !== state2.black_prisoners) { return false; }
@@ -376,7 +511,7 @@ export class GoEngine {
 
         return true;
     }
-    public boardMatriciesAreTheSame(m1, m2) {
+    public boardMatriciesAreTheSame(m1:Array<Array<NumericPlayerColor>>, m2:Array<Array<NumericPlayerColor>>):boolean {
         if (m1.length !== m2.length || m1[0].length !== m2[0].length) { return false; }
 
         for (let y = 0; y < m1.length; ++y) {
@@ -388,8 +523,7 @@ export class GoEngine {
         }
         return true;
     }
-
-    private boardStatesAreTheSame(state1, state2) {
+    private boardStatesAreTheSame(state1:GoEngineState, state2:GoEngineState):boolean {
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (state1.board[y][x] !== state2.board[y][x]) {
@@ -401,7 +535,7 @@ export class GoEngine {
         return true;
     }
 
-    public followPath(from_turn: number, moves, cb?) { /* returns first move on the branch  */
+    public followPath(from_turn: number, moves:MoveArray | string, cb?:(x:number, y:number, edited:boolean, color:number) => void):Array<MoveTree> {
         try {
             let ret = [];
             let from = this.move_tree.index(from_turn);
@@ -454,8 +588,9 @@ export class GoEngine {
             return [];
         }
     }
-    public showPrevious() {
-        if (this.dontStoreBoardHistory) { return; }
+    /** Returns true if there was a previous to show */
+    public showPrevious():boolean {
+        if (this.dontStoreBoardHistory) { return false; }
 
         if (this.cur_move.prev()) {
             this.jumpTo(this.cur_move.prev());
@@ -464,17 +599,19 @@ export class GoEngine {
 
         return false;
     }
-    public showNext() {
-        if (this.dontStoreBoardHistory) { return; }
+    /** Returns true if there was a previous to show */
+    public showNext():boolean {
+        if (this.dontStoreBoardHistory) { return false; }
 
         if (this.cur_move.next()) {
             this.jumpTo(this.cur_move.next());
+            return true;
         }
+        return false;
     }
-    public jumpTo(node) {
+    public jumpTo(node:MoveTree):void {
         if (!node) {
-            console.error('Attempted to jump to a null node');
-            return;
+            throw new Error('Attempted to jump to a null node');
         }
         this.move_before_jump = this.cur_move;
         this.cur_move = node;
@@ -482,12 +619,13 @@ export class GoEngine {
             this.setState(node.state);
         }
     }
-    public jumpToLastOfficialMove() {
+    public jumpToLastOfficialMove():void {
         if (this.dontStoreBoardHistory) { return; }
 
         this.jumpTo(this.last_official_move);
     }
-    public setLastOfficialMove() {
+    /** Saves our current move as our last official move */
+    public setLastOfficialMove():void {
         if (this.dontStoreBoardHistory) { return; }
         if (!this.cur_move.trunk) {
             if (!("original_sgf" in this.config)) {
@@ -497,10 +635,13 @@ export class GoEngine {
 
         this.last_official_move = this.cur_move;
     }
-    public isLastOfficialMove() {
+
+    /** return strue if our current move is our last official move */
+    public isLastOfficialMove():boolean {
         return this.cur_move.is(this.last_official_move);
     }
-    public getMoveDiff() {
+    /** Returns a move string from the given official move number (aka branch point) */
+    public getMoveDiff():{'from': number, 'moves': string} {
         let branch_point = this.cur_move.getBranchPoint();
         let cur = this.cur_move;
         let moves = [];
@@ -513,11 +654,11 @@ export class GoEngine {
         moves.reverse();
         return { "from": branch_point.getMoveIndex(), "moves": encodeMoves(moves) };
     }
-    public setAsCurrentReviewMove() {
+    public setAsCurrentReviewMove():void {
         if (this.dontStoreBoardHistory) { return; }
         this.cur_review_move = this.cur_move;
     }
-    public deleteCurMove() {
+    public deleteCurMove():void {
         if (this.cur_move.id === this.move_tree.id) { console.log("Wont remove move tree itself."); return; }
         if (this.cur_move.trunk) { console.log("Wont remove trunk node"); return; }
         let t = this.cur_move.parent;
@@ -547,7 +688,7 @@ export class GoEngine {
 
         return false;
     }
-    public jumpToOfficialMoveNumber(move_number:number) {
+    public jumpToOfficialMoveNumber(move_number:number):void {
         if (this.dontStoreBoardHistory) { return; }
 
         while (this.showPrevious()) {
@@ -560,35 +701,28 @@ export class GoEngine {
         }
     }
 
-    private isMoveLegal(x, y) {
+    private isMoveLegal(x:number, y:number):boolean {
         return true;
     }
-    private pass() {
+    private pass():void {
         this.player = this.opponent();
     }
-    private opponent() {
+    private opponent():NumericPlayerColor {
         return this.player === 1 ? 2 : 1;
     }
     public prettyCoords(x:number, y:number):string {
         return GoMath.prettyCoords(x, y, this.height);
     }
-    private incrementCurrentMarker() {
+    private incrementCurrentMarker():void {
         ++__currentMarker;
-        /*
-           for (var y=0; y < this.height; ++y) {
-           for (var x=0; x < this.width; ++x) {
-           this.marks[y][x] = 0;
-           }
-           }
-         */
     }
-    private markGroup(group) {
+    private markGroup(group:Group):void {
         for (let i = 0; i < group.length; ++i) {
             this.marks[group[i].y][group[i].x] = __currentMarker;
         }
     }
 
-    private foreachNeighbor_checkAndDo(x, y, done_array, fn_of_neighbor_pt) {
+    private foreachNeighbor_checkAndDo(x:number, y:number, done_array:Array<boolean>, fn_of_neighbor_pt:(x:number, y:number) => void):void {
         let idx = x + y * this.width;
         if (done_array[idx]) {
             return;
@@ -596,8 +730,8 @@ export class GoEngine {
         done_array[idx] = true;
         fn_of_neighbor_pt(x, y);
     }
-    private foreachNeighbor(pt_or_group, fn_of_neighbor_pt) {
-        if (pt_or_group.constructor === Array) {
+    private foreachNeighbor(pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void):void {
+        if (pt_or_group instanceof Array) {
             let group = pt_or_group;
             let done_array =  new Array(this.height * this.width);
             for (let i = 0; i < group.length; ++i) {
@@ -620,7 +754,7 @@ export class GoEngine {
         }
     }
     /** Returns an array of x/y pairs of all the same color */
-    private getGroup(x, y, clearMarks) {
+    private getGroup(x:number, y:number, clearMarks:boolean):Group {
         let color = this.board[y][x];
         if (clearMarks) {
             this.incrementCurrentMarker();
@@ -648,11 +782,11 @@ export class GoEngine {
         return ret;
     }
     /** Returns an array of groups connected to the given group */
-    private getConnectedGroups(group) {
+    private getConnectedGroups(group:Group):Array<Group> {
         let gr = group;
         this.incrementCurrentMarker();
         this.markGroup(group);
-        let ret = [];
+        let ret:Array<Group> = [];
         this.foreachNeighbor(group, (x, y) => {
             if (this.board[y][x]) {
                 this.incrementCurrentMarker();
@@ -668,20 +802,20 @@ export class GoEngine {
         });
         return ret;
     }
-    private getConnectedOpenSpace(group) {
+    private getConnectedOpenSpace(group:Group):Group {
         let gr = group;
         this.incrementCurrentMarker();
         this.markGroup(group);
-        let ret = [];
+        let ret:Group = [];
         let included = {};
 
         this.foreachNeighbor(group, (x, y) => {
             if (!this.board[y][x]) {
                 this.incrementCurrentMarker();
                 this.markGroup(gr);
-                for (let i = 0; i < ret.length; ++i) {
-                    this.markGroup(ret[i]);
-                }
+                //for (let i = 0; i < ret.length; ++i) {
+                this.markGroup(ret);
+                //}
                 let g = this.getGroup(x, y, false);
                 for (let i = 0; i < g.length; ++i) {
                     if (!included[g[i].x + "," + g[i].y]) {
@@ -693,7 +827,7 @@ export class GoEngine {
         });
         return ret;
     }
-    private countLiberties(group) {
+    private countLiberties(group:Group):number {
         let ct = 0;
         let counter = (x, y) => ct += this.board[y][x] ? 0 : 1;
         for (let i = 0; i < group.length; ++i) {
@@ -701,32 +835,29 @@ export class GoEngine {
         }
         return ct;
     }
-    private captureGroup(group) {
+    private captureGroup(group:Group):number {
         for (let i = 0; i < group.length; ++i) {
             let x = group[i].x;
             let y = group[i].y;
             if (this.board[y][x] === 1) { ++this.white_prisoners; }
             if (this.board[y][x] === 2) { ++this.black_prisoners; }
             this.board[y][x] = 0;
-            if (this.cb) {
-                this.cb.set(x, y, 0);
+            if (this.goban_callback) {
+                this.goban_callback.set(x, y, 0);
             }
         }
         return group.length;
     }
-    public playerToMove() {
+    public playerToMove():number {
         return this.player === 1 ? this.black_player_id : this.white_player_id;
     }
-    public playerNotToMove() {
+    public playerNotToMove():number {
         return this.player === 2 ? this.black_player_id : this.white_player_id;
     }
-    public otherPlayer() {
+    public otherPlayer():NumericPlayerColor {
         return this.player === 2 ? 1 : 2;
     }
-    private otherPlayerColorTranslated() {
-        return this.player === 2 ? _("Black") : _("White");
-    }
-    public playerColor(player_id?):'black'|'white'|'invalid' {
+    public playerColor(player_id?:number):'black'|'white'|'invalid' {
         if (player_id) {
             return (player_id === this.black_player_id ? "black" :
                     (player_id === this.white_player_id ? "white" : "invalid"));
@@ -737,7 +868,7 @@ export class GoEngine {
     public colorToMove():'black'|'white' {
         return this.player === 1 ? "black" : "white";
     }
-    public playerByColor(color) {
+    public playerByColor(color:PlayerColor | NumericPlayerColor):NumericPlayerColor {
         if (color === 1 || color === 2) {
             return color;
         }
@@ -745,7 +876,7 @@ export class GoEngine {
         if (color === "white") { return 2; }
         return 0;
     }
-    public place(x, y, checkForKo?, errorOnSuperKo?, dontCheckForSuperKo?, dontCheckForSuicide?, isTrunkMove?) {
+    public place(x:number, y:number, checkForKo?:boolean, errorOnSuperKo?:boolean, dontCheckForSuperKo?:boolean, dontCheckForSuicide?:boolean, isTrunkMove?:boolean) {
         try {
             if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
                 if (this.board[y][x]) {
@@ -814,8 +945,8 @@ export class GoEngine {
                 }
 
                 if (!suicide_move) {
-                    if (this.cb) {
-                        this.cb.set(x, y, this.player);
+                    if (this.goban_callback) {
+                        this.goban_callback.set(x, y, this.player);
                     }
                 }
             }
@@ -831,9 +962,9 @@ export class GoEngine {
                 this.player = this.opponent();
             }
             let next_move_number = this.cur_move.move_number + 1;
-            //var trunk = this.loading_trunk_moves || (!this.cb || this.cb.mode === "play");
+            //var trunk = this.loading_trunk_moves || (!this.goban_callback || this.goban_callback.mode === "play");
             let trunk = isTrunkMove ? true : false;
-            //console.log("Trunk move: ", trunk, this.cb.mode);
+            //console.log("Trunk move: ", trunk, this.goban_callback.mode);
             //this.cur_move = this.cur_move.move(x, y, trunk, false, color, next_move_number, !this.dontStoreBoardHistory ? this.getState() : null);
             this.cur_move = this.cur_move.move(x, y, trunk, false, color, next_move_number, this.getState());
         } catch (e) {
@@ -855,7 +986,7 @@ export class GoEngine {
             throw e;
         }
     }
-    public isBoardRepeating() {
+    public isBoardRepeating():boolean {
         let MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
         let current_state = this.getState();
         //var current_state = this.cur_move.state;
@@ -868,13 +999,13 @@ export class GoEngine {
         }
         return false;
     }
-    public editPlace(x, y, color, isTrunkMove?) {
+    public editPlace(x:number, y:number, color:NumericPlayerColor, isTrunkMove?:boolean):void {
         let player = this.playerByColor(color);
 
         if (x >= 0 && y >= 0) {
             this.board[y][x] = player;
-            if (this.cb) {
-                this.cb.set(x, y, player);
+            if (this.goban_callback) {
+                this.goban_callback.set(x, y, player);
             }
         }
 
@@ -882,7 +1013,7 @@ export class GoEngine {
 
         this.cur_move = this.cur_move.move(x, y, trunk, true, player, this.cur_move.move_number, this.getState());
     }
-    public initialStatePlace(x, y, color, dont_record_placement?) {
+    public initialStatePlace(x:number, y:number, color:NumericPlayerColor, dont_record_placement?:boolean):void {
         let moves = null;
         let p = this.player;
 
@@ -894,8 +1025,8 @@ export class GoEngine {
 
         if (x >= 0 && y >= 0) {
             this.board[y][x] = color;
-            if (this.cb) {
-                this.cb.set(x, y, color);
+            if (this.goban_callback) {
+                this.goban_callback.set(x, y, color);
             }
         }
 
@@ -929,7 +1060,7 @@ export class GoEngine {
 
         this.resetMoveTree();
     }
-    public resetMoveTree() {
+    public resetMoveTree():void {
         let marks = null;
         if (this.move_tree) {
             marks = this.move_tree.getAllMarks();
@@ -967,10 +1098,10 @@ export class GoEngine {
         };
     }
 
-    public toggleMetaGroupRemoval(x, y): Array<any> {
+    public toggleMetaGroupRemoval(x:number, y:number): Array<[-1|0|1, Group]> {
         try {
             if (x >= 0 && y >= 0) {
-                let removing = !this.removal[y][x];
+                let removing:(-1|0|1) = (!this.removal[y][x] ? 1 : 0);
                 let group = this.getGroup(x, y, true);
                 let removed_stones = this.setGroupForRemoval(x, y, removing)[1];
                 let empty_spaces = [];
@@ -996,7 +1127,7 @@ export class GoEngine {
                         already_done[pt.x + "," + pt.y] = true;
 
                         if (this.board[pt.y][pt.x] === 0) {
-                            let far_neighbors = this.getConnectedGroups(space[i]);
+                            let far_neighbors = this.getConnectedGroups([space[i]]);
                             for (let j = 0; j < far_neighbors.length; ++j) {
                                 let fpt = far_neighbors[j][0];
                                 if (this.board[fpt.y][fpt.x] === group_color) {
@@ -1013,16 +1144,16 @@ export class GoEngine {
                 if (!removing) {
                     return [[removing, removed_stones]];
                 } else {
-                    return [[removing, removed_stones], [!removing, empty_spaces]];
+                    return [[removing, removed_stones], [(!removing ? 1 : 0), empty_spaces]];
                 }
             }
         } catch (err) {
             console.log(err.stack);
         }
 
-        return [0, []];
+        return [[0, []]];
     }
-    private setGroupForRemoval(x, y, toggle_set) {
+    private setGroupForRemoval(x:number, y:number, toggle_set:-1|0|1):[-1|0|1, Group] {
         /*
            If toggle_set === -1, toggle the selection from marked / unmarked.
            If toggle_set === 0, unmark the group for removal
@@ -1033,7 +1164,7 @@ export class GoEngine {
 
         if (x >= 0 && y >= 0) {
             let group = this.getGroup(x, y, true);
-            let removing = toggle_set === -1 ? !this.removal[y][x] : toggle_set;
+            let removing = toggle_set === -1 ? (!this.removal[y][x] ? 1 : 0) : toggle_set;
 
             for (let i = 0; i < group.length; ++i) {
                 let x = group[i].x;
@@ -1045,15 +1176,15 @@ export class GoEngine {
         }
         return [0, []];
     }
-    public setRemoved(x, y, removed) {
+    public setRemoved(x:number, y:number, removed:boolean | 0 | 1):void {
         if (x < 0 || y < 0) { return; }
         if (x > this.width || y > this.height) { return; }
-        this.removal[y][x] = removed;
-        if (this.cb) {
-            this.cb.setForRemoval(x, y, this.removal[y][x]);
+        this.removal[y][x] = removed ? 1 : 0;
+        if (this.goban_callback) {
+            this.goban_callback.setForRemoval(x, y, this.removal[y][x]);
         }
     }
-    public clearRemoved() {
+    public clearRemoved():void {
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
@@ -1062,7 +1193,7 @@ export class GoEngine {
             }
         }
     }
-    public getStoneRemovalString() {
+    public getStoneRemovalString():string {
         let ret = "";
         let arr = [];
         for (let y = 0; y < this.height; ++y) {
@@ -1079,28 +1210,16 @@ export class GoEngine {
         return GoMath.sortMoves(ret);
     }
 
-    public getMoveNumber() {
+    public getMoveNumber():number {
         return this.cur_move ? this.cur_move.move_number : 0;
     }
-    public getCurrentMoveNumber() {
+    public getCurrentMoveNumber():number {
         return this.last_official_move.move_number;
     }
 
     /* Returns a details object containing the total score and the breakdown of the
      * scoring details */
-    public computeScore(only_prisoners?) {
-        let self = this;
-        /*
-        if (this.phase === "finished" && this.score && (!this.cb || this.cb.mode !== "analyze")) {
-            try {
-                if (!(this.board && ("review_id" in this.board) && this.board.review_id)) {
-                    return this.score;
-                }
-            } catch (e) { }
-        }
-        */
-
-
+    public computeScore(only_prisoners?:boolean):Score {
         let ret = {
             "white": {
                 "total": 0,
@@ -1130,7 +1249,7 @@ export class GoEngine {
         let removed_white = 0;
 
         /* clear removed */
-        if ((!this.cb || this.cb.mode !== "analyze")) {
+        if ((!this.goban_callback || this.goban_callback.mode !== "analyze")) {
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
                     if (this.removal[y][x]) {
@@ -1161,7 +1280,7 @@ export class GoEngine {
                 let x = group[i].x;
                 let y = group[i].y;
 
-                let oldboard = self.cur_move.state.board;
+                let oldboard = this.cur_move.state.board;
 
                 /* XXX: TODO: When we implement stone removal and scoring stuff
                  * into the review mode and analysis mode, this needs to change to
@@ -1174,7 +1293,7 @@ export class GoEngine {
                     }
                     */
                 } catch (e) { }
-                if (!self.removal[y][x] || oldboard[y][x] || in_review) {
+                if (!this.removal[y][x] || oldboard[y][x] || in_review) {
                     ++ct;
                     scored[y][x] = 1;
                 }
@@ -1185,13 +1304,13 @@ export class GoEngine {
 
         //if (this.phase !== "play") {
         if (!only_prisoners && this.score_territory) {
-            let gm = new GoMath(this, self.cur_move.state.board);
+            let gm = new GoMath(this, this.cur_move.state.board);
             //console.log(gm);
 
             gm.foreachGroup((gr) => {
                 if (gr.is_territory) {
                     //console.log(gr);
-                    if (!self.score_territory_in_seki && gr.is_territory_in_seki && self.strict_seki_mode) {
+                    if (!this.score_territory_in_seki && gr.is_territory_in_seki && this.strict_seki_mode) {
                         return;
                     }
                     let color = gr.territory_color === 1 ? "black" : "white";
@@ -1199,10 +1318,10 @@ export class GoEngine {
                     ret[color].territory += markScored(gr.points);
                     for (let i = 0; i < gr.points.length; ++i) {
                         let pt = gr.points[i];
-                        if (self.board[pt.y][pt.x] && !self.removal[pt.y][pt.x]) {
+                        if (this.board[pt.y][pt.x] && !this.removal[pt.y][pt.x]) {
                             /* This can happen as peopel are using the edit tool to force stone position colors */
                             /* This can also happen now that we are doing estimate based scoring */
-                            //console.log("Point "+ GoMath.prettyCoords(pt.x, pt.y, self.height) +" should be removed, but is not because of an edit");
+                            //console.log("Point "+ GoMath.prettyCoords(pt.x, pt.y, this.height) +" should be removed, but is not because of an edit");
                             //throw "Fucking hell: " + pt.x + "," + pt.y;
                         }
                     }
@@ -1257,14 +1376,13 @@ export class GoEngine {
 
         return ret;
     }
-    public handicapMovesLeft() {
+    public handicapMovesLeft():number {
         if (this.free_handicap_placement) {
             return Math.max(0, this.handicap - this.getMoveNumber());
         }
         return 0;
     }
-    private computeAutoRemovedGroups(board) {
-        let self = this;
+    private computeAutoRemovedGroups():Array<Group> {
         let ret = [];
         let groups = [null];
         let group_id_map = [];
@@ -1284,7 +1402,7 @@ export class GoEngine {
         return ret;
     }
 
-    private static normalizeConfig(config) {
+    private static normalizeConfig(config:GoEngineConfig):void {
         if (config.ladder !== config.ladder_id) {
             config.ladder_id = config.ladder;
         }
@@ -1292,7 +1410,7 @@ export class GoEngine {
             delete config["ladder"];
         }
     }
-    public static fillDefaults(game_obj) {
+    public static fillDefaults(game_obj:GoEngineConfig):GoEngineConfig {
         if (!("phase" in game_obj)) { game_obj.phase = "play"; }
         if (!("rules" in game_obj)) { game_obj.rules = "japanese"; }
 
@@ -1405,7 +1523,9 @@ export class GoEngine {
             }
         }
 
-        if (typeof(game_obj.time_control) !== "object") {
+        //if (typeof(game_obj.time_control) !== "object") {
+        //    throw new Error(`Unhandled time control: was not object, instead found ${game_obj.time_control}`)
+            /*
             if (!game_obj.time_control) {
                 game_obj.time_control = "none";
             }
@@ -1438,7 +1558,8 @@ export class GoEngine {
             }
             //console.log(tc);
             game_obj.time_control = tc;
-        }
+            */
+        //}
 
 
 
@@ -1532,7 +1653,7 @@ export class GoEngine {
 
         return game_obj;
     }
-    public static clearRuleSettings(game_obj) {
+    public static clearRuleSettings(game_obj:GoEngineConfig):GoEngineConfig {
         delete game_obj.allow_self_capture;
         delete game_obj.automatic_stone_removal;
         delete game_obj.allow_ko;
@@ -1547,7 +1668,7 @@ export class GoEngine {
         delete game_obj.komi;
         return game_obj;
     }
-    private parseSGF(sgf):() => void {
+    private parseSGF(sgf:string):() => void {
         /* This callback is eventually returned after the parse. It is the function
          * that should be run which will perform the actual moves. This function is
          * constructed by making a bunch of dyanmic functions and chaining them
@@ -1753,9 +1874,9 @@ export class GoEngine {
                         {
                             instructions.push(() => {
                                 try {
-                                    pos = val.substr(0, 2);
+                                    let s:string = val.substr(0, 2);
                                     let extra = val.substr(3);
-                                    let mv = self.decodeMoves(pos)[0];
+                                    let mv = self.decodeMoves(s)[0];
                                     //console.log(mv);
 
                                     let marks = self.cur_move.getMarks(mv.x, mv.y);
@@ -1806,12 +1927,12 @@ export class GoEngine {
             }
         };
     }
-    public estimateScore(trials, tolerance) {
-        let se = new ScoreEstimator(this.cb);
+    public estimateScore(trials:number, tolerance:number):Score {
+        let se = new ScoreEstimator(this.goban_callback);
         se.init(this, trials, tolerance);
         return se.score();
     }
-    public getMoveByLocation(x, y) {
+    public getMoveByLocation(x:number, y:number):MoveTree {
         let m = null;
         let cur_move = this.cur_move;
         while (!m && cur_move) {
@@ -1830,7 +1951,7 @@ export class GoEngine {
         return m;
     }
 
-    public exportAsPuzzle() {
+    public exportAsPuzzle():PuzzleConfig {
         return {
             mode: "puzzle",
             name: this.name,

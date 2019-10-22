@@ -29,7 +29,7 @@ import {
     AUTOSCORE_TOLERANCE,
     MARK_TYPES,
 } from './GobanCore';
-import {GoEngine, encodeMove, encodeMoves} from "./GoEngine";
+import {GoEngine, NumericPlayerColor, encodeMove, encodeMoves} from "./GoEngine";
 import {GoMath} from "./GoMath";
 import {MoveTree} from "./MoveTree";
 import {GoThemes} from "./GoThemes";
@@ -510,7 +510,7 @@ export class GobanCanvas extends GobanCore  {
             if ((this.engine.phase === "stone removal" || this.scoring_mode) && this.isParticipatingPlayer()) {
                 let arrs;
                 if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
-                    let removed = !this.engine.removal[y][x];
+                    let removed = (!this.engine.removal[y][x] ? 1 : 0);
                     arrs = [[removed, [{"x": x, "y": y}]]];
                 }
                 else {
@@ -538,7 +538,7 @@ export class GobanCanvas extends GobanCore  {
                 }
             }
             else if (this.mode === "pattern search") {
-                let color = (this.engine.board[y][x] + 1) % 3; /* cycle through the colors */
+                let color:NumericPlayerColor = (this.engine.board[y][x] + 1) % 3 as NumericPlayerColor; /* cycle through the colors */
                 if (this.pattern_search_color) {
                     color = this.pattern_search_color;
                     if (this.engine.board[y][x] === this.pattern_search_color) {
@@ -558,7 +558,7 @@ export class GobanCanvas extends GobanCore  {
             }
             else if (this.mode === "puzzle") {
                 let puzzle_mode = "place";
-                let color = 0;
+                let color:NumericPlayerColor = 0;
                 if (this.getPuzzlePlacementSetting) {
                     let s = this.getPuzzlePlacementSetting();
                     puzzle_mode = s.mode;
@@ -2095,6 +2095,47 @@ export class GobanCanvas extends GobanCore  {
         if (!dont_redraw) {
             this.redraw(true);
             this.move_tree_redraw();
+        }
+    }
+    private onLabelingStart(ev) {
+        let pos = getRelativeEventPosition(ev);
+        this.last_label_position = this.xy2ij(pos.x, pos.y);
+
+        {
+            let x = this.last_label_position.i;
+            let y = this.last_label_position.j;
+            if (!((x >= 0 && x < this.width) && (y >= 0 && y < this.height))) {
+                return;
+            }
+        }
+
+        this.labeling_mode = this.putOrClearLabel(this.last_label_position.i, this.last_label_position.j) ? "put" : "clear";
+
+        /* clear hover */
+        if (this.__last_pt.valid) {
+            let last_hover = this.last_hover_square;
+            this.last_hover_square = null;
+            this.drawSquare(last_hover.x, last_hover.y);
+        }
+        this.__last_pt = this.xy2ij(-1, -1);
+        this.drawSquare(this.last_label_position.i, this.last_label_position.j);
+    }
+    private onLabelingMove(ev) {
+        let pos = getRelativeEventPosition(ev);
+        let cur = this.xy2ij(pos.x, pos.y);
+
+        {
+            let x = cur.i;
+            let y = cur.j;
+            if (!((x >= 0 && x < this.width) && (y >= 0 && y < this.height))) {
+                return;
+            }
+        }
+
+        if (cur.i !== this.last_label_position.i || cur.j !== this.last_label_position.j) {
+            this.last_label_position = cur;
+            this.putOrClearLabel(cur.i, cur.j, this.labeling_mode);
+            this.setLabelCharacterFromMarks();
         }
     }
 
