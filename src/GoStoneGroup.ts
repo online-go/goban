@@ -14,30 +14,34 @@
  * limitations under the License.
  */
 
+import { NumericPlayerColor } from './GoEngine';
+import { BoardState, Intersection, Group } from './GoMath';
+
 export class GoStoneGroup {
-    probable_color: any;
-    dame: any;
-    __added_neighbors: any;
-    corner_groups: any;
-    points: any;
-    neighbors: any;
-    is_territory: any;
-    color: any;
-    is_probably_dead: any;
-    is_probably_dame: any;
-    engine: any;
-    id: any;
-    is_strong_eye: any;
-    adjacent_white: any;
-    adjacent_black: any;
-    is_eye: any;
-    is_strong_string: any;
-    territory_color: any;
-    is_territory_in_seki: any;
+    probable_color: NumericPlayerColor;
+    dame: boolean;
+    corner_groups: {[y:string]: {[x:string]: GoStoneGroup}};
+    points: Array<Intersection>;
+    neighbors: Array<GoStoneGroup>;
+    is_territory: boolean;
+    color: NumericPlayerColor;
+    is_probably_dead: boolean;
+    is_probably_dame: boolean;
+    board_state: BoardState;
+    id: number;
+    is_strong_eye: boolean;
+    adjacent_white: number;
+    adjacent_black: number;
+    is_eye: boolean;
+    is_strong_string: boolean;
+    territory_color: NumericPlayerColor;
+    is_territory_in_seki: boolean;
+
+    private __added_neighbors: {[group_id:number]: boolean};
 
 
-    constructor(engine, id, color, dame) {
-        this.engine = engine;
+    constructor(board_state:BoardState, id:number, color:NumericPlayerColor, dame:boolean) {
+        this.board_state = board_state;
         this.points = [];
         this.neighbors = [];
         this.id = id;
@@ -51,65 +55,68 @@ export class GoStoneGroup {
         this.__added_neighbors = {};
         this.corner_groups = {};
     }
-    addStone(x, y) {
+    addStone(x:number, y:number):void {
         this.points.push({"x": x, "y": y});
     }
-    addNeighborGroup(group) {
+    addNeighborGroup(group:GoStoneGroup):void {
         if (!(group.id in this.__added_neighbors)) {
             this.neighbors.push(group);
             this.__added_neighbors[group.id] = true;
         }
     }
-    addCornerGroup(x, y, group) {
+    addCornerGroup(x:number, y:number, group:GoStoneGroup):void {
         if (!(y in this.corner_groups)) { this.corner_groups[y]  = {}; }
         this.corner_groups[y][x] = group;
     }
-    foreachStone(fn) {
+    foreachStone(fn:(pt:Intersection)=>void):void {
         for (let i = 0; i < this.points.length; ++i) {
             fn(this.points[i]);
         }
     }
-    foreachNeighborGroup(fn) {
+    foreachNeighborGroup(fn:(group:GoStoneGroup)=>void):void {
         for (let i = 0; i < this.neighbors.length; ++i) {
             fn(this.neighbors[i]);
         }
     }
-    computeIsEye() {
+    computeIsEye():void {
         this.is_eye = false;
 
-        if (this.points.length > 1) { return; }
+        if (this.points.length > 1) {
+            return;
+        }
+
         this.is_eye = this.is_territory;
     }
-    size() {
+    size():number {
         return this.points.length;
     }
-    computeIsStrongEye() {
+    computeIsStrongEye():void {
         /* If a single eye is surrounded by 7+ stones of the same color, 5 stones
          * for edges, and 3 stones for corners, or if any of those spots are
          * territory owned by the same color, it is considered strong. */
         this.is_strong_eye = false;
         let color;
-        let engine = this.engine;
+        let board_state = this.board_state;
         if (this.is_eye) {
             let x = this.points[0].x;
             let y = this.points[0].y;
-            color = engine.board[y][x === 0 ? x + 1 : x - 1];
+            color = board_state.board[y][x === 0 ? x + 1 : x - 1];
             let not_color = 0;
 
             let chk = (x, y) => {
                 /* If there is a stone on the board and it's not our color,
                  * or if the spot is part of some territory which is not our color,
                  * then return true, else false. */
-                return (color !== engine.board[y][x] && (!this.corner_groups[y][x].is_territory || this.corner_groups[y][x].territory_color !== color)) ? 1 : 0;
+                return (color !== board_state.board[y][x] && (!this.corner_groups[y][x].is_territory || this.corner_groups[y][x].territory_color !== color)) ? 1 : 0;
             };
 
             not_color =
-                (x - 1 >= 0           && y - 1 >= 0            ? chk(x - 1, y - 1) : 0) +
-                (x + 1 < engine.width && y - 1 >= 0            ? chk(x + 1, y - 1) : 0) +
-                (x - 1 >= 0           && y + 1 < engine.height ? chk(x - 1, y + 1) : 0) +
-                (x + 1 < engine.width && y + 1 < engine.height ? chk(x + 1, y + 1) : 0);
+                (x - 1 >= 0                && y - 1 >= 0            ? chk(x - 1, y - 1) : 0) +
+                (x + 1 < board_state.width && y - 1 >= 0            ? chk(x + 1, y - 1) : 0) +
+                (x - 1 >= 0                && y + 1 < board_state.height ? chk(x - 1, y + 1) : 0) +
+                (x + 1 < board_state.width && y + 1 < board_state.height ? chk(x + 1, y + 1) : 0);
 
-            if (x - 1 >= 0 && x + 1 < engine.width && y - 1 >= 0 && y + 1 < engine.height) {
+            if (x - 1 >= 0 && x + 1 < board_state.width && y - 1 >= 0 && y + 1 < board_state.height) {
                 this.is_strong_eye = not_color <= 1;
             } else {
                 this.is_strong_eye = not_color === 0;
@@ -117,15 +124,15 @@ export class GoStoneGroup {
         }
 
     }
-    computeIsStrongString() {
+    computeIsStrongString():void {
         /* A group is considered a strong string if it is adjacent to two strong eyes */
         let strong_eye_count = 0;
         this.foreachNeighborGroup((gr) => {
-            strong_eye_count += gr.is_strong_eye;
+            strong_eye_count += (gr.is_strong_eye ? 1 : 0);
         });
         this.is_strong_string = strong_eye_count >= 2;
     }
-    computeIsTerritory() {
+    computeIsTerritory():void {
         /* An empty group is considered territory if all of it's neighbors are of
          * the same color */
         this.is_territory = false;
@@ -134,7 +141,7 @@ export class GoStoneGroup {
             return;
         }
 
-        let color = 0;
+        let color:NumericPlayerColor = 0;
         for (let i = 0; i < this.neighbors.length; ++i) {
             if (this.neighbors[i].color !== 0) {
                 color = this.neighbors[i].color;
@@ -153,7 +160,7 @@ export class GoStoneGroup {
             this.territory_color = color;
         }
     }
-    computeIsTerritoryInSeki() {
+    computeIsTerritoryInSeki():void {
         /* An empty group is considered territory if all of it's neighbors are of
          * the same color */
         this.is_territory_in_seki = false;
@@ -167,7 +174,7 @@ export class GoStoneGroup {
                         for (let i = 0; i < border_of_border.points.length; ++i) {
                             let x = border_of_border.points[i].x;
                             let y = border_of_border.points[i].y;
-                            if (!this.engine.removal[y][x]) {
+                            if (!this.board_state.removal[y][x]) {
                                 is_not_negated = false;
                             }
                         }
@@ -179,21 +186,21 @@ export class GoStoneGroup {
             });
         }
     }
-    computeProbableColor() {
+    computeProbableColor():void {
         /* For open area that has no definitive owner, compute the weight
          * of how much of who is touching the area */
         this.adjacent_black = 0;
         this.adjacent_white = 0;
         this.probable_color = 0;
-        this.engine.foreachNeighbor(this.points, (x, y) => {
-            let color = this.engine.board[y][x];
+        this.board_state.foreachNeighbor(this.points, (x, y) => {
+            let color = this.board_state.board[y][x];
             if (color === 1) { this.adjacent_black++; }
             if (color === 2) { this.adjacent_white++; }
         });
         if (this.adjacent_white >= this.adjacent_black * 3) { this.probable_color = 2; }
         if (this.adjacent_black >= this.adjacent_white * 3) { this.probable_color = 1; }
     }
-    computeProbablyDead() {
+    computeProbablyDead():void {
         this.is_probably_dead = false;
 
         if (this.color) {
@@ -216,7 +223,7 @@ export class GoStoneGroup {
         }
 
     }
-    computeProbablyDame() {
+    computeProbablyDame():void {
         this.is_probably_dame = false;
         if (!this.is_territory && this.color === 0 && this.size() < 2) {
             this.is_probably_dame = true;

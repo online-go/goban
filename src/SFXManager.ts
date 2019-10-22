@@ -29,17 +29,17 @@ export class SFXManager {
         this.sync();
     }
 
-    public enable() {
+    public enable():void {
         this.enabled = true;
         this.sync();
     }
 
-    public sync() {
+    public sync():void {
         if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
 
         if (GobanCore.getSoundEnabled() || (this.volume_override != null && this.volume_override > 0)) {
             for (let i = 10; i >= 1; i--) {
-                this.addAudio(i, "female-en-" + i);
+                this.addAudio(i.toString(), "female-en-" + i);
             }
             for (let i = 1; i <= 5; ++i) {
                 this.addAudio("stone-" + i, "stone" + i);
@@ -57,7 +57,7 @@ export class SFXManager {
             this.addAudio("tutorial-ping", "tutorial-ping");
         }
     }
-    public play(name, play_even_if_window_doesnt_have_focus?) {
+    public play(name:string, play_even_if_window_doesnt_have_focus?:boolean):void {
         if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
         this.sync();
 
@@ -107,7 +107,7 @@ export class SFXManager {
             }
         }
     }
-    public pause(name:string) {
+    public pause(name:string):void {
         if (this.play_promises[name] !== undefined) {
             /* play action was started on chrome, pause it when it actually starts */
             this.play_promise_future_state[name] = 'pause';
@@ -126,12 +126,12 @@ export class SFXManager {
         }
     }
 
-    public stopAll() {
+    public stopAll():void {
         for (let n in this.sfx) {
             this.pause(n);
         }
     }
-    private addAudio(name, pathname) {
+    private addAudio(name:string, pathname:string):void {
         if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
 
         if (pathname in this.loaded) {

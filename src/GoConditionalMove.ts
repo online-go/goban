@@ -14,25 +14,40 @@
  * limitations under the License.
  */
 
+
+type ConditionalMoveResponse = [
+    /** response_move */
+    string,
+
+    /** next: */
+    ConditionalMoveTree
+];
+
+interface ConditionalMoveTree {
+    [move: string]: ConditionalMoveResponse;
+}
+
 export class GoConditionalMove {
-    children: any;
+    children: {
+        [move:string]: GoConditionalMove;
+    };
     parent: GoConditionalMove;
     move: string;
 
-    constructor(move, parent) {
+    constructor(move:string, parent:GoConditionalMove) {
         this.move = move;
         this.parent = parent;
         this.children = {};
     }
 
-    encode() {
+    encode():ConditionalMoveResponse {
         let ret = {};
         for (let ch in this.children) {
             ret[ch] = this.children[ch].encode();
         }
         return [this.move, ret];
     }
-    static decode(data) {
+    static decode(data:ConditionalMoveResponse):GoConditionalMove {
         let move = data[0];
         let children = data[1];
         let ret = new GoConditionalMove(move, null);
@@ -43,12 +58,10 @@ export class GoConditionalMove {
         }
         return ret;
     }
-    getChild(mv) {
+    getChild(mv:string):GoConditionalMove {
         if (mv in this.children) {
             return this.children[mv];
         }
-        //console.log("Didn't have child " + mv);
-        //console.log(this.children);
         return new GoConditionalMove(null, this);
     }
     duplicate():GoConditionalMove {

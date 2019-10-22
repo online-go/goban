@@ -16,7 +16,13 @@
 
 import {GoError} from "./GoError";
 import {MoveTree, MoveTreeJson} from "./MoveTree";
-import {GoMath, Move, MoveArray} from "./GoMath";
+import {
+    GoMath,
+    Move,
+    MoveArray,
+    Intersection,
+    Group,
+} from "./GoMath";
 import {GoStoneGroup} from "./GoStoneGroup";
 import {ScoreEstimator} from "./ScoreEstimator";
 import {GobanCore} from './GobanCore';
@@ -25,12 +31,6 @@ import {JGOFTimeControl} from './JGOF';
 import {_} from "./translate";
 
 
-export interface Intersection {
-    x:number;
-    y:number;
-}
-
-export type Group = Array<Intersection>;
 export type GoEnginePhase = 'play'|'stone removal'|'finished';
 export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz'
 
@@ -168,16 +168,16 @@ export type PuzzleOpponentMoveMode = 'manual'|'automatic';
 
 let __currentMarker = 0;
 
-export function encodeMove(x, y?) {
+export function encodeMove(x:number | Move, y?:number):string {
     if (typeof(x) === "number") {
         return GoMath.num2char(x) + GoMath.num2char(y);
     } else {
-        let mv = x;
+        let mv:Move = x as Move;
 
         if (!mv.edited) {
             return GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
         } else {
-            return "!" + mv.player + GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
+            return "!" + mv.color + GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
         }
     }
 }
@@ -730,7 +730,8 @@ export class GoEngine {
         done_array[idx] = true;
         fn_of_neighbor_pt(x, y);
     }
-    private foreachNeighbor(pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void):void {
+    /** Public for usage in GoStoneGroup */
+    public foreachNeighbor(pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void):void {
         if (pt_or_group instanceof Array) {
             let group = pt_or_group;
             let done_array =  new Array(this.height * this.width);

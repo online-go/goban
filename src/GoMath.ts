@@ -25,11 +25,19 @@ export interface Move {
     edited?: boolean;
 }
 
+export interface Intersection {
+    x:number;
+    y:number;
+}
+
+export type Group = Array<Intersection>;
+
 export interface BoardState {
     width: number;
     height: number;
-    board: Array<Array<number>>;
+    board: Array<Array<NumericPlayerColor>>;
     removal: Array<Array<number>>;
+    foreachNeighbor?: (pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void) => void;
 }
 
 // [x, y, time_delta, edited?]
@@ -128,8 +136,6 @@ export class GoMath {
     //};
 
     public static makeMatrix(width:number, height:number, initialValue:number = 0):Array<Array<number>> {
-
-
         let ret = [];
         for (let y = 0; y < height; ++y) {
             ret.push([]);

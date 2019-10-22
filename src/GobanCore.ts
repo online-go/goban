@@ -2381,7 +2381,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             console.error(e);
         }
     }
-    protected updateScoreEstimation() {
+    public updateScoreEstimation() {
         if (this.score_estimate) {
             let est = this.score_estimate.estimated_hard_score - this.engine.komi;
             let color;

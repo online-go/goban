@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-export class GoError {
-    engine: any;
-    x: any;
-    y: any;
-    message: any;
+import { GoEngine } from './GoEngine';
 
-    constructor(engine, x, y, msg) {
+export class GoError {
+    engine: GoEngine;
+    x: number;
+    y: number;
+    message: string;
+
+    constructor(engine:GoEngine, x:number, y:number, msg:string) {
         this.engine = engine;
         this.x = x;
         this.y = y;

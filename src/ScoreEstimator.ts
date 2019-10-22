@@ -15,8 +15,9 @@
  */
 
 import {dup} from "./GoUtil";
-import {GoMath} from "./GoMath";
-import {GoEngine, encodeMove, encodeMoves, Score} from "./GoEngine";
+import {GoMath, Intersection, Group} from "./GoMath";
+import {GobanCore} from "./GobanCore";
+import {GoEngine, encodeMove, encodeMoves, Score, PlayerScore, NumericPlayerColor} from "./GoEngine";
 import {_} from "./translate";
 
 declare const CLIENT;
@@ -40,7 +41,7 @@ let OGSScoreEstimatorModule;
 
 
 /* This is used on the server side */
-export function set_OGSScoreEstimator(mod) {
+export function set_OGSScoreEstimator(mod:any) {
     OGSScoreEstimatorModule = mod;
     init_score_estimator()
         .then((tf) => console.info('Score estimator intialized'))
@@ -116,21 +117,21 @@ if (CLIENT) {
 
 
 class SEGroup {
-    points;
-    neighboring_enemy;
-    neighboring_space;
-    se;
-    id;
-    color;
-    removed;
-    estimated_score;
-    estimated_hard_score;
-    neighbors;
-    neighbor_map;
-    liberties;
+    points:Array<{x: number, y:number, color:NumericPlayerColor}>;
+    neighboring_enemy:Array<SEGroup>;
+    neighboring_space:Array<SEGroup>;
+    se:ScoreEstimator;
+    id:number;
+    color:NumericPlayerColor;
+    removed:boolean;
+    estimated_score:number;
+    estimated_hard_score:number;
+    neighbors:Array<SEGroup>;
+    neighbor_map:{[group_id:string]: boolean};
+    liberties:number;
 
 
-    constructor(se, color, id) {
+    constructor(se:ScoreEstimator, color, id) {
         this.points = [];
         this.se = se;
         this.id = id;
@@ -221,45 +222,45 @@ class SEGroup {
 }
 
 export class ScoreEstimator {
-    width;
-    height;
-    board;
-    white_prisoners;
-    black_prisoners;
-    score_stones;
-    score_prisoners;
-    score_territory;
-    score_territory_in_seki;
-    removed;
-    black;
-    white;
-    engine;
-    groups;
-    currentMarker;
-    removal;
-    cb;
-    tolerance;
-    group_list;
-    marks;
-    amount;
-    amount_fractional;
-    area;
-    territory;
-    trials;
-    estimated_area;
-    winner;
-    heat;
-    color_to_move;
-    estimated_score;
-    estimated_hard_score;
+    width:number;
+    height:number;
+    board:Array<Array<NumericPlayerColor>>;
+    white_prisoners:number;
+    black_prisoners:number;
+    score_stones:boolean;
+    score_prisoners:boolean;
+    score_territory:boolean;
+    score_territory_in_seki:boolean;
+    removed:Array<Array<number>>;
+    black:PlayerScore;
+    white:PlayerScore;
+    engine:GoEngine;
+    groups:Array<Array<SEGroup>>;
+    currentMarker:number;
+    removal:Array<Array<number>>; // TODO: This is defined to be a dup of this.removed, can we remove that?
+    goban_callback:GobanCore;
+    tolerance:number;
+    group_list:Array<SEGroup>;
+    marks:Array<Array<number>>;
+    amount:number;
+    amount_fractional:string;
+    area:Array<Array<number>>;
+    territory:Array<Array<number>>;
+    trials:number;
+    estimated_area:Array<Array<number>>;
+    winner:string;
+    heat:Array<Array<number>>;
+    color_to_move:'black'|'white';
+    estimated_score:number;
+    estimated_hard_score:number;
 
 
 
-    constructor(cb) {
-        this.cb = cb;
+    constructor(goban_callback:GobanCore) {
+        this.goban_callback = goban_callback;
     }
 
-    init(engine, trials, tolerance) {
+    init(engine:GoEngine, trials:number, tolerance:number):void {
         this.currentMarker = 1;
         this.engine = engine;
         this.width = engine.width;
@@ -271,7 +272,7 @@ export class ScoreEstimator {
         this.area = GoMath.makeMatrix(this.width, this.height, 0);
         this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.estimated_area = GoMath.makeMatrix(this.width, this.height, 0.0);
-        this.groups = GoMath.makeMatrix(this.width, this.height, 0);
+        this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.estimated_score = 0.0;
         this.estimated_hard_score = 0.0;
@@ -283,7 +284,7 @@ export class ScoreEstimator {
         this.estimateScore(this.trials, this.tolerance);
         //this.sealDame();
     }
-    estimateScore(trials, tolerance) {
+    estimateScore(trials:number, tolerance:number):void {
         if (!OGSScoreEstimator_initialized) {
             throw new Error("Score estimator not intialized yet");
         }
@@ -352,14 +353,16 @@ export class ScoreEstimator {
         this.amount = Math.abs(this.estimated_hard_score);
         this.amount_fractional = Math.abs(this.estimated_score).toFixed(1);
 
-        if (this.cb && this.cb.heatmapUpdated) {
-            this.cb.heatmapUpdated();
+        /*
+        if (this.goban_callback && this.goban_callback.heatmapUpdated) {
+            this.goban_callback.heatmapUpdated();
         }
-        if (this.cb && this.cb.updateScoreEstimation) {
-            this.cb.updateScoreEstimation();
+        */
+        if (this.goban_callback && this.goban_callback.updateScoreEstimation) {
+            this.goban_callback.updateScoreEstimation();
         }
     }
-    getProbablyDead() {
+    getProbablyDead():string {
         let ret = "";
         let arr = [];
         for (let y = 0; y < this.height; ++y) {
@@ -380,11 +383,11 @@ export class ScoreEstimator {
         }
         return ret;
     }
-    resetGroups() {
+    resetGroups():void {
         let self = this;
         console.log("resetting groups");
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
-        this.groups = GoMath.makeMatrix(this.width, this.height, 0);
+        this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.group_list = [];
         let stack = null;
 
@@ -444,14 +447,14 @@ export class ScoreEstimator {
             }
         });
     }
-    foreachGroup(fn) {
+    foreachGroup(fn:(group:SEGroup) => void):void {
         for (let i = 0; i < this.group_list.length; ++i) {
             fn(this.group_list[i]);
         }
     }
-    handleClick(i, j, modkey) {
+    handleClick(i:number, j:number, modkey:boolean) {
         if (modkey) {
-            this.setRemoved(i, j, !this.removal[j][i]);
+            this.setRemoved(i, j, !this.removal[j][i] ? 1 : 0);
         } else {
             this.toggleMetaGroupRemoval(i, j);
         }
@@ -459,7 +462,7 @@ export class ScoreEstimator {
         this.estimateScore(this.trials, this.tolerance);
         //this.resetGroups();
     }
-    toggleMetaGroupRemoval(x, y) {
+    toggleMetaGroupRemoval(x:number, y:number):void {
         let self = this;
         let len = 0;
         let already_done = {};
@@ -510,13 +513,13 @@ export class ScoreEstimator {
         }
 
     }
-    setRemoved(x, y, removed) {
+    setRemoved(x:number, y:number, removed:number):void {
         this.removal[y][x] = removed;
-        if (this.cb) {
-            this.cb.setForRemoval(x, y, this.removal[y][x]);
+        if (this.goban_callback) {
+            this.goban_callback.setForRemoval(x, y, this.removal[y][x]);
         }
     }
-    clearRemoved() {
+    clearRemoved():void {
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
@@ -525,7 +528,7 @@ export class ScoreEstimator {
             }
         }
     }
-    getStoneRemovalString() {
+    getStoneRemovalString():string {
         let ret = "";
         let arr = [];
         for (let y = 0; y < this.height; ++y) {
@@ -541,19 +544,13 @@ export class ScoreEstimator {
         }
         return ret;
     }
-    getGroup(x, y) {
+    getGroup(x:number, y:number):SEGroup {
         return this.groups[y][x];
     }
-    incrementCurrentMarker() {
+    incrementCurrentMarker():void {
         ++this.currentMarker;
     }
 
-    /** Returns an array of groups connected to the given group */
-    markGroup(group) {
-        for (let i = 0; i < group.length; ++i) {
-            this.marks[group[i].y][group[i].x] = this.currentMarker;
-        }
-    }
     /**
      * This gets run after we've instructed the estimator how/when to fill dame,
      * manually mark removed/dame, etc..  it does an official scoring from the
@@ -644,12 +641,12 @@ export class ScoreEstimator {
 
         return this;
     }
-    foreachNeighbor(pt_or_group, fn_of_neighbor_pt) {
+    public foreachNeighbor(pt_or_group:Intersection | Group, fn_of_neighbor_pt):void {
         let self = this;
         let group;
         let done_array;
 
-        if (pt_or_group.constructor === Array) {
+        if (pt_or_group instanceof Array) {
             group = pt_or_group;
             done_array = new Array(this.height * this.width);
             for (let i = 0; i < group.length; ++i) {
