@@ -734,7 +734,7 @@ export class GoEngine {
             return this.colorToMove();
         }
     }
-    public colorToMove() {
+    public colorToMove():'black'|'white' {
         return this.player === 1 ? "black" : "white";
     }
     public playerByColor(color) {

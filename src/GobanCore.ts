@@ -97,6 +97,23 @@ export interface GobanConfig {
 }
 
 
+export interface AudioClockEvent {
+    /** The number of seconds left until the clock runs out of time */
+    countdown_seconds: number;
+
+    /** The player (id) whose turn it is */
+    player_id: string;
+
+    /** The player whose turn it is */
+    color: PlayerColor;
+
+    /** Time control system being used by the clock */
+    time_control_system: JGOFTimeControlSystem;
+
+    /** True if we are in overtime. This is only ever set for systems that have
+     *  a concept of overtime. */
+    in_overtime: boolean;
+}
 
 interface Events {
     "destroy": never;
@@ -136,13 +153,7 @@ interface Events {
     "audio-game-end": never;
     "audio-pass": never;
     "audio-stone": number;
-    "audio-clock": {
-        seconds_left: number;
-        player_to_move: number;
-        clock_player: number;
-        time_control_system: JGOFTimeControlSystem;
-        in_overtime: boolean;
-    };
+    "audio-clock": AudioClockEvent;
     "clock": JGOFClock;
 }
 
@@ -2554,11 +2565,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 main_time: 0,
             };
 
+            //let pause_offset = this.engine.paused_since ? time_elapsed : 0;
+            let pause_offset = 0;
+
             let tcs:string = "" + (time_control.system);
             switch (time_control.system) {
                 case 'simple':
                     ret.main_time = is_current_player
-                        ?  Math.max(0, (original_clock_expiration - time_elapsed) - current_server_time)
+                        ?  Math.max(0, (original_clock_expiration + pause_offset) - current_server_time)
                         : time_control.per_move * 1000;
                     break;
 
@@ -2568,7 +2582,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 case 'absolute':
                     ret.main_time = is_current_player
-                        ?  Math.max(0, (original_clock_expiration - time_elapsed) - current_server_time)
+                        ?  Math.max(0, (original_clock_expiration + pause_offset) - current_server_time)
                         : Math.max(0, original_clock_expiration - current_server_time);
                     break;
 
@@ -2636,7 +2650,28 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             return ret;
         };
 
+        let last_audio_event:{[player_id:string]:AudioClockEvent} = {
+            black: {
+                countdown_seconds: 0,
+                player_id: '',
+                color: 'black',
+                time_control_system: 'none',
+                in_overtime: false,
+            },
+            white: {
+                countdown_seconds: 0,
+                player_id: '',
+                color: 'white',
+                time_control_system: 'none',
+                in_overtime: false,
+            }
+        };
+
         const do_update = () => {
+            if (!time_control) {
+                return;
+            }
+
             update_current_server_time();
 
             let next_update_time:number = 100;
@@ -2661,32 +2696,68 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
 
             if (this.engine.paused_since) {
-                /*
-                white_pause_text = _("Paused");
-                black_pause_text = _("Paused");
-                if (this.engine.pause_control) {
-                    let pause_control = this.engine.pause_control;
-                    if ("weekend" in pause_control) {
-                        black_pause_text = _("Weekend");
-                        white_pause_text = _("Weekend");
-                    }
-                    if ("system" in pause_control) {
-                        black_pause_text = _("Paused by Server");
-                        white_pause_text = _("Paused by Server");
-                    }
-                    if (("vacation-" + clock.black_player_id) in pause_control) {
-                        black_pause_text = _("Vacation");
-                    }
-                    if (("vacation-" + clock.white_player_id) in pause_control) {
-                        white_pause_text = _("Vacation");
-                    }
-                }
-                */
                 clock.paused_since = this.engine.paused_since;
                 clock.pause_state = AdHocPauseControl2JGOFPauseState(this.engine.pause_control);
             }
 
             this.emit('clock', clock);
+
+            // check if we need to update our audio
+            if (this.mode === 'play' && time_control) {
+                // Move's and clock events are separate, so this just checks to make sure that when we
+                // update, we are updating when the engine and clock agree on whose turn it is.
+                if (this.engine.colorToMove() === clock.current_player) {
+                    let player_clock:JGOFPlayerClock = clock.current_player === 'black' ? clock.black_clock : clock.white_clock;
+                    let audio_clock:AudioClockEvent = {
+                        countdown_seconds: 0,
+                        player_id: this.engine.playerToMove().toString(),
+                        color: this.engine.colorToMove(),
+                        time_control_system: time_control.system,
+                        in_overtime: false,
+                    }
+
+                    switch (time_control.system) {
+                        case 'simple':
+                        case 'absolute':
+                        case 'fischer':
+                            audio_clock.countdown_seconds = Math.ceil(player_clock.main_time / 1000);
+                            break;
+
+                        case 'byoyomi':
+                            if (player_clock.main_time > 0) {
+                                audio_clock.countdown_seconds = Math.ceil(player_clock.main_time / 1000);
+                            } else {
+                                audio_clock.in_overtime = true;
+                                audio_clock.countdown_seconds = Math.ceil(player_clock.period_time_left / 1000);
+                            }
+                            break;
+
+                        case 'canadian':
+                            if (player_clock.main_time > 0) {
+                                audio_clock.countdown_seconds = Math.ceil(player_clock.main_time / 1000);
+                            } else {
+                                audio_clock.in_overtime = true;
+                                audio_clock.countdown_seconds = Math.ceil(player_clock.block_time_left / 1000);
+                            }
+                            break;
+
+                        case 'none':
+                            break;
+
+                        default:
+                            throw new Error(`Unsupported time control system: ${(time_control as any).system}`);
+                    }
+
+                    if (!deepEqual(audio_clock, last_audio_event[clock.current_player])) {
+                        last_audio_event[clock.current_player] = audio_clock;
+                        this.emit('audio-clock', audio_clock);
+                    } else {
+                    }
+                } else {
+                    // Engine and clock code didn't agreen on whose turn it was, don't emit audio-clock event yet
+                }
+
+            }
 
             this.__clock_timer = setTimeout(do_update, next_update_time);
         };
