@@ -28,6 +28,7 @@ export interface GoThemeBackgroundReactStyles {
 
 export class GoTheme {
     public name: string;
+    public styles: {[style_name:string]: string} = {};
     protected parent: GoTheme; // An optional parent theme
 
     constructor(parent:GoTheme = null) {

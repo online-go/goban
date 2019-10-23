@@ -30,7 +30,7 @@ export let GoThemes:GoThemesInterface = {
     black: {},
     board: {},
 };
-export let GoThemesSorted:{[n:string]: Array<typeof GoTheme>} = {
+export let GoThemesSorted:{[n:string]: Array<GoTheme>} = {
     white: [],
     black: [],
     board: [],
@@ -47,13 +47,13 @@ init_disc(GoThemes);
 init_rendered(GoThemes);
 
 
-function theme_sort(a:typeof GoTheme, b:typeof GoTheme) {
-    return (new a()).sort() - (new b()).sort();
+function theme_sort(a:GoTheme, b:GoTheme) {
+    return a.sort() - b.sort();
 }
 
 for (let k in GoThemes) {
     GoThemesSorted[k] = Object.keys(GoThemes[k]).map((n) => {
-        return GoThemes[k][n];
+        return new GoThemes[k][n];
     });
     GoThemesSorted[k].sort(theme_sort);
 }
