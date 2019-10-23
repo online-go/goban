@@ -19,25 +19,23 @@ import {
     GoEngineConfig,
     GoEnginePhase,
     encodeMove,
-    encodeMoves,
     PlayerColor,
     PuzzleOpponentMoveMode,
     PuzzlePlayerMoveMode,
     NumericPlayerColor,
     Score,
 } from "./GoEngine";
-import {GoMath, MoveArray, NumberMatrix, StringMatrix, Intersection} from "./GoMath";
-import {GoStoneGroup} from "./GoStoneGroup";
+import {GoMath, Move, NumberMatrix, Intersection} from "./GoMath";
 import {GoConditionalMove} from "./GoConditionalMove";
-import {MoveTree, MarkInterface} from "./MoveTree";
+import {MoveTree, MarkInterface, MoveTreePenMarks} from "./MoveTree";
 import {init_score_estimator, ScoreEstimator} from "./ScoreEstimator";
 import { deepEqual, dup } from "./GoUtil";
 import {TypedEventEmitter} from "./TypedEventEmitter";
-import {_, pgettext, interpolate} from "./translate";
+import {_, interpolate} from "./translate";
 import { JGOFClock, JGOFTimeControl, JGOFPlayerClock, JGOFTimeControlSystem, JGOFPauseState} from './JGOF';
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl  } from './AdHocFormat';
 
-declare let swal;
+declare let swal:any;
 
 export const GOBAN_FONT =  "Verdana,Arial,sans-serif";
 
@@ -45,7 +43,7 @@ export const SCORE_ESTIMATION_TRIALS = 1000;
 export const SCORE_ESTIMATION_TOLERANCE = 0.30;
 export const AUTOSCORE_TRIALS = 1000;
 export const AUTOSCORE_TOLERANCE = 0.30;
-export const MARK_TYPES = ["letter", "circle", "square", "triangle", "sub_triangle", "cross", "black", "white"];
+export const MARK_TYPES:Array<keyof MarkInterface> = ["letter", "circle", "square", "triangle", "sub_triangle", "cross", "black", "white"];
 
 let last_goban_id = 0;
 
@@ -74,13 +72,16 @@ export interface GobanBounds {
     bottom: number;
 }
 
+export interface GobanChatLogLine {
+    chat_id: string;
+    // TODO: there are other fields in here, we need to flesh them out, and/or
+    // figure out if we even still need this
+}
+
 export type GobanChatLog = Array<{
     channel: 'main' | 'spectator' | 'malkovich';
-    lines: Array<{
-        chat_id: string;
-        // TODO: there are other fields in here, we need to flesh them out, and/or
-        // figure out if we even still need this
-    }>;
+    date: number;
+    lines: Array<GobanChatLogLine>;
 }>
 
 export interface GobanConfig extends GoEngineConfig {
@@ -206,7 +207,7 @@ export interface GobanHooks {
     getSoundEnabled?: () => boolean;
     getSoundVolume?: () => number;
 
-    watchSelectedThemes?: (cb:() => void) => { remove:() => any };
+    watchSelectedThemes?: (cb:(themes:GobanSelectedThemes) => void) => { remove:() => any };
     getSelectedThemes?: () => GobanSelectedThemes;
 
     discBlackStoneColor?: () => string;
@@ -227,19 +228,29 @@ export interface ReviewMessage {
     "undo"?:boolean;/* offical undo [reviewing live game] */
     "t"?:string;   /* text */
     "t+"?:string;  /* text append */
-    "k"?:{[mark:string]: string};   /* marks */
+    "k"?:MarkInterface;   /* marks */
     "pp"?:[number,number];  /* pen point */
     "pen"?: string; /* pen color / pen start */
-    //"chat";
+    "chat"?: {
+        chat_id: string;
+        player_id: number;
+        channel: string;
+        date: number
+    };
     //"remove-chat";
     //"voice";
     //"unvoice";
     "clearpen"?:boolean;
     "delete"?: number;
     //"id";
-    //"owner";
-    //"gamedata";
-    "controller"?: number;
+    "owner"?: number | {id:number, username: string};
+    "gamedata"?:GobanConfig;
+    "controller"?: number | {id:number, username: string};
+    // not stored, but used for auth and message routing
+    "auth"?: string;
+    "review_id"?: number;
+    "player_id"?: number;
+    "username"?: string;
 }
 
 export interface GobanMetrics {
@@ -320,7 +331,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected last_move:MoveTree;
     protected last_phase:GoEnginePhase;
     protected last_review_message:ReviewMessage;
-    protected last_sound_played_for_a_stone_placement;
+    protected last_sound_played_for_a_stone_placement:string;
     protected last_stone_sound:number;
     protected metrics:GobanMetrics;
     //protected move_number:number;
@@ -351,7 +362,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     // todo remove this when we split out connection stuff
     protected socket:any;
-    protected socket_event_bindings = [];
+    protected socket_event_bindings:Array<[string, () => void]> = [];
     protected game_connection_data:any;
     protected connectToReviewSent:boolean;
     protected review_connection_data:{
@@ -364,16 +375,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     /** GobanCore calls some abstract methods as part of the construction
      *  process. Because our subsclasses might (and do) need to do some of their
      *  own config before these are called, we set this function to be called
-     *  by our subclass after it's done it's own internal config stuff. */
+     *  by our subclass after it's done it's own internal config stuff.
+     */
     protected post_config_constructor:() => void;
 
     public abstract enablePen():void;
     public abstract disablePen():void;
     public abstract clearAnalysisDrawing():void;
-    public abstract drawPenMarks(penmarks):void;
-    public abstract message(msg, timeout?):void;
+    public abstract drawPenMarks(penmarks:MoveTreePenMarks):void;
+    public abstract message(msg:string, timeout?:number):void;
     public abstract clearMessage():void;
-    protected abstract setThemes(themes, dont_redraw):void;
+    protected abstract setThemes(themes:GobanSelectedThemes, dont_redraw:boolean):void;
     public abstract drawSquare(i:number, j:number):void;
     public abstract redraw(force_clear?: boolean):void;
     public abstract move_tree_redraw(no_warp?:boolean):void;
@@ -396,10 +408,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         let C: any = {};
         let default_config = this.defaultConfig();
         for (let k in default_config) {
-            C[k] = default_config[k];
+            C[k] = (default_config as any)[k];
         }
         for (let k in config) {
-            C[k] = config[k];
+            C[k] = (config as any)[k];
         }
         config = C;
 
@@ -583,7 +595,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public static setHooks(hooks:GobanHooks):void {
         for (let name in hooks) {
-            GobanCore.hooks[name] = hooks[name];
+            (GobanCore.hooks as any)[name] = (hooks as any)[name];
         }
     }
 
@@ -708,7 +720,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         this._socket_on("connect", send_connect_message);
-        this._socket_on("disconnect", () => {
+        this._socket_on("disconnect", ():void => {
             if (this.disconnectedFromGame) { return; }
         });
 
@@ -722,7 +734,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             prefix = "review/" + this.review_id + "/";
         }
 
-        this._socket_on(prefix + "reset", (msg) => {
+        this._socket_on(prefix + "reset", (msg:any):void => {
             if (this.disconnectedFromGame) { return; }
             this.emit("reset", msg);
 
@@ -730,7 +742,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.emit('audio-game-start');
             }
             if (msg.message) {
-                if (!window["has_focus"] && !window["user"].anonymous && /^\/game\//.test(this.getLocation())) {
+                if (
+                    !(window as any)["has_focus"] 
+                    && !(window as any)["user"].anonymous 
+                    && /^\/game\//.test(this.getLocation())
+                ) {
                     swal(_(msg.message));
                 } else {
                     console.info(msg.message);
@@ -738,7 +754,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
             console.info("Game connection reset");
         });
-        this._socket_on(prefix + "error", (msg) => {
+        this._socket_on(prefix + "error", (msg:any):void => {
             if (this.disconnectedFromGame) { return; }
             this.emit("error", msg);
             let duration = 500;
@@ -755,7 +771,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         /*** Game mode ***/
         /*****************/
         if (this.game_id) {
-            this._socket_on(prefix + "gamedata", (obj) => {
+            this._socket_on(prefix + "gamedata", (obj:GobanConfig):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 this.clearMessage();
@@ -778,26 +794,26 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 }
                 */
             });
-            this._socket_on(prefix + "chat", (obj) => {
+            this._socket_on(prefix + "chat", (obj:any):void => {
                 if (this.disconnectedFromGame) { return; }
                 obj.line.channel = obj.channel;
                 this.emit("chat", obj.line);
             });
-            this._socket_on(prefix + "reset-chats", (obj) => {
+            this._socket_on(prefix + "reset-chats", ():void => {
                 if (this.disconnectedFromGame) { return; }
                 this.emit("chat-reset");
             });
-            this._socket_on(prefix + "chat/remove", (obj) => {
+            this._socket_on(prefix + "chat/remove", (obj:any):void => {
                 if (this.disconnectedFromGame) { return; }
                 this.emit("chat-remove", obj);
             });
-            this._socket_on(prefix + "message", (msg) => {
+            this._socket_on(prefix + "message", (msg:any):void => {
                 if (this.disconnectedFromGame) { return; }
                 this.message(msg);
             });
             this.last_phase = null;
 
-            this._socket_on(prefix + "clock", (obj) => {
+            this._socket_on(prefix + "clock", (obj:any):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 this.setGameClock(obj);
@@ -805,7 +821,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
             });
-            this._socket_on(prefix + "phase", (new_phase) => {
+            this._socket_on(prefix + "phase", (new_phase:any):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 this.setMode("play");
@@ -830,13 +846,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
             });
-            this._socket_on(prefix + "undo_requested", (move_number) => {
+            this._socket_on(prefix + "undo_requested", (move_number:string):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 this.engine.undo_requested = parseInt(move_number);
                 this.emit("update");
             });
-            this._socket_on(prefix + "undo_accepted", (move_number) => {
+            this._socket_on(prefix + "undo_accepted", ():void => {
                 if (this.disconnectedFromGame) { return; }
 
                 if (!this.engine.undo_requested) {
@@ -857,7 +873,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
             });
-            this._socket_on(prefix + "move", (move_obj) => {
+            this._socket_on(prefix + "move", (move_obj:any):void => {
                 try {
                     if (this.disconnectedFromGame) { return; }
 
@@ -938,7 +954,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     console.error(e);
                 }
             });
-            this._socket_on(prefix + "conditional_moves", (cmoves) => {
+            this._socket_on(prefix + "conditional_moves", (cmoves:any):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 if (cmoves.moves == null) {
@@ -947,7 +963,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.setConditionalTree(GoConditionalMove.decode(cmoves.moves));
                 }
             });
-            this._socket_on(prefix + "removed_stones", (cfg) => {
+            this._socket_on(prefix + "removed_stones", (cfg:any):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 if ("strict_seki_mode" in cfg) {
@@ -955,7 +971,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 } else {
                     let removed = cfg.removed;
                     let stones = cfg.stones;
-                    let moves;
+                    let moves:Array<Move>;
                     if (!stones) {
                         moves = [];
                     } else {
@@ -969,7 +985,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
             });
-            this._socket_on(prefix + "removed_stones_accepted", (cfg) => {
+            this._socket_on(prefix + "removed_stones_accepted", (cfg:any):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 let player_id = cfg.player_id;
@@ -980,21 +996,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.engine.players["black"].accepted_stones = stones;
                 }
                 else {
-                    this.engine.players[this.engine.playerColor(player_id)].accepted_stones = stones;
-                    this.engine.players[this.engine.playerColor(player_id)].accepted_strict_seki_mode = "strict_seki_mode" in cfg ? cfg.strict_seki_mode : false;
+                    this.engine.players[this.engine.playerColor(player_id) as 'black' | 'white'].accepted_stones = stones;
+                    this.engine.players[this.engine.playerColor(player_id) as 'black' | 'white'].accepted_strict_seki_mode = "strict_seki_mode" in cfg ? cfg.strict_seki_mode : false;
                 }
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
             });
 
-            this._socket_on(prefix + "auto_resign", (obj) => {
+            this._socket_on(prefix + "auto_resign", (obj:any) => {
                 this.emit('auto-resign', {
                     game_id: obj.game_id,
                     player_id: obj.player_id,
                     expiration: obj.expiration,
                 });
             });
-            this._socket_on(prefix + "clear_auto_resign", (obj) => {
+            this._socket_on(prefix + "clear_auto_resign", (obj:any) => {
                 this.emit('clear-auto-resign', {
                     game_id: obj.game_id,
                     player_id: obj.player_id,
@@ -1007,7 +1023,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         /*** Review mode ***/
         /*******************/
         let bulk_processing = false;
-        let process_r = (obj) => {
+        let process_r = (obj:ReviewMessage) => {
             if (this.disconnectedFromGame) { return; }
 
             if ("chat" in obj) {
@@ -1175,7 +1191,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         };
 
         if (this.review_id) {
-            this._socket_on(prefix + "full_state", (entries) => {
+            this._socket_on(prefix + "full_state", (entries:Array<ReviewMessage>) => {
                 try {
                     if (!entries || entries.length === 0) {
                         console.error('Blank full state received, ignoring');
@@ -1495,7 +1511,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public load(config:GobanConfig):void {
         for (let k in config) {
-            this.config[k] = config[k];
+            (this.config as any)[k] = (config as any)[k];
         }
         this.clearMessage();
         this.width = config.width || 19;
@@ -1537,10 +1553,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
         }
 
-        let merged_log = [];
-        let main_log = (config.chat_log || []).map((x) => {x.channel = "main"; return x; });
-        let spectator_log = (config.spectator_log || []).map((x) => {x.channel = "spectator"; return x; });
-        let malkovich_log = (config.malkovich_log || []).map((x) => {x.channel = "malkovich"; return x; });
+        let merged_log:GobanChatLog = [];
+        let main_log:GobanChatLog = (config.chat_log || []).map((x) => {x.channel = "main"; return x; });
+        let spectator_log:GobanChatLog = (config.spectator_log || []).map((x) => {x.channel = "spectator"; return x; });
+        let malkovich_log:GobanChatLog = (config.malkovich_log || []).map((x) => {x.channel = "malkovich"; return x; });
         merged_log = merged_log.concat(main_log, spectator_log, malkovich_log);
         merged_log.sort((a, b) => a.date - b.date);
 
@@ -1616,7 +1632,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.showing_scores = true;
 
         for (let i = 0; i < 2; ++i) {
-            let color = i ? "black" : "white";
+            let color:'black' | 'white' = i ? "black" : "white";
             let moves = this.engine.decodeMoves(score[color].scoring_positions);
             for (let j = 0; j < moves.length; ++j) {
                 let mv = moves[j];
@@ -1960,12 +1976,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         if (["play", "analyze", "conditional", "edit", "score estimation", "pattern search", "puzzle"].indexOf(mode) === -1) {
             swal("Invalid mode for Goban: " + mode);
-            return;
+            return false;
         }
 
         if (this.engine.config.disable_analysis && this.engine.phase !== "finished" && (mode === "analyze" || mode === "conditional")) {
             swal("Unable to enter " + mode + " mode");
-            return;
+            return false;
         }
 
         if (mode === "conditional") {
@@ -2010,13 +2026,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
     protected sendPendingResignation():void {
-        window["comm_socket"].send("game/delayed_resign", {
+        this.socket.send("game/delayed_resign", {
             "auth": this.config.auth,
             "game_id": this.config.game_id
         });
     }
     protected clearPendingResignation():void {
-        window["comm_socket"].send("game/clear_delayed_resign", {
+        this.socket.send("game/clear_delayed_resign", {
             "auth": this.config.auth,
             "game_id": this.config.game_id
         });
@@ -2082,7 +2098,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public acceptRemovedStones():void {
         let stones = this.engine.getStoneRemovalString();
-        this.engine.players[this.engine.playerColor(this.config.player_id)].accepted_stones = stones;
+        this.engine.players[this.engine.playerColor(this.config.player_id) as 'black' | 'white'].accepted_stones = stones;
         this.socket.send("game/removed_stones/accept", {
             "auth": this.config.auth,
             "game_id": this.config.game_id,
@@ -2092,22 +2108,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
     public rejectRemovedStones():void {
-        let stones = this.engine.getStoneRemovalString();
-        this.engine.players[this.engine.playerColor(this.config.player_id)].accepted_stones = null;
+        this.engine.players[this.engine.playerColor(this.config.player_id) as 'black' | 'white'].accepted_stones = null;
         this.socket.send("game/removed_stones/reject", {
             "auth": this.config.auth,
             "game_id": this.config.game_id,
             "player_id": this.config.player_id
         });
     }
-    public setEditColor(color):void {
+    public setEditColor(color:'black' | 'white'):void {
         this.edit_color = color;
         this.updateTitleAndStonePlacement();
     }
-    protected editSettings(changes):void {
+    protected editSettings(changes:GoEngineConfig):void {
         let need_to_change = false;
         for (let k in changes) {
-            if (this.engine[k] !== changes[k]) {
+            if ((this.engine as any)[k] !== (changes as any)[k]) {
                 need_to_change = true;
                 break;
             }
@@ -2143,7 +2158,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         }
     }
-    protected setState(state):void {
+    protected setState(state:any):void {
         if ((this.game_type === "review" || this.game_type === "demo") && this.engine) {
             this.drawPenMarks(this.engine.cur_move.pen_marks);
             if (this.isPlayerController() && this.connectToReviewSent) {
@@ -2179,9 +2194,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
 
-    public setMarks(marks, dont_draw?):void {
+    public setMarks(marks:MarkInterface, dont_draw?:boolean):void {
         for (let key in marks) {
-            let locations = this.engine.decodeMoves(marks[key]);
+            let locations = this.engine.decodeMoves(marks[key] as string);
             for (let i = 0; i < locations.length; ++i) {
                 let pt = locations[i];
                 this.setMark(pt.x, pt.y, key, dont_draw);
@@ -2405,7 +2420,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public autoScore():void {
         try {
-            if (!window["user"] || !this.on_game_screen  || !this.engine || (window["user"].id !== this.engine.black_player_id && window["user"].id !== this.engine.white_player_id)) {
+            if (
+                !(window as any)["user"] 
+                || !this.on_game_screen  
+                || !this.engine 
+                || ((window as any)["user"].id as number !== this.engine.black_player_id 
+                    && (window as any)["user"].id as number !== this.engine.white_player_id)
+            ) {
                 return;
             }
         } catch (e) {
@@ -2749,22 +2770,20 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             let diff = this.engine.getMoveDiff();
             this.engine.setAsCurrentReviewMove();
 
-            let msg;
+            let msg:ReviewMessage;
 
             if (!msg_override) {
-                let marks = {};
-                let mark_ct = 0;
+                let marks:MarkInterface = {};
                 for (let y = 0; y < this.height; ++y) {
                     for (let x = 0; x < this.width; ++x) {
                         let pos = this.getMarks(x, y);
                         for (let i = 0; i < MARK_TYPES.length; ++i) {
                             if (MARK_TYPES[i] in pos && pos[MARK_TYPES[i]]) {
-                                let markkey = MARK_TYPES[i] === "letter" ? pos.letter : MARK_TYPES[i];
+                                let markkey:(keyof MarkInterface) = MARK_TYPES[i] === "letter" ? pos.letter : MARK_TYPES[i];
                                 if (!(markkey in marks)) {
                                     marks[markkey] = "";
                                 }
                                 marks[markkey] += encodeMove(x, y);
-                                ++mark_ct;
                             }
                         }
                     }

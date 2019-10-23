@@ -182,7 +182,7 @@ export function encodeMove(x:number | Move, y?:number):string {
         }
     }
 }
-export function encodeMoves(lst) {
+export function encodeMoves(lst:Array<Move>) {
     let ret = "";
     for (let i = 0; i < lst.length; ++i) {
         ret += encodeMove(lst[i]);
@@ -230,7 +230,7 @@ export class GoEngine {
     public readonly rules:GoEngineRules;
     public readonly width:number;
     public removal:Array<Array<-1|0|1>>;
-    public setState_callback:(state) => void;
+    public setState_callback:(state:any) => void;
     public strict_seki_mode:boolean;
     public time_control:JGOFTimeControl;
     public undo_requested: number;
@@ -261,7 +261,7 @@ export class GoEngine {
     private score_territory_in_seki:boolean;
 
 
-    constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?) {
+    constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?:boolean) {
         try {
             /* We had a bug where we were filling in some initial state data incorrectly when we were dealing with
              * sgfs, so this code exists for sgf 'games' < 800k in the database.. -anoek 2014-08-13 */
@@ -277,7 +277,7 @@ export class GoEngine {
 
         for (let k in config) {
             if (k !== 'move_tree') {
-                this[k] = config[k];
+                (this as any)[k] = (config as any)[k];
             }
         }
 
@@ -298,9 +298,9 @@ export class GoEngine {
         this.board_is_repeating = false;
         this.players = config.players;
         for (let y = 0; y < this.height; ++y) {
-            let row = [];
+            let row:Array<NumericPlayerColor> = [];
             let mark_row = [];
-            let removal_row = [];
+            let removal_row:Array<-1|0|1> = [];
             for (let x = 0; x < this.width; ++x) {
                 row.push(0);
                 mark_row.push(0);
@@ -321,7 +321,13 @@ export class GoEngine {
 
         try {
             this.config.original_disable_analysis = this.config.disable_analysis;
-            if (typeof(window) !== "undefined" && typeof(window["user"]) !== "undefined" && window["user"] && window["user"].id !== this.black_player_id && window["user"].id !== this.white_player_id) {
+            if (
+                typeof(window) !== "undefined"
+                && typeof((window as any)["user"]) !== "undefined"
+                && (window as any)["user"]
+                && (window as any)["user"].id as number !== this.black_player_id
+                && (window as any)["user"].id as number !== this.white_player_id
+            ) {
                 this.disable_analysis = false;
                 this.config.disable_analysis = false;
             }
@@ -481,7 +487,7 @@ export class GoEngine {
             this.setState_callback(state.udata_state);
         }
 
-        let redrawn = {};
+        let redrawn:{[s:string]: boolean} = {};
 
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
@@ -540,7 +546,7 @@ export class GoEngine {
         try {
             let ret = [];
             let from = this.move_tree.index(from_turn);
-            let cur;
+            let cur:MoveTree;
             if (from) {
                 cur = from;
             } else {
@@ -552,7 +558,7 @@ export class GoEngine {
 
             while (i < _moves.length) {
                 let mv = _moves[i];
-                let existing = cur.lookupMove(mv.x, mv.y, this.playerByColor(mv.color), mv.edited);
+                let existing:MoveTree = cur.lookupMove(mv.x, mv.y, this.playerByColor(mv.color), mv.edited);
                 if (existing) {
                     cur = existing;
                     ++i;
@@ -779,7 +785,7 @@ export class GoEngine {
                 this.foreachNeighbor(pt, addToCheck);
             }
         }
-        function addToCheck(x, y) { toCheckX.push(x); toCheckY.push(y); }
+        function addToCheck(x:number, y:number):void { toCheckX.push(x); toCheckY.push(y); }
 
         return ret;
     }
@@ -809,7 +815,7 @@ export class GoEngine {
         this.incrementCurrentMarker();
         this.markGroup(group);
         let ret:Group = [];
-        let included = {};
+        let included:{[s:string]: boolean} = {};
 
         this.foreachNeighbor(group, (x, y) => {
             if (!this.board[y][x]) {
@@ -831,7 +837,7 @@ export class GoEngine {
     }
     private countLiberties(group:Group):number {
         let ct = 0;
-        let counter = (x, y) => ct += this.board[y][x] ? 0 : 1;
+        let counter = (x:number, y:number):number => ct += this.board[y][x] ? 0 : 1;
         for (let i = 0; i < group.length; ++i) {
             this.foreachNeighbor(group[i], counter);
         }
@@ -1117,7 +1123,7 @@ export class GoEngine {
                     /* for stones though, toggle the selected stone group any any stone
                      * groups which are adjacent to it through open area */
                     let len = 0;
-                    let already_done = {};
+                    let already_done:{[str:string]: boolean} = {};
 
                     let space = this.getConnectedOpenSpace(group);
                     for (let i = 0; i < space.length; ++i) {
@@ -1267,7 +1273,7 @@ export class GoEngine {
             }
         }
 
-        let scored = [];
+        let scored:Array<Array<number>> = [];
         for (let y = 0; y < this.height; ++y) {
             let row = [];
             for (let x = 0; x < this.width; ++x) {
@@ -1276,7 +1282,7 @@ export class GoEngine {
             scored.push(row);
         }
 
-        let markScored = (group) => {
+        let markScored = (group:Group) => {
             let ct = 0;
             for (let i = 0; i < group.length; ++i) {
                 let x = group[i].x;
@@ -1315,9 +1321,13 @@ export class GoEngine {
                     if (!this.score_territory_in_seki && gr.is_territory_in_seki && this.strict_seki_mode) {
                         return;
                     }
-                    let color = gr.territory_color === 1 ? "black" : "white";
-                    ret[color].scoring_positions += encodeMoves(gr.points);
-                    ret[color].territory += markScored(gr.points);
+                    if (gr.territory_color === 1) {
+                        ret["black"].scoring_positions += encodeMoves(gr.points);
+                        ret["black"].territory += markScored(gr.points);
+                    } else {
+                        ret["white"].scoring_positions += encodeMoves(gr.points);
+                        ret["white"].territory += markScored(gr.points);
+                    }
                     for (let i = 0; i < gr.points.length; ++i) {
                         let pt = gr.points[i];
                         if (this.board[pt.y][pt.x] && !this.removal[pt.y][pt.x]) {
@@ -1335,9 +1345,13 @@ export class GoEngine {
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
                     if (this.board[y][x]) {
-                        let color = this.board[y][x] === 1 ? "black" : "white";
-                        ++ret[color].stones;
-                        ret[color].scoring_positions += encodeMove(x, y);
+                        if (this.board[y][x] === 1) {
+                            ++ret.black.stones;
+                            ret.black.scoring_positions += encodeMove(x, y);
+                        } else {
+                            ++ret.white.stones;
+                            ret.white.scoring_positions += encodeMove(x, y);
+                        }
                     }
                 }
             }
@@ -1349,11 +1363,13 @@ export class GoEngine {
             ret["white"].prisoners = this.white_prisoners + removed_black;
         }
 
-        for (let color in {"black": "black", "white": "white"}) {
-            ret[color].total = ret[color].stones + ret[color].territory + ret[color].prisoners + ret[color].komi;
-            if (this.score_handicap) {
-                ret[color].total += ret[color].handicap;
-            }
+        ret["black"].total = ret["black"].stones + ret["black"].territory + ret["black"].prisoners + ret["black"].komi;
+        if (this.score_handicap) {
+            ret["black"].total += ret["black"].handicap;
+        }
+        ret["white"].total = ret["white"].stones + ret["white"].territory + ret["white"].prisoners + ret["white"].komi;
+        if (this.score_handicap) {
+            ret["white"].total += ret["white"].handicap;
         }
 
         try {
@@ -1384,14 +1400,14 @@ export class GoEngine {
         }
         return 0;
     }
-    private computeAutoRemovedGroups():Array<Group> {
-        let ret = [];
-        let groups = [null];
-        let group_id_map = [];
+    private computeAutoRemovedGroups():Array<GoStoneGroup> {
+        let ret:Array<GoStoneGroup> = [];
+        //let groups = [null];
+        //let group_id_map = [];
 
         let gm = new GoMath(this);
-        groups = gm.groups;
-        group_id_map = gm.group_id_map;
+        //groups = gm.groups;
+        //group_id_map = gm.group_id_map;
 
         gm.foreachGroup((gr) => { gr.computeProbableColor(); });
         gm.foreachGroup((gr) => { gr.computeProbablyDead(); });
@@ -1521,7 +1537,7 @@ export class GoEngine {
 
         for (let k in defaults) {
             if (!(k in game_obj)) {
-                game_obj[k] = defaults[k];
+                (game_obj as any)[k] = (defaults as any)[k];
             }
         }
 
@@ -1683,7 +1699,7 @@ export class GoEngine {
 
         let inMainBranch = true;
         let gametree_depth = 0;
-        let farthest_move = null;
+        let farthest_move:MoveTree = null;
 
         if (sgf.charCodeAt(0) > 255) {
             /* Assume this is a Byte Order Mark */
@@ -1726,8 +1742,8 @@ export class GoEngine {
             while (sgf[pos] === "(") {
                 process();
             }
-            function process() {
-                let cur;
+            function process():void {
+                let cur:MoveTree;
                 instructions.push(() => {
                     cur = self.cur_move;
                     //console.log("Stashing jump pos: ", cur.id);
@@ -1751,9 +1767,9 @@ export class GoEngine {
 
         }
 
-        function sequence() {
+        function sequence():Array<Array<Array<string>>> {
             whitespace();
-            let ret = [];
+            let ret:Array<Array<Array<string>>> = [];
             while (sgf[pos] === ";") {
                 let n = node();
                 ret.push(n);
@@ -1762,8 +1778,8 @@ export class GoEngine {
             return ret;
         }
 
-        function node() {
-            let ret = [];
+        function node():Array<Array<string>> {
+            let ret:Array<Array<string>> = [];
             if (sgf[pos] !== ";") { throw new Error("Expecting ';' to start a Node"); }
             ++pos;
             whitespace();
@@ -1773,8 +1789,8 @@ export class GoEngine {
             return ret;
         }
 
-        function property() {
-            let ret = [];
+        function property():Array<string> {
+            let ret:Array<string> = [];
             let ident = "";
             while (/[a-zA-Z]/.test(sgf[pos])) {
                 ident += sgf[pos++];
@@ -1812,12 +1828,12 @@ export class GoEngine {
 
 
 
-        function processProperty(ident, values) {
+        function processProperty(ident:string, values:Array<string>) {
             for (let i = 1; i < values.length; ++i) {
                 process(values[i]);
             }
 
-            function process(val) {
+            function process(val:string) {
                 switch (ident) {
                     case "AB":
                     case "AW":

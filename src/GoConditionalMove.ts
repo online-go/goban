@@ -41,7 +41,7 @@ export class GoConditionalMove {
     }
 
     encode():ConditionalMoveResponse {
-        let ret = {};
+        let ret:ConditionalMoveTree = {};
         for (let ch in this.children) {
             ret[ch] = this.children[ch].encode();
         }

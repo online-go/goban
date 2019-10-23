@@ -16,15 +16,12 @@
 
 import {_, pgettext, interpolate} from "./translate";
 
-declare var $;
-let __deviceCanvasScalingRatio = null;
+let __deviceCanvasScalingRatio:number = null;
 
 /* Creates a non-blury canvas object. Most systems don't have an issue with
  * this, but HDPI android devices deal with scaling canvases and images in a
  * retarded fashion and require this hack to get around it. */
 export function createDeviceScaledCanvas(width:number, height:number):HTMLCanvasElement {
-    //return rescaleDeviceScaledCanvas($("<canvas>").attr("width", width).attr("height", height), width, height);
-    //return $("<canvas>").attr("width", width).attr("height", height);
     let canvas = document.createElement("canvas");
     canvas.setAttribute("width", `${width}px`);
     canvas.setAttribute("height", `${height}px`);
@@ -76,7 +73,9 @@ export function resizeDeviceScaledCanvas(canvas:HTMLCanvasElement, width:number,
 
 export function deviceCanvasScalingRatio() {
     if (!__deviceCanvasScalingRatio) {
-        let canvas = $("<canvas>").attr("width", 257).attr("height", 257)[0];
+        let canvas = document.createElement('canvas');
+        canvas.width = 257;
+        canvas.height = 257;
         let context = (canvas as HTMLCanvasElement).getContext("2d");
 
         let devicePixelRatio = window.devicePixelRatio || 1;
@@ -134,7 +133,7 @@ export function shortDurationString(seconds:number) {
         (seconds ? " " + interpolate(pgettext("Short time (seconds)", "%ss"), [seconds]) : "");
 }
 export function dup(obj: any): any {
-    let ret;
+    let ret:any;
     if (typeof(obj) === "object") {
         if (Array.isArray(obj)) {
             ret = [];

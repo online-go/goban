@@ -20,8 +20,8 @@ import {GobanCore} from "./GobanCore";
 import {GoEngine, encodeMove, encodeMoves, Score, PlayerScore, NumericPlayerColor} from "./GoEngine";
 import {_} from "./translate";
 
-declare const CLIENT;
-declare const SERVER;
+declare const CLIENT:boolean;
+declare const SERVER:boolean;
 
 
 /* This script is used on both the front end and back end, and the way the
@@ -35,9 +35,9 @@ declare const SERVER;
  *
  */
 
-declare var OGSScoreEstimator;
-let OGSScoreEstimator_initialized = false;
-let OGSScoreEstimatorModule;
+declare var OGSScoreEstimator:any;
+let OGSScoreEstimator_initialized:boolean = false;
+let OGSScoreEstimatorModule:any;
 
 
 /* This is used on the server side */
@@ -63,8 +63,8 @@ export function init_score_estimator():Promise<boolean> {
         }
 
         try {
-            if (!OGSScoreEstimatorModule && 'OGSScoreEstimator' in window && window['OGSScoreEstimator']) {
-                OGSScoreEstimatorModule = window['OGSScoreEstimator'];
+            if (!OGSScoreEstimatorModule && 'OGSScoreEstimator' in window as any && (window as any)['OGSScoreEstimator'] as any) {
+                OGSScoreEstimatorModule = (window as any)['OGSScoreEstimator'] as any;
             }
         } catch (e) {
             console.error(e);
@@ -80,11 +80,11 @@ export function init_score_estimator():Promise<boolean> {
         //console.log("Sync script");
         let script:HTMLScriptElement = document.getElementById('ogs_score_estimator_script') as HTMLScriptElement;
         if (script) {
-            let resolve;
-            let reject;
+            let resolve:(tf:boolean) => void;
+            //let reject;
             init_promise = new Promise<boolean>((_resolve, _reject) => {
                 resolve = _resolve;
-                reject  = _reject;
+                //reject  = _reject;
             });
 
             script.onload = () => {
@@ -106,6 +106,10 @@ export function init_score_estimator():Promise<boolean> {
         OGSScoreEstimator_initialized = true;
         return Promise.resolve(true);
     }
+
+    // this can't be reached so long as one of CLIENT or SERVER is set, which
+    // should always be the case.
+    throw new Error("Unreachable code reached");
 }
 
 if (CLIENT) {
@@ -115,9 +119,14 @@ if (CLIENT) {
     .catch(err => console.error(err));
 }
 
+interface SEPoint {
+    x: number;
+    y:number;
+    color?:NumericPlayerColor;
+}
 
 class SEGroup {
-    points:Array<{x: number, y:number, color:NumericPlayerColor}>;
+    points:Array<SEPoint>;
     neighboring_enemy:Array<SEGroup>;
     neighboring_space:Array<SEGroup>;
     se:ScoreEstimator;
@@ -131,7 +140,7 @@ class SEGroup {
     liberties:number;
 
 
-    constructor(se:ScoreEstimator, color, id) {
+    constructor(se:ScoreEstimator, color:NumericPlayerColor, id:number) {
         this.points = [];
         this.se = se;
         this.id = id;
@@ -145,15 +154,15 @@ class SEGroup {
         this.estimated_score = 0.0;
         this.estimated_hard_score = 0.0;
     }
-    add(i, j, color) {
+    add(i:number, j:number, color:NumericPlayerColor) {
         this.points.push({x: i, y: j, color: color});
     }
-    foreachPoint(fn) {
+    foreachPoint(fn:(pt:SEPoint) => void) {
         for (let i = 0; i < this.points.length; ++i) {
             fn(this.points[i]);
         }
     }
-    foreachNeighboringPoint(fn) {
+    foreachNeighboringPoint(fn:(pt:SEPoint) => void) {
         let self = this;
         let points = this.points;
         let done_array = new Array(this.se.height * this.se.width);
@@ -161,7 +170,7 @@ class SEGroup {
             done_array[points[i].x + points[i].y * this.se.width] = true;
         }
 
-        function checkAndDo(x, y) {
+        function checkAndDo(x:number, y:number):void {
             let idx = x + y * self.se.width;
             if (done_array[idx]) {
                 return;
@@ -179,7 +188,7 @@ class SEGroup {
             if (pt.y + 1 !== this.se.height) { checkAndDo(pt.x, pt.y + 1); }
         }
     }
-    addNeighbor(group) {
+    addNeighbor(group:SEGroup):void {
         if (!(group.id in this.neighbor_map)) {
             this.neighbors.push(group);
             this.neighbor_map[group.id] = true;
@@ -191,32 +200,32 @@ class SEGroup {
             }
         }
     }
-    foreachNeighborGroup(fn) {
+    foreachNeighborGroup(fn:(group:SEGroup)=>void):void {
         for (let i = 0; i < this.neighbors.length; ++i) {
             //if (!this.neighbors[i].removed) {
                 fn(this.neighbors[i]);
             //}
         }
     }
-    foreachNeighborSpaceGroup(fn) {
+    foreachNeighborSpaceGroup(fn:(group:SEGroup)=>void):void {
         for (let i = 0; i < this.neighboring_space.length; ++i) {
             //if (!this.neighboring_space[i].removed) {
                 fn(this.neighboring_space[i]);
             //}
         }
     }
-    foreachNeighborEnemyGroup(fn) {
+    foreachNeighborEnemyGroup(fn:(group:SEGroup)=>void):void {
         for (let i = 0; i < this.neighboring_enemy.length; ++i) {
             //if (!this.neighboring_enemy[i].removed) {
                 fn(this.neighboring_enemy[i]);
             //}
         }
     }
-    setRemoved(removed) {
+    setRemoved(removed:boolean):void {
         this.removed = removed;
         for (let i = 0; i < this.points.length; ++i) {
             let pt = this.points[i];
-            this.se.setRemoved(pt.x, pt.y, removed);
+            this.se.setRemoved(pt.x, pt.y, removed ? 1 : 0);
         }
     }
 }
@@ -316,7 +325,7 @@ export class ScoreEstimator {
             }
         }
         let _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", ["number", "number", "number", "number", "number", "number"]);
-        let estimate = _estimate as (w, h, p, c, tr, to) => number;
+        let estimate = _estimate as (w:number, h:number, p:number, c:number, tr:number, to:number) => number;
         let st = Date.now();
         let estimated_score = estimate(
                     this.width, this.height, ptr,
@@ -417,7 +426,7 @@ export class ScoreEstimator {
             }
         }
 
-        function push_on_stack(x, y) {
+        function push_on_stack(x:number, y:number) {
             stack.push(x);
             stack.push(y);
         }
@@ -435,7 +444,7 @@ export class ScoreEstimator {
         }
 
         /* compute liberties */
-        this.foreachGroup((g) => {
+        this.foreachGroup((g:SEGroup) => {
             if (g.color) {
                 let liberties = 0;
                 g.foreachNeighboringPoint((pt) => {
@@ -463,11 +472,9 @@ export class ScoreEstimator {
         //this.resetGroups();
     }
     toggleMetaGroupRemoval(x:number, y:number):void {
-        let self = this;
-        let len = 0;
-        let already_done = {};
-        let space_groups = [];
-        let group_color = null;
+        let already_done:{[k:string]: boolean} = {};
+        let space_groups:Array<SEGroup> = [];
+        let group_color:NumericPlayerColor = null;
 
         try {
             if (x >= 0 && y >= 0) {
@@ -605,8 +612,12 @@ export class ScoreEstimator {
                     if (!this.score_territory_in_seki && gr.is_territory_in_seki) {
                         return;
                     }
-                    let color = gr.territory_color === 1 ? "black" : "white";
-                    this[color].scoring_positions += encodeMoves(gr.points);
+                    if (gr.territory_color === 1) {
+                        this.black.scoring_positions += encodeMoves(gr.points);
+                    } else {
+                        this.white.scoring_positions += encodeMoves(gr.points);
+                    }
+
                     console.warn("What should be unreached code is running, should probably be running "
                                  + "this[color].territory += markScored(gr.points, false);");
                     //this[color].territory += markScored(gr.points, false);
@@ -618,9 +629,13 @@ export class ScoreEstimator {
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
                     if (this.board[y][x]) {
-                        let color = this.board[y][x] === 1 ? "black" : "white";
-                        ++this[color].stones;
-                        this[color].scoring_positions += encodeMove(x, y);
+                        if (this.board[y][x] === 1) {
+                            ++this.black.stones;
+                            this.black.scoring_positions += encodeMove(x, y);
+                        } else {
+                            ++this.white.stones;
+                            this.white.scoring_positions += encodeMove(x, y);
+                        }
                     }
                 }
             }
@@ -632,22 +647,22 @@ export class ScoreEstimator {
             this["white"].prisoners = this.white_prisoners + removed_black;
         }
 
-        for (let color in {"black": "black", "white": "white"}) {
-            this[color].total = this[color].stones + this[color].territory + this[color].prisoners + this[color].komi;
-            if (this.score_stones) {
-                this[color].total += this[color].handicap;
-            }
+        this.black.total = this.black.stones + this.black.territory + this.black.prisoners + this.black.komi;
+        this.white.total = this.white.stones + this.white.territory + this.white.prisoners + this.white.komi;
+        if (this.score_stones) {
+            this.black.total += this.black.handicap;
+            this.white.total += this.white.handicap;
         }
 
         return this;
     }
-    public foreachNeighbor(pt_or_group:Intersection | Group, fn_of_neighbor_pt):void {
+    public foreachNeighbor(pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void):void {
         let self = this;
-        let group;
-        let done_array;
+        let group:Group;
+        let done_array:Array<boolean>;
 
         if (pt_or_group instanceof Array) {
-            group = pt_or_group;
+            group = pt_or_group as Group;
             done_array = new Array(this.height * this.width);
             for (let i = 0; i < group.length; ++i) {
                 done_array[group[i].x + group[i].y * this.width] = true;
@@ -667,7 +682,7 @@ export class ScoreEstimator {
             if (pt.y + 1 !== this.height) { fn_of_neighbor_pt(pt.x, pt.y + 1); }
         }
 
-        function checkAndDo(x, y) {
+        function checkAndDo(x:number, y:number):void {
             let idx = x + y * self.width;
             if (done_array[idx]) {
                 return;

@@ -58,7 +58,7 @@ export class GoMath {
         this.group_id_map = group_id_map;
         this.groups = groups;
 
-        let floodFill = (x, y, color, dame, id) => {
+        let floodFill = (x:number, y:number, color:NumericPlayerColor, dame:boolean, id:number):void => {
             if (x >= 0 && x < this.state.width) {
                 if (y >= 0 && y < this.state.height) {
                     if (this.state.board[y][x] === color
@@ -128,7 +128,7 @@ export class GoMath {
         this.foreachGroup((gr) => { gr.computeIsStrongEye(); });
         this.foreachGroup((gr) => { gr.computeIsStrongString(); });
     }
-    public foreachGroup(fn) {
+    public foreachGroup(fn:(gr:GoStoneGroup) => void) {
         for (let i = 1; i < this.groups.length; ++i) {
             fn(this.groups[i]);
         }
@@ -194,29 +194,29 @@ export class GoMath {
     public static decodeMoves(move_obj:MoveArray | string | [object], width?:number, height?:number): Array<Move> {
         let ret: Array<Move> = [];
 
-        function decodeSingleMoveArray(arr) {
-            let obj = {
+        function decodeSingleMoveArray(arr:[number, number, number, number?, object?]):Move {
+            let obj:Move = {
                 x         : arr[0],
                 y         : arr[1],
                 timedelta : arr.length > 2 ? arr[2] : -1,
-                color     : arr.length > 3 ? arr[3] : 0,
+                color     : (arr.length > 3 ? arr[3] : 0) as NumericPlayerColor,
             };
-            let extra = arr.length > 4 ? arr[4] : {};
+            let extra:any = arr.length > 4 ? arr[4] : {};
             for (let k in extra) {
-                obj[k] = extra[k];
+                (obj as any)[k] = extra[k];
             }
             return obj;
         }
 
         if (move_obj instanceof Array) {
             if (move_obj.length && typeof(move_obj[0]) === "number") {
-                ret.push(decodeSingleMoveArray(move_obj));
+                ret.push(decodeSingleMoveArray(move_obj as [number, number, number, number]));
             }
             else {
                 for (let i = 0; i < move_obj.length; ++i) {
                     let mv:any = move_obj[i];
                     if (mv instanceof Array) {
-                        ret.push(decodeSingleMoveArray(mv));
+                        ret.push(decodeSingleMoveArray(mv as [number, number, number, number]));
                     }
                     else {
                         console.error("mv: ", mv);
@@ -293,16 +293,16 @@ export class GoMath {
         if (num === -1) { return "."; }
         return "abcdefghijklmnopqrstuvwxyz"[num];
     }
-    public static encodeMove(x, y?):string {
+    public static encodeMove(x:number | Move, y?:number):string {
         if (typeof(x) === "number") {
             return GoMath.num2char(x) + GoMath.num2char(y);
         } else {
-            let mv = x;
+            let mv:Move = x;
 
             if (!mv.edited) {
                 return GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
             } else {
-                return "!" + mv.player + GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
+                return "!" + mv.color + GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
             }
         }
     }
@@ -327,7 +327,7 @@ export class GoMath {
         }
         return arr;
     }
-    public static encodeMovesToArray(moves):Array<MoveArray> {
+    public static encodeMovesToArray(moves:Array<Move>):Array<MoveArray> {
         let ret:Array<MoveArray> = [];
         for (let i = 0; i < moves.length; ++i) {
             ret.push(GoMath.encodeMoveToArray(moves[i]));

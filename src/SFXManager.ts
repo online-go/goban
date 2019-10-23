@@ -168,7 +168,7 @@ export class SFXManager {
 
 
 export const sfx = new SFXManager();
-window['sfx'] = sfx;
+(window as any)['sfx'] = sfx;
 
 let I = setInterval(() => {
     /* postpone downloading stuff till more important things have begun loading */

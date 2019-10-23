@@ -15,14 +15,15 @@
  */
 
 import { GoTheme } from "../GoTheme";
+import { GoThemesInterface } from "../GoThemes";
 import { GobanCore } from "../GobanCore";
 import {_} from "../translate";
 
-export default function(GoThemes) {
+export default function(GoThemes:GoThemesInterface) {
     class Stone extends GoTheme {
-        sort() { return  0; }
+        sort():number { return  0; }
 
-        placePlainStone(ctx, cx, cy, radius, color) {
+        placePlainStone(ctx:CanvasRenderingContext2D, cx:number, cy:number, radius:number, color:string):void {
             let lineWidth = radius * 0.10;
             if (lineWidth < 0.3) {
                 lineWidth = 0;
@@ -42,37 +43,41 @@ export default function(GoThemes) {
     }
 
     class Black extends Stone {
-        preRenderBlack(radius, seed): any {
+        get theme_name():string { return 'Plain' };
+
+        preRenderBlack(radius:number, seed:number): boolean {
             return true;
         }
 
-        placeBlackStone(ctx, shadow_ctx, stone, cx, cy, radius) {
+        placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:any, cx:number, cy:number, radius:number):void {
             this.placePlainStone(ctx, cx, cy, radius, this.getBlackStoneColor());
         }
 
-        public getBlackStoneColor() {
+        public getBlackStoneColor():string {
             return GobanCore.hooks.discBlackStoneColor ? GobanCore.hooks.discBlackStoneColor() : '#000000';
         }
 
-        public getBlackTextColor() {
+        public getBlackTextColor():string{
             return GobanCore.hooks.discBlackTextColor ? GobanCore.hooks.discBlackTextColor() : '#FFFFFF';
         }
     }
 
     class White extends Stone {
-        preRenderWhite(radius, seed): any {
+        get theme_name():string { return 'Plain' };
+
+        preRenderWhite(radius:number, seed:number): any {
             return true;
         }
 
-        placeWhiteStone(ctx, shadow_ctx, stone, cx, cy, radius) {
+        placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:any, cx:number, cy:number, radius:number):void {
             this.placePlainStone(ctx, cx, cy, radius, this.getWhiteStoneColor());
         }
 
-        public getWhiteStoneColor() {
+        public getWhiteStoneColor():string{
             return GobanCore.hooks.discWhiteStoneColor ? GobanCore.hooks.discWhiteStoneColor() : '#FFFFFF';
         }
 
-        public getWhiteTextColor() {
+        public getWhiteTextColor():string{
             return GobanCore.hooks.discWhiteTextColor ? GobanCore.hooks.discWhiteTextColor() : '#000000';
         }
     }

@@ -14,91 +14,36 @@
  * limitations under the License.
  */
 
-let win = typeof(window) === "undefined" ? {} : window;
+let win:any = typeof(window) === "undefined" ? {} : window;
 
-export let current_language = win["ogs_current_language"] || 'en';
-export let languages = win["ogs_languages"] || {'en': 'English'};
-export let countries = win["ogs_countries"] || {'en': {'us': 'United States'}};
-export let locales = win["ogs_locales"] || {'en': {}};
-export let sorted_locale_countries = [];
+export let current_language:string = win["ogs_current_language"] as any || 'en';
+export let languages:{[lang:string]: string} = win["ogs_languages"] as any || {'en': 'English'};
+export let countries:{[lang:string]: {[country:string]: string}} = win["ogs_countries"] as any || {'en': {'us': 'United States'}};
+export let locales:{[lang:string]: {[msg:string]:string}} = win["ogs_locales"] as any || {'en': {}};
 
-
-let catalog;
+let catalog:{[msg:string]: string};
 try {
     catalog = locales[current_language] || {};
 } catch (e) {
     catalog = {};
 }
 
-export function pluralidx(count) { return (count === 1) ? 0 : 1; }
+const debug_wrap = current_language === "debug" ? (s:string) => `[${s}]` : (s:string) => s;
 
-const debug_wrap = current_language === "debug" ? (s) => `[${s}]` : (s) => s;
-
-export function gettext(msgid) {
+export function gettext(msgid:string):string {
     if (msgid in catalog) {
         return catalog[msgid][0];
     }
     return debug_wrap(msgid);
 }
 
-export function ngettext(singular, plural, count) {
-    let key = singular + "" + plural;
-    if (key in catalog) {
-        if (catalog[key].length === 1) {
-            count = 1;
-        }
-
-        return catalog[key][count === 1 ? 0 : 1];
-    }
-    return debug_wrap(count === 1 ? singular : plural);
-}
-
-
-export function pgettext(context, msgid) {
+export function pgettext(context:string, msgid:string):string {
     let key = context + "" + msgid;
     if (key in catalog) {
         return catalog[key][0];
     }
     return debug_wrap(msgid);
 }
-
-export function npgettext(context, singular, plural, count) {
-    let key = context + "" + singular + "" + plural;
-    if (key in catalog) {
-        if (catalog[key].length === 1) {
-            count = 1;
-        }
-        return catalog[key][count === 1 ? 0 : 1];
-    }
-    return debug_wrap(count === 1 ? singular : plural);
-}
-
-let gettext_formats = {};
-
-gettext_formats["DATETIME_FORMAT"] = "N j, Y, P";
-gettext_formats["DATE_FORMAT"] = "N j, Y";
-gettext_formats["DECIMAL_SEPARATOR"] = ".";
-gettext_formats["MONTH_DAY_FORMAT"] = "F j";
-gettext_formats["NUMBER_GROUPING"] = "3";
-gettext_formats["TIME_FORMAT"] = "P";
-gettext_formats["FIRST_DAY_OF_WEEK"] = "0";
-gettext_formats["TIME_INPUT_FORMATS"] = ["%H:%M:%S", "%H:%M"];
-gettext_formats["THOUSAND_SEPARATOR"] = ",";
-gettext_formats["DATE_INPUT_FORMATS"] = ["%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y"];
-gettext_formats["YEAR_MONTH_FORMAT"] = "F Y";
-gettext_formats["SHORT_DATE_FORMAT"] = "m/d/Y";
-gettext_formats["SHORT_DATETIME_FORMAT"] = "m/d/Y P";
-gettext_formats["DATETIME_INPUT_FORMATS"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M", "%m/%d/%Y", "%m/%d/%y %H:%M:%S", "%m/%d/%y %H:%M", "%m/%d/%y", "%Y-%m-%d %H:%M:%S.%f"];
-
-export function get_format(format_type) {
-    let value = gettext_formats[format_type];
-    if (typeof(value) === "undefined") {
-      return format_type;
-    } else {
-      return value;
-    }
-}
-
 
 export function interpolate(str: string, params: any): string {
     if (Array.isArray(params)) {
@@ -120,6 +65,6 @@ export function interpolate(str: string, params: any): string {
     }
     return str.replace(/%[sd]/g, (_, __, position) => params);
 }
-export function _(str): string {
+export function _(str:string): string {
     return gettext(str);
 }

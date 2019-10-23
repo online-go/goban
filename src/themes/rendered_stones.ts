@@ -14,9 +14,22 @@
  * limitations under the License.
  */
 
-import { GoTheme } from "../GoTheme";
+import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
+import { GoThemesInterface } from "../GoThemes";
 import {_} from "../translate";
 import {deviceCanvasScalingRatio} from "../GoUtil";
+
+type StoneType = {"stone": HTMLCanvasElement, "shadow": HTMLCanvasElement};
+type StoneTypeArray = Array<StoneType>;
+interface RenderOptions {
+    base_color: string;
+    light: vec3;
+    ambient: number;
+    shell_lines?: boolean;
+    specular_hardness: number;
+    diffuse_light_distance: number;
+    specular_light_distance: number;
+}
 
 /**
  * Converts an RGB color value to HSL. Conversion formula
@@ -29,7 +42,7 @@ import {deviceCanvasScalingRatio} from "../GoUtil";
  * @param   Number  b       The blue color value
  * @return  Array           The HSL representation
  */
-function rgbToHsl(r, g, b) {
+function rgbToHsl(r:number, g:number, b:number):[number, number, number] {
     r /= 255;
     g /= 255;
     b /= 255;
@@ -69,7 +82,7 @@ function rgbToHsl(r, g, b) {
 
 
 
-function hue2rgb(p, q, t) {
+function hue2rgb(p:number, q:number, t:number):number {
     if (t < 0) { t += 1; }
     if (t > 1) { t -= 1; }
     if (t < 1 / 6) { return p + (q - p) * 6 * t; }
@@ -77,7 +90,7 @@ function hue2rgb(p, q, t) {
     if (t < 2 / 3) { return p + (q - p) * (2 / 3 - t) * 6; }
     return p;
 }
-function hslToRgb(h, s, l) {
+function hslToRgb(h:number, s:number, l:number):[number, number, number] {
     let r;
     let g;
     let b;
@@ -95,22 +108,23 @@ function hslToRgb(h, s, l) {
     return [Math.min(255, r * 255), Math.min(255, g * 255), Math.min(255, b * 255)];
 }
 
-function add(A, B) {
+type vec3 = [number, number, number];
+function add(A:vec3, B:vec3):vec3 {
     return [A[0] + B[0], A[1] + B[1], A[2] + B[2]];
 }
-function dot(A, B) {
+function dot(A:vec3, B:vec3):number {
     return A[0] * B[0] + A[1] * B[1] + A[2] * B[2];
 }
-function scale(A, x) {
+function scale(A:vec3, x:number):vec3 {
     return [A[0] * x, A[1] * x, A[2] * x];
 }
-function length(A) {
+function length(A:vec3):number {
     return Math.sqrt(dot(A, A));
 }
-function normalized(A) {
+function normalized(A:vec3):vec3 {
     return scale(A, 1 / length(A));
 }
-function stone_normal(x, y, radius) {
+function stone_normal(x:number, y:number, radius:number):vec3 {
     let z = Math.sqrt(Math.max(0, radius * radius - x * x - y * y));
 
     let ret = normalized([x, y, z]);
@@ -120,13 +134,13 @@ function stone_normal(x, y, radius) {
 
     return ret;
 }
-function square_size(radius, scaled) {
+function square_size(radius:number, scaled:boolean):number {
     return 2 * Math.ceil(radius) + (scaled ? 0 : 1);
 }
-function stone_center_in_square(radius, scaled) {
+function stone_center_in_square(radius:number, scaled:boolean):number {
     return Math.ceil(radius) + (scaled ? 0 : 0.5);
 }
-function copyAlpha(ctx, width, height) {
+function copyAlpha(ctx:CanvasRenderingContext2D, width:number, height:number):Array<number> {
     if (width <= 0 || height <= 0) {
         throw ("Invalid width/height given: " + (width + "x" + height));
     }
@@ -144,7 +158,7 @@ function copyAlpha(ctx, width, height) {
     }
     return ret;
 }
-function pasteAlpha(ctx, alpha, width, height) {
+function pasteAlpha(ctx:CanvasRenderingContext2D, alpha:Array<number>, width:number, height:number):void {
     let image = ctx.getImageData(0, 0, width, height);
     let idx = 0;
     let i = 0;
@@ -158,14 +172,23 @@ function pasteAlpha(ctx, alpha, width, height) {
     }
     ctx.putImageData(image, 0, 0);
 }
-function applyPhongShading(ctx, ss, center, radius, ambient, specular_hardness, diffuse_light_distance, specular_light_distance, light) {
+function applyPhongShading(
+    ctx:CanvasRenderingContext2D,
+    ss:number,
+    center:number,
+    radius:number,
+    ambient:number,
+    specular_hardness:number,
+    diffuse_light_distance:number,
+    specular_light_distance:number,
+    light:vec3
+) {
     let image = ctx.getImageData(0, 0, ss, ss);
 
     let r2 = (radius + 1) * (radius + 1); /* alpha will save us from overrunning the image*/
-    let look = [0, 0, 1];
+    let look:vec3 = [0, 0, 1];
 
     let idx = 0;
-    let normal_idx = 0;
     for (let y = -center; y < ss - center; ++y) {
         for (let x = -center; x < ss - center; ++x) {
             let xxyy = x * x + y * y;
@@ -189,13 +212,12 @@ function applyPhongShading(ctx, ss, center, radius, ambient, specular_hardness, 
             }
 
             idx += 4;
-            ++normal_idx;
         }
     }
 
     ctx.putImageData(image, 0, 0);
 }
-function clearAboveColor(ctx, width, height, r, g, b) {
+function clearAboveColor(ctx:CanvasRenderingContext2D, width:number, height:number, r:number, g:number, b:number):void {
     let image = ctx.getImageData(0, 0, width, height);
 
     let idx = 0;
@@ -214,7 +236,7 @@ function clearAboveColor(ctx, width, height, r, g, b) {
 
     ctx.putImageData(image, 0, 0);
 }
-function preRenderStone(radius, seed, options) {
+function preRenderStone(radius:number, seed:number, options:RenderOptions):StoneTypeArray {
 
     let dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
@@ -223,21 +245,21 @@ function preRenderStone(radius, seed, options) {
     let center = stone_center_in_square(radius, dcsr !== 1.0);
     let sss = radius * 2.5; /* Shadow square size */
 
-    let stone;
-    let shadow;
+    let stone:HTMLCanvasElement;
+    let shadow:HTMLCanvasElement;
     let ctx;
     let shadow_ctx;
     if (typeof(document) !== "undefined") {
         stone = document.createElement("canvas");
-        stone.setAttribute("width", ss);
-        stone.setAttribute("height", ss);
+        stone.setAttribute("width", ss + 'px');
+        stone.setAttribute("height", ss + 'px');
         shadow = document.createElement("canvas");
-        shadow.setAttribute("width", sss);
-        shadow.setAttribute("height", sss);
+        shadow.setAttribute("width", sss + 'px');
+        shadow.setAttribute("height", sss + 'px');
         //stone = createDeviceScaledCanvas(ss, ss);
         //shadow = createDeviceScaledCanvas(sss, sss);
-        ctx = (stone as HTMLCanvasElement).getContext("2d");
-        shadow_ctx = (shadow as HTMLCanvasElement).getContext("2d");
+        ctx = stone.getContext("2d");
+        shadow_ctx = shadow.getContext("2d");
     } else {
         throw new Error("Backend server rendering has been removed, should be easy to re-enable if we still need it though (code is here, just needs wiring up again)");
     }
@@ -360,7 +382,7 @@ function preRenderStone(radius, seed, options) {
 
     return [{"stone": stone, "shadow": shadow}];
 }
-function placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius) {
+function placeRenderedStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:StoneType, cx:number, cy:number, radius:number):void {
 
     let dcsr = deviceCanvasScalingRatio();
     if (dcsr !== 1.0) {
@@ -387,19 +409,19 @@ function placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius) {
     }
 
 }
-function stoneCastsShadow(radius) {
+function stoneCastsShadow(radius:number):boolean {
     return radius >= 10;
 }
 
-export default function(GoThemes) {
+export default function(GoThemes:GoThemesInterface) {
     class Common extends GoTheme {
-        stoneCastsShadow(radius) {
+        stoneCastsShadow(radius:number):boolean {
             return stoneCastsShadow(radius * deviceCanvasScalingRatio());
         }
-        placeBlackStone(ctx, shadow_ctx, stone, cx, cy, radius) {
+        placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:StoneType, cx:number, cy:number, radius:number):void {
             placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
-        placeWhiteStone(ctx, shadow_ctx, stone, cx, cy, radius) {
+        placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:StoneType, cx:number, cy:number, radius:number):void {
             placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
     }
@@ -407,8 +429,9 @@ export default function(GoThemes) {
     /* Slate & Shell { */
     class Slate extends Common {
         sort() { return  30; }
+        get theme_name():string { return 'Slate' };
 
-        preRenderBlack(radius, seed) {
+        preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
                 "base_color": "rgba(30,30,35,1.0)",
                 "light": normalized([-4, -4, 5]),
@@ -418,7 +441,7 @@ export default function(GoThemes) {
                 "specular_light_distance": 8,
             });
         }
-        getBlackTextColor(color) {
+        getBlackTextColor(color:string):string {
             return "#ffffff";
         }
     }
@@ -430,9 +453,10 @@ export default function(GoThemes) {
 
     class Shell extends Common {
         sort() { return  30; }
+        get theme_name():string { return 'Shell' };
 
-        preRenderWhite(radius, seed) {
-            let ret = [];
+        preRenderWhite(radius:number, seed:number):StoneTypeArray {
+            let ret:StoneTypeArray = [];
             for (let i = 0; i < 10; ++i) {
                 ret = ret.concat(preRenderStone(radius, seed *= 13, {
                     "base_color": "rgba(207,205,206,1.0)",
@@ -447,7 +471,7 @@ export default function(GoThemes) {
             return ret;
         }
 
-        getWhiteTextColor(color) {
+        getWhiteTextColor(color:string):string {
             return "#000000";
         }
     }
@@ -460,7 +484,9 @@ export default function(GoThemes) {
 
     class GlassBlack extends Common {
         sort() { return  20; }
-        preRenderBlack(radius, seed) {
+        get theme_name():string { return 'Glass' };
+
+        preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
                 "base_color": "rgba(15,15,20,1.0)",
                 "light": normalized([-4, -4, 2]),
@@ -470,7 +496,7 @@ export default function(GoThemes) {
                 "specular_light_distance": 10,
             });
         }
-        getBlackTextColor(color) {
+        getBlackTextColor(color:string):string {
             return "#ffffff";
         }
     }
@@ -481,8 +507,9 @@ export default function(GoThemes) {
 
     class GlassWhite extends Common {
         sort() { return  20; }
+        get theme_name():string { return 'Glass' };
 
-        preRenderWhite(radius, seed) {
+        preRenderWhite(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed *= 13, {
                 "base_color": "rgba(207,205,206,1.0)",
                 "light": normalized([-4, -4, 2]),
@@ -493,7 +520,7 @@ export default function(GoThemes) {
             });
         }
 
-        getWhiteTextColor(color) {
+        getWhiteTextColor(color:string):string {
             return "#000000";
         }
     }
@@ -506,8 +533,9 @@ export default function(GoThemes) {
 
     class WornGlassBlack extends Common {
         sort() { return  21; }
+        get theme_name():string { return 'Worn Glass' };
 
-        preRenderBlack(radius, seed) {
+        preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
                 "base_color": "rgba(15,15,20,1.0)",
                 "light": normalized([-4, -4, 2]),
@@ -517,7 +545,7 @@ export default function(GoThemes) {
                 "specular_light_distance": 10,
             });
         }
-        getBlackTextColor(color) {
+        getBlackTextColor(color:string):string {
             return "#ffffff";
         }
     }
@@ -527,8 +555,9 @@ export default function(GoThemes) {
 
     class WornGlassWhite extends Common {
         sort() { return  21; }
+        get theme_name():string { return 'Worn Glass' };
 
-        preRenderWhite(radius, seed) {
+        preRenderWhite(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed *= 13, {
                 "base_color": "rgba(189,189,194,1.0)",
                 "light": normalized([-4, -4, 2]),
@@ -539,7 +568,7 @@ export default function(GoThemes) {
             });
         }
 
-        getWhiteTextColor(color) {
+        getWhiteTextColor(color:string):string {
             return "#000000";
         }
     }
@@ -549,8 +578,9 @@ export default function(GoThemes) {
     /* Night { */
     class NightBlack extends Common {
         sort() { return  100; }
+        get theme_name():string { return 'Night' };
 
-        preRenderBlack(radius, seed) {
+        preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
                 "base_color": "rgba(15,15,20,1.0)",
                 "light": normalized([-4, -4, 2]),
@@ -560,7 +590,7 @@ export default function(GoThemes) {
                 "specular_light_distance": 10,
             });
         }
-        getBlackTextColor(color) {
+        getBlackTextColor(color:string):string {
             return "#888888";
         }
     }
@@ -571,8 +601,9 @@ export default function(GoThemes) {
 
     class NightWhite extends Common {
         sort() { return  100; }
+        get theme_name():string { return 'Night' };
 
-        preRenderWhite(radius, seed) {
+        preRenderWhite(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed *= 13, {
                 "base_color": "rgba(100,100,100,1.0)",
                 "light": normalized([-4, -4, 2]),
@@ -583,7 +614,7 @@ export default function(GoThemes) {
             });
         }
 
-        getWhiteTextColor(color) {
+        getWhiteTextColor(color:string):string {
             return "#000000";
         }
     }

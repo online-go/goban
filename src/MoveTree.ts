@@ -36,6 +36,8 @@ export interface MarkInterface {
     black?            : boolean;
     white?            : boolean;
     color?            : string;
+
+    [label:string]    : string | boolean;
 }
 
 export type MoveTreePenMarks = Array<{
@@ -68,7 +70,7 @@ export interface MoveTreeChatLine {
 }
 
 let __move_tree_id = 0;
-let __isobranches_state_hash = {}; /* used while finding isobranches */
+let __isobranches_state_hash:{[hash:string]: Array<MoveTree>} = {}; /* used while finding isobranches */
 
 /* TODO: If we're on the server side, we shouldn't be doing anything with marks */
 export class MoveTree {
@@ -200,7 +202,7 @@ export class MoveTree {
             for (let i = 0; i < json.marks.length; ++i) {
                 let m = json.marks[i];
                 for (let k in m.marks) {
-                    this.getMarks(m.x, m.y)[k] = m.marks[k];
+                    (this.getMarks(m.x, m.y) as any)[k] = (m.marks as any)[k];
                 }
             }
         }
@@ -384,7 +386,7 @@ export class MoveTree {
         }
         return this.parent;
     }
-    index(idx):MoveTree {
+    index(idx:number):MoveTree {
         let cur:MoveTree = this;
         while (cur.prev() && idx < 0) { cur = cur.prev(); ++idx; }
         while (cur.next(true) && idx > 0) { cur = cur.next(true); --idx; }
@@ -449,7 +451,7 @@ export class MoveTree {
         }
         return false;
     }
-    foreachMarkedPosition(fn:(i:number, j:number) => void):boolean {
+    foreachMarkedPosition(fn:(i:number, j:number) => void):void {
         if (!this.marks) {
             return;
         }
@@ -465,7 +467,9 @@ export class MoveTree {
     }
     isAncestorOf(other:MoveTree):boolean {
         do {
-            if (other.id === this.id) { return true; }
+            if (other.id === this.id) { 
+                return true; 
+            }
             other = other.parent;
         } while (other);
         return false;

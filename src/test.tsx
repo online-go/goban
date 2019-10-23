@@ -83,7 +83,7 @@ function save() {
 function clear() {
     localStorage.remove("config");
 }
-window['clear'] = clear;
+(window as any)['clear'] = clear;
 /*
             "getPuzzlePlacementSetting": () => {
                 return {"mode": "play"};
@@ -220,7 +220,7 @@ function Main():JSX.Element {
 interface ReactGobanProps {
 }
 
-function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x): GobanClass}, props:ReactGobanProps):JSX.Element {
+function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x:GobanConfig): GobanClass}, props:ReactGobanProps):JSX.Element {
     const container = React.useRef(null);
     const move_tree_container = React.useRef(null);
     let goban:GobanCore;

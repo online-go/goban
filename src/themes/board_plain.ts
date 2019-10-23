@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { GoTheme } from "../GoTheme";
+import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
+import { GoThemesInterface } from "../GoThemes";
 import { GobanCore } from "../GobanCore";
 import {_} from "../translate";
 
@@ -30,22 +31,23 @@ function hexToRgba(raw: string, alpha: number = 1): string {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function(GoThemes) {
+export default function(GoThemes:GoThemesInterface) {
 
     class Plain extends GoTheme {
-        sort() { return 0; }
-        getBackgroundCSS() {
+        sort():number { return 0; }
+        get theme_name():string { return 'Plain' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": GobanCore.hooks.plainBoardColor ? GobanCore.hooks.plainBoardColor() : '#DCB35C',
                 "background-image": ""
             };
         }
-        getLineColor() { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
-        getFadedLineColor() { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.5); }
-        getStarColor() { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
-        getFadedStarColor() { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.5); }
-        getBlankTextColor() { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
-        getLabelTextColor() { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.75); }
+        getLineColor():string { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
+        getFadedLineColor():string { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.5); }
+        getStarColor():string { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
+        getFadedStarColor():string { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.5); }
+        getBlankTextColor():string { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
+        getLabelTextColor():string { return hexToRgba(GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000', 0.75); }
     }
 
 
@@ -53,21 +55,22 @@ export default function(GoThemes) {
     GoThemes["board"]["Plain"] = Plain;
 
     class Night extends GoTheme {
-        sort() {
+        sort():number {
             return 100;
         }
-        getBackgroundCSS() {
+        get theme_name():string { return 'Night Play' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#444444",
                 "background-image": ""
             };
         }
-        getLineColor() { return "#555555"; }
-        getFadedLineColor() { return "#333333"; }
-        getStarColor() { return "#555555"; }
-        getFadedStarColor() { return "#333333"; }
-        getBlankTextColor() { return "#777777"; }
-        getLabelTextColor() { return "#555555"; }
+        getLineColor():string { return "#555555"; }
+        getFadedLineColor():string { return "#333333"; }
+        getStarColor():string { return "#555555"; }
+        getFadedStarColor():string { return "#333333"; }
+        getBlankTextColor():string { return "#777777"; }
+        getLabelTextColor():string { return "#555555"; }
     }
 
     _("Night Play"); // ensure translation exists
@@ -78,19 +81,20 @@ export default function(GoThemes) {
     class HNG extends GoTheme {
         static C = "#00193E";
         static C2 = "#004C75";
-        sort() { return 105; }
-        getBackgroundCSS() {
+        sort():number { return 105; }
+        get theme_name():string { return 'HNG' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#00e7fc",
                 "background-image": ""
             };
         }
-        getLineColor() { return HNG.C; }
-        getFadedLineColor() { return "#00AFBF"; }
-        getStarColor() { return HNG.C; }
-        getFadedStarColor() { return "#00AFBF"; }
-        getBlankTextColor() { return HNG.C2; }
-        getLabelTextColor() { return HNG.C2; }
+        getLineColor():string { return HNG.C; }
+        getFadedLineColor():string { return "#00AFBF"; }
+        getStarColor():string { return HNG.C; }
+        getFadedStarColor():string { return "#00AFBF"; }
+        getBlankTextColor():string { return HNG.C2; }
+        getLabelTextColor():string { return HNG.C2; }
     }
 
     _("HNG"); // ensure translation exists
@@ -100,19 +104,20 @@ export default function(GoThemes) {
 
     class HNGNight extends GoTheme {
         static C = "#007591";
-        sort() { return 105; }
-        getBackgroundCSS() {
+        sort():number { return 105; }
+        get theme_name():string { return 'HNG Night' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#090C1F",
                 "background-image": ""
             };
         }
-        getLineColor() { return HNGNight.C; }
-        getFadedLineColor() { return "#4481B5"; }
-        getStarColor() { return HNGNight.C; }
-        getFadedStarColor() { return "#4481B5"; }
-        getBlankTextColor() { return "#3591DE"; }
-        getLabelTextColor() { return "#4481B5"; }
+        getLineColor():string { return HNGNight.C; }
+        getFadedLineColor():string { return "#4481B5"; }
+        getStarColor():string { return HNGNight.C; }
+        getFadedStarColor():string { return "#4481B5"; }
+        getBlankTextColor():string { return "#3591DE"; }
+        getLabelTextColor():string { return "#4481B5"; }
     }
 
     _("HNG Night"); // ensure translation exists
@@ -120,21 +125,22 @@ export default function(GoThemes) {
 
 
     class Book extends GoTheme {
-        sort() {
+        sort():number {
             return 110;
         }
-        getBackgroundCSS() {
+        get theme_name():string { return 'Book' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#ffffff",
                 "background-image": ""
             };
         }
-        getLineColor() { return "#555555"; }
-        getFadedLineColor() { return "#999999"; }
-        getStarColor() { return "#555555"; }
-        getFadedStarColor() { return "#999999"; }
-        getBlankTextColor() { return "#000000"; }
-        getLabelTextColor() { return "#555555"; }
+        getLineColor():string { return "#555555"; }
+        getFadedLineColor():string { return "#999999"; }
+        getStarColor():string { return "#555555"; }
+        getFadedStarColor():string { return "#999999"; }
+        getBlankTextColor():string { return "#000000"; }
+        getLabelTextColor():string { return "#555555"; }
     }
 
 

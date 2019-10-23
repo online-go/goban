@@ -95,7 +95,7 @@ export class GoStoneGroup {
          * for edges, and 3 stones for corners, or if any of those spots are
          * territory owned by the same color, it is considered strong. */
         this.is_strong_eye = false;
-        let color;
+        let color:NumericPlayerColor;
         let board_state = this.board_state;
         if (this.is_eye) {
             let x = this.points[0].x;
@@ -103,7 +103,7 @@ export class GoStoneGroup {
             color = board_state.board[y][x === 0 ? x + 1 : x - 1];
             let not_color = 0;
 
-            let chk = (x, y) => {
+            let chk = (x:number, y:number):0|1 => {
                 /* If there is a stone on the board and it's not our color,
                  * or if the spot is part of some territory which is not our color,
                  * then return true, else false. */

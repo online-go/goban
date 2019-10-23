@@ -36,4 +36,4 @@ export {
     GobanCanvasConfig as GobanConfig
 } from './GobanCanvas';
 
-window['goban'] = module.exports;
+(window as any)['goban'] = module.exports;

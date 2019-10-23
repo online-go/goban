@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { GoTheme } from "../GoTheme";
+import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
+import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
 import { GobanCore } from '../GobanCore';
 
@@ -25,21 +26,22 @@ function getCDNReleaseBase() {
     return '';
 }
 
-export default function(GoThemes) {
+export default function(GoThemes:GoThemesInterface) {
     class Kaya extends GoTheme {
-        sort() { return 10; }
-        getBackgroundCSS() {
+        sort():number { return 10; }
+        get theme_name():string { return 'Kaya' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')"
             };
         }
-        getLineColor() { return "#000000"; }
-        getFadedLineColor() { return "#888888"; }
-        getStarColor() { return "#000000"; }
-        getFadedStarColor() { return "#888888"; }
-        getBlankTextColor() { return "#000000"; }
-        getLabelTextColor() { return "#444444"; }
+        getLineColor():string { return "#000000"; }
+        getFadedLineColor():string { return "#888888"; }
+        getStarColor():string { return "#000000"; }
+        getFadedStarColor():string { return "#888888"; }
+        getBlankTextColor():string { return "#000000"; }
+        getLabelTextColor():string { return "#444444"; }
     }
 
     _("Kaya"); // ensure translation
@@ -47,19 +49,20 @@ export default function(GoThemes) {
 
 
     class RedOak extends GoTheme {
-        sort() { return  20; }
-        getBackgroundCSS() {
+        sort():number { return  20; }
+        get theme_name():string { return 'Red Oak' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/oak.jpg')"
             };
         }
-        getLineColor() { return "#000000"; }
-        getFadedLineColor() { return "#888888"; }
-        getStarColor() { return "#000000"; }
-        getFadedStarColor() { return "#888888"; }
-        getBlankTextColor() { return "#000000"; }
-        getLabelTextColor() { return "#000000"; }
+        getLineColor():string { return "#000000"; }
+        getFadedLineColor():string { return "#888888"; }
+        getStarColor():string { return "#000000"; }
+        getFadedStarColor():string { return "#888888"; }
+        getBlankTextColor():string { return "#000000"; }
+        getLabelTextColor():string { return "#000000"; }
     }
 
 
@@ -69,19 +72,20 @@ export default function(GoThemes) {
 
 
     class Persimmon extends GoTheme {
-        sort() { return  30; }
-        getBackgroundCSS() {
+        sort():number { return  30; }
+        get theme_name():string { return 'Persimmon' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/persimmon.jpg')"
             };
         }
-        getLineColor() { return "#000000"; }
-        getFadedLineColor() { return "#888888"; }
-        getStarColor() { return "#000000"; }
-        getFadedStarColor() { return "#888888"; }
-        getBlankTextColor() { return "#000000"; }
-        getLabelTextColor() { return "#000000"; }
+        getLineColor():string { return "#000000"; }
+        getFadedLineColor():string { return "#888888"; }
+        getStarColor():string { return "#000000"; }
+        getFadedStarColor():string { return "#888888"; }
+        getBlankTextColor():string { return "#000000"; }
+        getLabelTextColor():string { return "#000000"; }
     }
 
 
@@ -90,19 +94,20 @@ export default function(GoThemes) {
 
 
     class BlackWalnut extends GoTheme {
-        sort() { return  40; }
-        getBackgroundCSS() {
+        sort():number { return  40; }
+        get theme_name():string { return 'Black Walnut' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/black_walnut.jpg')"
             };
         }
-        getLineColor() { return "#000000"; }
-        getFadedLineColor() { return "#4A2F24"; }
-        getStarColor() { return "#000000"; }
-        getFadedStarColor() { return "#4A2F24"; }
-        getBlankTextColor() { return "#000000"; }
-        getLabelTextColor() { return "#000000"; }
+        getLineColor():string { return "#000000"; }
+        getFadedLineColor():string { return "#4A2F24"; }
+        getStarColor():string { return "#000000"; }
+        getFadedStarColor():string { return "#4A2F24"; }
+        getBlankTextColor():string { return "#000000"; }
+        getLabelTextColor():string { return "#000000"; }
     }
 
 
@@ -111,19 +116,20 @@ export default function(GoThemes) {
 
 
     class Granite extends GoTheme {
-        sort() { return  40; }
-        getBackgroundCSS() {
+        sort():number { return  40; }
+        get theme_name():string { return 'Granite' };
+        getBackgroundCSS():GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/granite.jpg')"
             };
         }
-        getLineColor() { return "#cccccc"; }
-        getFadedLineColor() { return "#888888"; }
-        getStarColor() { return "#cccccc"; }
-        getFadedStarColor() { return "#888888"; }
-        getBlankTextColor() { return "#cccccc"; }
-        getLabelTextColor() { return "#cccccc"; }
+        getLineColor():string { return "#cccccc"; }
+        getFadedLineColor():string { return "#888888"; }
+        getStarColor():string { return "#cccccc"; }
+        getFadedStarColor():string { return "#888888"; }
+        getBlankTextColor():string { return "#cccccc"; }
+        getLabelTextColor():string { return "#cccccc"; }
     }
 
 

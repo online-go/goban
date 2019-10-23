@@ -17,15 +17,23 @@
 import { GoTheme } from "./GoTheme";
 
 export interface GoThemesInterface {
-    white: any;
-    black: any;
-    board: any;
+    white: {[name:string]: typeof GoTheme};
+    black: {[name:string]: typeof GoTheme};
+    board: {[name:string]: typeof GoTheme};
+
+    // this exists so we can easily do GoThemes[what]
+    [_:string]: {[name:string]: typeof GoTheme};
 }
 
 export let GoThemes:GoThemesInterface = {
     white: {},
     black: {},
     board: {},
+};
+export let GoThemesSorted:{[n:string]: Array<typeof GoTheme>} = {
+    white: [],
+    black: [],
+    board: [],
 };
 
 import init_board_plain from "./themes/board_plain";
@@ -39,15 +47,13 @@ init_disc(GoThemes);
 init_rendered(GoThemes);
 
 
-function theme_sort(a, b) {
-    return a.sort - b.sort;
+function theme_sort(a:typeof GoTheme, b:typeof GoTheme) {
+    return (new a()).sort() - (new b()).sort();
 }
 
 for (let k in GoThemes) {
-    GoThemes[k].sorted = Object.keys(GoThemes[k]).map((n) => {
-        GoThemes[k][n].theme_name = n;
+    GoThemesSorted[k] = Object.keys(GoThemes[k]).map((n) => {
         return GoThemes[k][n];
     });
-    GoThemes[k].sorted.sort(theme_sort);
+    GoThemesSorted[k].sort(theme_sort);
 }
-
