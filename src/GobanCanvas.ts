@@ -2247,7 +2247,9 @@ export class GobanCanvas extends GobanCore  {
             return;
         }
 
+        let do_init = false;
         if (!this.move_tree_inner_container) {
+            do_init = true;
             this.move_tree_inner_container = document.createElement('div');
             this.move_tree_canvas = document.createElement('canvas');
             this.move_tree_inner_container.appendChild(this.move_tree_canvas);
@@ -2259,23 +2261,26 @@ export class GobanCanvas extends GobanCore  {
             let move_tree_on_scroll = (event:Event) => {
                 this.move_tree_redraw(true);
             };
-            this.move_tree_container.addEventListener('scroll', move_tree_on_scroll);
-            this.on('destroy', () => {
-                this.move_tree_container.removeEventListener('scroll', move_tree_on_scroll);
-            });
 
             try {
                 let observer = new ResizeObserver(() => {
                     this.move_tree_redraw(true);
-                }).observe(this.move_tree_container);
+                });
+                observer.observe(this.move_tree_container);
                 this.on('destroy', () => { observer.disconnect(); });
             } catch (e) {
                 // ResizeObserver is still fairly new and might not exist
             }
         }
 
-        if (this.move_tree_inner_container.parentNode !== this.move_tree_container) {
+        if (do_init || this.move_tree_inner_container.parentNode !== this.move_tree_container) {
             this.move_tree_container.appendChild(this.move_tree_inner_container);
+            this.move_tree_container.style.position = 'relative';
+            this.move_tree_container.removeEventListener('scroll', move_tree_on_scroll);
+            this.move_tree_container.addEventListener('scroll', move_tree_on_scroll);
+            this.on('destroy', () => {
+                this.move_tree_container.removeEventListener('scroll', move_tree_on_scroll);
+            });
         }
 
 
@@ -2333,8 +2338,6 @@ export class GobanCanvas extends GobanCore  {
         let div_scroll_top = this.move_tree_container.scrollTop;
         let div_scroll_left = this.move_tree_container.scrollLeft;
 
-        canvas.style.top = div_scroll_top + 'px';
-        canvas.style.left = div_scroll_left + 'px';
         if (canvas.width !== div_clientWidth || canvas.height !== div_clientHeight) {
             resizeDeviceScaledCanvas(
                 canvas,
@@ -2346,7 +2349,6 @@ export class GobanCanvas extends GobanCore  {
         this.move_tree_inner_container.style.width = width + 'px';
         this.move_tree_inner_container.style.height = height + 'px';
 
-
         if (!no_warp) {
             /* make sure our active stone is visible, but don't scroll around unnecessarily */
             if (div_scroll_left > active_path_end.layout_cx || div_scroll_left + div_clientWidth - 20 < active_path_end.layout_cx
@@ -2354,8 +2356,13 @@ export class GobanCanvas extends GobanCore  {
             ) {
                 this.move_tree_container.scrollLeft = active_path_end.layout_cx - div_clientWidth / 2;
                 this.move_tree_container.scrollTop = active_path_end.layout_cy - div_clientHeight / 2;
+                div_scroll_top = this.move_tree_container.scrollTop;
+                div_scroll_left = this.move_tree_container.scrollLeft;
             }
         }
+
+        canvas.style.top = div_scroll_top + 'px';
+        canvas.style.left = div_scroll_left + 'px';
 
 
         let viewport = {
