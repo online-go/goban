@@ -147,25 +147,28 @@ export interface GoEngineInitialState {
 }
 
 export interface PuzzleConfig {
-    mode: "puzzle";
-    name: string;
-    puzzle_type: string;
-    width: number;
-    height: number;
-    initial_state: GoEngineInitialState;
-    puzzle_opponent_move_mode: PuzzleOpponentMoveMode;
-    puzzle_player_move_mode: PuzzlePlayerMoveMode;
+    //mode: "puzzle";
+    mode?: string;
+    name?: string;
+    puzzle_type?: string;
+    width?: number;
+    height?: number;
+    initial_state?: GoEngineInitialState;
+    puzzle_autoplace_delay?: number;
+    puzzle_opponent_move_mode?: PuzzleOpponentMoveMode;
+    puzzle_player_move_mode?: PuzzlePlayerMoveMode;
 
-    puzzle_rank: number;
-    puzzle_description: string;
-    puzzle_collection: number;
-    initial_player: PlayerColor;
-    move_tree: MoveTreeJson;
+    puzzle_rank?: number;
+    puzzle_description?: string;
+    puzzle_collection?: number;
+    initial_player?: PlayerColor;
+    move_tree?: MoveTreeJson;
 }
 
 
 export type PuzzlePlayerMoveMode = 'free' | 'fixed';
 export type PuzzleOpponentMoveMode = 'manual'|'automatic';
+export type PuzzlePlacementSetting = {'mode': 'play'} | {'mode': 'setup', 'color': NumericPlayerColor} | {'mode': 'place', 'color': 0};
 
 let __currentMarker = 0;
 

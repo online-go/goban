@@ -20,8 +20,10 @@ import {
     GoEnginePhase,
     encodeMove,
     PlayerColor,
+    PuzzleConfig,
     PuzzleOpponentMoveMode,
     PuzzlePlayerMoveMode,
+    PuzzlePlacementSetting,
     NumericPlayerColor,
     Score,
 } from "./GoEngine";
@@ -84,16 +86,14 @@ export type GobanChatLog = Array<{
     lines: Array<GobanChatLogLine>;
 }>
 
-export interface GobanConfig extends GoEngineConfig {
+export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     display_width?: number;
 
     interactive?: boolean;
     mode?: 'puzzle';
     square_size?: number | ((goban:GobanCore) => number) | 'auto';
 
-    puzzle_opponent_move_mode?: PuzzleOpponentMoveMode;
-    puzzle_player_move_mode?: PuzzlePlayerMoveMode;
-    getPuzzlePlacementSetting?: () => {'mode': 'play'} | {'mode':'setup', 'color': NumericPlayerColor};
+    getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
 
     chat_log?:GobanChatLog;
     spectator_log?:GobanChatLog;
@@ -123,7 +123,15 @@ export interface GobanConfig extends GoEngineConfig {
     game_type?: 'temporary';
 
     // puzzle stuff
+    /*
     puzzle_autoplace_delay?: number;
+    puzzle_opponent_move_mode?: PuzzleOpponentMoveMode;
+    puzzle_player_move_mode?: PuzzlePlayerMoveMode;
+    puzzle_rank = puzzle && puzzle.puzzle_rank ? puzzle.puzzle_rank : 0;
+    puzzle_collection = (puzzle && puzzle.collection ? puzzle.collection.id : 0);
+    puzzle_type = (puzzle && puzzle.type ? puzzle.type : "");
+    */
+
 
 
     // deprecated
@@ -316,7 +324,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected heatmap:NumberMatrix;
     protected colored_circles:Array<Array<ColoredCircle>>;
     protected game_type:string;
-    protected getPuzzlePlacementSetting:() => {'mode': 'play'} | {'mode': 'setup', 'color': NumericPlayerColor};
+    protected getPuzzlePlacementSetting:() => PuzzlePlacementSetting;
     protected goban_id: number;
     protected has_new_official_move:boolean;
     protected highlight_movetree_moves:boolean;
@@ -743,8 +751,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
             if (msg.message) {
                 if (
-                    !(window as any)["has_focus"] 
-                    && !(window as any)["user"].anonymous 
+                    !(window as any)["has_focus"]
+                    && !(window as any)["user"].anonymous
                     && /^\/game\//.test(this.getLocation())
                 ) {
                     swal(_(msg.message));
@@ -2421,10 +2429,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public autoScore():void {
         try {
             if (
-                !(window as any)["user"] 
-                || !this.on_game_screen  
-                || !this.engine 
-                || ((window as any)["user"].id as number !== this.engine.black_player_id 
+                !(window as any)["user"]
+                || !this.on_game_screen
+                || !this.engine
+                || ((window as any)["user"].id as number !== this.engine.black_player_id
                     && (window as any)["user"].id as number !== this.engine.white_player_id)
             ) {
                 return;

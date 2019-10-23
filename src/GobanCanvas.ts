@@ -620,8 +620,6 @@ export class GobanCanvas extends GobanCore  {
                         if (this.shift_key_is_down) {
                             color = color === 1 ? 2 : 1;
                         }
-                    } else {
-                        throw new Error("Unexpected mode while attempting to setup puzzle");
                     }
                 }
 
@@ -2159,8 +2157,10 @@ export class GobanCanvas extends GobanCore  {
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         //this.parent.css(this.theme_board.getBackgroundCSS());
         let bgcss = this.theme_board.getBackgroundCSS();
-        for (let key in bgcss) {
-            (this.parent.style as any)[key] = (bgcss as any)[key];
+        if (this.parent) {
+            for (let key in bgcss) {
+                (this.parent.style as any)[key] = (bgcss as any)[key];
+            }
         }
 
         if (!dont_redraw) {
@@ -2258,9 +2258,6 @@ export class GobanCanvas extends GobanCore  {
             this.move_tree_container.style.position = 'relative';
             this.move_tree_canvas.style.position = 'absolute';
 
-            let move_tree_on_scroll = (event:Event) => {
-                this.move_tree_redraw(true);
-            };
 
             try {
                 let observer = new ResizeObserver(() => {
@@ -2274,12 +2271,17 @@ export class GobanCanvas extends GobanCore  {
         }
 
         if (do_init || this.move_tree_inner_container.parentNode !== this.move_tree_container) {
+            let move_tree_on_scroll = (event:Event) => {
+                this.move_tree_redraw(true);
+            };
+
             this.move_tree_container.appendChild(this.move_tree_inner_container);
             this.move_tree_container.style.position = 'relative';
             this.move_tree_container.removeEventListener('scroll', move_tree_on_scroll);
             this.move_tree_container.addEventListener('scroll', move_tree_on_scroll);
+            let mt = this.move_tree_container;
             this.on('destroy', () => {
-                this.move_tree_container.removeEventListener('scroll', move_tree_on_scroll);
+                mt.removeEventListener('scroll', move_tree_on_scroll);
             });
         }
 
