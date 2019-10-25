@@ -900,6 +900,14 @@ export class GobanCanvas extends GobanCore  {
     protected disableDrawing():void {
         this.drawing_enabled = false;
     }
+    public setByoYomiLabel(label:string):void {
+        if (this.byoyomi_label !== label) {
+            this.byoyomi_label = label;
+            if (this.last_hover_square) {
+                this.drawSquare(this.last_hover_square.x, this.last_hover_square.y);
+            }
+        }
+    }
     public drawSquare(i:number, j:number):void {
         if (i < 0 || j < 0) { return; }
         if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {

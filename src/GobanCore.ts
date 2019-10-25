@@ -2526,15 +2526,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         let current_server_time:number = null;
         function update_current_server_time() {
-            let server_time_offset =  GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
+            let server_time_offset = GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
             current_server_time = Date.now() - server_time_offset;
         }
         update_current_server_time();
 
-        //this.last_clock = original_clock;
-
         let clock:JGOFClock = {
             current_player: original_clock.current_player === original_clock.black_player_id ? 'black' : 'white',
+            current_player_id: original_clock.current_player.toString(),
             time_of_last_move: original_clock.last_move,
             paused_since: original_clock.paused_since,
             black_clock: null,
@@ -2559,9 +2558,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         }
 
-
         const make_player_clock = (
-            original_clock:AdHocPlayerClock,
+            original_player_clock:AdHocPlayerClock,
             original_clock_expiration:number,
             is_current_player:boolean,
             time_elapsed:number
@@ -2570,14 +2568,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 main_time: 0,
             };
 
-            //let pause_offset = this.engine.paused_since ? time_elapsed : 0;
-            let pause_offset = 0;
+            let raw_clock_pause_offset = this.engine.paused_since
+                ? current_server_time - Math.max(original_clock.last_move, this.engine.paused_since)
+                : 0;
 
             let tcs:string = "" + (time_control.system);
             switch (time_control.system) {
                 case 'simple':
                     ret.main_time = is_current_player
-                        ?  Math.max(0, (original_clock_expiration + pause_offset) - current_server_time)
+                        ?  Math.max(0, (original_clock_expiration + raw_clock_pause_offset) - current_server_time)
                         : time_control.per_move * 1000;
                     break;
 
@@ -2587,28 +2586,36 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 case 'absolute':
                     ret.main_time = is_current_player
-                        ?  Math.max(0, (original_clock_expiration + pause_offset) - current_server_time)
-                        : Math.max(0, original_clock_expiration - current_server_time);
+                        ?  Math.max(0, (original_clock_expiration + raw_clock_pause_offset) - current_server_time)
+                        : Math.max(0, original_player_clock.thinking_time * 1000);
                     break;
 
                 case 'fischer':
                     ret.main_time = is_current_player
-                        ?  Math.max(0, (original_clock.thinking_time * 1000 - time_elapsed))
-                        : original_clock.thinking_time*1000;
+                        ?  Math.max(0, (original_player_clock.thinking_time * 1000 - time_elapsed))
+                        : original_player_clock.thinking_time*1000;
                     break;
 
                 case 'byoyomi':
                     if (is_current_player) {
-                        ret.main_time = original_clock.thinking_time * 1000 - time_elapsed;
-                        ret.periods_left = original_clock.periods;
-                        ret.period_time_left = time_control.period_time * 1000;
-                        if (ret.main_time < 0) {
-                            let overtime_usage = - ret.main_time;
+                        let overtime_usage = 0;
+                        if (original_player_clock.thinking_time > 0) {
+                            ret.main_time = original_player_clock.thinking_time * 1000 - time_elapsed;
+                            if (ret.main_time <= 0) {
+                                overtime_usage = - ret.main_time;
+                                ret.main_time = 0;
+                            }
+                        } else {
                             ret.main_time = 0;
-
-                            let periods_used = Math.floor(overtime_usage / time_control.period_time * 1000);
+                            overtime_usage = time_elapsed;
+                        }
+                        ret.periods_left = original_player_clock.periods;
+                        ret.period_time_left = time_control.period_time * 1000;
+                        if (overtime_usage > 0) {
+                            let periods_used = Math.floor(overtime_usage / (time_control.period_time * 1000));
                             ret.periods_left -= periods_used;
-                            ret.period_time_left = overtime_usage - (periods_used * time_control.period_time * 1000);
+                            ret.period_time_left = (time_control.period_time * 1000)
+                                - (overtime_usage - (periods_used * time_control.period_time * 1000));
 
                             if (ret.periods_left < 0) {
                                 ret.periods_left = 0;
@@ -2619,22 +2626,32 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             }
                         }
                     } else {
-                        ret.main_time = original_clock.thinking_time * 1000;
-                        ret.periods_left = original_clock.periods;
+                        ret.main_time = original_player_clock.thinking_time * 1000;
+                        ret.periods_left = original_player_clock.periods;
                         ret.period_time_left = time_control.period_time * 1000;
                     }
                     break;
 
                 case 'canadian':
                     if (is_current_player) {
-                        ret.main_time = original_clock.thinking_time * 1000 - time_elapsed;
-                        ret.moves_left = original_clock.moves_left;
-                        ret.block_time_left = original_clock.block_time * 1000;
+                        console.log(original_player_clock, time_elapsed, clock.paused_since, original_clock.last_move);
 
-                        if (ret.main_time < 0) {
-                            let overtime_usage = - ret.main_time;
+                        let overtime_usage = 0;
+                        if (original_player_clock.thinking_time > 0) {
+                            ret.main_time = original_player_clock.thinking_time * 1000 - time_elapsed;
+                            if (ret.main_time <= 0) {
+                                overtime_usage = - ret.main_time;
+                                ret.main_time = 0;
+                            }
+                        } else {
                             ret.main_time = 0;
+                            overtime_usage = time_elapsed;
+                        }
+                        ret.moves_left = original_player_clock.moves_left;
+                        ret.block_time_left = original_player_clock.block_time * 1000;
 
+                        console.log(overtime_usage);
+                        if (overtime_usage > 0) {
                             ret.block_time_left -= overtime_usage;
 
                             if (ret.block_time_left < 0) {
@@ -2642,9 +2659,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             }
                         }
                     } else {
-                        ret.main_time = original_clock.thinking_time * 1000;
-                        ret.moves_left = original_clock.moves_left;
-                        ret.block_time_left = original_clock.block_time * 1000;
+                        ret.main_time = original_player_clock.thinking_time * 1000;
+                        ret.moves_left = original_player_clock.moves_left;
+                        ret.block_time_left = original_player_clock.block_time * 1000;
                     }
                     break;
 
@@ -2680,7 +2697,27 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             update_current_server_time();
 
             let next_update_time:number = 100;
-            const elapsed:number = current_server_time - original_clock.last_move;
+
+            if (clock.start_mode) {
+                clock.start_time_left = original_clock.expiration - current_server_time;
+            }
+
+            if (this.engine.paused_since) {
+                clock.paused_since = this.engine.paused_since;
+                clock.pause_state = AdHocPauseControl2JGOFPauseState(this.engine.pause_control);
+                if (clock.pause_state.stone_removal) {
+                    clock.stone_removal_time_left = original_clock.expiration - current_server_time;
+                }
+            }
+
+            if (!clock.pause_state || Object.keys(clock.pause_state).length === 0) {
+                delete clock.paused_since;
+                delete clock.pause_state;
+            }
+
+            const elapsed:number = clock.paused_since
+                ? Math.max(clock.paused_since, original_clock.last_move) - original_clock.last_move
+                : current_server_time - original_clock.last_move;
 
             clock.black_clock = make_player_clock(
                 typeof(original_clock.black_time) === 'number' ? null : original_clock.black_time as AdHocPlayerClock,
@@ -2695,15 +2732,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 clock.current_player === 'white' && !clock.start_mode,
                 elapsed
             );
-
-            if (clock.start_mode) {
-                clock.start_time_left = original_clock.expiration - current_server_time;
-            }
-
-            if (this.engine.paused_since) {
-                clock.paused_since = this.engine.paused_since;
-                clock.pause_state = AdHocPauseControl2JGOFPauseState(this.engine.pause_control);
-            }
 
             this.emit('clock', clock);
 

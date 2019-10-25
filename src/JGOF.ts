@@ -37,9 +37,11 @@ export interface JGOFClock {
     /** Player to move, and thus player whose clock is running. */
     current_player: "black" | "white";
 
+    /** Player ID of player to move */
+    current_player_id: string;
+
     /** Time the last move was made, in milliseconds since 1970, as observed by the server. */
     time_of_last_move:number;
-
 
     /** Time left on blacks clock. */
     black_clock: JGOFPlayerClock;
@@ -55,6 +57,11 @@ export interface JGOFClock {
      *  on the start clock, when the clock reaches zero the game will be
      *  canceled. */
     start_time_left?:number;
+
+    /** If `puase_State.stone_removal` is true, this is the number of
+     * milliseconds left before the result is automatically accepted.
+     */
+    stone_removal_time_left?:number;
 
     /** Time the game was paused, in milliseconds since 1970, as observed by the server */
     paused_since?:number;
