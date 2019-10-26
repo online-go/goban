@@ -1,6 +1,6 @@
 {
     "name": "goban",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "",
     "main": "lib/goban.js",
     "types": "lib/goban.d.ts",
@@ -37,9 +37,9 @@
     "devDependencies": {
         "@types/react": "^16.9.2",
         "@types/react-dom": "^16.9.0",
+        "eventemitter3": "^4.0.0",
         "react": "^16.9.0",
         "react-dom": "^16.9.0",
-        "eventemitter3": "^4.0.0",
         "ts-loader": "^6.2.0",
         "tslint": "^5.20.0",
         "typedoc": "^0.15.0",
