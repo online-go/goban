@@ -258,8 +258,13 @@ export class GoMath {
                     let color:NumericPlayerColor = 0;
                     if (move_string[i + 0] === "!") {
                         edited = true;
-                        color = parseInt(move_string[i + 1]) as NumericPlayerColor;
-                        i += 2;
+                        if (move_string.substr(i, 10) === '!undefined') { /* bad data */
+                            color = 0;
+                            i += 10;
+                        } else {
+                            color = parseInt(move_string[i + 1]) as NumericPlayerColor;
+                            i += 2;
+                        }
                     }
 
 
