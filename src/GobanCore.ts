@@ -460,7 +460,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.engine = null;
         this.last_move = null;
-        this.config = config;
+        this.config = repair_config(config);
         this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
         this.game_id = config.game_id;
         this.player_id = config.player_id;
@@ -1518,6 +1518,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
 
     public load(config:GobanConfig):void {
+        config = repair_config(config);
         for (let k in config) {
             (this.config as any)[k] = (config as any)[k];
         }
@@ -2973,4 +2974,13 @@ function AdHocPauseControl2JGOFPauseState(pause_control:AdHocPauseControl) {
     }
 
     return ret;
+}
+
+function repair_config(config:GobanConfig):GobanConfig {
+    if (config.time_control && !config.time_control.system && (config.time_control as any).time_control) {
+        config.time_control.system = (config.time_control as any).time_control;
+        console.log("Repairing goban config: time_control.time_control -> time_control.system = ", config.time_control.system);
+    }
+
+    return config;
 }
