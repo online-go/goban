@@ -349,12 +349,13 @@ export class GobanCanvas extends GobanCore  {
                 clearTimeout(mousedisabled);
             }
             mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+            getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
 
             if (ev.target === canvas) {
-                lastX = ev.touches[0].pageX;
-                lastY = ev.touches[0].pageY;
-                startX = ev.touches[0].pageX;
-                startY = ev.touches[0].pageY;
+                lastX = ev.touches[0].clientX;
+                lastY = ev.touches[0].clientY;
+                startX = ev.touches[0].clientX;
+                startY = ev.touches[0].clientY;
                 pointerDown(ev);
             } else if (dragging) {
                 pointerOut(ev);
@@ -381,10 +382,11 @@ export class GobanCanvas extends GobanCore  {
                 clearTimeout(mousedisabled);
             }
             mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+            getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
 
             if (ev.target === canvas) {
-                lastX = ev.touches[0].pageX;
-                lastY = ev.touches[0].pageY;
+                lastX = ev.touches[0].clientX;
+                lastY = ev.touches[0].clientY;
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
                     pointerMove(ev);
                     ev.preventDefault();
@@ -856,11 +858,11 @@ export class GobanCanvas extends GobanCore  {
         let x:number;
         let y:number;
         if (event instanceof MouseEvent) {
-            x = event.pageX - offset.left;
-            y = event.pageY - offset.top;
+            x = event.clientX - offset.left;
+            y = event.clientY - offset.top;
         } else {
-            x = event.touches[0].pageX - offset.left;
-            y = event.touches[0].pageY - offset.top;
+            x = event.touches[0].clientX - offset.left;
+            y = event.touches[0].clientY - offset.top;
         }
 
         let pt = this.xy2ij(x, y);
@@ -2417,18 +2419,22 @@ export class GobanCanvas extends GobanCore  {
             let x = 0;
             let y = 0;
             if (typeof(TouchEvent) !== "undefined" && event instanceof TouchEvent) {
-                x = Math.round(event.touches[0].pageX) - offset.left;
-                y = Math.round(event.touches[0].pageY) - offset.top;
+                x = Math.round(event.touches[0].clientX) - offset.left;
+                y = Math.round(event.touches[0].clientY) - offset.top;
+                console.log(x, y, offset, ox, oy);
             }
             else if (event instanceof MouseEvent) {
-                x = Math.round(event.pageX) - offset.left;
-                y = Math.round(event.pageY) - offset.top;
+                x = Math.round(event.clientX) - offset.left;
+                y = Math.round(event.clientY) - offset.top;
             }
             x += ox;
             y += oy;
             let i = Math.floor(x / MoveTree.stone_square_size);
             let j = Math.floor(y / MoveTree.stone_square_size);
             let node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
+
+
+
             if (node) {
                 if (this.engine.cur_move.id !== node.id) {
                     this.engine.jumpTo(node);

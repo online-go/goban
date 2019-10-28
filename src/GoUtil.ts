@@ -91,6 +91,9 @@ export function deviceCanvasScalingRatio() {
     return __deviceCanvasScalingRatio;
 }
 
+let last_touch_x = -1000;
+let last_touch_y = -1000;
+
 export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
     let x = -1000;
     let y = -1000;
@@ -98,18 +101,22 @@ export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
 
     if (typeof(TouchEvent) !== "undefined" && event instanceof TouchEvent) {
         if (event.touches && event.touches.length) {
-            x = event.touches[0].pageX - offset.left;
-            y = event.touches[0].pageY - offset.top;
-        } else if (event.touches && event.touches.length) {
-            x = event.touches[0].pageX - offset.left;
-            y = event.touches[0].pageY - offset.top;
+            x = event.touches[0].clientX - offset.left;
+            y = event.touches[0].clientY - offset.top;
         } else {
-            console.log("Missing event tap location:", event);
+            if (event.type !== 'touchend') {
+                console.log("Missing event tap location:", event);
+            } else {
+                x = last_touch_x;
+                y = last_touch_y;
+            }
         }
+        last_touch_x = x;
+        last_touch_y = y;
     } else if (event instanceof MouseEvent) {
-        if (event.pageX) {
-            x = event.pageX - offset.left;
-            y = event.pageY - offset.top;
+        if (event.clientX) {
+            x = event.clientX - offset.left;
+            y = event.clientY - offset.top;
         } else {
             console.log("Missing event click location:", event);
         }
