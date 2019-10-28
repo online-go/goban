@@ -1717,7 +1717,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public disableStonePlacement():void {
         this.stone_placement_enabled = false;
-        // console.log("disabled stone placement");
         if (this.__last_pt && this.__last_pt.valid) {
             this.drawSquare(this.__last_pt.i, this.__last_pt.j);
         }
@@ -1735,7 +1734,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         this.stone_placement_enabled = true;
-        // console.log("enabled stone placement");
         if (this.__last_pt && this.__last_pt.valid) {
             this.drawSquare(this.__last_pt.i, this.__last_pt.j);
         }
@@ -2520,6 +2518,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.emit('clock', null);
             return;
         }
+
         this.last_clock = original_clock;
 
         let time_control:JGOFTimeControl = this.config.time_control;
@@ -2556,6 +2555,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 delete this.engine.paused_since;
                 delete this.engine.pause_control;
             }
+        }
+
+        if (original_clock.start_mode) {
+            clock.start_mode = true;
         }
 
         const make_player_clock = (
@@ -2634,8 +2637,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 case 'canadian':
                     if (is_current_player) {
-                        console.log(original_player_clock, time_elapsed, clock.paused_since, original_clock.last_move);
-
                         let overtime_usage = 0;
                         if (original_player_clock.thinking_time > 0) {
                             ret.main_time = original_player_clock.thinking_time * 1000 - time_elapsed;
@@ -2650,7 +2651,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         ret.moves_left = original_player_clock.moves_left;
                         ret.block_time_left = original_player_clock.block_time * 1000;
 
-                        console.log(overtime_usage);
                         if (overtime_usage > 0) {
                             ret.block_time_left -= overtime_usage;
 

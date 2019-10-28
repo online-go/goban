@@ -10,7 +10,7 @@ doc typedoc:
 	yarn run typedoc
 
 clean:
-	rm -Rf lib
+	rm -Rf lib node
 
 publish push:
 	yarn run build-debug
