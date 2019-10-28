@@ -653,11 +653,16 @@ export class GoEngine {
     /** Returns a move string from the given official move number (aka branch point) */
     public getMoveDiff():{'from': number, 'moves': string} {
         let branch_point = this.cur_move.getBranchPoint();
-        let cur = this.cur_move;
-        let moves = [];
+        let cur:MoveTree = this.cur_move;
+        let moves:Array<Move> = [];
 
         while (cur.id !== branch_point.id) {
-            moves.push(cur);
+            moves.push({
+                x: cur.x,
+                y: cur.y,
+                color: cur.player,
+                edited: cur.edited,
+            });
             cur = cur.parent;
         }
 

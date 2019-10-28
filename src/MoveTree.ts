@@ -264,6 +264,10 @@ export class MoveTree {
     }
 
     lookupMove(x:number, y:number, player:number, edited:boolean):MoveTree {
+        if (typeof(player) !== 'number') {
+            throw new Error(`Invalid player color: ${player}`)
+        }
+
         if (this.trunk_next &&
             this.trunk_next.x === x &&
                 this.trunk_next.y === y &&
@@ -284,6 +288,9 @@ export class MoveTree {
     move(x:number, y:number, trunk:boolean, edited:boolean, player:NumericPlayerColor, move_number:number, state:any):MoveTree {
         if (typeof(player) === "undefined") {
             throw new Error("Invalid player");
+        }
+        if (typeof(player) !== 'number') {
+            throw new Error(`Invalid player color: ${player}`)
         }
 
         let m = this.lookupMove(x, y, player, edited);
@@ -467,8 +474,8 @@ export class MoveTree {
     }
     isAncestorOf(other:MoveTree):boolean {
         do {
-            if (other.id === this.id) { 
-                return true; 
+            if (other.id === this.id) {
+                return true;
             }
             other = other.parent;
         } while (other);
