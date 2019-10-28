@@ -2519,9 +2519,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             return;
         }
 
+        let time_control:JGOFTimeControl = this.config.time_control;
+        if (!time_control || !time_control.system) {
+            this.emit('clock', null);
+            return;
+        }
+
         this.last_clock = original_clock;
 
-        let time_control:JGOFTimeControl = this.config.time_control;
 
         let current_server_time:number = null;
         function update_current_server_time() {
@@ -2690,7 +2695,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         };
 
         const do_update = () => {
-            if (!time_control) {
+            if (!time_control || !time_control.system) {
                 return;
             }
 
@@ -2736,7 +2741,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.emit('clock', clock);
 
             // check if we need to update our audio
-            if (this.mode === 'play' && time_control) {
+            if (this.mode === 'play') {
                 // Move's and clock events are separate, so this just checks to make sure that when we
                 // update, we are updating when the engine and clock agree on whose turn it is.
                 if (this.engine.colorToMove() === clock.current_player) {
