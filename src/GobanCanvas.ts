@@ -131,7 +131,7 @@ export class GobanCanvas extends GobanCore  {
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
-        this.parent.append(this.board);
+        this.parent.appendChild(this.board);
         this.bindPointerBindings(this.board);
 
         this.move_tree_container = config["move_tree_container"];
@@ -216,7 +216,7 @@ export class GobanCanvas extends GobanCore  {
             this.pen_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
             this.pen_layer.setAttribute("id", "pen-canvas");
             this.pen_layer.className = "PenLayer";
-            this.parent.append(this.pen_layer);
+            this.parent.appendChild(this.pen_layer);
             //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
             this.pen_layer.style.left = this.layer_offset_left + 'px';
             this.pen_layer.style.top = this.layer_offset_top + 'px';
@@ -2075,8 +2075,8 @@ export class GobanCanvas extends GobanCore  {
         this.message_div.appendChild(table);
         this.message_text = document.createElement("div");
         this.message_text.innerHTML = msg;
-        this.message_td.append(this.message_text);
-        this.parent.append(this.message_div);
+        this.message_td.appendChild(this.message_text);
+        this.parent.appendChild(this.message_div);
 
         this.message_div.addEventListener("click", () => {
             if (timeout > 0) {
@@ -2228,7 +2228,7 @@ export class GobanCanvas extends GobanCore  {
             /*
             } else {
                 this.title_div.empty();
-                this.title_div.append(title);
+                this.title_div.appendChild(title);
             }
             */
         }
