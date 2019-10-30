@@ -169,7 +169,9 @@ export class GobanCanvas extends GobanCore  {
     public destroy():void {
         super.destroy();
 
-        this.board.remove();
+        if (this.board && this.board.parentNode) {
+            this.board.parentNode.removeChild(this.board);
+        }
         this.detachPenCanvas();
         this.detachShadowLayer();
 
@@ -183,7 +185,9 @@ export class GobanCanvas extends GobanCore  {
     }
     private detachShadowLayer():void {
         if (this.shadow_layer) {
-            this.shadow_layer.remove();
+            if (this.shadow_layer.parentNode) {
+                this.shadow_layer.parentNode.removeChild(this.shadow_layer);
+            }
             this.shadow_layer = null;
             this.shadow_ctx = null;
         }
@@ -206,7 +210,9 @@ export class GobanCanvas extends GobanCore  {
     }
     private detachPenCanvas():void {
         if (this.pen_layer) {
-            this.pen_layer.remove();
+            if (this.pen_layer.parentNode) {
+                this.pen_layer.parentNode.removeChild(this.pen_layer);
+            }
             this.pen_layer = null;
             this.pen_ctx = null;
         }
@@ -2096,7 +2102,7 @@ export class GobanCanvas extends GobanCore  {
     }
     public clearMessage():void {
         if (this.message_div) {
-            this.message_div.remove();
+            this.message_div.parentNode.removeChild(this.message_div);
             this.message_div = null;
         }
         if (this.message_timeout) {
