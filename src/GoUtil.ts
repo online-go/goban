@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {_, pgettext, interpolate} from "./translate";
+import {_, interpolate} from "./translate";
 
 let __deviceCanvasScalingRatio:number = null;
 
@@ -135,11 +135,11 @@ export function shortDurationString(seconds:number) {
     let hours = Math.floor(seconds / 3600); seconds -= hours * 3600;
     let minutes = Math.floor(seconds / 60); seconds -= minutes * 60;
     return "" +
-        (weeks ? " " + interpolate(pgettext("Short time (weeks)", "%swk"), [weeks]) : "") +
-        (days ? " " + interpolate(pgettext("Short time (days)", "%sd"), [days]) : "") +
-        (hours ? " " + interpolate(pgettext("Short time (hours)", "%sh"), [hours]) : "") +
-        (minutes ? " " + interpolate(pgettext("Short time (minutes)", "%sm"), [minutes]) : "") +
-        (seconds ? " " + interpolate(pgettext("Short time (seconds)", "%ss"), [seconds]) : "");
+        (weeks ? " " + interpolate(_("%swk"), [weeks]) : "") +
+        (days ? " " + interpolate(_("%sd"), [days]) : "") +
+        (hours ? " " + interpolate(_("%sh"), [hours]) : "") +
+        (minutes ? " " + interpolate(_("%sm"), [minutes]) : "") +
+        (seconds ? " " + interpolate(_("%ss"), [seconds]) : "");
 }
 export function dup(obj: any): any {
     let ret:any;

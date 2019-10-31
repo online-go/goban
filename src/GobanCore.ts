@@ -1672,7 +1672,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             case "play":
                 if (this.player_id && this.player_id === this.engine.playerToMove() && this.mode !== "edit" && this.engine.cur_move.id === this.engine.last_official_move.id) {
                     if (this.engine.cur_move.passed() && this.engine.handicapMovesLeft() <= 0 && this.engine.cur_move.parent) {
-                        this.setTitle(_("Your move - Opponent Passed"));
+                        this.setTitle(_("Your move - opponent passed"));
                         if (this.last_move && this.last_move.x >= 0) {
                             this.drawSquare(this.last_move.x, this.last_move.y);
                         }
@@ -1680,7 +1680,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.setTitle(_("Your move"));
                     }
                     if (this.engine.cur_move.id === this.engine.last_official_move.id && this.mode === "play") {
-                        this.emit("state_text", {title: _("Your Move")});
+                        this.emit("state_text", {title: _("Your move")});
                     }
                 } else {
                     let color = this.engine.playerColor(this.engine.playerToMove());

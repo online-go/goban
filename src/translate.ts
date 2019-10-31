@@ -16,33 +16,59 @@
 
 let win:any = typeof(window) === "undefined" ? {} : window;
 
-export let current_language:string = win["ogs_current_language"] as any || 'en';
-export let languages:{[lang:string]: string} = win["ogs_languages"] as any || {'en': 'English'};
-export let countries:{[lang:string]: {[country:string]: string}} = win["ogs_countries"] as any || {'en': {'us': 'United States'}};
-export let locales:{[lang:string]: {[msg:string]:string}} = win["ogs_locales"] as any || {'en': {}};
+let catalog:any = {};
+let debug_mode = false;
+const debug_wrap = debug_mode ? (s:string) => `[${s}]` : (s:string) => s;
 
-let catalog:{[msg:string]: string};
-try {
-    catalog = locales[current_language] || {};
-} catch (e) {
-    catalog = {};
+export interface GobanStrings {
+    'Your move': string;
+    'White': string;
+    'Black': string;
+    'Illegal Ko Move': string;
+    'Move is suicidal': string;
+    'Loading...': string;
+    'Processing...': string;
+    'Submitting...': string;
+    'A stone has already been placed here': string;
+    'Illegal board repetition': string;
+    'Error submitting move': string;
+    'Game Finished': string;
+    'Black to move': string;
+    'White to move': string;
+    'Your move - opponent passed': string;
+    'Review': string;
+    'Control passed to %s': string;
+    'Synchronization error, reloading': string;
+    'Stone Removal': string;
+    'Stone Removal Phase': string;
+    'Enter the label you want to add to the board': string;
+
+    'Black Walnut': string;
+    'Book': string;
+    'Glass': string;
+    'Granite': string;
+    'HNG Night': string;
+    'HNG': string;
+    'Kaya': string;
+    'Night Play': string;
+    'Night': string;
+    'Persimmon': string;
+    'Plain': string;
+    'Red Oak': string;
+    'Shell': string;
+    'Slate': string;
+    'Worn Glass': string;
+
+    '%swk': string; /* short time week */
+    '%sd': string; /* short time day */
+    '%sh': string; /* short time hour */
+    '%sm': string; /* short time minute */
+    '%ss': string; /* short time second */
 }
 
-const debug_wrap = current_language === "debug" ? (s:string) => `[${s}]` : (s:string) => s;
-
-export function gettext(msgid:string):string {
-    if (msgid in catalog) {
-        return catalog[msgid][0];
-    }
-    return debug_wrap(msgid);
-}
-
-export function pgettext(context:string, msgid:string):string {
-    let key = context + "" + msgid;
-    if (key in catalog) {
-        return catalog[key][0];
-    }
-    return debug_wrap(msgid);
+export function setGobanTranslations(_catalog:GobanStrings, _debug_mode:boolean = false):void {
+    catalog = _catalog;
+    debug_mode = _debug_mode;
 }
 
 export function interpolate(str: string, params: any): string {
@@ -65,6 +91,10 @@ export function interpolate(str: string, params: any): string {
     }
     return str.replace(/%[sd]/g, (_, __, position) => params);
 }
-export function _(str:string): string {
-    return gettext(str);
+
+export function _(msgid:keyof GobanStrings): string {
+    if (msgid in catalog) {
+        return catalog[msgid];
+    }
+    return debug_wrap(msgid);
 }

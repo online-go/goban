@@ -37,7 +37,7 @@ import {GoThemes} from "./GoThemes";
 import { MoveTreePenMarks } from "./MoveTree";
 import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, deviceCanvasScalingRatio, elementOffset} from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
-import {_, pgettext, interpolate} from "./translate";
+import {_, interpolate} from "./translate";
 
 let __theme_cache:{
     [bw:string]: {[name:string]: {[size:string]: any}}
