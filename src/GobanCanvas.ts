@@ -859,19 +859,8 @@ export class GobanCanvas extends GobanCore  {
             (this.player_id || this.engine.black_player_id === 0 || this.mode === "analyze" || this.scoring_mode)
             )) { return; }
 
-        let offset = elementOffset(this.board);
-
-        let x:number;
-        let y:number;
-        if (event instanceof MouseEvent) {
-            x = event.clientX - offset.left;
-            y = event.clientY - offset.top;
-        } else {
-            x = event.touches[0].clientX - offset.left;
-            y = event.touches[0].clientY - offset.top;
-        }
-
-        let pt = this.xy2ij(x, y);
+        let pos = getRelativeEventPosition(event);
+        let pt = this.xy2ij(pos.x, pos.y);
 
         if (this.__last_pt.i === pt.i && this.__last_pt.j === pt.j) {
             return;
@@ -2421,25 +2410,12 @@ export class GobanCanvas extends GobanCore  {
         let handler = (event:TouchEvent | MouseEvent) => {
             let ox = this.move_tree_container.scrollLeft;
             let oy = this.move_tree_container.scrollTop;
-            let offset = elementOffset(canvas);
-            let x = 0;
-            let y = 0;
-            if (typeof(TouchEvent) !== "undefined" && event instanceof TouchEvent) {
-                x = Math.round(event.touches[0].clientX) - offset.left;
-                y = Math.round(event.touches[0].clientY) - offset.top;
-                console.log(x, y, offset, ox, oy);
-            }
-            else if (event instanceof MouseEvent) {
-                x = Math.round(event.clientX) - offset.left;
-                y = Math.round(event.clientY) - offset.top;
-            }
-            x += ox;
-            y += oy;
-            let i = Math.floor(x / MoveTree.stone_square_size);
-            let j = Math.floor(y / MoveTree.stone_square_size);
+            let pos = getRelativeEventPosition(event);
+            pos.x += ox;
+            pos.y += oy;
+            let i = Math.floor(pos.x / MoveTree.stone_square_size);
+            let j = Math.floor(pos.y / MoveTree.stone_square_size);
             let node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
-
-
 
             if (node) {
                 if (this.engine.cur_move.id !== node.id) {

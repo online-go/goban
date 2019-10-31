@@ -94,15 +94,17 @@ export function deviceCanvasScalingRatio() {
 let last_touch_x = -1000;
 let last_touch_y = -1000;
 
+/** Returns {x,y} of the event relative to the event target */
 export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
     let x = -1000;
     let y = -1000;
-    let offset = elementOffset(event.target as HTMLElement);
+
+    let rect = (event.target as HTMLElement).getBoundingClientRect();
 
     if (typeof(TouchEvent) !== "undefined" && event instanceof TouchEvent) {
         if (event.touches && event.touches.length) {
-            x = event.touches[0].clientX - offset.left;
-            y = event.touches[0].clientY - offset.top;
+            x = event.touches[0].clientX - rect.left;
+            y = event.touches[0].clientY - rect.top;
         } else {
             if (event.type !== 'touchend') {
                 console.log("Missing event tap location:", event);
@@ -115,8 +117,8 @@ export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
         last_touch_y = y;
     } else if (event instanceof MouseEvent) {
         if (event.clientX) {
-            x = event.clientX - offset.left;
-            y = event.clientY - offset.top;
+            x = event.clientX - rect.left;
+            y = event.clientY - rect.top;
         } else {
             console.log("Missing event click location:", event);
         }
