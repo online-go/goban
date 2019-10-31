@@ -2742,7 +2742,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.emit('clock', clock);
 
             // check if we need to update our audio
-            if (this.mode === 'play') {
+            if (this.mode === 'play' && this.engine.phase === 'play') {
                 // Move's and clock events are separate, so this just checks to make sure that when we
                 // update, we are updating when the engine and clock agree on whose turn it is.
                 if (this.engine.colorToMove() === clock.current_player) {
@@ -2768,6 +2768,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             } else {
                                 audio_clock.in_overtime = true;
                                 audio_clock.countdown_seconds = Math.ceil(player_clock.period_time_left / 1000);
+                                if (player_clock.periods_left <= 0) {
+                                    audio_clock.countdown_seconds = -1;
+                                }
                             }
                             break;
 
@@ -2789,8 +2792,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     if (!deepEqual(audio_clock, last_audio_event[clock.current_player])) {
                         last_audio_event[clock.current_player] = audio_clock;
-                        this.emit('audio-clock', audio_clock);
-                    } else {
+                        if (audio_clock.countdown_seconds > 0) {
+                            this.emit('audio-clock', audio_clock);
+                        }
                     }
                 } else {
                     // Engine and clock code didn't agreen on whose turn it was, don't emit audio-clock event yet
@@ -2798,7 +2802,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             }
 
-            this.__clock_timer = setTimeout(do_update, next_update_time);
+            if (this.engine.phase !== 'finished') {
+                this.__clock_timer = setTimeout(do_update, next_update_time);
+            }
         };
 
         do_update();
