@@ -42,30 +42,23 @@ export function resizeDeviceScaledCanvas(canvas:HTMLCanvasElement, width:number,
 
     if (devicePixelRatio !== backingStoreRatio) {
         console.log("Scaling necessary: Device pixel ratio: " + devicePixelRatio + "  background store ratio: " + backingStoreRatio);
+    }
 
-        canvas.width = width * ratio;
-        canvas.height = height * ratio;
-        //canvas.attr("width", width * ratio);
-        //canvas.attr("height", height * ratio);
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
 
-        canvas.style.width = width + "px";
-        canvas.style.height = height + "px";
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
 
-        // now scale the context to counter
-        // the fact that we've manually scaled
-        // our canvas element
-
-        try {
-            context.scale(ratio, ratio);
-        } catch (e) {
-            __deviceCanvasScalingRatio = 1.0;
-            canvas.width = width;
-            canvas.height = height;
-            console.warn(e);
-        }
-    } else {
+    try {
+        // now scale the context to counter the fact that we've manually
+        // scaled our canvas element
+        context.scale(ratio, ratio);
+    } catch (e) {
+        __deviceCanvasScalingRatio = 1.0;
         canvas.width = width;
         canvas.height = height;
+        console.warn(e);
     }
 
     return canvas;

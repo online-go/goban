@@ -1885,6 +1885,7 @@ export class GobanCanvas extends GobanCore  {
 
         let metrics = this.metrics = this.computeMetrics();
         if (force_clear || !(this.__set_board_width === metrics.width && this.__set_board_height === metrics.height && this.theme_stone_radius === this.computeThemeStoneRadius())) {
+            force_clear = true;
             try {
                 //this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
                 this.parent.style.width = metrics.width + "px";
@@ -1911,6 +1912,14 @@ export class GobanCanvas extends GobanCore  {
                     } else {
                         this.detachPenCanvas();
                     }
+                }
+
+                if (this.shadow_layer) {
+                    resizeDeviceScaledCanvas(this.shadow_layer, metrics.width, metrics.height);
+                    //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
+                    this.shadow_layer.style.left = this.layer_offset_left + 'px';
+                    this.shadow_layer.style.top = this.layer_offset_top + 'px';
+                    this.shadow_ctx = this.shadow_layer.getContext("2d");
                 }
 
                 this.__set_board_width = metrics.width;
