@@ -31,7 +31,7 @@ import {GoMath, Move, NumberMatrix, Intersection} from "./GoMath";
 import {GoConditionalMove} from "./GoConditionalMove";
 import {MoveTree, MarkInterface, MoveTreePenMarks} from "./MoveTree";
 import {init_score_estimator, ScoreEstimator} from "./ScoreEstimator";
-import { deepEqual, dup } from "./GoUtil";
+import { deepEqual, dup, computeAverageMoveTime } from "./GoUtil";
 import {TypedEventEmitter} from "./TypedEventEmitter";
 import {_, interpolate} from "./translate";
 import { JGOFClock, JGOFTimeControl, JGOFPlayerClock, JGOFTimeControlSystem, JGOFPauseState} from './JGOF';
@@ -2983,9 +2983,17 @@ function AdHocPauseControl2JGOFPauseState(pause_control:AdHocPauseControl) {
 }
 
 function repair_config(config:GobanConfig):GobanConfig {
-    if (config.time_control && !config.time_control.system && (config.time_control as any).time_control) {
-        config.time_control.system = (config.time_control as any).time_control;
-        console.log("Repairing goban config: time_control.time_control -> time_control.system = ", config.time_control.system);
+    if (config.time_control) {
+        if (!config.time_control.system && (config.time_control as any).time_control) {
+            config.time_control.system = (config.time_control as any).time_control;
+            console.log("Repairing goban config: time_control.time_control -> time_control.system = ", config.time_control.system);
+        }
+        if (!config.time_control.speed) {
+            let tpm = computeAverageMoveTime(config.time_control);
+            config.time_control.speed =
+                tpm === 0 || tpm > 3600 ? "correspondence" : (tpm < 10 ? "blitz" : "live");
+            console.log("Repairing goban config: time_control.speed = ", config.time_control.speed);
+        }
     }
 
     return config;

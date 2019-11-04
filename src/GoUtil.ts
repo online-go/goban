@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import {_, interpolate} from "./translate";
+import { _, interpolate } from "./translate";
+import { JGOFTimeControl } from './JGOF';
 
 let __deviceCanvasScalingRatio:number = null;
 
@@ -206,4 +207,43 @@ export function elementOffset(element:HTMLElement) {
         top: rect.top + document.body.scrollTop,
         left: rect.left + document.body.scrollLeft
     };
+}
+
+export function computeAverageMoveTime(time_control:JGOFTimeControl, old_time_per_move?:number):number {
+    if (old_time_per_move) {
+        return old_time_per_move;
+    }
+    if (typeof(time_control) !== "object") {
+        console.warn(`computAverageMoveTime passed ${time_control} instead of a time_control object`);
+        return time_control;
+    }
+
+    try {
+        let t;
+        switch (time_control.system) {
+            case "fischer":
+                t = time_control.initial_time / 90 + time_control.time_increment;
+                break;
+            case "byoyomi":
+                t = time_control.main_time / 90 + time_control.period_time;
+                break;
+            case "simple":
+                t = time_control.per_move;
+                break;
+            case "canadian":
+                t = time_control.main_time / 90 + time_control.period_time / time_control.stones_per_period;
+                break;
+            case "absolute":
+                t = time_control.total_time / 90;
+                break;
+            case "none":
+                t = 0;
+                break;
+        }
+        return Math.round(t);
+    } catch (err) {
+        console.error("Error computing avergate move time for time control: ", time_control);
+        console.error(err);
+        return 60;
+    }
 }
