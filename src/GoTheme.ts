@@ -29,9 +29,9 @@ export interface GoThemeBackgroundReactStyles {
 export class GoTheme {
     public name: string;
     public styles: {[style_name:string]: string} = {};
-    protected parent: GoTheme; // An optional parent theme
+    protected parent?: GoTheme; // An optional parent theme
 
-    constructor(parent:GoTheme = null) {
+    constructor(parent?:GoTheme) {
         this.parent = parent;
     }
 
@@ -57,7 +57,7 @@ export class GoTheme {
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
-    public placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:any, cx:number, cy:number, radius:number) {
+    public placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D | null, stone:any, cx:number, cy:number, radius:number) {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getWhiteStoneColor();
         ctx.beginPath();
@@ -65,7 +65,7 @@ export class GoTheme {
         ctx.fill();
     }
 
-    public placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:any, cx:number, cy:number, radius:number) {
+    public placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D | null, stone:any, cx:number, cy:number, radius:number) {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getBlackStoneColor();
         ctx.beginPath();

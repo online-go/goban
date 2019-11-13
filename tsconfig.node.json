@@ -20,6 +20,7 @@
         },
         "noImplicitAny": true,
         "noImplicitReturns": true,
+        "strictNullChecks": true,
         "sourceMap": true,
         "jsx": "react"
     },

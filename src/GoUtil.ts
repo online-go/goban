@@ -17,7 +17,7 @@
 import { _, interpolate } from "./translate";
 import { JGOFTimeControl } from './JGOF';
 
-let __deviceCanvasScalingRatio:number = null;
+let __deviceCanvasScalingRatio:number = 0;
 
 /* Creates a non-blury canvas object. Most systems don't have an issue with
  * this, but HDPI android devices deal with scaling canvases and images in a
@@ -31,6 +31,9 @@ export function createDeviceScaledCanvas(width:number, height:number):HTMLCanvas
 
 export function resizeDeviceScaledCanvas(canvas:HTMLCanvasElement, width:number, height:number):HTMLCanvasElement {
     let context = canvas.getContext("2d");
+    if (!context) {
+        throw new Error(`Failed to get context for canvas`);
+    }
 
     let devicePixelRatio = window.devicePixelRatio || 1;
     let backingStoreRatio = (context as any).webkitBackingStorePixelRatio ||
@@ -192,15 +195,15 @@ export function deepEqual(a: any, b: any) {
     }
 }
 
-export function elementOffset(element:HTMLElement) {
+export function elementOffset(element:HTMLElement):{top: number, left: number} {
     if (!element) {
-        return null;
+        throw new Error(`No element passed to elementOffset`);
     }
 
     let rect = element.getBoundingClientRect();
 
     if (!rect) {
-        return null;
+        throw new Error(`Element.getBoundingClientRect() returned null`);
     }
 
     return {

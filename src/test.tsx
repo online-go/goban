@@ -21,14 +21,13 @@ import { GobanCore, GobanConfig, GobanHooks } from './GobanCore';
 import { GobanCanvas } from './GobanCanvas';
 import { EventEmitter } from 'eventemitter3';
 
-let stored_config:GobanConfig = null;
+let stored_config:GobanConfig = {};
 try {
-    stored_config = JSON.parse(localStorage.getItem('config'));
+    stored_config = JSON.parse(localStorage.getItem('config') || '{}');
 } catch (e) {
-
 }
 
-let base_config:GobanConfig = stored_config || {
+let base_config:GobanConfig = Object.assign({
     "interactive": true,
     "mode": "puzzle",
     //"player_id": 0,
@@ -66,7 +65,11 @@ let base_config:GobanConfig = stored_config || {
         top: 0,
         bottom: 18,
     },
-};
+}, stored_config);
+
+
+
+
 
 const hooks:GobanHooks = {
     //getCoordinateDisplaySystem: () => '1-1',
@@ -168,36 +171,44 @@ function Main():JSX.Element {
             <div className='setting'>
                 <span>Top bounds:</span>
                 <input type='range' min="0" max="18" step="1"
-                    value={base_config.bounds.top}
+                    value={base_config.bounds?.top}
                     onChange={(ev) => {
-                        base_config.bounds.top = parseInt(ev.target.value);
+                        if (base_config.bounds) {
+                            base_config.bounds.top = parseInt(ev.target.value);
+                        }
                         redraw();
                     }} />
             </div>
             <div className='setting'>
                 <span>Left bounds:</span>
                 <input type='range' min="0" max="18" step="1"
-                    value={base_config.bounds.left}
+                    value={base_config.bounds?.left}
                     onChange={(ev) => {
-                        base_config.bounds.left = parseInt(ev.target.value);
+                        if (base_config.bounds) {
+                            base_config.bounds.left = parseInt(ev.target.value);
+                        }
                         redraw();
                     }} />
             </div>
             <div className='setting'>
                 <span>Right bounds:</span>
                 <input type='range' min="0" max="18" step="1"
-                    value={base_config.bounds.right}
+                    value={base_config.bounds?.right}
                     onChange={(ev) => {
-                        base_config.bounds.right = parseInt(ev.target.value);
+                        if (base_config.bounds) {
+                            base_config.bounds.right = parseInt(ev.target.value);
+                        }
                         redraw();
                     }} />
             </div>
             <div className='setting'>
                 <span>Bottom bounds:</span>
                 <input type='range' min="0" max="18" step="1"
-                    value={base_config.bounds.bottom}
+                    value={base_config.bounds?.bottom}
                     onChange={(ev) => {
-                        base_config.bounds.bottom = parseInt(ev.target.value);
+                        if (base_config.bounds) {
+                            base_config.bounds.bottom = parseInt(ev.target.value);
+                        }
                         redraw();
                     }} />
             </div>
@@ -240,15 +251,17 @@ function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x:GobanConfig): Goba
 
         fiddler.on('redraw', () => {
             const start = Date.now();
-            goban.draw_top_labels = base_config.draw_top_labels;
-            goban.draw_left_labels = base_config.draw_left_labels;
-            goban.draw_right_labels = base_config.draw_right_labels;
-            goban.draw_bottom_labels = base_config.draw_bottom_labels;
-            goban.config.draw_top_labels = base_config.draw_top_labels;
-            goban.config.draw_left_labels = base_config.draw_left_labels;
-            goban.config.draw_right_labels = base_config.draw_right_labels;
-            goban.config.draw_bottom_labels = base_config.draw_bottom_labels;
-            goban.setBounds(base_config.bounds);
+            goban.draw_top_labels = !!base_config.draw_top_labels;
+            goban.draw_left_labels = !!base_config.draw_left_labels;
+            goban.draw_right_labels = !!base_config.draw_right_labels;
+            goban.draw_bottom_labels = !!base_config.draw_bottom_labels;
+            goban.config.draw_top_labels = !!base_config.draw_top_labels;
+            goban.config.draw_left_labels = !!base_config.draw_left_labels;
+            goban.config.draw_right_labels = !!base_config.draw_right_labels;
+            goban.config.draw_bottom_labels = !!base_config.draw_bottom_labels;
+            if (base_config.bounds) {
+                goban.setBounds(base_config.bounds);
+            }
             goban.redraw(true);
             const end = Date.now();
             console.log("Redraw time: ", end - start);

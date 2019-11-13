@@ -126,5 +126,5 @@ export interface AdHocPauseControl {
     moderator_paused?: {
         moderator_id: number;
     }
-    [vacation:string]: true | object; /* This is a string in the format of "vacation-${player_id}", it is always true - the object here is to make typescript happy */
+    [vacation:string]: any; /* This is a string in the format of "vacation-${player_id}", it is always true - the any here is to make typescript happy with object and undefined possible values */
 }

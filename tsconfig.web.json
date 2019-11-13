@@ -18,8 +18,20 @@
                 "*"
             ]
         },
+
         "noImplicitAny": true,
         "noImplicitReturns": true,
+        "strictNullChecks": true,
+        "forceConsistentCasingInFileNames": true,
+
+        "noImplicitThis": false,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "strictFunctionTypes": false,
+        "strictPropertyInitialization": false,
+        "strictBindCallApply": false,
+
+
         "sourceMap": true,
         "jsx": "react"
     },

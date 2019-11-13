@@ -39,7 +39,7 @@ export interface BoardState {
     height: number;
     board: Array<Array<NumericPlayerColor>>;
     removal: Array<Array<number>>;
-    foreachNeighbor?: (pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void) => void;
+    foreachNeighbor: (pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void) => void;
 }
 
 // [x, y, time_delta, edited?]
@@ -51,8 +51,8 @@ export class GoMath {
     public groups: Array<GoStoneGroup>;
 
     constructor(state:BoardState, original_board?:Array<Array<number>>) {
-        let groups:Array<GoStoneGroup> = [null];
-        let group_id_map:Array<Array<number>> = null;
+        let groups:Array<GoStoneGroup> = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
+        let group_id_map:Array<Array<number>> = GoMath.makeMatrix(state.width, state.height);
 
         this.state = state;
         this.group_id_map = group_id_map;
@@ -80,16 +80,15 @@ export class GoMath {
         };
 
         /* Build groups */
-        group_id_map = GoMath.makeMatrix(this.state.width, this.state.height);
         let groupId = 1;
         for (let y = 0; y < this.state.height; ++y) {
             for (let x = 0; x < this.state.width; ++x) {
                 if (group_id_map[y][x] === 0) {
-                    floodFill(x, y, this.state.board[y][x], (original_board && this.state.removal[y][x] && original_board[y][x] === 0), groupId++);
+                    floodFill(x, y, this.state.board[y][x], !!(original_board && this.state.removal[y][x] && original_board[y][x] === 0), groupId++);
                 }
 
                 if (!(group_id_map[y][x] in groups)) {
-                    groups.push(new GoStoneGroup(this.state, group_id_map[y][x], this.state.board[y][x], (original_board && this.state.removal[y][x] && original_board[y][x] === 0)));
+                    groups.push(new GoStoneGroup(this.state, group_id_map[y][x], this.state.board[y][x], !!(original_board && this.state.removal[y][x] && original_board[y][x] === 0)));
                 }
                 groups[group_id_map[y][x]].addStone(x, y);
             }
@@ -226,6 +225,9 @@ export class GoMath {
             }
         }
         else if (typeof(move_obj) === "string") {
+            if (!height || !width) {
+                throw new Error(`decodeMoves requires a height and width to be set when decoding a string coordinate`);
+            }
 
             if (/[a-zA-Z][0-9]/.test(move_obj)) {
                 /* coordinate form, used from human input. */
@@ -300,6 +302,9 @@ export class GoMath {
     }
     public static encodeMove(x:number | Move, y?:number):string {
         if (typeof(x) === "number") {
+            if (typeof(y) !== "number") {
+                throw new Error(`Invalid y parameter to encodeMove y = ${y}`);
+            }
             return GoMath.num2char(x) + GoMath.num2char(y);
         } else {
             let mv:Move = x;

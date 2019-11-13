@@ -32,7 +32,7 @@ import {_} from "./translate";
 
 
 export type GoEnginePhase = 'play'|'stone removal'|'finished';
-export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz'
+export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz';
 
 export interface PlayerScore {
     total: number;
@@ -57,7 +57,8 @@ export interface GoEngineState {
     isobranch_hash?: string;
 
     /** User data state, the Goban's usually want to store some state in here, which is
-     *  obtained and set by calling the getState_callback */
+     *  obtained and set by calling the getState_callback
+     */
     udata_state: any;
 }
 
@@ -135,7 +136,7 @@ export interface GoEngineConfig {
     errors?:Array<{error: string, stack:any}>;
 
     /** Deprecated, I dno't think we need this anymore, but need to be sure */
-    ogs_import?: boolean
+    ogs_import?: boolean;
 
     // deprecated, normalized out
     ladder?: number;
@@ -174,6 +175,9 @@ let __currentMarker = 0;
 
 export function encodeMove(x:number | Move, y?:number):string {
     if (typeof(x) === "number") {
+        if (typeof(y) !== "number") {
+            throw new Error(`Invalid y value passed to encodeMove`);
+        }
         return GoMath.num2char(x) + GoMath.num2char(y);
     } else {
         let mv:Move = x as Move;
@@ -255,8 +259,8 @@ export class GoEngine {
     public free_handicap_placement:boolean;
     private loading_sgf:boolean;
     private marks:Array<Array<number>>;
-    private move_before_jump:MoveTree;
-    private mv:Move;
+    private move_before_jump?:MoveTree;
+    //private mv:Move;
     private score_prisoners:boolean;
     private score_stones:boolean;
     private score_handicap:boolean;
@@ -287,10 +291,10 @@ export class GoEngine {
 
         let self = this;
         this.config = config;
-        this.dontStoreBoardHistory = dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
+        this.dontStoreBoardHistory = !!dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
 
-        this.goban_callback = goban_callback;
-        if (this.goban_callback) {
+        if (goban_callback) {
+            this.goban_callback = goban_callback;
             this.goban_callback.engine = this;
         }
         this.board = [];
@@ -299,7 +303,10 @@ export class GoEngine {
         this.white_prisoners = 0;
         this.black_prisoners = 0;
         this.board_is_repeating = false;
-        this.players = config.players;
+        this.players = config.players || {
+            black: {},
+            white: {},
+        };
         for (let y = 0; y < this.height; ++y) {
             let row:Array<NumericPlayerColor> = [];
             let mark_row = [];
@@ -346,25 +353,22 @@ export class GoEngine {
         }
 
         let load_sgf_moves_if_needed = () => { };
-        if ("original_sgf" in config) {
-            if (!("initial_state" in config)) {
-                config["initial_state"] = {};
-            }
-            if (!("black" in config["initial_state"])) {
-                config["initial_state"].black = "";
-            }
-            if (!("white" in config["initial_state"])) {
-                config["initial_state"].white = "";
+        if (config.original_sgf) {
+            config.initial_state = {
+                black: config.initial_state?.black || '',
+                white: config.initial_state?.white || '',
+            };
+
+            if (this.phase === "play") {
+                this.phase = "finished";
             }
 
-            if (this.phase === "play") { this.phase = "finished"; }
-
-            load_sgf_moves_if_needed = this.parseSGF(config["original_sgf"]);
+            load_sgf_moves_if_needed = this.parseSGF(config.original_sgf);
         }
 
-        if ("initial_state" in config) {
-            let black_moves = this.decodeMoves(config.initial_state.black);
-            let white_moves = this.decodeMoves(config.initial_state.white);
+        if (config.initial_state) {
+            let black_moves = this.decodeMoves(config.initial_state.black || '');
+            let white_moves = this.decodeMoves(config.initial_state.white || '');
             for (let i = 0; i < black_moves.length; ++i) {
                 let x = black_moves[i].x;
                 let y = black_moves[i].y;
@@ -383,7 +387,7 @@ export class GoEngine {
 
         this.cur_move = this.move_tree;
         this.last_official_move = this.cur_move;
-        this.move_before_jump = null;
+        delete this.move_before_jump;
 
 
         try {
@@ -398,21 +402,21 @@ export class GoEngine {
         }
 
 
-        if ("moves" in config) {
+        if (config.moves) {
             let moves = this.decoded_moves = this.decodeMoves(config.moves);
 
             //var have_edited = false;
             for (let i = 0; i < moves.length; ++i) {
                 let mv = moves[i];
                 if (mv.edited) {
-                    this.editPlace(mv.x, mv.y, mv.color, true);
+                    this.editPlace(mv.x, mv.y, mv.color || 0, true);
                     //have_edited = true;
                 }
                 else {
                     try {
                         this.place(mv.x, mv.y, false, false, true, true, true);
                     } catch (e) {
-                        if (!("errors" in config)) {
+                        if (!config.errors) {
                             config.errors = [];
                         }
                         config.errors.push({
@@ -420,7 +424,7 @@ export class GoEngine {
                             "stack": e.stack,
                         });
                         console.log(config.errors[config.errors.length - 1]);
-                        this.editPlace(mv.x, mv.y, mv.color, true);
+                        this.editPlace(mv.x, mv.y, mv.color || 0, true);
                     }
                 }
             }
@@ -430,7 +434,7 @@ export class GoEngine {
             unpackMoveTree(this.move_tree, config.move_tree);
         }
 
-        if ("removed" in config) {
+        if (config.removed) {
             let removed = this.decodeMoves(config.removed);
             for (let i = 0; i < removed.length; ++i) {
                 this.setRemoved(removed[i].x, removed[i].y, true);
@@ -561,12 +565,12 @@ export class GoEngine {
 
             while (i < _moves.length) {
                 let mv = _moves[i];
-                let existing:MoveTree = cur.lookupMove(mv.x, mv.y, this.playerByColor(mv.color), mv.edited);
+                let existing:MoveTree | null = cur.lookupMove(mv.x, mv.y, this.playerByColor(mv.color || 0), !!mv.edited);
                 if (existing) {
                     cur = existing;
                     ++i;
                     if (cb) {
-                        cb(mv.x, mv.y, mv.edited, mv.color);
+                        cb(mv.x, mv.y, !!mv.edited, mv.color || 0);
                     }
                 } else {
                     break;
@@ -579,13 +583,13 @@ export class GoEngine {
                 let mv = _moves[i];
 
                 if (mv.edited) {
-                    this.editPlace(mv.x, mv.y, mv.color);
+                    this.editPlace(mv.x, mv.y, mv.color || 0);
                 } else {
                     this.place(mv.x, mv.y, false, false, true, true);
                 }
 
                 if (cb) {
-                    cb(mv.x, mv.y, mv.edited, mv.color);
+                    cb(mv.x, mv.y, !!mv.edited, mv.color || 0);
                 }
 
                 ret.push(this.cur_move);
@@ -619,7 +623,7 @@ export class GoEngine {
         }
         return false;
     }
-    public jumpTo(node:MoveTree):void {
+    public jumpTo(node:MoveTree | null):void {
         if (!node) {
             throw new Error('Attempted to jump to a null node');
         }
@@ -653,10 +657,10 @@ export class GoEngine {
     /** Returns a move string from the given official move number (aka branch point) */
     public getMoveDiff():{'from': number, 'moves': string} {
         let branch_point = this.cur_move.getBranchPoint();
-        let cur:MoveTree = this.cur_move;
+        let cur:MoveTree | null = this.cur_move;
         let moves:Array<Move> = [];
 
-        while (cur.id !== branch_point.id) {
+        while (cur && cur.id !== branch_point.id) {
             moves.push({
                 x: cur.x,
                 y: cur.y,
@@ -678,7 +682,7 @@ export class GoEngine {
         if (this.cur_move.trunk) { console.log("Wont remove trunk node"); return; }
         let t = this.cur_move.parent;
         this.cur_move.remove();
-        this.cur_move = t;
+        this.cur_move = t ? t : this.move_tree;
         this.jumpTo(t);
     }
     public gameCanBeCanceled():boolean {
@@ -779,8 +783,8 @@ export class GoEngine {
         let toCheckY = [y];
         let ret = [];
         while (toCheckX.length) {
-            x = toCheckX.pop();
-            y = toCheckY.pop();
+            x = toCheckX.pop() || 0;
+            y = toCheckY.pop() || 0;
 
             if (this.marks[y][x] === __currentMarker) {
                 continue;
@@ -1007,10 +1011,12 @@ export class GoEngine {
         let current_state = this.getState();
         //var current_state = this.cur_move.state;
 
-        let t = this.cur_move.index(-2);
-        for (let i = Math.min(MAX_SUPERKO_SEARCH, this.cur_move.move_number - 2); i > 0; --i, t = t.prev()) {
-            if (this.boardStatesAreTheSame(t.state, current_state)) {
-                return true;
+        let t:MoveTree | null | undefined = this.cur_move.index(-2);
+        for (let i = Math.min(MAX_SUPERKO_SEARCH, this.cur_move.move_number - 2); i > 0; --i, t = t?.prev()) {
+            if (t) {
+                if (this.boardStatesAreTheSame(t.state, current_state)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -1048,7 +1054,7 @@ export class GoEngine {
 
         if (!dont_record_placement) {
             /* Remove */
-            moves = this.decodeMoves(this.initial_state.black);
+            moves = this.decodeMoves(this.initial_state?.black || '');
             for (let i = 0; i < moves.length; ++i) {
                 if (moves[i].x === x && moves[i].y === y) {
                     moves.splice(i, 1);
@@ -1057,7 +1063,7 @@ export class GoEngine {
             }
             this.initial_state.black = encodeMoves(moves);
 
-            moves = this.decodeMoves(this.initial_state.white);
+            moves = this.decodeMoves(this.initial_state?.white || '');
             for (let i = 0; i < moves.length; ++i) {
                 if (moves[i].x === x && moves[i].y === y) {
                     moves.splice(i, 1);
@@ -1068,7 +1074,7 @@ export class GoEngine {
 
             /* Then add if applicable */
             if (color) {
-                let moves = this.decodeMoves(this.initial_state[color === 1 ? "black" : "white"]);
+                let moves = this.decodeMoves(this.initial_state[color === 1 ? "black" : "white"] || '');
                 moves.push({"x": x, "y": y, "color": color});
                 this.initial_state[color === 1 ? "black" : "white"] = encodeMoves(moves);
             }
@@ -1085,7 +1091,7 @@ export class GoEngine {
         this.move_tree = new MoveTree(this, true, -1, -1, false, 0, 0, null, this.getState());
         this.cur_move = this.move_tree;
         this.last_official_move = this.cur_move;
-        this.move_before_jump = null;
+        delete this.move_before_jump;
 
         if (marks) {
             this.move_tree.setAllMarks(marks);
@@ -1440,7 +1446,6 @@ export class GoEngine {
         if (!("phase" in game_obj)) { game_obj.phase = "play"; }
         if (!("rules" in game_obj)) { game_obj.rules = "japanese"; }
 
-        let rules = game_obj.rules;
         let defaults: any = {};
 
         defaults.history = [];
@@ -1475,6 +1480,8 @@ export class GoEngine {
         defaults.white_must_pass_last = false;
         defaults.opponent_plays_first_after_resume = false;
         defaults.strict_seki_mode = game_obj.phase === "finished" ? true : false;
+
+        let rules = game_obj.rules || defaults.rules;
 
         switch (rules.toLowerCase()) {
             case "chinese"  :
@@ -1623,57 +1630,64 @@ export class GoEngine {
                         ];
                     }
 
-                    switch (game_obj.handicap) {
-                        case 8: black += stars[0][1] + stars[2][1];
-                        /* falls through */
-                        case 6: black += stars[1][0] + stars[1][2];
-                        /* falls through */
-                        case 4: black += stars[0][0];
-                        /* falls through */
-                        case 3: black += stars[2][2];
-                        /* falls through */
-                        case 2: black += stars[0][2] + stars[2][0];
-                        /* falls through */
-                        game_obj.initial_player = "white";
-                        break;
+                    if (stars) {
+                        switch (game_obj.handicap) {
+                            case 8: black += stars[0][1] + stars[2][1];
+                                /* falls through */
+                            case 6: black += stars[1][0] + stars[1][2];
+                                /* falls through */
+                            case 4: black += stars[0][0];
+                                /* falls through */
+                            case 3: black += stars[2][2];
+                                /* falls through */
+                            case 2: black += stars[0][2] + stars[2][0];
+                                /* falls through */
+                                game_obj.initial_player = "white";
+                                break;
 
-                        case 9: black += stars[0][1] + stars[2][1];
-                        /* falls through */
-                        case 7: black += stars[1][0] + stars[1][2];
-                        /* falls through */
-                        case 5: black += stars[1][1];
-                        black += stars[0][0];
-                        black += stars[2][2];
-                        black += stars[0][2] + stars[2][0];
-                        game_obj.initial_player = "white";
-                        break;
+                            case 9: black += stars[0][1] + stars[2][1];
+                                /* falls through */
+                            case 7: black += stars[1][0] + stars[1][2];
+                                /* falls through */
+                            case 5: black += stars[1][1];
+                                black += stars[0][0];
+                                black += stars[2][2];
+                                black += stars[0][2] + stars[2][0];
+                                game_obj.initial_player = "white";
+                                break;
 
-                        default: /* covers 1 stone too */
+                            default: /* covers 1 stone too */
+                                game_obj.free_handicap_placement = true;
+                                break;
+                        }
+
+                        if ("ogs_import" in game_obj) {
+                            /* ogs had the starting stones for 2 and 3 swapped from the cannonical positioning */
+                            if (game_obj.handicap === 2) { black = stars[0][0] + stars[2][2]; }
+                            if (game_obj.handicap === 3) { black = stars[0][0] + stars[0][2] + stars[2][2]; }
+                        }
+                    } else {
                         game_obj.free_handicap_placement = true;
-                        break;
-                    }
-
-                    if ("ogs_import" in game_obj) {
-                        /* ogs had the starting stones for 2 and 3 swapped from the cannonical positioning */
-                        if (game_obj.handicap === 2) { black = stars[0][0] + stars[2][2]; }
-                        if (game_obj.handicap === 3) { black = stars[0][0] + stars[0][2] + stars[2][2]; }
                     }
 
                     game_obj.initial_state = {"black": black, "white": white};
-                    //console.log("Handicap laid out [" + game_obj.handicap + "]:", game_obj.initial_state);
                 } else {
                     game_obj.initial_state = {"black": "", "white": ""};
                 }
         }
 
 
-        if (game_obj.phase === "finished" && "ogs" in game_obj) {
+        if (game_obj.phase === "finished" && game_obj.ogs && game_obj.score) {
             let ogs = game_obj.ogs;
             game_obj.score.white.scoring_positions = (game_obj.rules !== "japanese" ? ogs.white_stones : "") + ogs.white_territory;
             game_obj.score.black.scoring_positions = (game_obj.rules !== "japanese" ? ogs.black_stones : "") + ogs.black_territory;
             let dead = ogs.black_seki_eyes + ogs.white_seki_eyes + ogs.black_dead_stones + ogs.white_dead_stones;
-            game_obj.players.white.accepted_stones = dead;
-            game_obj.players.black.accepted_stones = dead;
+            if (game_obj.players?.white) {
+                game_obj.players.white.accepted_stones = dead;
+            }
+            if (game_obj.players?.black) {
+                game_obj.players.black.accepted_stones = dead;
+            }
             game_obj.removed = dead;
         }
 
@@ -1707,7 +1721,7 @@ export class GoEngine {
 
         let inMainBranch = true;
         let gametree_depth = 0;
-        let farthest_move:MoveTree = null;
+        let farthest_move:MoveTree;
 
         if (sgf.charCodeAt(0) > 255) {
             /* Assume this is a Byte Order Mark */
@@ -1855,6 +1869,13 @@ export class GoEngine {
                                     }
                                 });
                             } else {
+                                if (!self.config.initial_state) {
+                                    self.config.initial_state = {
+                                        black: '',
+                                        white: ''
+                                    };
+                                }
+
                                 if (ident === "AB") {
                                     self.config.initial_state.black += val;
                                 } else {
@@ -1958,9 +1979,9 @@ export class GoEngine {
         se.init(this, trials, tolerance);
         return se.score();
     }
-    public getMoveByLocation(x:number, y:number):MoveTree {
-        let m = null;
-        let cur_move = this.cur_move;
+    public getMoveByLocation(x:number, y:number):MoveTree | null {
+        let m:MoveTree | null = null;
+        let cur_move:MoveTree | null = this.cur_move;
         while (!m && cur_move) {
             if (cur_move.x === x && cur_move.y === y) {
                 m = cur_move;

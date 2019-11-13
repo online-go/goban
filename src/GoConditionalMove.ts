@@ -17,7 +17,7 @@
 
 type ConditionalMoveResponse = [
     /** response_move */
-    string,
+    string | null,
 
     /** next: */
     ConditionalMoveTree
@@ -31,10 +31,10 @@ export class GoConditionalMove {
     children: {
         [move:string]: GoConditionalMove;
     };
-    parent: GoConditionalMove;
-    move: string;
+    parent?: GoConditionalMove;
+    move: string | null;
 
-    constructor(move:string, parent:GoConditionalMove) {
+    constructor(move:string | null, parent?:GoConditionalMove) {
         this.move = move;
         this.parent = parent;
         this.children = {};
@@ -50,7 +50,7 @@ export class GoConditionalMove {
     static decode(data:ConditionalMoveResponse):GoConditionalMove {
         let move = data[0];
         let children = data[1];
-        let ret = new GoConditionalMove(move, null);
+        let ret = new GoConditionalMove(move);
         for (let ch in children) {
             let child = GoConditionalMove.decode(children[ch]);
             child.parent = ret;

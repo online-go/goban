@@ -197,7 +197,7 @@ interface Events {
     "audio-pass": never;
     "audio-stone": number;
     "audio-clock": AudioClockEvent;
-    "clock": JGOFClock;
+    "clock": JGOFClock | null;
 }
 
 export interface GobanHooks {
@@ -245,6 +245,7 @@ export interface ReviewMessage {
         channel: string;
         date: number
     };
+    "remove-chat"?: string;
     //"remove-chat";
     //"voice";
     //"unvoice";
@@ -273,7 +274,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public conditional_starting_color:'black'|'white'|'invalid';
     public analyze_tool:AnalysisTool;
     public analyze_subtool:AnalysisSubTool;
-    public black_pause_text: string = null;
+    public black_pause_text: string;
     public conditional_tree:GoConditionalMove;
     public double_click_submit: boolean;
     public draw_bottom_labels:boolean;
@@ -282,7 +283,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public draw_top_labels:boolean;
     public engine: GoEngine;
     public height:number;
-    public last_clock:AdHocClock = null;
+    public last_clock:AdHocClock;
     public mode:string;
     public one_click_submit: boolean;
     public pen_marks:Array<any>;
@@ -292,8 +293,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public review_owner_id: number;
     public score_estimate:any;
     public showing_scores:boolean;
-    public submit_move:() => void;
-    public white_pause_text: string = null;
+    public submit_move?:() => void;
+    public white_pause_text: string;
     public width:number;
 
 
@@ -311,7 +312,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected bounds:GobanBounds;
     protected conditional_path:string;
     public config:GobanConfig;
-    protected current_cmove:GoConditionalMove;
+    protected current_cmove?:GoConditionalMove;
     protected currently_my_cmove:boolean;
     protected destroyed:boolean;
     protected dirty_redraw:any = null; // timer
@@ -321,10 +322,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected dont_draw_last_move:boolean;
     protected edit_color:'black' | 'white';
     protected errorHandler:(e:Error) => void;
-    protected heatmap:NumberMatrix;
-    protected colored_circles:Array<Array<ColoredCircle>>;
+    protected heatmap?:NumberMatrix;
+    protected colored_circles?:Array<Array<ColoredCircle>>;
     protected game_type:string;
-    protected getPuzzlePlacementSetting:() => PuzzlePlacementSetting;
+    protected getPuzzlePlacementSetting?:() => PuzzlePlacementSetting;
     protected goban_id: number;
     protected has_new_official_move:boolean;
     protected highlight_movetree_moves:boolean;
@@ -335,17 +336,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected isPlayerOwner:() => boolean;
     protected label_character:string;
     protected label_mark:string;
-    protected last_hover_square:Intersection;
-    protected last_move:MoveTree;
-    protected last_phase:GoEnginePhase;
+    protected last_hover_square?:Intersection;
+    protected last_move?:MoveTree;
+    protected last_phase?:GoEnginePhase;
     protected last_review_message:ReviewMessage;
     protected last_sound_played_for_a_stone_placement:string;
     protected last_stone_sound:number;
     protected metrics:GobanMetrics;
     //protected move_number:number;
-    protected move_selected:Intersection;
+    protected move_selected?:Intersection;
     protected no_display:boolean;
-    protected onError:(error:Error) => void;
+    protected onError?:(error:Error) => void;
     //protected onPendingResignation;
     //protected onPendingResignationCleared;
     protected on_game_screen:boolean;
@@ -455,34 +456,36 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.double_click_submit = "double_click_submit" in config ? config["double_click_submit"] : true;
         this.original_square_size = config["square_size"] || "auto";
         //this.square_size = config["square_size"] || "auto";
-        this.interactive = "interactive" in config ? config["interactive"] : false;
+        this.interactive = !!config.interactive;
         this.pen_marks = [];
 
-        this.engine = null;
-        this.last_move = null;
+        //this.engine = null;
+        //this.last_move = null;
         this.config = repair_config(config);
         this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
-        this.game_id = config.game_id;
-        this.player_id = config.player_id;
-        this.review_id = config.review_id;
+        this.game_id = config.game_id || 0;
+        this.player_id = config.player_id || 0;
+        this.review_id = config.review_id || 0;
         this.last_review_message = {};
         this.review_had_gamedata = false;
-        this.puzzle_autoplace_delay = "puzzle_autoplace_delay" in config ? config.puzzle_autoplace_delay : 300;
+        this.puzzle_autoplace_delay = config.puzzle_autoplace_delay || 300;
         this.isPlayerOwner = config.isPlayerOwner || (() => false); /* for reviews  */
         this.isPlayerController = config.isPlayerController || (() => false); /* for reviews  */
         this.isInPushedAnalysis = config.isInPushedAnalysis ? config.isInPushedAnalysis : (() => false);
         this.leavePushedAnalysis = config.leavePushedAnalysis ? config.leavePushedAnalysis : (() => { return; });
         //this.onPendingResignation = config.onPendingResignation;
         //this.onPendingResignationCleared = config.onPendingResignationCleared;
-        this.onError = "onError" in config ? config.onError : null;
-        this.dont_draw_last_move = "dont_draw_last_move" in config ? config.dont_draw_last_move : false;
-        this.getPuzzlePlacementSetting = "getPuzzlePlacementSetting" in config ? config.getPuzzlePlacementSetting : null;
+        if ('onError' in config) {
+            this.onError = config.onError;
+        }
+        this.dont_draw_last_move = !!config.dont_draw_last_move;
+        this.getPuzzlePlacementSetting = config.getPuzzlePlacementSetting;
         this.has_new_official_move = false;
         this.mode = "play";
         this.analyze_tool = "stone";
         this.analyze_subtool = "alternate";
         this.label_character = "A";
-        this.edit_color = null;
+        //this.edit_color = null;
         this.stone_placement_enabled = false;
         this.highlight_movetree_moves = false;
         this.restrict_moves_to_movetree = false;
@@ -498,10 +501,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         };
 
-        this.draw_top_labels    = "draw_top_labels"    in config ? config["draw_top_labels"]    : true;
-        this.draw_left_labels   = "draw_left_labels"   in config ? config["draw_left_labels"]   : true;
-        this.draw_right_labels  = "draw_right_labels"  in config ? config["draw_right_labels"]  : true;
-        this.draw_bottom_labels = "draw_bottom_labels" in config ? config["draw_bottom_labels"] : true;
+        this.draw_top_labels    = "draw_top_labels"    in config ? !!config.draw_top_labels    : true;
+        this.draw_left_labels   = "draw_left_labels"   in config ? !!config.draw_left_labels   : true;
+        this.draw_right_labels  = "draw_right_labels"  in config ? !!config.draw_right_labels  : true;
+        this.draw_bottom_labels = "draw_bottom_labels" in config ? !!config.draw_bottom_labels : true;
         this.show_move_numbers  = this.getShowMoveNumbers();
         this.show_variation_move_numbers = this.getShowVariationMoveNumbers();
 
@@ -520,8 +523,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         } else if (typeof(config['square_size']) === 'number') {
             this.square_size = config['square_size'] as number;
         }
-        if ("display_width" in config && this.original_square_size === "auto") {
-            this.display_width = config["display_width"];
+        if (config.display_width && this.original_square_size === "auto") {
+            this.display_width = config.display_width;
             let n_squares = Math.max(
                 this.bounded_width  + +this.draw_left_labels + +this.draw_right_labels,
                 this.bounded_height + +this.draw_bottom_labels + +this.draw_top_labels
@@ -551,11 +554,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.post_config_constructor = () => {
 
-            this.current_cmove = null; /* set in setConditionalTree */
+            delete this.current_cmove; /* set in setConditionalTree */
             this.currently_my_cmove = false;
-            this.setConditionalTree(null);
+            this.setConditionalTree(undefined);
 
-            this.last_hover_square = null;
+            delete this.last_hover_square;
             this.__last_pt = this.xy2ij(-1, -1);
             if (preloaded_data) {
                 this.load(preloaded_data);
@@ -580,9 +583,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             */
 
             this.review_connection_data = {
-                "auth": config.auth,
-                "review_id": config.review_id,
-                "player_id": config.player_id
+                "auth": config.auth || 'missing-auth',
+                "review_id": config.review_id || 0,
+                "player_id": config.player_id || 0
             };
 
             if ("server_socket" in config && config["server_socket"]) {
@@ -789,7 +792,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (this.on_game_screen && this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
                     this.emit('audio-game-end');
                 }
-                this.last_phase = obj.phase;
+                if (obj.phase) {
+                    this.last_phase = obj.phase;
+                } else {
+                    console.warn(`Game gameata missing phase`);
+                }
                 this.load(obj);
                 this.emit("gamedata", obj);
 
@@ -819,7 +826,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (this.disconnectedFromGame) { return; }
                 this.message(msg);
             });
-            this.last_phase = null;
+            delete this.last_phase;
 
             this._socket_on(prefix + "clock", (obj:any):void => {
                 if (this.disconnectedFromGame) { return; }
@@ -908,7 +915,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     if (this.engine.cur_move.id !== this.engine.last_official_move.id &&
                         (this.engine.cur_move.parent == null
                          && this.engine.cur_move.trunk_next != null
-                         || this.engine.cur_move.parent.id !== this.engine.last_official_move.id)
+                         || this.engine.cur_move.parent?.id !== this.engine.last_official_move.id)
                     ) {
                         jumptomove = this.engine.cur_move;
                     }
@@ -932,14 +939,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
 
                     if (mv[0].edited) {
-                        this.engine.editPlace(mv[0].x, mv[0].y, mv[0].color);
+                        this.engine.editPlace(mv[0].x, mv[0].y, mv[0].color || 0);
                     }
                     else {
                         this.engine.place(mv[0].x, mv[0].y, false, false, false, true, true);
                     }
 
                     this.setLastOfficialMove();
-                    this.move_selected = null;
+                    delete this.move_selected;
 
                     if (jumptomove) {
                         this.engine.jumpTo(jumptomove);
@@ -966,7 +973,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (this.disconnectedFromGame) { return; }
 
                 if (cmoves.moves == null) {
-                    this.setConditionalTree(null);
+                    this.setConditionalTree();
                 } else {
                     this.setConditionalTree(GoConditionalMove.decode(cmoves.moves));
                 }
@@ -1034,19 +1041,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         let process_r = (obj:ReviewMessage) => {
             if (this.disconnectedFromGame) { return; }
 
-            if ("chat" in obj) {
-                obj["chat"].channel = "discussion";
+            if (obj.chat) {
+                obj.chat.channel = "discussion";
                 if (!obj.chat.chat_id) {
                     obj.chat.chat_id = obj.chat.player_id + "." + obj.chat.date;
                 }
-                this.emit("chat", obj["chat"]);
+                this.emit("chat", obj.chat);
             }
 
-            if ("remove-chat" in obj) {
+            if (obj["remove-chat"]) {
                 this.emit("chat-remove", { chat_ids: [obj['remove-chat']] });
             }
 
-            if ("gamedata" in obj) {
+            if (obj.gamedata) {
                 if (obj.gamedata.phase === "stone removal") {
                     obj.gamedata.phase = "finished";
                 }
@@ -1055,10 +1062,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.review_had_gamedata = true;
             }
 
-            if ("owner" in obj) {
+            if (obj.owner) {
                 this.review_owner_id =  typeof(obj.owner) === "object" ? obj.owner.id : obj.owner;
             }
-            if ("controller" in obj) {
+            if (obj.controller) {
                 this.review_controller_id = typeof(obj.controller) === "object" ? obj.controller.id : obj.controller;
             }
 
@@ -1070,10 +1077,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 let curmove = this.engine.cur_move;
                 let follow = this.engine.cur_review_move == null || this.engine.cur_review_move.id === curmove.id;
                 let do_redraw = false;
-                if ("f" in obj) { /* specifying node */
+                if ("f" in obj && typeof(obj.m) === 'string') { /* specifying node */
                     let t = this.done_loading_review;
                     this.done_loading_review = false; /* this prevents drawing from being drawn when we do a follow path. */
-                    this.engine.followPath(obj.f, obj.m);
+                    this.engine.followPath(obj.f || 0, obj.m);
                     this.drawSquare(this.engine.cur_move.x, this.engine.cur_move.y);
                     this.done_loading_review = t;
                     this.engine.setAsCurrentReviewMove();
@@ -1114,13 +1121,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
 
                 if (this.engine.cur_review_move) {
-                    if ("t" in obj) { /* set text */
+                    if (typeof(obj["t"]) === 'string') { /* set text */
                         this.engine.cur_review_move.text = obj["t"];
                     }
                     if ("t+" in obj) { /* append to text */
                         this.engine.cur_review_move.text += obj["t+"];
                     }
-                    if ("k" in obj) { /* set marks */
+                    if (typeof(obj.k) !== 'undefined') { /* set marks */
                         let t = this.engine.cur_move;
                         this.engine.cur_review_move.clearMarks();
                         this.engine.cur_move = this.engine.cur_review_move;
@@ -1142,10 +1149,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             this.move_tree_redraw();
                         }
                     }
-                    if ("pen" in obj) { /* start pen */
+                    if (typeof(obj.pen) !== 'undefined') { /* start pen */
                         this.engine.cur_review_move.pen_marks.push({"color": obj["pen"], "points": []});
                     }
-                    if ("pp" in obj) { /* update pen marks */
+                    if (typeof(obj.pp) !== 'undefined') { /* update pen marks */
                         try {
                             let pts = this.engine.cur_review_move.pen_marks[this.engine.cur_review_move.pen_marks.length - 1].points;
                             this.engine.cur_review_move.pen_marks[this.engine.cur_review_move.pen_marks.length - 1].points = pts.concat(obj["pp"]);
@@ -1187,7 +1194,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.emit("chat", {
                         "system": true,
                         "chat_id": uuid(),
-                        "body": interpolate(_("Control passed to %s"), [typeof(obj.controller) === "number" ? `%%%PLAYER-${obj.controller}%%%` : obj.controller.username]),
+                        "body": interpolate(_("Control passed to %s"), [typeof(obj.controller) === "number" ? `%%%PLAYER-${obj.controller}%%%` : obj.controller?.username || '[missing controller name]']),
                         "channel": "system",
                     });
                     this.emit("update");
@@ -1349,7 +1356,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.edit_color = "white";
 
         } else {
-            this.edit_color = null;
+            delete this.edit_color;
         }
 
         this.setLabelCharacterFromMarks(this.analyze_subtool as ('letters' | 'numbers'));
@@ -1361,7 +1368,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
 
     protected putOrClearLabel(x:number, y:number, mode?:'put'|'clear'):boolean {
-        let ret:boolean = null;
+        let ret:boolean = false;
         if (mode == null || typeof(mode) === "undefined") {
             if (this.analyze_subtool === "letters" || this.analyze_subtool === "numbers") {
                 this.label_mark = this.label_character;
@@ -1440,7 +1447,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
     public computeMetrics():GobanMetrics {
-        if (this.square_size <= 0) {
+        if (!this.square_size || this.square_size <= 0) {
             //console.error("Non positive square size set", this.square_size);
             //console.error(new Error().stack);
             this.square_size = 12;
@@ -1453,13 +1460,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             "offset": 0
         };
 
-        if (this.square_size % 2 === 0) { ret.mid -= 0.5; ret.offset = 0.5; }
+        if (this.square_size % 2 === 0) { 
+            ret.mid -= 0.5; 
+            ret.offset = 0.5; 
+        }
 
         return ret;
     }
-    protected setSubmit(fn:() => void):void {
+    protected setSubmit(fn?:() => void):void {
         this.submit_move = fn;
-        this.emit("show-submit", fn != null);
+        this.emit("show-submit", !!fn);
     }
 
     public markDirty():void {
@@ -1506,10 +1516,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.bounded_height = this.height;
         }
 
-        this.draw_left_labels = this.config.draw_left_labels;
-        this.draw_right_labels = this.config.draw_right_labels;
-        this.draw_top_labels = this.config.draw_top_labels;
-        this.draw_bottom_labels = this.config.draw_bottom_labels;
+        this.draw_left_labels = !!this.config.draw_left_labels;
+        this.draw_right_labels = !!this.config.draw_right_labels;
+        this.draw_top_labels = !!this.config.draw_top_labels;
+        this.draw_bottom_labels = !!this.config.draw_bottom_labels;
 
         if (this.bounds.left > 0) { this.draw_left_labels = false; }
         if (this.bounds.top > 0) { this.draw_top_labels = false; }
@@ -1525,7 +1535,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.clearMessage();
         this.width = config.width || 19;
         this.height = config.height || 19;
-        this.move_selected = null;
+        delete this.move_selected;
 
         this.bounds = config.bounds || {top: 0, left: 0, bottom: this.height - 1, right: this.width - 1};
         if (this.bounds) {
@@ -1537,7 +1547,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
 
-        if ("display_width" in config && this.original_square_size === "auto") {
+        if (config.display_width && this.original_square_size === "auto") {
             this.display_width = config["display_width"];
             if (isNaN(this.display_width)) {
                 console.error("Invalid display width. (NaN)");
@@ -1585,17 +1595,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         */
 
-        if ("marks" in this.config && this.engine) {
+        if (this.config.marks && this.engine) {
             this.setMarks(this.config.marks);
         }
-        this.setConditionalTree(null);
+        this.setConditionalTree();
 
-        if (this.engine.puzzle_player_move_mode === "fixed" && this.getPuzzlePlacementSetting().mode === "play") {
-            this.highlight_movetree_moves = true;
-            this.restrict_moves_to_movetree = true;
-        }
-        if (this.getPuzzlePlacementSetting && this.getPuzzlePlacementSetting().mode !== "play") {
-            this.highlight_movetree_moves = true;
+        if (this.getPuzzlePlacementSetting) {
+            if (this.engine.puzzle_player_move_mode === "fixed" && this.getPuzzlePlacementSetting().mode === "play") {
+                this.highlight_movetree_moves = true;
+                this.restrict_moves_to_movetree = true;
+            }
+            if (this.getPuzzlePlacementSetting && this.getPuzzlePlacementSetting().mode !== "play") {
+                this.highlight_movetree_moves = true;
+            }
         }
 
         if (!(old_engine && old_engine.boardMatriciesAreTheSame(old_engine.board, this.engine.board))) {
@@ -1769,14 +1781,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public showNext(dont_update_display?:boolean):void {
         if (this.mode === "conditional") {
-            if (this.currently_my_cmove) {
-                if (this.current_cmove.move != null) {
-                    this.followConditionalPath(this.current_cmove.move);
-                }
-            } else {
-                for (let ch in this.current_cmove.children) {
-                    this.followConditionalPath(ch);
-                    break;
+            if (this.current_cmove) {
+                if (this.currently_my_cmove) {
+                    if (this.current_cmove.move !== null) {
+                        this.followConditionalPath(this.current_cmove.move);
+                    }
+                } else {
+                    for (let ch in this.current_cmove.children) {
+                        this.followConditionalPath(ch);
+                        break;
+                    }
                 }
             }
         } else {
@@ -1817,7 +1831,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
 
     public jumpToLastOfficialMove():void {
-        this.move_selected = null;
+        delete this.move_selected;
         this.engine.jumpToLastOfficialMove();
         this.updateTitleAndStonePlacement();
 
@@ -1877,11 +1891,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
     }
 
-    public setConditionalTree(conditional_tree:GoConditionalMove):void {
-        if (conditional_tree == null) {
-            conditional_tree = new GoConditionalMove(null, null);
+    public setConditionalTree(conditional_tree?:GoConditionalMove):void {
+        if (typeof(conditional_tree) === 'undefined') {
+            conditional_tree = new GoConditionalMove(null);
         }
-        this.conditional_tree = conditional_tree;
+        this.conditional_tree = conditional_tree as GoConditionalMove;
         this.current_cmove = conditional_tree;
 
         this.emit("update");
@@ -1896,6 +1910,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected followConditionalSegment(x:number, y:number):void {
         let mv = encodeMove(x, y);
         this.conditional_path += mv;
+
+        if (!this.current_cmove) {
+            throw new Error(`followConditionalSegment called when current_cmove was not set`);
+        }
 
         if (this.currently_my_cmove) {
             if (mv !== this.current_cmove.move) {
@@ -1918,15 +1936,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected deleteConditionalSegment(x:number, y:number) {
         this.conditional_path += encodeMove(x, y);
 
+        if (!this.current_cmove) {
+            throw new Error(`deleteConditionalSegment called when current_cmove was not set`);
+        }
+
         if (this.currently_my_cmove) {
             this.current_cmove.children = {};
             this.current_cmove.move = null;
             let cur = this.current_cmove;
             let parent = cur.parent;
             this.current_cmove = parent;
-            for (let mv in parent.children) {
-                if (parent.children[mv] === cur) {
-                    delete parent.children[mv];
+            if (parent) {
+                for (let mv in parent.children) {
+                    if (parent.children[mv] === cur) {
+                        delete parent.children[mv];
+                    }
                 }
             }
         } else {
@@ -1979,7 +2003,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             return false;
         }
 
-        this.setSubmit(null);
+        this.setSubmit();
 
         if (["play", "analyze", "conditional", "edit", "score estimation", "pattern search", "puzzle"].indexOf(mode) === -1) {
             swal("Invalid mode for Goban: " + mode);
@@ -2115,7 +2139,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
     public rejectRemovedStones():void {
-        this.engine.players[this.engine.playerColor(this.config.player_id) as 'black' | 'white'].accepted_stones = null;
+        delete this.engine.players[this.engine.playerColor(this.config.player_id) as 'black' | 'white'].accepted_stones;
         this.socket.send("game/removed_stones/reject", {
             "auth": this.config.auth,
             "game_id": this.config.game_id,
@@ -2210,17 +2234,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         }
     }
-    public setHeatmap(heatmap:NumberMatrix, dont_draw?:boolean): NumberMatrix {
-        let ret = this.heatmap;
+    public setHeatmap(heatmap:NumberMatrix, dont_draw?:boolean) {
         this.heatmap = heatmap;
         if (!dont_draw) {
             this.redraw(true);
         }
-        return ret;
     }
     public setColoredCircles(circles:Array<ColoredCircle>, dont_draw?:boolean):void {
         if (!circles || circles.length === 0) {
-            this.colored_circles = null;
+            delete this.colored_circles;
             return;
         }
 
@@ -2355,7 +2377,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
                     let ch = this.getMarks(x, y).letter;
-                    idx = Math.max(idx, seq1.indexOf(ch));
+                    if (ch) {
+                        idx = Math.max(idx, seq1.indexOf(ch));
+                    }
                 }
             }
 
@@ -2366,8 +2390,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
-                    if (parseInt(this.getMarks(x, y).letter)) {
-                        val = Math.max(val, parseInt(this.getMarks(x, y).letter));
+                    let mark_as_number:number = parseInt(this.getMarks(x, y).letter || '');
+                    if (mark_as_number) {
+                        val = Math.max(val, mark_as_number);
                     }
                 }
             }
@@ -2445,7 +2470,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.message(_("Processing..."), -1);
         let do_score_estimation = () => {
-            let se = new ScoreEstimator(null);
+            let se = new ScoreEstimator();
             se.init(this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
             //console.error(se.area);
 
@@ -2509,30 +2534,32 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
 
-    public setGameClock(original_clock:AdHocClock):void {
+    public setGameClock(original_clock:AdHocClock | null):void {
         if (this.__clock_timer) {
             clearTimeout(this.__clock_timer);
             this.__clock_timer = null;
         }
 
-        if (original_clock == null) {
+        if (!original_clock) {
             this.emit('clock', null);
             return;
         }
 
-        let time_control:JGOFTimeControl = this.config.time_control;
-        if (!time_control || !time_control.system) {
+        if (!this.config.time_control || !this.config.time_control.system) {
             this.emit('clock', null);
             return;
         }
+        let time_control:JGOFTimeControl = this.config.time_control;
 
         this.last_clock = original_clock;
 
 
-        let current_server_time:number = null;
+        let current_server_time:number = 0;
         function update_current_server_time() {
-            let server_time_offset = GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
-            current_server_time = Date.now() - server_time_offset;
+            if (GobanCore.hooks.getClockDrift && GobanCore.hooks.getNetworkLatency) {
+                let server_time_offset = GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
+                current_server_time = Date.now() - server_time_offset;
+            }
         }
         update_current_server_time();
 
@@ -2541,8 +2568,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             current_player_id: original_clock.current_player.toString(),
             time_of_last_move: original_clock.last_move,
             paused_since: original_clock.paused_since,
-            black_clock: null,
-            white_clock: null,
+            black_clock: { main_time: 0 },
+            white_clock: { main_time: 0 },
         };
 
         if (original_clock.pause) {
@@ -2618,7 +2645,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             ret.main_time = 0;
                             overtime_usage = time_elapsed;
                         }
-                        ret.periods_left = original_player_clock.periods;
+                        ret.periods_left = original_player_clock.periods || 0;
                         ret.period_time_left = time_control.period_time * 1000;
                         if (overtime_usage > 0) {
                             let periods_used = Math.floor(overtime_usage / (time_control.period_time * 1000));
@@ -2655,7 +2682,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             overtime_usage = time_elapsed;
                         }
                         ret.moves_left = original_player_clock.moves_left;
-                        ret.block_time_left = original_player_clock.block_time * 1000;
+                        ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
 
                         if (overtime_usage > 0) {
                             ret.block_time_left -= overtime_usage;
@@ -2667,7 +2694,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     } else {
                         ret.main_time = original_player_clock.thinking_time * 1000;
                         ret.moves_left = original_player_clock.moves_left;
-                        ret.block_time_left = original_player_clock.block_time * 1000;
+                        ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
                     }
                     break;
 
@@ -2726,14 +2753,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 : current_server_time - original_clock.last_move;
 
             clock.black_clock = make_player_clock(
-                typeof(original_clock.black_time) === 'number' ? null : original_clock.black_time as AdHocPlayerClock,
+                original_clock.black_time as AdHocPlayerClock,
                 original_clock.expiration,
                 clock.current_player === 'black' && !clock.start_mode,
                 elapsed
             );
 
             clock.white_clock = make_player_clock(
-                typeof(original_clock.white_time) === 'number' ? null : original_clock.white_time as AdHocPlayerClock,
+                original_clock.white_time as AdHocPlayerClock,
                 original_clock.expiration,
                 clock.current_player === 'white' && !clock.start_mode,
                 elapsed
@@ -2767,8 +2794,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 audio_clock.countdown_seconds = Math.ceil(player_clock.main_time / 1000);
                             } else {
                                 audio_clock.in_overtime = true;
-                                audio_clock.countdown_seconds = Math.ceil(player_clock.period_time_left / 1000);
-                                if (player_clock.periods_left <= 0) {
+                                audio_clock.countdown_seconds = Math.ceil((player_clock.period_time_left || 0) / 1000);
+                                if ((player_clock.periods_left || 0) <= 0) {
                                     audio_clock.countdown_seconds = -1;
                                 }
                             }
@@ -2779,7 +2806,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 audio_clock.countdown_seconds = Math.ceil(player_clock.main_time / 1000);
                             } else {
                                 audio_clock.in_overtime = true;
-                                audio_clock.countdown_seconds = Math.ceil(player_clock.block_time_left / 1000);
+                                audio_clock.countdown_seconds = Math.ceil((player_clock.block_time_left || 0) / 1000);
                             }
                             break;
 
@@ -2827,7 +2854,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         let pos = this.getMarks(x, y);
                         for (let i = 0; i < MARK_TYPES.length; ++i) {
                             if (MARK_TYPES[i] in pos && pos[MARK_TYPES[i]]) {
-                                let markkey:(keyof MarkInterface) = MARK_TYPES[i] === "letter" ? pos.letter : MARK_TYPES[i];
+                                let markkey:(keyof MarkInterface) = MARK_TYPES[i] === "letter" ? (pos.letter || '[ERR]') : MARK_TYPES[i];
                                 if (!(markkey in marks)) {
                                     marks[markkey] = "";
                                 }
@@ -2942,8 +2969,9 @@ function AdHocPauseControl2JGOFPauseState(pause_control:AdHocPauseControl) {
     let ret:JGOFPauseState = {};
 
     for (let k in pause_control) {
-        if (/vacation-([0-9]+)/.test(k)) {
-            let player_id = k.match(/vacation-([0-9]+)/)[1];
+        let matches = k.match(/vacation-([0-9]+)/);
+        if (matches) {
+            let player_id = matches[1];
             if (!ret.vacation) {
                 ret.vacation = {};
             }
@@ -2964,13 +2992,13 @@ function AdHocPauseControl2JGOFPauseState(pause_control:AdHocPauseControl) {
 
                 case 'paused':
                     ret.player = {
-                        player_id: pause_control.paused.pausing_player_id.toString(),
-                        pauses_left: pause_control.paused.pauses_left,
+                        player_id: pause_control.paused?.pausing_player_id.toString() || '0',
+                        pauses_left: pause_control.paused?.pauses_left || 0,
                     };
                     break;
 
                 case 'moderator_paused':
-                    ret.moderator = pause_control.moderator_paused.moderator_id.toString();
+                    ret.moderator = pause_control.moderator_paused?.moderator_id.toString() || '0';
                     break;
 
                 default:
@@ -2985,14 +3013,14 @@ function AdHocPauseControl2JGOFPauseState(pause_control:AdHocPauseControl) {
 function repair_config(config:GobanConfig):GobanConfig {
     if (config.time_control) {
         if (!config.time_control.system && (config.time_control as any).time_control) {
-            config.time_control.system = (config.time_control as any).time_control;
-            console.log("Repairing goban config: time_control.time_control -> time_control.system = ", config.time_control.system);
+            (config.time_control as any).system = (config.time_control as any).time_control;
+            console.log("Repairing goban config: time_control.time_control -> time_control.system = ", (config.time_control as any).system);
         }
         if (!config.time_control.speed) {
             let tpm = computeAverageMoveTime(config.time_control);
-            config.time_control.speed =
+            (config.time_control as any).speed =
                 tpm === 0 || tpm > 3600 ? "correspondence" : (tpm < 10 ? "blitz" : "live");
-            console.log("Repairing goban config: time_control.speed = ", config.time_control.speed);
+            console.log("Repairing goban config: time_control.speed = ", (config.time_control as any).speed);
         }
     }
 

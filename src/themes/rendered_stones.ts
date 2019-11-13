@@ -48,8 +48,8 @@ function rgbToHsl(r:number, g:number, b:number):[number, number, number] {
     b /= 255;
     let max = Math.max(r, g, b);
     let min = Math.min(r, g, b);
-    let h;
-    let s;
+    let h = NaN;
+    let s = NaN;
     let l = (max + min) / 2;
 
     if (max === min) {
@@ -260,9 +260,17 @@ function preRenderStone(radius:number, seed:number, options:RenderOptions):Stone
         //shadow = createDeviceScaledCanvas(sss, sss);
         ctx = stone.getContext("2d");
         shadow_ctx = shadow.getContext("2d");
+
+        if (!ctx) {
+            throw new Error("Error getting stone context 2d");
+        }
+        if (!shadow_ctx) {
+            throw new Error("Error getting shadow context 2d");
+        }
     } else {
         throw new Error("Backend server rendering has been removed, should be easy to re-enable if we still need it though (code is here, just needs wiring up again)");
     }
+
 
         /*
     } else {
@@ -382,7 +390,7 @@ function preRenderStone(radius:number, seed:number, options:RenderOptions):Stone
 
     return [{"stone": stone, "shadow": shadow}];
 }
-function placeRenderedStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:StoneType, cx:number, cy:number, radius:number):void {
+function placeRenderedStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D | null, stone:StoneType, cx:number, cy:number, radius:number):void {
 
     let dcsr = deviceCanvasScalingRatio();
     if (dcsr !== 1.0) {
@@ -418,10 +426,10 @@ export default function(GoThemes:GoThemesInterface) {
         stoneCastsShadow(radius:number):boolean {
             return stoneCastsShadow(radius * deviceCanvasScalingRatio());
         }
-        placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:StoneType, cx:number, cy:number, radius:number):void {
+        placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D | null, stone:StoneType, cx:number, cy:number, radius:number):void {
             placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
-        placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D, stone:StoneType, cx:number, cy:number, radius:number):void {
+        placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D | null, stone:StoneType, cx:number, cy:number, radius:number):void {
             placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
     }

@@ -37,7 +37,7 @@ export interface MarkInterface {
     white?            : boolean;
     color?            : string;
 
-    [label:string]    : string | boolean;
+    [label: string]: string | boolean | undefined;
 }
 
 export type MoveTreePenMarks = Array<{
@@ -83,9 +83,9 @@ export class MoveTree {
 
     public move_number: number;
     public readonly pretty_coordinates: string;
-    public parent: MoveTree;
+    public parent: MoveTree | null;
     public readonly id: number;
-    public trunk_next: MoveTree;
+    public trunk_next?: MoveTree;
     public branches: Array<MoveTree>;
     public correct_answer: boolean;
     public wrong_answer: boolean;
@@ -117,13 +117,13 @@ export class MoveTree {
     public isobranches: any;
     private isobranch_hash : string;
 
-    constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:NumericPlayerColor, move_number:number, parent:MoveTree, state:GoEngineState) {
+    constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:NumericPlayerColor, move_number:number, parent:MoveTree | null, state:GoEngineState) {
         this.id = ++__move_tree_id;
         this.x = x;
         this.y = y;
         this.pretty_coordinates = engine.prettyCoords(x, y);
-        this.label = null;
-        this.label_metrics = null;
+        //this.label;
+        //this.label_metrics;
         this.layout_x = 0;
         this.layout_y = 0;
         this.engine = engine;
@@ -133,17 +133,13 @@ export class MoveTree {
         this.parent = parent;
         this.move_number = move_number;
         this.state = state;
-        this.trunk_next = null;
+        this.trunk_next = undefined;
         this.branches = [];
         this.active_path_number = 0;
         this.active_node_number = 0;
         //this.clearMarks();
         this.line_color = -1;
-
         this.text = "";
-
-        this.correct_answer = null;
-        this.wrong_answer = null;
     }
 
 
@@ -159,7 +155,7 @@ export class MoveTree {
         if (this.hasMarks()) {
             ret.marks = [];
             this.foreachMarkedPosition((x, y) => {
-                ret.marks.push({"x": x, "y": y, "marks": this.getMarks(x, y)});
+                ret.marks?.push({"x": x, "y": y, "marks": this.getMarks(x, y)});
             });
         }
         if (this.text) {
@@ -194,9 +190,9 @@ export class MoveTree {
             throw new Error("Node mismatch when unpacking json object in MoveTree.fromJson");
         }
 
-        this.correct_answer = json.correct_answer;
-        this.wrong_answer = json.wrong_answer;
-        this.text = json.text ? json.text : "";
+        this.correct_answer = !!json.correct_answer;
+        this.wrong_answer = !!json.wrong_answer;
+        this.text = json?.text ? json.text : "";
 
         if (json.marks) {
             for (let i = 0; i < json.marks.length; ++i) {
@@ -263,9 +259,9 @@ export class MoveTree {
         recompute(this);
     }
 
-    lookupMove(x:number, y:number, player:number, edited:boolean):MoveTree {
+    lookupMove(x:number, y:number, player:number, edited:boolean):MoveTree | null {
         if (typeof(player) !== 'number') {
-            throw new Error(`Invalid player color: ${player}`)
+            throw new Error(`Invalid player color: ${player}`);
         }
 
         if (this.trunk_next &&
@@ -273,24 +269,24 @@ export class MoveTree {
                 this.trunk_next.y === y &&
                     this.trunk_next.edited === edited &&
                         (!edited || this.trunk_next.player)
-            ) {
-                return this.trunk_next;
-            }
+        ) {
+            return this.trunk_next;
+        }
 
-            for (let i = 0; i < this.branches.length; ++i) {
-                if (this.branches[i].x === x && this.branches[i].y === y && (!edited || this.branches[i].player === player) && this.branches[i].edited === edited) {
-                    return this.branches[i];
-                }
+        for (let i = 0; i < this.branches.length; ++i) {
+            if (this.branches[i].x === x && this.branches[i].y === y && (!edited || this.branches[i].player === player) && this.branches[i].edited === edited) {
+                return this.branches[i];
             }
+        }
 
-            return null;
+        return null;
     }
     move(x:number, y:number, trunk:boolean, edited:boolean, player:NumericPlayerColor, move_number:number, state:any):MoveTree {
         if (typeof(player) === "undefined") {
             throw new Error("Invalid player");
         }
         if (typeof(player) !== 'number') {
-            throw new Error(`Invalid player color: ${player}`)
+            throw new Error(`Invalid player color: ${player}`);
         }
 
         let m = this.lookupMove(x, y, player, edited);
@@ -361,7 +357,7 @@ export class MoveTree {
 
         return m;
     }
-    next(dont_follow_hints?:boolean):MoveTree {
+    next(dont_follow_hints?:boolean):MoveTree | null {
         if (this.trunk_next) {
             /* always follow a trunk first if it's available */
             return this.trunk_next;
@@ -371,9 +367,11 @@ export class MoveTree {
          * because we sometimes delete things, we're gonna check to make sure it's
          * still in our list of branches before blindly following it */
         if (this.hint_next && !dont_follow_hints) {
+            /*
             if (this.trunk_next && this.hint_next.id === this.trunk_next.id) {
                 return this.hint_next;
             }
+            */
             for (let i = 0; i < this.branches.length; ++i) {
                 if (this.branches[i].id === this.hint_next.id) {
                     return this.hint_next;
@@ -387,7 +385,7 @@ export class MoveTree {
         }
         return null;
     }
-    prev():MoveTree {
+    prev():MoveTree | null {
         if (this.parent) {
             this.parent.hint_next = this;
         }
@@ -395,16 +393,20 @@ export class MoveTree {
     }
     index(idx:number):MoveTree {
         let cur:MoveTree = this;
-        while (cur.prev() && idx < 0) { cur = cur.prev(); ++idx; }
-        while (cur.next(true) && idx > 0) { cur = cur.next(true); --idx; }
+        while (cur.prev() && idx < 0) { cur = cur.prev() as MoveTree; ++idx; }
+        while (cur.next(true) && idx > 0) { cur = cur.next(true) as MoveTree; --idx; }
         return cur;
     }
-    is(other:MoveTree):boolean {
-        return other && this.id === other.id;
+    is(other?:MoveTree):boolean {
+        return !!(other && this.id === other.id);
     }
     remove():MoveTree {
+        if (!this.parent) {
+            throw new Error(`Cannot remove MoveTree child without a parent`);
+        }
+
         if (this.is(this.parent.trunk_next)) {
-            this.parent.trunk_next = null;
+            this.parent.trunk_next = undefined;
         } else {
             for (let i = 0; i < this.parent.branches.length; ++i) {
                 if (this.parent.branches[i].is(this)) {
@@ -472,7 +474,10 @@ export class MoveTree {
             }
         }
     }
-    isAncestorOf(other:MoveTree):boolean {
+    isAncestorOf(other:MoveTree | null):boolean {
+        if (!other) {
+            return false;
+        }
         do {
             if (other.id === this.id) {
                 return true;
@@ -631,7 +636,7 @@ export class MoveTree {
     }
     getMoveStringToThisPoint():string {
         let move_stack = [];
-        let cur:MoveTree = this;
+        let cur:MoveTree | null = this;
         let ret = "";
         while (cur) {
             move_stack.push(cur);
@@ -722,7 +727,7 @@ export class MoveTree {
 
         return min_y;
     }
-    getNodeAtLayoutPosition(layout_x:number, layout_y:number):MoveTree {
+    getNodeAtLayoutPosition(layout_x:number, layout_y:number):MoveTree | null {
         let key = layout_x  + "," + layout_y;
         if (key in this.engine.move_tree_layout_hash) {
             return this.engine.move_tree_layout_hash[key];
@@ -750,19 +755,19 @@ export class MoveTree {
     }
 
 
-    nextSibling():MoveTree {
+    nextSibling():MoveTree | null {
         let ret = null;
         for (let i = 1; i < 30 && ret == null; ++i) {
             ret = this.getNodeAtLayoutPosition(this.layout_x, this.layout_y + i);
         }
         return  ret;
     }
-    prevSibling():MoveTree {
+    prevSibling():MoveTree | null {
         let ret = null;
         for (let i = 1; i < 30 && ret == null; ++i) {
             ret = this.getNodeAtLayoutPosition(this.layout_x, this.layout_y - i);
         }
-        return  ret;
+        return ret;
         //return  this.getNodeAtLayoutPosition(this.layout_x, this.layout_y-1);
     }
 
@@ -803,8 +808,11 @@ export class MoveTree {
 
         this.trunk = true;
         if (this.branches.length > 0) {
-            this.trunk_next = this.branches.shift();
-            this.trunk_next.hoistFirstBranchToTrunk();
+            let br = this.branches.shift();
+            if (br) {
+                this.trunk_next = br;
+                this.trunk_next.hoistFirstBranchToTrunk();
+            }
         }
     }
 

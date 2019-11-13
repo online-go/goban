@@ -23,7 +23,7 @@ export class SFXManager {
     private play_state: {[id:string]: string} = {};
     private play_promises: {[id:string]: Promise<void>} = {};
     private play_promise_future_state: {[id:string]: string} = {};
-    public volume_override:number = null;
+    public volume_override:number;
 
     constructor() {
         this.sync();
@@ -35,9 +35,9 @@ export class SFXManager {
     }
 
     public sync():void {
-        if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
+        if (!this.enabled && !this.volume_override) { return; }
 
-        if (GobanCore.getSoundEnabled() || (this.volume_override != null && this.volume_override > 0)) {
+        if (GobanCore.getSoundEnabled() || this.volume_override) {
             for (let i = 10; i >= 1; i--) {
                 this.addAudio(i.toString(), "female-en-" + i);
             }
@@ -58,16 +58,16 @@ export class SFXManager {
         }
     }
     public play(name:string, play_even_if_window_doesnt_have_focus?:boolean):void {
-        if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
+        if (!this.enabled && !this.volume_override) { return; }
         this.sync();
 
-        if (GobanCore.getSoundEnabled() || (this.volume_override != null && this.volume_override > 0)) {
-            if (this.volume_override != null && this.volume_override === 0)  {
+        if (GobanCore.getSoundEnabled() || this.volume_override) {
+            if (!this.volume_override) {
                 return;
             }
             try {
                 let volume = GobanCore.getSoundVolume();
-                if (this.volume_override != null) {
+                if (this.volume_override) {
                     volume = this.volume_override;
                 }
 
@@ -132,7 +132,7 @@ export class SFXManager {
         }
     }
     private addAudio(name:string, pathname:string):void {
-        if (!this.enabled && (this.volume_override == null || this.volume_override === 0)) { return; }
+        if (!this.enabled && !this.volume_override) { return; }
 
         if (pathname in this.loaded) {
             this.sfx[name] = this.loaded[pathname];

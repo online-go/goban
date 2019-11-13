@@ -48,7 +48,7 @@ export function set_OGSScoreEstimator(mod:any) {
         .catch(err => console.error(err));
 }
 
-let init_promise:Promise<boolean> = null;
+let init_promise:Promise<boolean>;
 
 export function init_score_estimator():Promise<boolean> {
     if (CLIENT) {
@@ -149,10 +149,11 @@ class SEGroup {
         this.neighboring_space = [];
         this.neighboring_enemy = [];
         this.neighbor_map = {};
-        this.liberties = null; /* This is set by ScoreEstimator.resetGroups */
         this.removed = false;
         this.estimated_score = 0.0;
         this.estimated_hard_score = 0.0;
+
+        // this.liberties is set by ScoreEstimator.resetGroups */
     }
     add(i:number, j:number, color:NumericPlayerColor) {
         this.points.push({x: i, y: j, color: color});
@@ -247,7 +248,7 @@ export class ScoreEstimator {
     groups:Array<Array<SEGroup>>;
     currentMarker:number;
     removal:Array<Array<number>>; // TODO: This is defined to be a dup of this.removed, can we remove that?
-    goban_callback:GobanCore;
+    goban_callback?:GobanCore;
     tolerance:number;
     group_list:Array<SEGroup>;
     marks:Array<Array<number>>;
@@ -265,7 +266,7 @@ export class ScoreEstimator {
 
 
 
-    constructor(goban_callback:GobanCore) {
+    constructor(goban_callback?:GobanCore) {
         this.goban_callback = goban_callback;
     }
 
@@ -411,6 +412,10 @@ export class ScoreEstimator {
                     while (stack.length) {
                         let yy = stack.pop();
                         let xx = stack.pop();
+                        if (xx === undefined || yy === undefined) {
+                            throw new Error(`Invalid stack state`);
+                        }
+
                         if (this.marks[yy][xx] === this.currentMarker) {
                             continue;
                         }
@@ -474,7 +479,7 @@ export class ScoreEstimator {
     toggleMetaGroupRemoval(x:number, y:number):void {
         let already_done:{[k:string]: boolean} = {};
         let space_groups:Array<SEGroup> = [];
-        let group_color:NumericPlayerColor = null;
+        let group_color:NumericPlayerColor;
 
         try {
             if (x >= 0 && y >= 0) {
@@ -498,7 +503,7 @@ export class ScoreEstimator {
 
                     while (space_groups.length) {
                         let cur_space_group = space_groups.pop();
-                        cur_space_group.foreachNeighborEnemyGroup((g) => {
+                        cur_space_group?.foreachNeighborEnemyGroup((g) => {
                             if (!already_done[g.id]) {
                                 already_done[g.id] = true;
                                 if (g.color === group_color) {
