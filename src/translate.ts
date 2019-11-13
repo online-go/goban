@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-let win:any = typeof(window) === "undefined" ? {} : window;
-
 let catalog:any = {};
 let debug_mode = false;
 const debug_wrap = debug_mode ? (s:string) => `[${s}]` : (s:string) => s;

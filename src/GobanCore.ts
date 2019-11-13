@@ -1744,12 +1744,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.disableStonePlacement();
         }
 
+        /*
         if (this.engine.phase === "play" || (this.engine.phase === "finished" && this.mode === "analyze")) {
             let color = this.engine.playerColor(this.engine.playerToMove());
             if (this.mode === "edit" && this.edit_color) {
                 color = this.edit_color;
             }
         }
+        */
 
         this.stone_placement_enabled = true;
         if (this.__last_pt && this.__last_pt.valid) {
@@ -2447,7 +2449,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public updateScoreEstimation():void {
         if (this.score_estimate) {
             let est = this.score_estimate.estimated_hard_score - this.engine.komi;
-            let color;
             if (GobanCore.hooks.updateScoreEstimation) {
                 GobanCore.hooks.updateScoreEstimation(
                     est > 0 ? "black" : "white",
@@ -2525,14 +2526,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 window.location.reload();
             }, 4000);
             this.socket.send("game/move", mv, () => {
-                let confirmation_time = new Date();
                 clearTimeout(second_try_timeout);
                 this.clearMessage();
             });
 
         }, 4000);
         this.socket.send("game/move", mv, () => {
-            let confirmation_time = new Date();
             clearTimeout(timeout);
             this.clearMessage();
         });
@@ -2954,15 +2953,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public setLastReviewMessage(m:ReviewMessage):void {
         this.last_review_message = m;
     }
-}
-function plurality(num:number, single:string, plural:string) {
-    if (num > 0) {
-        if (num === 1) {
-            return num + " " + single;
-        }
-        return num + " " + plural;
-    }
-    return "";
 }
 function uuid(): string {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {

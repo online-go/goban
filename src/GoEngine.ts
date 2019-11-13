@@ -23,10 +23,8 @@ import {
     Intersection,
     Group,
 } from "./GoMath";
-import {GoStoneGroup} from "./GoStoneGroup";
 import {ScoreEstimator} from "./ScoreEstimator";
 import {GobanCore} from './GobanCore';
-import {AdHocPauseControl} from './AdHocFormat';
 import {JGOFTimeControl} from './JGOF';
 import {_} from "./translate";
 
@@ -510,21 +508,6 @@ export class GoEngine {
 
         return state;
     }
-    private statesAreTheSame(state1:GoEngineState, state2:GoEngineState):boolean {
-        if (state1.player !== state2.player) { return false; }
-        if (state1.white_prisoners !== state2.white_prisoners) { return false; }
-        if (state1.black_prisoners !== state2.black_prisoners) { return false; }
-
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (state1.board[y][x] !== state2.board[y][x]) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
     public boardMatriciesAreTheSame(m1:Array<Array<NumericPlayerColor>>, m2:Array<Array<NumericPlayerColor>>):boolean {
         if (m1.length !== m2.length || m1[0].length !== m2[0].length) { return false; }
 
@@ -722,12 +705,6 @@ export class GoEngine {
         }
     }
 
-    private isMoveLegal(x:number, y:number):boolean {
-        return true;
-    }
-    private pass():void {
-        this.player = this.opponent();
-    }
     private opponent():NumericPlayerColor {
         return this.player === 1 ? 2 : 1;
     }
@@ -1138,7 +1115,6 @@ export class GoEngine {
 
                     /* for stones though, toggle the selected stone group any any stone
                      * groups which are adjacent to it through open area */
-                    let len = 0;
                     let already_done:{[str:string]: boolean} = {};
 
                     let space = this.getConnectedOpenSpace(group);
@@ -1415,25 +1391,6 @@ export class GoEngine {
             return Math.max(0, this.handicap - this.getMoveNumber());
         }
         return 0;
-    }
-    private computeAutoRemovedGroups():Array<GoStoneGroup> {
-        let ret:Array<GoStoneGroup> = [];
-        //let groups = [null];
-        //let group_id_map = [];
-
-        let gm = new GoMath(this);
-        //groups = gm.groups;
-        //group_id_map = gm.group_id_map;
-
-        gm.foreachGroup((gr) => { gr.computeProbableColor(); });
-        gm.foreachGroup((gr) => { gr.computeProbablyDead(); });
-        gm.foreachGroup((gr) => { gr.computeProbablyDame(); });
-        gm.foreachGroup((gr) => {
-            if (gr.is_probably_dead || gr.is_probably_dame) {
-                ret.push(gr);
-            }
-        });
-        return ret;
     }
 
     private static normalizeConfig(config:GoEngineConfig):void {
@@ -1982,8 +1939,7 @@ export class GoEngine {
         }
 
         try {
-            let c = collection();
-            //console.log(c);
+            collection();
         } catch (e) {
             console.log("Failed to parse SGF on line " + line + " at char '" + sgf[pos] + "' (right after '" + sgf.substr(pos - 10, 10) + "')");
             console.log(e.stack);

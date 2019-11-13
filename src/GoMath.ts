@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import {GoStoneGroup} from "./GoStoneGroup";
-import {GoEngine, NumericPlayerColor} from './GoEngine';
+import { GoStoneGroup } from "./GoStoneGroup";
+import { NumericPlayerColor } from './GoEngine';
 
 export interface Move {
     x: number;
@@ -180,15 +180,6 @@ export class GoMath {
             return ("ABCDEFGHJKLMNOPQRSTUVWXYZ"[x]) + ("" + (board_height - y));
         }
         return "";
-    }
-    private static convertMoveStringToArrayFormat(move_string:string, width:number, height:number):Array<MoveArray> {
-        let moves = GoMath.decodeMoves(move_string, width, height);
-        let ret = [];
-        for (let i = 0; i < moves.length; ++i) {
-            let mv = moves[i];
-            ret.push(GoMath.encodeMoveToArray(mv));
-        }
-        return ret;
     }
     public static decodeMoves(move_obj:MoveArray | string | Array<MoveArray> | [object], width?:number, height?:number): Array<Move> {
         let ret: Array<Move> = [];

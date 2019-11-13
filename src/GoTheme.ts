@@ -190,8 +190,3 @@ export class GoTheme {
         return "#000000";
     }
 }
-
-function color2number(hex_color:string):number {
-    return parseInt(hex_color.replace('#','0x'));
-}
-

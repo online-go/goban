@@ -33,7 +33,7 @@ import {MoveTree} from "./MoveTree";
 import {GoTheme} from "./GoTheme";
 import {GoThemes} from "./GoThemes";
 import { MoveTreePenMarks } from "./MoveTree";
-import {createDeviceScaledCanvas, resizeDeviceScaledCanvas, elementOffset} from "./GoUtil";
+import {createDeviceScaledCanvas, resizeDeviceScaledCanvas } from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
 import {_} from "./translate";
 
@@ -683,8 +683,6 @@ export class GobanCanvas extends GobanCore  {
                     /* Also, if we just placed a piece and the computer is waiting to place it's piece (autoplaying), then
                      * don't allow anything to be placed. */
                     if (!double_tap && !this.autoplaying_puzzle_move) {
-                        let mv_x = x;
-                        let mv_y = y;
                         let calls = 0;
 
                         if (this.engine.puzzle_player_move_mode !== "fixed" || this.engine.cur_move.lookupMove(x, y, this.engine.player, false)) {
@@ -1605,11 +1603,7 @@ export class GobanCanvas extends GobanCore  {
             if (this.engine.cur_move.x === i && this.engine.cur_move.y === j && this.engine.board[j][i] &&
                   (this.engine.phase === "play" || (this.engine.phase === "finished"))
             ) {
-                let xx = -1;
-                let yy = -1;
                 this.last_move = this.engine.cur_move;
-
-                let r = this.square_size * 0.35;
 
                 if (i >= 0 && j >= 0) {
                     ctx.beginPath();
@@ -1892,10 +1886,8 @@ export class GobanCanvas extends GobanCore  {
 
         /* draw special symbols */
         {
-            let hovermark;
             if (this.analyze_tool === "label" && (this.last_hover_square && this.last_hover_square.x === i && this.last_hover_square.y === j)) {
                 if (this.analyze_subtool === "triangle" || this.analyze_subtool === "square" || this.analyze_subtool === "cross" || this.analyze_subtool === "circle") {
-                    hovermark = this.analyze_subtool;
                     ret += "hover " + this.analyze_subtool + ",";
                 }
             }
@@ -1944,11 +1936,6 @@ export class GobanCanvas extends GobanCore  {
                 this.parent.style.width = metrics.width + "px";
                 this.parent.style.height = metrics.height + "px";
                 resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
-
-                //let bo = this.board.offset();
-                //let po = this.parent.offset() || {"top": 0, "left": 0};
-                let bo = elementOffset(this.board);
-                let po = elementOffset(this.parent) || {"top": 0, "left": 0};
 
                 this.layer_offset_left = 0;
                 this.layer_offset_top = 0;
@@ -2128,7 +2115,6 @@ export class GobanCanvas extends GobanCore  {
             }
         }
 
-        let stop = new Date();
         this.drawPenMarks(this.pen_marks);
         this.move_tree_redraw();
     }

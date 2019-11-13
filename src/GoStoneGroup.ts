@@ -15,7 +15,7 @@
  */
 
 import { NumericPlayerColor } from './GoEngine';
-import { BoardState, Intersection, Group } from './GoMath';
+import { BoardState, Intersection } from './GoMath';
 
 export class GoStoneGroup {
     probable_color: NumericPlayerColor;

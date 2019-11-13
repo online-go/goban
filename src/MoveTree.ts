@@ -16,7 +16,6 @@
 
 import {GoMath, MoveArray} from "./GoMath";
 import {GoEngine, GoEngineState} from "./GoEngine";
-import {resizeDeviceScaledCanvas} from "./GoUtil";
 import {encodeMove, NumericPlayerColor} from "./GoEngine";
 
 export interface MarkInterface {
@@ -98,7 +97,6 @@ export class MoveTree {
     public x: number;
     public y: number;
     public edited: boolean;
-    private active_node_number: number;
     public state: GoEngineState;
     public pen_marks: MoveTreePenMarks = [];
 
@@ -136,7 +134,6 @@ export class MoveTree {
         this.trunk_next = undefined;
         this.branches = [];
         this.active_path_number = 0;
-        this.active_node_number = 0;
         //this.clearMarks();
         this.line_color = -1;
         this.text = "";
@@ -455,7 +452,10 @@ export class MoveTree {
         for (let j = 0; j < this.marks.length; ++j) {
             for (let i = 0; i < this.marks[j].length; ++i) {
                 for (let k in this.marks[j][i]) {
-                    return true;
+                    // !!k is to prevent compiler warning about unused k, but
+                    // this is called a lot so we don't want to do
+                    // Object.keys(..).length here
+                    return !!k || true;
                 }
             }
         }
@@ -470,7 +470,12 @@ export class MoveTree {
             for (let i = 0; i < this.marks[j].length; ++i) {
                 for (let k in this.marks[j][i]) {
                     fn(i, j);
-                    break;
+                    // !!k is to prevent compiler warning about unused k, but
+                    // this is called a lot so we don't want to do
+                    // Object.keys(..).length here
+                    if (!!k || true) {
+                        break;
+                    }
                 }
             }
         }

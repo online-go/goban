@@ -410,7 +410,6 @@ export class ScoreEstimator {
         return ret;
     }
     resetGroups():void {
-        let self = this;
         console.log("resetting groups");
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);

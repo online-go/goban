@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
+import { GoTheme } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import {_} from "../translate";
 import {deviceCanvasScalingRatio} from "../GoUtil";
@@ -307,11 +307,8 @@ function preRenderStone(radius:number, seed:number, options:RenderOptions):Stone
             let run = Math.sin(angle);
             let m = rise / run;
             let minv = run / rise;
-            let ox1 = 0;
-            let oy1 = 0;
 
             let minv2_1 = minv * minv - 1;
-            let negate = minv2_1 < 0 ? 1 : -1;
             minv2_1  = Math.abs(minv2_1);
 
             let s = seed;
@@ -437,7 +434,7 @@ export default function(GoThemes:GoThemesInterface) {
     /* Slate & Shell { */
     class Slate extends Common {
         sort() { return  30; }
-        get theme_name():string { return 'Slate' };
+        get theme_name():string { return 'Slate'; }
 
         preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
@@ -461,7 +458,7 @@ export default function(GoThemes:GoThemesInterface) {
 
     class Shell extends Common {
         sort() { return  30; }
-        get theme_name():string { return 'Shell' };
+        get theme_name():string { return 'Shell'; }
 
         preRenderWhite(radius:number, seed:number):StoneTypeArray {
             let ret:StoneTypeArray = [];
@@ -492,7 +489,7 @@ export default function(GoThemes:GoThemesInterface) {
 
     class GlassBlack extends Common {
         sort() { return  20; }
-        get theme_name():string { return 'Glass' };
+        get theme_name():string { return 'Glass'; }
 
         preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
@@ -515,7 +512,7 @@ export default function(GoThemes:GoThemesInterface) {
 
     class GlassWhite extends Common {
         sort() { return  20; }
-        get theme_name():string { return 'Glass' };
+        get theme_name():string { return 'Glass'; }
 
         preRenderWhite(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed *= 13, {
@@ -541,7 +538,7 @@ export default function(GoThemes:GoThemesInterface) {
 
     class WornGlassBlack extends Common {
         sort() { return  21; }
-        get theme_name():string { return 'Worn Glass' };
+        get theme_name():string { return 'Worn Glass'; }
 
         preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
@@ -563,7 +560,7 @@ export default function(GoThemes:GoThemesInterface) {
 
     class WornGlassWhite extends Common {
         sort() { return  21; }
-        get theme_name():string { return 'Worn Glass' };
+        get theme_name():string { return 'Worn Glass'; }
 
         preRenderWhite(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed *= 13, {
@@ -586,7 +583,7 @@ export default function(GoThemes:GoThemesInterface) {
     /* Night { */
     class NightBlack extends Common {
         sort() { return  100; }
-        get theme_name():string { return 'Night' };
+        get theme_name():string { return 'Night'; }
 
         preRenderBlack(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed, {
@@ -609,7 +606,7 @@ export default function(GoThemes:GoThemesInterface) {
 
     class NightWhite extends Common {
         sort() { return  100; }
-        get theme_name():string { return 'Night' };
+        get theme_name():string { return 'Night'; }
 
         preRenderWhite(radius:number, seed:number):StoneTypeArray {
             return preRenderStone(radius, seed *= 13, {
