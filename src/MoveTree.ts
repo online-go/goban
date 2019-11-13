@@ -79,7 +79,7 @@ export class MoveTree {
     public static readonly stone_square_size = (MoveTree.stone_radius + MoveTree.stone_padding) * 2;
 
 
-    public label: string;
+    public label: string = '[unset]';
 
     public move_number: number;
     public readonly pretty_coordinates: string;
@@ -87,9 +87,9 @@ export class MoveTree {
     public readonly id: number;
     public trunk_next?: MoveTree;
     public branches: Array<MoveTree>;
-    public correct_answer: boolean;
-    public wrong_answer: boolean;
-    private hint_next: MoveTree;
+    public correct_answer: boolean = false;
+    public wrong_answer: boolean = false;
+    private hint_next?: MoveTree;
     public player: NumericPlayerColor;
     public line_color: number;
     public trunk: boolean;
@@ -103,19 +103,19 @@ export class MoveTree {
     public pen_marks: MoveTreePenMarks = [];
 
     /* public for use by renderer */
-    public active_path_number: number;
-    public layout_cx: number;
-    public layout_cy: number;
-    public layout_x: number;
-    public layout_y: number;
-    public label_metrics: TextMetrics;
+    public active_path_number: number = 0;
+    public layout_cx: number = 0;
+    public layout_cy: number = 0;
+    public layout_x: number = 0;
+    public layout_y: number = 0;
+    public label_metrics?: TextMetrics;
 
     /* These need to be protected by accessor methods now that we're not
      * initializing them on construction */
-    private chatlog: Array<MoveTreeChatLine>;
-    private marks: Array<Array<MarkInterface>>;
+    private chatlog?: Array<MoveTreeChatLine>;
+    private marks?: Array<Array<MarkInterface>>;
     public isobranches: any;
-    private isobranch_hash : string;
+    private isobranch_hash?: string;
 
     constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:NumericPlayerColor, move_number:number, parent:MoveTree | null, state:GoEngineState) {
         this.id = ++__move_tree_id;
@@ -237,7 +237,7 @@ export class MoveTree {
         let recompute = (node:MoveTree):void => {
             node.isobranches = [];
 
-            for (let n of __isobranches_state_hash[node.isobranch_hash]) {
+            for (let n of __isobranches_state_hash[node.isobranch_hash as string]) {
                 if (node.id !== n.id) {
                     if (node.isAncestorOf(n) || n.isAncestorOf(node)) {
                         continue;
@@ -437,15 +437,16 @@ export class MoveTree {
     }
     getAllMarks():Array<Array<MarkInterface>> {
         if (!this.marks) {
-            this.clearMarks();
+            this.marks = this.clearMarks();
         }
         return this.marks;
     }
     setAllMarks(marks:Array<Array<MarkInterface>>):void {
         this.marks = marks;
     }
-    clearMarks():void {
+    clearMarks():Array<Array<MarkInterface>> {
         this.marks = GoMath.makeObjectMatrix<MarkInterface>(this.engine.width, this.engine.height);
+        return this.marks;
     }
     hasMarks():boolean {
         if (!this.marks) {
@@ -611,7 +612,7 @@ export class MoveTree {
 
     getMarks(x:number, y:number):MarkInterface {
         if (!this.marks) {
-            this.clearMarks();
+            this.marks = this.clearMarks();
         }
 
         if (y < this.marks.length && x < this.marks[y].length) {

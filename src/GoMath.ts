@@ -190,7 +190,7 @@ export class GoMath {
         }
         return ret;
     }
-    public static decodeMoves(move_obj:MoveArray | string | [object], width?:number, height?:number): Array<Move> {
+    public static decodeMoves(move_obj:MoveArray | string | Array<MoveArray> | [object], width?:number, height?:number): Array<Move> {
         let ret: Array<Move> = [];
 
         function decodeSingleMoveArray(arr:[number, number, number, number?, object?]):Move {

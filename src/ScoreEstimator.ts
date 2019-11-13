@@ -137,7 +137,7 @@ class SEGroup {
     estimated_hard_score:number;
     neighbors:Array<SEGroup>;
     neighbor_map:{[group_id:string]: boolean};
-    liberties:number;
+    liberties:number = 0;
 
 
     constructor(se:ScoreEstimator, color:NumericPlayerColor, id:number) {
@@ -201,21 +201,21 @@ class SEGroup {
             }
         }
     }
-    foreachNeighborGroup(fn:(group:SEGroup)=>void):void {
+    foreachNeighborGroup(fn:(group:SEGroup) => void):void {
         for (let i = 0; i < this.neighbors.length; ++i) {
             //if (!this.neighbors[i].removed) {
                 fn(this.neighbors[i]);
             //}
         }
     }
-    foreachNeighborSpaceGroup(fn:(group:SEGroup)=>void):void {
+    foreachNeighborSpaceGroup(fn:(group:SEGroup) => void):void {
         for (let i = 0; i < this.neighboring_space.length; ++i) {
             //if (!this.neighboring_space[i].removed) {
                 fn(this.neighboring_space[i]);
             //}
         }
     }
-    foreachNeighborEnemyGroup(fn:(group:SEGroup)=>void):void {
+    foreachNeighborEnemyGroup(fn:(group:SEGroup) => void):void {
         for (let i = 0; i < this.neighboring_enemy.length; ++i) {
             //if (!this.neighboring_enemy[i].removed) {
                 fn(this.neighboring_enemy[i]);
@@ -235,15 +235,32 @@ export class ScoreEstimator {
     width:number;
     height:number;
     board:Array<Array<NumericPlayerColor>>;
-    white_prisoners:number;
-    black_prisoners:number;
-    score_stones:boolean;
-    score_prisoners:boolean;
-    score_territory:boolean;
-    score_territory_in_seki:boolean;
+    white_prisoners:number = 0;
+    black_prisoners:number = 0;
+    //score_stones:boolean;
+    //score_prisoners:boolean;
+    //score_territory:boolean;
+    //score_territory_in_seki:boolean;
     removed:Array<Array<number>>;
-    black:PlayerScore;
-    white:PlayerScore;
+    white: PlayerScore = {
+        "total": 0,
+        "stones": 0,
+        "territory": 0,
+        "prisoners": 0,
+        "scoring_positions": "",
+        "handicap": 0,
+        "komi": 0,
+    };
+    black: PlayerScore = {
+        "total": 0,
+        "stones": 0,
+        "territory": 0,
+        "prisoners": 0,
+        "scoring_positions": "",
+        "handicap": 0,
+        "komi": 0,
+    };
+
     engine:GoEngine;
     groups:Array<Array<SEGroup>>;
     currentMarker:number;
@@ -252,13 +269,13 @@ export class ScoreEstimator {
     tolerance:number;
     group_list:Array<SEGroup>;
     marks:Array<Array<number>>;
-    amount:number;
-    amount_fractional:string;
+    amount:number = NaN;
+    amount_fractional:string = '[unset]';
     area:Array<Array<number>>;
     territory:Array<Array<number>>;
     trials:number;
     estimated_area:Array<Array<number>>;
-    winner:string;
+    winner:string = '[unset]';
     heat:Array<Array<number>>;
     color_to_move:'black'|'white';
     estimated_score:number;
@@ -266,11 +283,9 @@ export class ScoreEstimator {
 
 
 
-    constructor(goban_callback?:GobanCore) {
+    constructor(goban_callback:GobanCore | undefined, engine:GoEngine, trials:number, tolerance:number) {
         this.goban_callback = goban_callback;
-    }
 
-    init(engine:GoEngine, trials:number, tolerance:number):void {
         this.currentMarker = 1;
         this.engine = engine;
         this.width = engine.width;
@@ -294,6 +309,7 @@ export class ScoreEstimator {
         this.estimateScore(this.trials, this.tolerance);
         //this.sealDame();
     }
+
     estimateScore(trials:number, tolerance:number):void {
         if (!OGSScoreEstimator_initialized) {
             throw new Error("Score estimator not intialized yet");
@@ -607,14 +623,14 @@ export class ScoreEstimator {
         }
 
         //if (this.phase !== "play") {
-        if (this.score_territory) {
+        if (this.engine.score_territory) {
             let gm = new GoMath(this);
             //console.log(gm);
 
             gm.foreachGroup((gr) => {
                 if (gr.is_territory) {
                     //console.log(gr);
-                    if (!this.score_territory_in_seki && gr.is_territory_in_seki) {
+                    if (!this.engine.score_territory_in_seki && gr.is_territory_in_seki) {
                         return;
                     }
                     if (gr.territory_color === 1) {
@@ -630,7 +646,7 @@ export class ScoreEstimator {
             });
         }
 
-        if (this.score_stones) {
+        if (this.engine.score_stones) {
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
                     if (this.board[y][x]) {
@@ -647,14 +663,14 @@ export class ScoreEstimator {
         }
         //}
 
-        if (this.score_prisoners) {
-            this["black"].prisoners = this.black_prisoners + removed_white;
-            this["white"].prisoners = this.white_prisoners + removed_black;
+        if (this.engine.score_prisoners) {
+            this.black.prisoners = this.black_prisoners + removed_white;
+            this.white.prisoners = this.white_prisoners + removed_black;
         }
 
         this.black.total = this.black.stones + this.black.territory + this.black.prisoners + this.black.komi;
         this.white.total = this.white.stones + this.white.territory + this.white.prisoners + this.white.komi;
-        if (this.score_stones) {
+        if (this.engine.score_stones) {
             this.black.total += this.black.handicap;
             this.white.total += this.white.handicap;
         }

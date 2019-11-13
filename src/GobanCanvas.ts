@@ -1,4 +1,4 @@
-                /*
+/*
  * Copyright 2012-2019 Online-Go.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,11 +22,12 @@ import {
     GobanCore,
     GobanConfig,
     GobanSelectedThemes,
+    GobanMetrics,
     GOBAN_FONT,
     SCORE_ESTIMATION_TRIALS,
     SCORE_ESTIMATION_TOLERANCE,
 } from './GobanCore';
-import { NumericPlayerColor, encodeMove, encodeMoves} from "./GoEngine";
+import { GoEngine, NumericPlayerColor, encodeMove, encodeMoves} from "./GoEngine";
 import {GoMath, Group} from "./GoMath";
 import {MoveTree} from "./MoveTree";
 import {GoTheme} from "./GoTheme";
@@ -46,7 +47,7 @@ let __theme_cache:{
 declare var ResizeObserver:any;
 
 export interface GobanCanvasConfig extends GobanConfig {
-    board_div: HTMLElement;
+    board_div?: HTMLElement;
     title_div?: HTMLElement;
     move_tree_container?: HTMLElement;
 }
@@ -60,66 +61,74 @@ interface ViewPortInterface {
     maxy: number;
 }
 
+const HOT_PINK = '#ff69b4';
+
 export class GobanCanvas extends GobanCore  {
+    public engine: GoEngine;
     private parent: HTMLElement;
-    private board_div: HTMLElement;
+    //private board_div: HTMLElement;
     private board: HTMLCanvasElement;
-    private __set_board_height:number;
-    private __set_board_width:number;
+    private __set_board_height:number = -1;
+    private __set_board_width:number = -1;
     private ready_to_draw:boolean = false;
     private message_div?:HTMLDivElement;
-    private message_td:HTMLElement;
-    private message_text:HTMLDivElement;
-    private message_timeout:number;
+    private message_td?:HTMLElement;
+    private message_text?:HTMLDivElement;
+    private message_timeout?:number;
     private shadow_layer?:HTMLCanvasElement;
     private shadow_ctx?:CanvasRenderingContext2D;
     private handleShiftKey:(ev:KeyboardEvent) => void;
 
     public move_tree_container?: HTMLElement;
     private move_tree_inner_container?: HTMLDivElement;
-    private move_tree_canvas: HTMLCanvasElement;
+    private move_tree_canvas?: HTMLCanvasElement;
 
-    private __borders_initialized:boolean;
-    private autoplaying_puzzle_move:boolean;
-    private byoyomi_label:string;
+    private __borders_initialized:boolean = false;
+    private autoplaying_puzzle_move:boolean = false;
+    private byoyomi_label:string = '';
     private ctx:CanvasRenderingContext2D;
-    private current_pen_mark:{"color": string, "points": [number, number]};
-    private labeling_mode:'put' | 'clear';
-    private last_label_position:{i:number, j:number};
-    private last_pen_position:[number, number];
-    private last_sent_move:string;
+    private current_pen_mark?:{"color": string, "points": [number, number]};
+    private labeling_mode?:'put' | 'clear';
+    private last_label_position:{i:number, j:number} = {i:NaN, j:NaN};
+    private last_pen_position?:[number, number];
+    protected metrics:GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
 
-    private layer_offset_left:number;
-    private layer_offset_top:number;
-    private pattern_search_color:NumericPlayerColor;
+    private layer_offset_left:number = 0;
+    private layer_offset_top:number = 0;
+    private pattern_search_color:NumericPlayerColor = 0;
 
     private drawing_enabled:boolean = true;
-    private pen_ctx:CanvasRenderingContext2D;
-    private pen_layer:HTMLCanvasElement;
-    public title:string;
+    private pen_ctx?:CanvasRenderingContext2D;
+    private pen_layer?:HTMLCanvasElement;
+    public title:string = '';
     protected title_div?:HTMLElement;
 
-    private themes:GobanSelectedThemes;
+    private themes:GobanSelectedThemes = {
+        'board': 'Plain',
+        'black': 'Plain',
+        'white': 'Plain',
+    };
     private theme_black:GoTheme;
-    private theme_black_stones:Array<any>;
-    private theme_black_text_color:string;
-    private theme_blank_text_color:string;
+    private theme_black_stones:Array<any> = [];
+    private theme_black_text_color:string = HOT_PINK;
+    private theme_blank_text_color:string = HOT_PINK;
     private theme_board:GoTheme;
-    private theme_faded_line_color:string;
-    private theme_faded_star_color:string;
-    private theme_faded_text_color:string;
-    private theme_line_color:string;
-    private theme_star_color:string;
-    private theme_stone_radius:number;
+    private theme_faded_line_color:string = HOT_PINK;
+    private theme_faded_star_color:string = HOT_PINK;
+    //private theme_faded_text_color:string;
+    private theme_line_color:string = '';
+    private theme_star_color:string = '';
+    private theme_stone_radius:number = 10;
     private theme_white:GoTheme;
-    private theme_white_stones:Array<any>;
-    private theme_white_text_color:string;
+    private theme_white_stones:Array<any> = [];
+    private theme_white_text_color:string = HOT_PINK;
 
     constructor(config:GobanCanvasConfig, preloaded_data?:AdHocFormat|JGOF) {
         super(config, preloaded_data);
 
-        this.parent = config["board_div"];
-        if (!this.parent) {
+        if (config.board_div) {
+            this.parent = config["board_div"];
+        } else {
             this.no_display = true;
             this.parent = document.createElement("div"); /* let a div dangle in no-mans land to prevent null pointer refs */
         }
@@ -128,10 +137,17 @@ export class GobanCanvas extends GobanCore  {
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
+        let ctx = this.board.getContext("2d");
+        if (ctx) {
+            this.ctx = ctx;
+        } else {
+            throw new Error(`Failed to obtain drawing context for board`);
+        }
+
         this.parent.appendChild(this.board);
         this.bindPointerBindings(this.board);
 
-        this.move_tree_container = config["move_tree_container"];
+        this.move_tree_container = config.move_tree_container;
 
         this.handleShiftKey = (ev) => {
             if (ev.shiftKey !== this.shift_key_is_down) {
@@ -145,13 +161,16 @@ export class GobanCanvas extends GobanCore  {
         window.addEventListener("keyup", this.handleShiftKey);
 
         let first_pass = true;
+        this.theme_board = new (GoThemes["board"][this.themes.board])();
+        this.theme_white = new (GoThemes["white"][this.themes.white])(this.theme_board);
+        this.theme_black = new (GoThemes["black"][this.themes.black])(this.theme_board);
         let watcher = this.watchSelectedThemes((themes:GobanSelectedThemes) => {
             this.setThemes(themes, first_pass ? true : false);
             first_pass = false;
         });
         this.on("destroy", () => watcher.remove());
 
-        this.post_config_constructor();
+        this.engine = this.post_config_constructor();
 
         this.ready_to_draw = true;
         this.redraw(true);
@@ -439,6 +458,10 @@ export class GobanCanvas extends GobanCore  {
         return [((x / 64) - lx) * this.square_size, ((y / 64) - ly) * this.square_size];
     }
     private setPenStyle(color:string):void {
+        if (!this.pen_ctx) {
+            throw new Error(`setPenStyle called with null pen_ctx`);
+        }
+
         this.pen_ctx.strokeStyle = color;
         this.pen_ctx.lineWidth = Math.max(1, Math.round(this.square_size * 0.1));
         this.pen_ctx.lineCap = "round";
@@ -455,6 +478,13 @@ export class GobanCanvas extends GobanCore  {
         this.syncReviewMove({"pen": this.analyze_subtool, "pp": this.xy2pen(pos.x, pos.y)});
     }
     private onPenMove(ev:MouseEvent | TouchEvent):void {
+        if (!this.pen_ctx) {
+            throw new Error(`onPenMove called with null pen_ctx`);
+        }
+        if (!this.last_pen_position || !this.current_pen_mark) {
+            throw new Error(`onPenMove called with invalid last pen position or current pen mark`);
+        }
+
         let pos = getRelativeEventPosition(ev);
         let start = this.last_pen_position;
         let s = this.pen2xy(start[0], start[1]);
@@ -463,6 +493,7 @@ export class GobanCanvas extends GobanCore  {
 
         let dx = end[0] - start[0];
         let dy = end[1] - start[1];
+
         if (dx * dx + dy * dy < 64) {
             return;
         }
@@ -470,6 +501,7 @@ export class GobanCanvas extends GobanCore  {
         this.last_pen_position = end;
         this.current_pen_mark.points.push(dx);
         this.current_pen_mark.points.push(dy);
+
         this.pen_ctx.beginPath();
         this.pen_ctx.moveTo(s[0], s[1]);
         this.pen_ctx.lineTo(e[0], e[1]);
@@ -481,6 +513,9 @@ export class GobanCanvas extends GobanCore  {
         if (this.review_id && !this.done_loading_review) { return; }
         if (!(penmarks.length || this.pen_layer)) {
             return;
+        }
+        if (!this.pen_ctx) {
+            throw new Error(`onPenMove called with null pen_ctx`);
         }
         this.attachPenCanvas();
         this.clearAnalysisDrawing();
@@ -504,7 +539,7 @@ export class GobanCanvas extends GobanCore  {
         }
     }
     private onTap(event:MouseEvent | TouchEvent, double_tap:boolean):void {
-        if (!(this.stone_placement_enabled && (this.player_id || this.engine.black_player_id === 0 || this.mode === "analyze" || this.mode === "pattern search" || this.mode === "puzzle"))) { return; }
+        if (!(this.stone_placement_enabled && (this.player_id || this.engine.players.black.id === 0 || this.mode === "analyze" || this.mode === "pattern search" || this.mode === "puzzle"))) { return; }
 
         let pos = getRelativeEventPosition(event);
         let xx = pos.x;
@@ -559,7 +594,6 @@ export class GobanCanvas extends GobanCore  {
                     return;
                 }
             }
-            this.last_sent_move = encodeMove(x, y);
             this.sendMove({
                 "auth": this.config.auth,
                 "game_id": this.config.game_id,
@@ -767,6 +801,10 @@ export class GobanCanvas extends GobanCore  {
                             }
                         }
                     } else {
+                        if (!this.edit_color) {
+                            throw new Error(`Edit place called with invalid edit_color value`);
+                        }
+
                         let edit_color = this.engine.playerByColor(this.edit_color);
                         if (event.shiftKey && edit_color === 1) { /* if we're going to place a black on an empty square but we're holding down shift, place white */
                             edit_color = 2;
@@ -838,7 +876,6 @@ export class GobanCanvas extends GobanCore  {
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
 
-                        this.last_sent_move = encodeMove(x, y);
                         this.sendMove({
                             "auth": this.config.auth,
                             "game_id": this.config.game_id,
@@ -863,8 +900,10 @@ export class GobanCanvas extends GobanCore  {
     }
     private onMouseMove(event:MouseEvent | TouchEvent):void {
         if (!(this.stone_placement_enabled &&
-            (this.player_id || this.engine.black_player_id === 0 || this.mode === "analyze" || this.scoring_mode)
-            )) { return; }
+            (this.player_id || this.engine.players.black.id === 0 || this.mode === "analyze" || this.scoring_mode)
+        )) {
+            return;
+        }
 
         let pos = getRelativeEventPosition(event);
         let pt = this.xy2ij(pos.x, pos.y);
@@ -2141,7 +2180,6 @@ export class GobanCanvas extends GobanCore  {
         }
 
         this.themes = themes;
-
         this.theme_board = new (GoThemes["board"][themes.board])();
         this.theme_white = new (GoThemes["white"][themes.white])(this.theme_board);
         this.theme_black = new (GoThemes["black"][themes.black])(this.theme_board);
@@ -2261,14 +2299,7 @@ export class GobanCanvas extends GobanCore  {
     protected setTitle(title:string):void {
         this.title = title;
         if (this.title_div) {
-            //if (typeof(title) === "string") {
-                this.title_div.innerHTML = title;
-            /*
-            } else {
-                this.title_div.empty();
-                this.title_div.appendChild(title);
-            }
-            */
+            this.title_div.innerHTML = title;
         }
         this.emit('title', title);
     }
@@ -2282,9 +2313,6 @@ export class GobanCanvas extends GobanCore  {
     //
     // Move tree
     //
-    //private redraw_on_scroll: any;
-    private move_tree_on_scroll: (event:Event) => void;
-
     public setMoveTreeContainer(container:HTMLElement):void {
         this.move_tree_container = container;
         this.move_tree_redraw();
@@ -2292,6 +2320,11 @@ export class GobanCanvas extends GobanCore  {
 
     public move_tree_redraw(no_warp?:boolean):void {
         if (!this.move_tree_container) {
+            return;
+        }
+
+        if (!this.move_tree_canvas) {
+            console.warn(`move_Tree_redraw called without move_tree_canvas set`);
             return;
         }
 
@@ -2368,9 +2401,7 @@ export class GobanCanvas extends GobanCore  {
 
         let canvas = this.move_tree_canvas;
         let engine = this.engine;
-        let stone_radius = MoveTree.stone_radius;
 
-        let dimensions = {"x": 1, "y": 1};
         this.engine.move_tree_layout_vector = [];
         let layout_hash = {};
         this.engine.move_tree.layout(0, 0, layout_hash, 0);

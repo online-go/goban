@@ -21,8 +21,6 @@ import {
     encodeMove,
     PlayerColor,
     PuzzleConfig,
-    PuzzleOpponentMoveMode,
-    PuzzlePlayerMoveMode,
     PuzzlePlacementSetting,
     NumericPlayerColor,
     Score,
@@ -84,7 +82,7 @@ export type GobanChatLog = Array<{
     channel: 'main' | 'spectator' | 'malkovich';
     date: number;
     lines: Array<GobanChatLogLine>;
-}>
+}>;
 
 export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     display_width?: number;
@@ -106,6 +104,8 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     draw_right_labels?: boolean;
     bounds?: GobanBounds;
     dont_draw_last_move?: boolean;
+    one_click_submit?: boolean;
+    double_click_submit?: boolean;
 
     //
     auth?:string;
@@ -132,8 +132,6 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     puzzle_type = (puzzle && puzzle.type ? puzzle.type : "");
     */
 
-
-
     // deprecated
     username?: string;
     server_socket?: any;
@@ -154,7 +152,8 @@ export interface AudioClockEvent {
     time_control_system: JGOFTimeControlSystem;
 
     /** True if we are in overtime. This is only ever set for systems that have
-     *  a concept of overtime. */
+     *  a concept of overtime.
+     */
     in_overtime: boolean;
 }
 
@@ -232,12 +231,12 @@ export interface GobanHooks {
 export interface ReviewMessage {
     "f"?:number;   /* from (move) */
     "m"?:string;   /* moves */
-    "om"?:[number,number,number];  /* offical move [reviewing live game] */
-    "undo"?:boolean;/* offical undo [reviewing live game] */
+    "om"?:[number, number, number];  /* offical move [reviewing live game] */
+    "undo"?:boolean; /* offical undo [reviewing live game] */
     "t"?:string;   /* text */
     "t+"?:string;  /* text append */
     "k"?:MarkInterface;   /* marks */
-    "pp"?:[number,number];  /* pen point */
+    "pp"?:[number, number];  /* pen point */
     "pen"?: string; /* pen color / pen start */
     "chat"?: {
         chat_id: string;
@@ -271,56 +270,58 @@ export interface GobanMetrics {
 
 
 export abstract class GobanCore extends TypedEventEmitter<Events> {
-    public conditional_starting_color:'black'|'white'|'invalid';
+    public conditional_starting_color:'black'|'white'|'invalid' = 'invalid';
     public analyze_tool:AnalysisTool;
     public analyze_subtool:AnalysisSubTool;
-    public black_pause_text: string;
-    public conditional_tree:GoConditionalMove;
+    //public black_pause_text: string;
+    public conditional_tree:GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;
     public draw_bottom_labels:boolean;
     public draw_left_labels:boolean;
     public draw_right_labels:boolean;
     public draw_top_labels:boolean;
-    public engine: GoEngine;
+    public abstract engine: GoEngine;
     public height:number;
-    public last_clock:AdHocClock;
+    public last_clock?:AdHocClock;
     public mode:string;
     public one_click_submit: boolean;
     public pen_marks:Array<any>;
     public readonly game_id: number | string;
     public readonly review_id: number;
-    public review_controller_id: number;
-    public review_owner_id: number;
+    public review_controller_id?: number;
+    public review_owner_id?: number;
     public score_estimate:any;
-    public showing_scores:boolean;
+    public showing_scores:boolean = false;
     public submit_move?:() => void;
-    public white_pause_text: string;
+    //public white_pause_text: string;
     public width:number;
 
+    protected pause_control?:AdHocPauseControl;
+    protected paused_since?: number;
 
     protected __board_redraw_pen_layer_timer:any = null;
     protected __clock_timer:any = null; /* number for web, Timeout for node - I don't think we can make them both happy so just 'any' */
     protected __draw_state:Array<Array<string>>;
-    protected __last_pt:{i:number, j:number, valid:boolean};
+    protected __last_pt:{i:number, j:number, valid:boolean} = {i:-1, j:-1, valid:false};
     protected __update_move_tree:any = null; /* timer */
     protected analysis_move_counter:number;
-    protected auto_scoring_done:boolean;
+    protected auto_scoring_done:boolean = false;
     //protected black_clock;
     //protected black_name;
     protected bounded_height:number;
     protected bounded_width:number;
     protected bounds:GobanBounds;
-    protected conditional_path:string;
+    protected conditional_path:string = '';
     public config:GobanConfig;
     protected current_cmove?:GoConditionalMove;
-    protected currently_my_cmove:boolean;
+    protected currently_my_cmove:boolean = false;
     protected destroyed:boolean;
     protected dirty_redraw:any = null; // timer
-    protected disconnectedFromGame:boolean;
-    protected display_width:number;
-    protected done_loading_review:boolean;
+    protected disconnectedFromGame:boolean = true;
+    protected display_width?:number;
+    protected done_loading_review:boolean = false;
     protected dont_draw_last_move:boolean;
-    protected edit_color:'black' | 'white';
+    protected edit_color?:'black' | 'white';
     protected errorHandler:(e:Error) => void;
     protected heatmap?:NumberMatrix;
     protected colored_circles?:Array<Array<ColoredCircle>>;
@@ -335,14 +336,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected isPlayerController:() => boolean;
     protected isPlayerOwner:() => boolean;
     protected label_character:string;
-    protected label_mark:string;
+    protected label_mark:string = '[UNSET]';
     protected last_hover_square?:Intersection;
     protected last_move?:MoveTree;
     protected last_phase?:GoEnginePhase;
     protected last_review_message:ReviewMessage;
-    protected last_sound_played_for_a_stone_placement:string;
+    protected last_sound_played_for_a_stone_placement?:string;
     protected last_stone_sound:number;
-    protected metrics:GobanMetrics;
     //protected move_number:number;
     protected move_selected?:Intersection;
     protected no_display:boolean;
@@ -360,7 +360,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected shift_key_is_down:boolean;
     protected show_move_numbers:boolean;
     protected show_variation_move_numbers:boolean;
-    protected square_size:number;
+    protected square_size:number = 10;
     protected stone_placement_enabled:boolean;
     protected submitBlinkTimer:any = null; // timer
     //protected syncToCurrentReviewMove;
@@ -373,8 +373,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected socket:any;
     protected socket_event_bindings:Array<[string, () => void]> = [];
     protected game_connection_data:any;
-    protected connectToReviewSent:boolean;
-    protected review_connection_data:{
+    protected connectToReviewSent?:boolean;
+    protected review_connection_data?:{
         "auth": string;
         "review_id": number;
         "player_id": number;
@@ -386,7 +386,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
      *  own config before these are called, we set this function to be called
      *  by our subclass after it's done it's own internal config stuff.
      */
-    protected post_config_constructor:() => void;
+    protected post_config_constructor:() => GoEngine;
 
     public abstract enablePen():void;
     public abstract disablePen():void;
@@ -452,9 +452,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         this.game_type = config.game_type || "";
-        this.one_click_submit = "one_click_submit" in config ? config["one_click_submit"] : false;
-        this.double_click_submit = "double_click_submit" in config ? config["double_click_submit"] : true;
-        this.original_square_size = config["square_size"] || "auto";
+        this.one_click_submit = "one_click_submit" in config ? !!config.one_click_submit : false;
+        this.double_click_submit = "double_click_submit" in config ? !!config.double_click_submit : true;
+        this.original_square_size = config.square_size || "auto";
         //this.square_size = config["square_size"] || "auto";
         this.interactive = !!config.interactive;
         this.pen_marks = [];
@@ -514,14 +514,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.bounds.bottom < this.height - 1) { this.draw_bottom_labels = false; }
 
 
-        if (typeof(config["square_size"]) === "function") {
-            this.square_size = config["square_size"](this) as number;
+        if (typeof(config.square_size) === "function") {
+            this.square_size = config.square_size(this) as number;
             if (isNaN(this.square_size)) {
                 console.error("Invalid square size set: (NaN)");
                 this.square_size = 12;
             }
-        } else if (typeof(config['square_size']) === 'number') {
-            this.square_size = config['square_size'] as number;
+        } else if (typeof(config.square_size) === 'number') {
+            this.square_size = config.square_size;
         }
         if (config.display_width && this.original_square_size === "auto") {
             this.display_width = config.display_width;
@@ -552,7 +552,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.__update_move_tree = null;
         this.shift_key_is_down = false;
 
-        this.post_config_constructor = () => {
+        this.post_config_constructor = ():GoEngine => {
+            let ret:GoEngine;
 
             delete this.current_cmove; /* set in setConditionalTree */
             this.currently_my_cmove = false;
@@ -560,11 +561,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             delete this.last_hover_square;
             this.__last_pt = this.xy2ij(-1, -1);
-            if (preloaded_data) {
-                this.load(preloaded_data);
-            } else {
-                this.load(config);
-            }
 
             this.game_connection_data = {
                 "game_id": config.game_id,
@@ -588,15 +584,20 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 "player_id": config.player_id || 0
             };
 
+            if (preloaded_data) {
+                ret = this.load(preloaded_data);
+            } else {
+                ret = this.load(config);
+            }
             if ("server_socket" in config && config["server_socket"]) {
                 if (!preloaded_data) {
                     this.message(_("Loading..."), -1);
                 }
                 this.connect(config["server_socket"]);
-            } else {
-                this.load(config);
             }
-        }
+
+            return ret;
+        };
     }
 
     protected _socket_on(event:string, cb:any) {
@@ -1106,12 +1107,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 if ("undo" in obj) { /* Official undo move [comes from live review of game] */
                     let t = this.engine.cur_review_move;
-                    let cur_move_undone = this.engine.cur_review_move.id === this.engine.last_official_move.id;
+                    let cur_move_undone = this.engine.cur_review_move?.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.showPrevious();
                     this.engine.setLastOfficialMove();
                     if (!cur_move_undone) {
-                        this.engine.jumpTo(t);
+                        if (t) {
+                            this.engine.jumpTo(t);
+                        } else {
+                            console.warn(`No valid move to jump back to in review game relay of undo`);
+                        }
                     }
                     this.engine.setAsCurrentReviewMove();
                     if (this.done_loading_review) {
@@ -1448,8 +1453,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public computeMetrics():GobanMetrics {
         if (!this.square_size || this.square_size <= 0) {
-            //console.error("Non positive square size set", this.square_size);
-            //console.error(new Error().stack);
             this.square_size = 12;
         }
 
@@ -1460,9 +1463,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             "offset": 0
         };
 
-        if (this.square_size % 2 === 0) { 
-            ret.mid -= 0.5; 
-            ret.offset = 0.5; 
+        if (this.square_size % 2 === 0) {
+            ret.mid -= 0.5;
+            ret.offset = 0.5;
         }
 
         return ret;
@@ -1527,7 +1530,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.bounds.bottom < this.height - 1) { this.draw_bottom_labels = false; }
     }
 
-    public load(config:GobanConfig):void {
+    public load(config:GobanConfig):GoEngine {
         config = repair_config(config);
         for (let k in config) {
             (this.config as any)[k] = (config as any)[k];
@@ -1633,6 +1636,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.engine.phase === "stone removal" && !("auto_scoring_done" in this) && !("auto_scoring_done" in (this as any).engine)) {
             (this as any).autoScore();
         }
+
+        return this.engine;
     }
     public set(x:number, y:number, player:NumericPlayerColor):void {
         this.markDirty();
@@ -1893,10 +1898,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public setConditionalTree(conditional_tree?:GoConditionalMove):void {
         if (typeof(conditional_tree) === 'undefined') {
-            conditional_tree = new GoConditionalMove(null);
+            this.conditional_tree = new GoConditionalMove(null);
+        } else {
+            this.conditional_tree = conditional_tree;
         }
-        this.conditional_tree = conditional_tree as GoConditionalMove;
-        this.current_cmove = conditional_tree;
+        this.current_cmove = this.conditional_tree;
 
         this.emit("update");
     }
@@ -2456,8 +2462,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 !(window as any)["user"]
                 || !this.on_game_screen
                 || !this.engine
-                || ((window as any)["user"].id as number !== this.engine.black_player_id
-                    && (window as any)["user"].id as number !== this.engine.white_player_id)
+                || ((window as any)["user"].id as number !== this.engine.players.black.id
+                    && (window as any)["user"].id as number !== this.engine.players.white.id)
             ) {
                 return;
             }
@@ -2470,9 +2476,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.message(_("Processing..."), -1);
         let do_score_estimation = () => {
-            let se = new ScoreEstimator();
-            se.init(this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
-            //console.error(se.area);
+            let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
 
             let current_removed = this.engine.getStoneRemovalString();
             let new_removed = se.getProbablyDead();
@@ -2574,19 +2578,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         if (original_clock.pause) {
             if (original_clock.pause.paused) {
-                this.engine.paused_since = original_clock.pause.paused_since;
-                this.engine.pause_control = original_clock.pause.pause_control;
+                this.paused_since = original_clock.pause.paused_since;
+                this.pause_control = original_clock.pause.pause_control;
 
                 /* correct for when we used to store paused_since in terms of seconds instead of ms */
-                if (this.engine.paused_since < 2000000000) {
-                    this.engine.paused_since *= 1000;
+                if (this.paused_since < 2000000000) {
+                    this.paused_since *= 1000;
                 }
 
                 clock.paused_since = original_clock.pause.paused_since;
                 clock.pause_state = AdHocPauseControl2JGOFPauseState(original_clock.pause.pause_control);
             } else {
-                delete this.engine.paused_since;
-                delete this.engine.pause_control;
+                delete this.paused_since;
+                delete this.pause_control;
             }
         }
 
@@ -2604,8 +2608,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 main_time: 0,
             };
 
-            let raw_clock_pause_offset = this.engine.paused_since
-                ? current_server_time - Math.max(original_clock.last_move, this.engine.paused_since)
+            let raw_clock_pause_offset = this.paused_since
+                ? current_server_time - Math.max(original_clock.last_move, this.paused_since)
                 : 0;
 
             let tcs:string = "" + (time_control.system);
@@ -2629,7 +2633,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 case 'fischer':
                     ret.main_time = is_current_player
                         ?  Math.max(0, (original_player_clock.thinking_time * 1000 - time_elapsed))
-                        : original_player_clock.thinking_time*1000;
+                        : original_player_clock.thinking_time * 1000;
                     break;
 
                 case 'byoyomi':
@@ -2735,9 +2739,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 clock.start_time_left = original_clock.expiration - current_server_time;
             }
 
-            if (this.engine.paused_since) {
-                clock.paused_since = this.engine.paused_since;
-                clock.pause_state = AdHocPauseControl2JGOFPauseState(this.engine.pause_control);
+            if (this.paused_since) {
+                clock.paused_since = this.paused_since;
+                if (!this.pause_control) {
+                    throw new Error(`Invalid pause_control state when performing clock do_update`);
+                }
+                clock.pause_state = AdHocPauseControl2JGOFPauseState(this.pause_control);
                 if (clock.pause_state.stone_removal) {
                     clock.stone_removal_time_left = original_clock.expiration - current_server_time;
                 }
@@ -2780,7 +2787,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         color: this.engine.colorToMove(),
                         time_control_system: time_control.system,
                         in_overtime: false,
-                    }
+                    };
 
                     switch (time_control.system) {
                         case 'simple':
@@ -2938,8 +2945,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
      * (and not only spectating), that is, if they are either white or black.
      */
     public isParticipatingPlayer():boolean {
-        return this.engine.black_player_id === this.player_id ||
-               this.engine.white_player_id === this.player_id;
+        return this.engine.players.black.id === this.player_id ||
+               this.engine.players.white.id === this.player_id;
     }
     public getLastReviewMessage():ReviewMessage {
         return this.last_review_message;

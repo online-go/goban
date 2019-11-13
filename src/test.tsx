@@ -18,7 +18,7 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { GobanCore, GobanConfig, GobanHooks } from './GobanCore';
 //import { GobanPixi } from './GobanPixi';
-import { GobanCanvas } from './GobanCanvas';
+import { GobanCanvas, GobanCanvasConfig } from './GobanCanvas';
 import { EventEmitter } from 'eventemitter3';
 
 let stored_config:GobanConfig = {};
@@ -231,16 +231,18 @@ function Main():JSX.Element {
 interface ReactGobanProps {
 }
 
-function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x:GobanConfig): GobanClass}, props:ReactGobanProps):JSX.Element {
+function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x:GobanCanvasConfig): GobanClass}, props:ReactGobanProps):JSX.Element {
     const container = React.useRef(null);
     const move_tree_container = React.useRef(null);
     let goban:GobanCore;
 
     React.useEffect(() => {
-        goban = new ctor(Object.assign({}, base_config, {
-            "board_div": container.current,
-            "move_tree_container": move_tree_container.current
-        }));
+        let config:GobanCanvasConfig = Object.assign({}, base_config, {
+            "board_div": container.current || undefined,
+            "move_tree_container": move_tree_container.current || undefined,
+        });
+
+        goban = new ctor(config);
 
         fiddler.on('setSquareSize', (ss) => {
             const start = Date.now();

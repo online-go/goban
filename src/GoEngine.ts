@@ -33,6 +33,7 @@ import {_} from "./translate";
 
 export type GoEnginePhase = 'play'|'stone removal'|'finished';
 export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz';
+export type GoEngineSuperKoAlgorithm = 'ssk';
 
 export interface PlayerScore {
     total: number;
@@ -63,8 +64,8 @@ export interface GoEngineState {
 }
 
 export interface GoEnginePlayerEntry {
-    id?:number;
-    username?:string;
+    id:number;
+    username:string;
     country?:string;
     rank?:number;
 
@@ -96,7 +97,7 @@ export interface GoEngineConfig {
         'white': GoEnginePlayerEntry;
     };
     //time_control?:JGOFTimeControl;
-    moves?:MoveArray;
+    moves?:Array<MoveArray>;
     move_tree?:MoveTreeJson;
     ranked?: boolean;
     original_disable_analysis?: boolean;
@@ -114,7 +115,11 @@ export interface GoEngineConfig {
     score_stones?:boolean;
     score_passes?:boolean;
     score_prisoners?:boolean;
+    score_handicap?:boolean;
     white_must_pass_last?:boolean;
+    aga_handicap_scoring?:boolean;
+    opponent_plays_first_after_resume?:boolean;
+    superko_algorithm?:GoEngineSuperKoAlgorithm;
 
     /** Removed stones in stone removal phase */
     removed?: string;
@@ -140,6 +145,8 @@ export interface GoEngineConfig {
 
     // deprecated, normalized out
     ladder?: number;
+    black_player_id?: number;
+    white_player_id?: number;
 }
 
 export interface GoEngineInitialState {
@@ -202,70 +209,71 @@ export type PlayerColor = 'black' | 'white';
 export type NumericPlayerColor = 0|1|2;
 
 export class GoEngine {
-    public readonly black_player_id:number;
+    //public readonly players.black.id:number;
+    //public readonly players.white.id:number;
     public board:Array<Array<NumericPlayerColor>>;
     public cur_move:MoveTree;
-    public cur_review_move:MoveTree;
-    public getState_callback:() => any;
-    public handicap:number;
-    public initial_state:GoEngineInitialState;
-    public komi:number;
+    public cur_review_move?:MoveTree;
+    public getState_callback?:() => any;
+    public handicap:number = NaN;
+    public initial_state:GoEngineInitialState = {black: '', white: ''};
+    public komi:number = NaN;
     public last_official_move:MoveTree;
     public move_tree:MoveTree;
     public move_tree_layout_vector:Array<number> = []; /* For use by MoveTree layout and rendering */
     public move_tree_layout_hash: {[coords:string]:MoveTree} = {}; /* For use by MoveTree layout and rendering */
     public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
-    public readonly name: string;
-    public outcome:string;
-    public pause_control:AdHocPauseControl;
-    public paused_since: number;
-    public phase:GoEnginePhase;
+    public readonly name: string = '';
+    public outcome:string = '';
+    public phase:GoEnginePhase = 'play';
     public player:NumericPlayerColor;
     public players:{
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
+    } = {
+        black: {username: 'black', id: NaN},
+        white: {username: 'white', id: NaN},
     };
-    public puzzle_collection:number;
-    public puzzle_description:string;
-    public puzzle_opponent_move_mode: PuzzleOpponentMoveMode;
-    public puzzle_player_move_mode: PuzzlePlayerMoveMode;
-    public puzzle_rank:number;
-    public puzzle_type:string;
+    public puzzle_collection:number = NaN;
+    public puzzle_description:string = '[missing puzzle descripton]';
+    public puzzle_opponent_move_mode: PuzzleOpponentMoveMode = 'manual';
+    public puzzle_player_move_mode: PuzzlePlayerMoveMode = 'free';
+    public puzzle_rank:number = NaN;
+    public puzzle_type:string = '[missing puzzle type]';
     public readonly config:GoEngineConfig;
-    public readonly disable_analysis:boolean;
-    public readonly height:number;
-    public readonly rules:GoEngineRules;
-    public readonly width:number;
+    public readonly disable_analysis:boolean = false;
+    public readonly height:number = 19;
+    public readonly rules:GoEngineRules = 'japanese';
+    public readonly width:number = 19;
     public removal:Array<Array<-1|0|1>>;
-    public setState_callback:(state:any) => void;
-    public strict_seki_mode:boolean;
-    public time_control:JGOFTimeControl;
-    public undo_requested: number;
-    public readonly white_player_id:number;
-    public winner:'black'|'white';
-    public game_id:number;
-    public decoded_moves:Array<Move>;
-    public automatic_stone_removal:boolean;
+    public setState_callback?:(state:any) => void;
+    public strict_seki_mode:boolean = false;
+    public time_control:JGOFTimeControl = { system: 'none', speed: 'correspondence', pause_on_weekends: true };
+    public undo_requested: number = NaN;
+    public winner?:'black'|'white';
+    public game_id:number = NaN;
+    public decoded_moves:Array<Move> = [];
+    public automatic_stone_removal:boolean = false;
 
-    private aga_handicap_scoring:boolean;
-    private allow_ko:boolean;
-    private allow_self_capture:boolean;
-    private allow_superko:boolean;
+    private aga_handicap_scoring:boolean = false;
+    private allow_ko:boolean = false;
+    private allow_self_capture:boolean = false;
+    private allow_superko:boolean = false;
     private black_prisoners:number;
     private white_prisoners:number;
     private board_is_repeating:boolean;
-    private goban_callback:GobanCore;
+    private goban_callback?:GobanCore;
     private dontStoreBoardHistory:boolean;
-    public free_handicap_placement:boolean;
-    private loading_sgf:boolean;
+    public free_handicap_placement:boolean = false;
+    private loading_sgf:boolean = false;
     private marks:Array<Array<number>>;
     private move_before_jump?:MoveTree;
     //private mv:Move;
-    private score_prisoners:boolean;
-    private score_stones:boolean;
-    private score_handicap:boolean;
-    private score_territory:boolean;
-    private score_territory_in_seki:boolean;
+    public score_prisoners:boolean = false;
+    public score_stones:boolean = false;
+    public score_handicap:boolean = false;
+    public score_territory:boolean = false;
+    public score_territory_in_seki:boolean = false;
 
 
     constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?:boolean) {
@@ -304,8 +312,8 @@ export class GoEngine {
         this.black_prisoners = 0;
         this.board_is_repeating = false;
         this.players = config.players || {
-            black: {},
-            white: {},
+            black: {username: 'black', id: NaN},
+            white: {username: 'white', id: NaN},
         };
         for (let y = 0; y < this.height; ++y) {
             let row:Array<NumericPlayerColor> = [];
@@ -321,22 +329,14 @@ export class GoEngine {
             this.removal.push(removal_row);
         }
 
-        if (this.black_player_id && !("id" in this.players.black)) {
-            this.players.black.id = this.black_player_id;
-        }
-        if (this.white_player_id && !("id" in this.players.white)) {
-            this.players.white.id = this.white_player_id;
-        }
-
-
         try {
             this.config.original_disable_analysis = this.config.disable_analysis;
             if (
                 typeof(window) !== "undefined"
                 && typeof((window as any)["user"]) !== "undefined"
                 && (window as any)["user"]
-                && (window as any)["user"].id as number !== this.black_player_id
-                && (window as any)["user"].id as number !== this.white_player_id
+                && (window as any)["user"].id as number !== this.players.black.id
+                && (window as any)["user"].id as number !== this.players.white.id
             ) {
                 this.disable_analysis = false;
                 this.config.disable_analysis = false;
@@ -461,7 +461,7 @@ export class GoEngine {
         }
     }
 
-    public decodeMoves(move_obj:MoveArray | string | [object]):Array<Move> {
+    public decodeMoves(move_obj:MoveArray | string | Array<MoveArray> | [object]):Array<Move> {
         return GoMath.decodeMoves(move_obj, this.width, this.height);
     }
     private getState():GoEngineState {
@@ -674,7 +674,9 @@ export class GoEngine {
         return { "from": branch_point.getMoveIndex(), "moves": encodeMoves(moves) };
     }
     public setAsCurrentReviewMove():void {
-        if (this.dontStoreBoardHistory) { return; }
+        if (this.dontStoreBoardHistory) {
+            return;
+        }
         this.cur_review_move = this.cur_move;
     }
     public deleteCurMove():void {
@@ -869,18 +871,18 @@ export class GoEngine {
         return group.length;
     }
     public playerToMove():number {
-        return this.player === 1 ? this.black_player_id : this.white_player_id;
+        return this.player === 1 ? this.players.black.id : this.players.white.id;
     }
     public playerNotToMove():number {
-        return this.player === 2 ? this.black_player_id : this.white_player_id;
+        return this.player === 2 ? this.players.black.id : this.players.white.id;
     }
     public otherPlayer():NumericPlayerColor {
         return this.player === 2 ? 1 : 2;
     }
     public playerColor(player_id?:number):'black'|'white'|'invalid' {
         if (player_id) {
-            return (player_id === this.black_player_id ? "black" :
-                    (player_id === this.white_player_id ? "white" : "invalid"));
+            return (player_id === this.players.black.id ? "black" :
+                    (player_id === this.players.white.id ? "white" : "invalid"));
         } else {
             return this.colorToMove();
         }
@@ -1441,16 +1443,40 @@ export class GoEngine {
         if ("ladder" in config) {
             delete config["ladder"];
         }
+
+        if (config.black_player_id || config.white_player_id) {
+            if (!config.players) {
+                config.players = {
+                    black: {
+                        username: 'black',
+                        id: config.black_player_id || NaN,
+                    },
+                    white: {
+                        username: 'white',
+                        id: config.white_player_id || NaN,
+                    }
+                };
+            }
+
+            if (!config.players || !config.players.black || !config.players.white) {
+                throw new Error(`config.players is invalid: ${JSON.stringify(config.players)}`);
+            }
+
+            if (config.players.black.id !== config.black_player_id) {
+                throw new Error(`config.players.black.id !== deprecated config.black_player_id`);
+            }
+            if (config.players.white.id !== config.white_player_id) {
+                throw new Error(`config.players.white.id !== deprecated config.white_player_id`);
+            }
+        }
     }
     public static fillDefaults(game_obj:GoEngineConfig):GoEngineConfig {
         if (!("phase" in game_obj)) { game_obj.phase = "play"; }
         if (!("rules" in game_obj)) { game_obj.rules = "japanese"; }
 
-        let defaults: any = {};
+        let defaults: GoEngineConfig = {};
 
-        defaults.history = [];
-        defaults.white_player_id = 0;
-        defaults.black_player_id = 0;
+        //defaults.history = [];
         defaults.game_id = 0;
         defaults.initial_player = "black";
         defaults.moves = [];
@@ -1466,9 +1492,10 @@ export class GoEngine {
         defaults.allow_ko = false;
         defaults.allow_superko = false;
         defaults.superko_algorithm = "ssk";
-        defaults.players = {};
-        defaults.players["black"] = {"username": "Black", "rank": -1, "elo": -1100};
-        defaults.players["white"] = {"username": "White", "rank": -1, "elo": -1100};
+        defaults.players = {
+            black: {"username": "Black", id:NaN, "rank": -1},
+            white: {"username": "White", id:NaN, "rank": -1},
+        };
         defaults.disable_analysis = false;
 
         defaults.score_territory = true;
@@ -1975,8 +2002,7 @@ export class GoEngine {
         };
     }
     public estimateScore(trials:number, tolerance:number):Score {
-        let se = new ScoreEstimator(this.goban_callback);
-        se.init(this, trials, tolerance);
+        let se = new ScoreEstimator(this.goban_callback, this, trials, tolerance);
         return se.score();
     }
     public getMoveByLocation(x:number, y:number):MoveTree | null {

@@ -30,7 +30,7 @@ export interface JGOF {
 
 export interface JGOFPlayer {
     name: string;
-    user_id?: string;
+    id?: string;
 }
 
 export interface JGOFClock {

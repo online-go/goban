@@ -32,6 +32,7 @@ export class GoTheme {
     protected parent?: GoTheme; // An optional parent theme
 
     constructor(parent?:GoTheme) {
+        this.name = `[ERROR theme missing name]`;
         this.parent = parent;
     }
 

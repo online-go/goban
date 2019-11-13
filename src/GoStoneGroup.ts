@@ -23,19 +23,19 @@ export class GoStoneGroup {
     corner_groups: {[y:string]: {[x:string]: GoStoneGroup}};
     points: Array<Intersection>;
     neighbors: Array<GoStoneGroup>;
-    is_territory: boolean;
+    is_territory: boolean = false;
     color: NumericPlayerColor;
-    is_probably_dead: boolean;
-    is_probably_dame: boolean;
+    is_probably_dead: boolean = false;
+    is_probably_dame: boolean = false;
     board_state: BoardState;
     id: number;
     is_strong_eye: boolean;
     adjacent_white: number;
     adjacent_black: number;
-    is_eye: boolean;
-    is_strong_string: boolean;
-    territory_color: NumericPlayerColor;
-    is_territory_in_seki: boolean;
+    is_eye: boolean = false;
+    is_strong_string: boolean = false;
+    territory_color: NumericPlayerColor = 0;
+    is_territory_in_seki: boolean = false;
 
     private __added_neighbors: {[group_id:number]: boolean};
 
@@ -68,12 +68,12 @@ export class GoStoneGroup {
         if (!(y in this.corner_groups)) { this.corner_groups[y]  = {}; }
         this.corner_groups[y][x] = group;
     }
-    foreachStone(fn:(pt:Intersection)=>void):void {
+    foreachStone(fn:(pt:Intersection) => void):void {
         for (let i = 0; i < this.points.length; ++i) {
             fn(this.points[i]);
         }
     }
-    foreachNeighborGroup(fn:(group:GoStoneGroup)=>void):void {
+    foreachNeighborGroup(fn:(group:GoStoneGroup) => void):void {
         for (let i = 0; i < this.neighbors.length; ++i) {
             fn(this.neighbors[i]);
         }

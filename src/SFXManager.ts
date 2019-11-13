@@ -17,13 +17,13 @@
 import {GobanCore} from './GobanCore';
 
 export class SFXManager {
-    private enabled = false;
+    private enabled:boolean = false;
     private loaded: {[id:string]: HTMLAudioElement} = {};
     private sfx: {[id:string]: HTMLAudioElement} = {};
     private play_state: {[id:string]: string} = {};
     private play_promises: {[id:string]: Promise<void>} = {};
     private play_promise_future_state: {[id:string]: string} = {};
-    public volume_override:number;
+    public volume_override?:number;
 
     constructor() {
         this.sync();
