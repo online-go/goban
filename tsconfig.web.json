@@ -19,18 +19,17 @@
             ]
         },
 
+        "forceConsistentCasingInFileNames": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "strictBindCallApply": true,
+        "strictFunctionTypes": true,
         "strictNullChecks": true,
-        "forceConsistentCasingInFileNames": true,
+        "strictPropertyInitialization": true,
 
-        "noImplicitThis": false,
         "noUnusedLocals": false,
         "noUnusedParameters": false,
-        "strictFunctionTypes": false,
-        "strictPropertyInitialization": false,
-        "strictBindCallApply": false,
-
 
         "sourceMap": true,
         "jsx": "react"
