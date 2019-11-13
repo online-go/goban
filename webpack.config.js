@@ -75,7 +75,7 @@ module.exports = (env, argv) => {
                         loader: "ts-loader",
                         exclude: /node_modules/,
                         options: {
-                            configFile: 'tsconfig.web.json',
+                            configFile: 'tsconfig.json',
                         }
                     }
                 ]
