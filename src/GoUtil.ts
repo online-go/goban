@@ -44,9 +44,11 @@ export function resizeDeviceScaledCanvas(canvas:HTMLCanvasElement, width:number,
 
     let ratio = devicePixelRatio / backingStoreRatio;
 
+    /*
     if (devicePixelRatio !== backingStoreRatio) {
         console.log("Scaling necessary: Device pixel ratio: " + devicePixelRatio + "  background store ratio: " + backingStoreRatio);
     }
+    */
 
     canvas.width = width * ratio;
     canvas.height = height * ratio;
