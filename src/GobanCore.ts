@@ -32,7 +32,14 @@ import {init_score_estimator, ScoreEstimator} from "./ScoreEstimator";
 import { deepEqual, dup, computeAverageMoveTime } from "./GoUtil";
 import {TypedEventEmitter} from "./TypedEventEmitter";
 import {_, interpolate} from "./translate";
-import { JGOFClock, JGOFTimeControl, JGOFPlayerClock, JGOFTimeControlSystem, JGOFPauseState} from './JGOF';
+import {
+    JGOFClock,
+    JGOFIntersection,
+    JGOFTimeControl,
+    JGOFPlayerClock,
+    JGOFTimeControlSystem,
+    JGOFPauseState
+} from './JGOF';
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl  } from './AdHocFormat';
 
 declare let swal:any;
@@ -53,7 +60,7 @@ export type AnalysisTool = 'stone' | 'draw' | 'label';
 export type AnalysisSubTool = 'black' | 'white' | 'alternate' | 'letters' | 'numbers' | string /* label character(s) */;
 
 export interface ColoredCircle {
-    move          : string;
+    move          : JGOFIntersection;
     color         : string;
     border_width? : number;
     border_color? : string;
@@ -96,6 +103,10 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     chat_log?:GobanChatLog;
     spectator_log?:GobanChatLog;
     malkovich_log?:GobanChatLog;
+
+    // pause control
+    pause_control?:AdHocPauseControl;
+    paused_since?: number;
 
     // settings
     draw_top_labels?: boolean;
@@ -296,8 +307,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     //public white_pause_text: string;
     public width:number;
 
-    protected pause_control?:AdHocPauseControl;
-    protected paused_since?: number;
+    public pause_control?:AdHocPauseControl;
+    public paused_since?: number;
 
     protected __board_redraw_pen_layer_timer:any = null;
     protected __clock_timer:any = null; /* number for web, Timeout for node - I don't think we can make them both happy so just 'any' */
@@ -1592,6 +1603,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.engine = new GoEngine(config, this);
         this.engine.getState_callback = () => { return this.getState(); };
         this.engine.setState_callback = (state) => { return this.setState(state); };
+
+        this.paused_since = config.paused_since;
+        this.pause_control = config.pause_control;
+
         /*
         if (this.move_number) {
             this.move_number.text(this.engine.getMoveNumber());
@@ -2256,8 +2271,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.colored_circles = GoMath.makeEmptyObjectMatrix<ColoredCircle>(this.width, this.height);
         for (let circle of circles) {
-            let xy = GoMath.decodeMoves(circle.move, this.width, this.height)[0];
-            this.colored_circles[xy.y][xy.x] = circle;
+            let mv = circle.move
+            this.colored_circles[mv.y][mv.x] = circle;
         }
         if (!dont_draw) {
             this.redraw(true);

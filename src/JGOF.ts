@@ -21,17 +21,32 @@
  */
 
 export interface JGOF {
+    /** JGOF version number */
+    jgof: 1;
+
     /** */
     black: JGOFPlayer | Array<JGOFPlayer>;
     white: JGOFPlayer | Array<JGOFPlayer>;
     time_control: JGOFTimeControl;
     clock: JGOFClock;
+    ai_reviews: {
+        [id:string]: JGOFAIReview;
+    };
+}
+
+export interface JGOFIntersection {
+    x: number;
+    y: number;
 }
 
 export interface JGOFPlayer {
     name: string;
     id?: string;
 }
+
+/*********/
+/* Clock */
+/*********/
 
 export interface JGOFClock {
     /** Player to move, and thus player whose clock is running. */
@@ -172,3 +187,76 @@ export type JGOFTimeControl =
     | JGOFCanadianTimeControl
     | JGOFAbsoluteTimeControl
     | JGOFNoneTimeControl;
+
+
+/******/
+/* AI */
+/******/
+
+export interface JGOFAIReview {
+    id: string;
+
+    /** A fast review typically only has a few moves reviewed, whereas a full
+     * review is expected to have every move reviewed. Note that this sets an
+     * expectation but not a requirement on what values are stored in `moves`,
+     * and while games are being reviewed these objects will have zero or more
+     * entries in `moves` regardless of the type.
+     */
+    type: 'fast' | 'full';
+    engine: string;
+    engine_version: string;
+    network: string;
+    network_size: string;
+    strength: number;
+
+    /** millisecond epoch time (ms from 1970 UTC) */
+    date: number;
+
+    /** predicted probability that black will win the last move */
+    win_rate: number;
+
+    /** predicted probability that black will win for all moves */
+    win_rates?: Array<number>;
+
+    /** Analysis of moves in the game. */
+    moves: {
+        [move_number:string]:JGOFAIReviewMove;
+    };
+}
+
+export interface JGOFAIReviewMove {
+    /** The move number */
+    move_number: number;
+
+    /** The move that was played */
+    move: JGOFIntersection;
+
+    /** Probability of black winning before this move was made */
+    pre_move_win_rate: number;
+
+    /** Probability of black winning after this move was made */
+    post_move_win_rate?: number;
+
+    /** Alternative moves that the AI analyzed and reported on */
+    variations: Array<JGOFAIReviewMoveVariation>;
+}
+
+export interface JGOFAIReviewMoveVariation {
+    /** The first move of the branch we are analyzing */
+    move: JGOFIntersection;
+
+    /** Followup predicted moves by the AI */
+    followup_moves: Array<JGOFIntersection>;
+
+    /** Probability of black wining to report for this variation */
+    post_move_win_rate: number;
+    visits: number;
+
+    /** lower confidence bound */
+    lcb?: number;
+    score_mean?: number;
+    score_stdev?: number;
+    utility?: number;
+    utility_lcb?: number;
+}
+

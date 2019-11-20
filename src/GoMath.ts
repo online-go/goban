@@ -337,8 +337,8 @@ export class GoMath {
     }
 
     /* Returns a sorted move string, this is used in our stone removal logic */
-    public static sortMoves(move_string:string):string {
-        let moves = GoMath.decodeMoves(move_string);
+    public static sortMoves(move_string:string, width:number, height:number):string {
+        let moves = GoMath.decodeMoves(move_string, width, height);
         moves.sort((a, b) => {
             let av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
             let bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;

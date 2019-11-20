@@ -1207,7 +1207,7 @@ export class GoEngine {
             ret += arr[i];
         }
 
-        return GoMath.sortMoves(ret);
+        return GoMath.sortMoves(ret, this.width, this.height);
     }
 
     public getMoveNumber():number {
@@ -1419,11 +1419,14 @@ export class GoEngine {
                 throw new Error(`config.players is invalid: ${JSON.stringify(config.players)}`);
             }
 
+            config.players.black.id = config.players.black.id ?? config.black_player_id;
+            config.players.white.id = config.players.white.id ?? config.white_player_id;
+
             if (config.players.black.id !== config.black_player_id) {
-                throw new Error(`config.players.black.id !== deprecated config.black_player_id`);
+                throw new Error(`config.players.black.id (${config.players.black.id}) !== deprecated config.black_player_id (${config.black_player_id})`);
             }
             if (config.players.white.id !== config.white_player_id) {
-                throw new Error(`config.players.white.id !== deprecated config.white_player_id`);
+                throw new Error(`config.players.white.id (${config.players.white.id}) !== deprecated config.white_player_id (${config.white_player_id})`);
             }
         }
     }

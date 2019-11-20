@@ -2309,11 +2309,6 @@ export class GobanCanvas extends GobanCore  {
             return;
         }
 
-        if (!this.move_tree_canvas) {
-            console.warn(`move_Tree_redraw called without move_tree_canvas set`);
-            return;
-        }
-
         let do_init = false;
         if (!this.move_tree_inner_container) {
             do_init = true;
@@ -2335,6 +2330,11 @@ export class GobanCanvas extends GobanCore  {
             } catch (e) {
                 // ResizeObserver is still fairly new and might not exist
             }
+        }
+
+        if (!this.move_tree_canvas) {
+            console.warn(`move_tree_redraw called without move_tree_canvas set`);
+            return;
         }
 
         if (do_init || this.move_tree_inner_container.parentNode !== this.move_tree_container) {
