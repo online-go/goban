@@ -17,6 +17,12 @@
 import { GoStoneGroup } from "./GoStoneGroup";
 import { NumericPlayerColor } from './GoEngine';
 
+export enum Color {
+    EMPTY = 0,
+    BLACK = 1,
+    WHITE = 2,
+}
+
 export interface Move {
     x: number;
     y: number;
@@ -42,8 +48,16 @@ export interface BoardState {
     foreachNeighbor: (pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void) => void;
 }
 
-// [x, y, time_delta, edited?]
-export type MoveArray = [number, number, number, number|void];
+// [x, y, time_delta, edited?, extra?]
+//export type MoveArray = [number, number, number|void, number|void];
+export type MoveArray = [
+    number,  /* x */
+    number,  /* y */
+    number,  /* time delta */
+    Color?,  /* color */
+    object?  /* extra */
+];
+
 
 export class GoMath {
     private state: BoardState;

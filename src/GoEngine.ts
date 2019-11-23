@@ -22,6 +22,7 @@ import {
     MoveArray,
     Intersection,
     Group,
+    Color,
 } from "./GoMath";
 import {ScoreEstimator} from "./ScoreEstimator";
 import {GobanCore} from './GobanCore';
@@ -204,7 +205,7 @@ export function encodeMoves(lst:Array<Move>) {
 
 export type PlayerColor = 'black' | 'white';
 /** 0 empty, 1 black, 2 white */
-export type NumericPlayerColor = 0|1|2;
+export type NumericPlayerColor = Color.EMPTY | Color.BLACK | Color.WHITE;
 
 export class GoEngine {
     //public readonly players.black.id:number;
