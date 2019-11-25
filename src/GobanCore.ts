@@ -22,7 +22,6 @@ import {
     PlayerColor,
     PuzzleConfig,
     PuzzlePlacementSetting,
-    NumericPlayerColor,
     Score,
 } from "./GoEngine";
 import {GoMath, Move, NumberMatrix, Intersection} from "./GoMath";
@@ -38,6 +37,7 @@ import {
     JGOFTimeControl,
     JGOFPlayerClock,
     JGOFTimeControlSystem,
+    JGOFNumericPlayerColor,
     JGOFPauseState
 } from './JGOF';
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl  } from './AdHocFormat';
@@ -1654,7 +1654,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         return this.engine;
     }
-    public set(x:number, y:number, player:NumericPlayerColor):void {
+    public set(x:number, y:number, player:JGOFNumericPlayerColor):void {
         this.markDirty();
     }
     public setForRemoval(x:number, y:number, removed:number) {

@@ -15,48 +15,28 @@
  */
 
 import { GoStoneGroup } from "./GoStoneGroup";
-import { NumericPlayerColor } from './GoEngine';
+import {
+    JGOFIntersection,
+    JGOFMove,
+    JGOFNumericPlayerColor,
+} from './JGOF';
+import { AdHocPackedMove } from './AdHocFormat';
 
-export enum Color {
-    EMPTY = 0,
-    BLACK = 1,
-    WHITE = 2,
-}
 
-export interface Move {
-    x: number;
-    y: number;
-    color?: NumericPlayerColor;
-    timedelta?: number;
-    edited?: boolean;
-}
-
-export interface Intersection {
-    x:number;
-    y:number;
-}
-
-export type Group = Array<Intersection>;
+export type Move = JGOFMove;
+export type Intersection = JGOFIntersection;
+export type Group = Array<JGOFIntersection>;
 export type NumberMatrix = Array<Array<number>>;
 export type StringMatrix = Array<Array<string>>;
 
 export interface BoardState {
     width: number;
     height: number;
-    board: Array<Array<NumericPlayerColor>>;
+    board: Array<Array<JGOFNumericPlayerColor>>;
     removal: Array<Array<number>>;
     foreachNeighbor: (pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void) => void;
 }
 
-// [x, y, time_delta, edited?, extra?]
-//export type MoveArray = [number, number, number|void, number|void];
-export type MoveArray = [
-    number,  /* x */
-    number,  /* y */
-    number,  /* time delta */
-    Color?,  /* color */
-    object?  /* extra */
-];
 
 
 export class GoMath {
@@ -72,7 +52,7 @@ export class GoMath {
         this.group_id_map = group_id_map;
         this.groups = groups;
 
-        let floodFill = (x:number, y:number, color:NumericPlayerColor, dame:boolean, id:number):void => {
+        let floodFill = (x:number, y:number, color:JGOFNumericPlayerColor, dame:boolean, id:number):void => {
             if (x >= 0 && x < this.state.width) {
                 if (y >= 0 && y < this.state.height) {
                     if (this.state.board[y][x] === color
@@ -193,9 +173,9 @@ export class GoMath {
         if (x >= 0) {
             return ("ABCDEFGHJKLMNOPQRSTUVWXYZ"[x]) + ("" + (board_height - y));
         }
-        return "";
+        return "pass";
     }
-    public static decodeMoves(move_obj:MoveArray | string | Array<MoveArray> | [object], width?:number, height?:number): Array<Move> {
+    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object], width?:number, height?:number): Array<Move> {
         let ret: Array<Move> = [];
 
         function decodeSingleMoveArray(arr:[number, number, number, number?, object?]):Move {
@@ -203,7 +183,7 @@ export class GoMath {
                 x         : arr[0],
                 y         : arr[1],
                 timedelta : arr.length > 2 ? arr[2] : -1,
-                color     : (arr.length > 3 ? arr[3] : 0) as NumericPlayerColor,
+                color     : (arr.length > 3 ? arr[3] : 0) as JGOFNumericPlayerColor,
             };
             let extra:any = arr.length > 4 ? arr[4] : {};
             for (let k in extra) {
@@ -262,14 +242,14 @@ export class GoMath {
 
                 for (let i = 0; i < move_string.length - 1; i += 2) {
                     let edited = false;
-                    let color:NumericPlayerColor = 0;
+                    let color:JGOFNumericPlayerColor = 0;
                     if (move_string[i + 0] === "!") {
                         edited = true;
                         if (move_string.substr(i, 10) === '!undefined') { /* bad data */
                             color = 0;
                             i += 10;
                         } else {
-                            color = parseInt(move_string[i + 1]) as NumericPlayerColor;
+                            color = parseInt(move_string[i + 1]) as JGOFNumericPlayerColor;
                             i += 2;
                         }
                     }
@@ -333,8 +313,8 @@ export class GoMath {
         }
         return ret;
     }
-    public static encodeMoveToArray(mv:Move):MoveArray {
-        let arr:MoveArray = [mv.x, mv.y, mv.timedelta ? mv.timedelta : -1, undefined];
+    public static encodeMoveToArray(mv:Move):AdHocPackedMove {
+        let arr:AdHocPackedMove = [mv.x, mv.y, mv.timedelta ? mv.timedelta : -1, undefined];
         if (mv.edited) {
             arr[3] = mv.color;
         } else {
@@ -342,13 +322,14 @@ export class GoMath {
         }
         return arr;
     }
-    public static encodeMovesToArray(moves:Array<Move>):Array<MoveArray> {
-        let ret:Array<MoveArray> = [];
+    public static encodeMovesToArray(moves:Array<Move>):Array<AdHocPackedMove> {
+        let ret:Array<AdHocPackedMove> = [];
         for (let i = 0; i < moves.length; ++i) {
             ret.push(GoMath.encodeMoveToArray(moves[i]));
         }
         return ret;
     }
+
 
     /* Returns a sorted move string, this is used in our stone removal logic */
     public static sortMoves(move_string:string, width:number, height:number):string {

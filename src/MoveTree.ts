@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-import {GoMath, MoveArray} from "./GoMath";
+import {GoMath} from "./GoMath";
 import {GoEngine, GoEngineState} from "./GoEngine";
-import {encodeMove, NumericPlayerColor} from "./GoEngine";
+import {encodeMove} from "./GoEngine";
+import {AdHocPackedMove} from './AdHocFormat';
+import {JGOFNumericPlayerColor} from "./JGOF";
 
 export interface MarkInterface {
     triangle?         : boolean;
@@ -61,7 +63,7 @@ export interface MoveTreeChatLineBody {
     'type': 'analysis';
     name: string;
     from: number;
-    moves: MoveArray | string;
+    moves: AdHocPackedMove | string;
 }
 export interface MoveTreeChatLine {
     username: string;
@@ -89,7 +91,7 @@ export class MoveTree {
     public correct_answer: boolean = false;
     public wrong_answer: boolean = false;
     private hint_next?: MoveTree;
-    public player: NumericPlayerColor;
+    public player: JGOFNumericPlayerColor;
     public line_color: number;
     public trunk: boolean;
     public text: string;
@@ -115,7 +117,7 @@ export class MoveTree {
     public isobranches: any;
     private isobranch_hash?: string;
 
-    constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:NumericPlayerColor, move_number:number, parent:MoveTree | null, state:GoEngineState) {
+    constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:JGOFNumericPlayerColor, move_number:number, parent:MoveTree | null, state:GoEngineState) {
         this.id = ++__move_tree_id;
         this.x = x;
         this.y = y;
@@ -278,7 +280,7 @@ export class MoveTree {
 
         return null;
     }
-    move(x:number, y:number, trunk:boolean, edited:boolean, player:NumericPlayerColor, move_number:number, state:any):MoveTree {
+    move(x:number, y:number, trunk:boolean, edited:boolean, player:JGOFNumericPlayerColor, move_number:number, state:any):MoveTree {
         if (typeof(player) === "undefined") {
             throw new Error("Invalid player");
         }

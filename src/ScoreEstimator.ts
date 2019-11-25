@@ -17,7 +17,8 @@
 import {dup} from "./GoUtil";
 import {GoMath, Intersection, Group} from "./GoMath";
 import {GobanCore} from "./GobanCore";
-import {GoEngine, encodeMove, encodeMoves, Score, PlayerScore, NumericPlayerColor} from "./GoEngine";
+import {GoEngine, encodeMove, encodeMoves, Score, PlayerScore} from "./GoEngine";
+import { JGOFNumericPlayerColor } from './JGOF';
 import {_} from "./translate";
 
 declare const CLIENT:boolean;
@@ -122,7 +123,7 @@ if (CLIENT) {
 interface SEPoint {
     x: number;
     y:number;
-    color?:NumericPlayerColor;
+    color?:JGOFNumericPlayerColor;
 }
 
 class SEGroup {
@@ -131,7 +132,7 @@ class SEGroup {
     neighboring_space:Array<SEGroup>;
     se:ScoreEstimator;
     id:number;
-    color:NumericPlayerColor;
+    color:JGOFNumericPlayerColor;
     removed:boolean;
     estimated_score:number;
     estimated_hard_score:number;
@@ -140,7 +141,7 @@ class SEGroup {
     liberties:number = 0;
 
 
-    constructor(se:ScoreEstimator, color:NumericPlayerColor, id:number) {
+    constructor(se:ScoreEstimator, color:JGOFNumericPlayerColor, id:number) {
         this.points = [];
         this.se = se;
         this.id = id;
@@ -155,7 +156,7 @@ class SEGroup {
 
         // this.liberties is set by ScoreEstimator.resetGroups */
     }
-    add(i:number, j:number, color:NumericPlayerColor) {
+    add(i:number, j:number, color:JGOFNumericPlayerColor) {
         this.points.push({x: i, y: j, color: color});
     }
     foreachPoint(fn:(pt:SEPoint) => void) {
@@ -234,7 +235,7 @@ class SEGroup {
 export class ScoreEstimator {
     width:number;
     height:number;
-    board:Array<Array<NumericPlayerColor>>;
+    board:Array<Array<JGOFNumericPlayerColor>>;
     white_prisoners:number = 0;
     black_prisoners:number = 0;
     //score_stones:boolean;
@@ -494,7 +495,7 @@ export class ScoreEstimator {
     toggleMetaGroupRemoval(x:number, y:number):void {
         let already_done:{[k:string]: boolean} = {};
         let space_groups:Array<SEGroup> = [];
-        let group_color:NumericPlayerColor;
+        let group_color:JGOFNumericPlayerColor;
 
         try {
             if (x >= 0 && y >= 0) {

@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { NumericPlayerColor } from './GoEngine';
 import { BoardState, Intersection } from './GoMath';
+import { JGOFNumericPlayerColor } from './JGOF';
 
 export class GoStoneGroup {
-    probable_color: NumericPlayerColor;
+    probable_color: JGOFNumericPlayerColor;
     dame: boolean;
     corner_groups: {[y:string]: {[x:string]: GoStoneGroup}};
     points: Array<Intersection>;
     neighbors: Array<GoStoneGroup>;
     is_territory: boolean = false;
-    color: NumericPlayerColor;
+    color: JGOFNumericPlayerColor;
     is_probably_dead: boolean = false;
     is_probably_dame: boolean = false;
     board_state: BoardState;
@@ -34,13 +34,13 @@ export class GoStoneGroup {
     adjacent_black: number;
     is_eye: boolean = false;
     is_strong_string: boolean = false;
-    territory_color: NumericPlayerColor = 0;
+    territory_color: JGOFNumericPlayerColor = 0;
     is_territory_in_seki: boolean = false;
 
     private __added_neighbors: {[group_id:number]: boolean};
 
 
-    constructor(board_state:BoardState, id:number, color:NumericPlayerColor, dame:boolean) {
+    constructor(board_state:BoardState, id:number, color:JGOFNumericPlayerColor, dame:boolean) {
         this.board_state = board_state;
         this.points = [];
         this.neighbors = [];
@@ -95,7 +95,7 @@ export class GoStoneGroup {
          * for edges, and 3 stones for corners, or if any of those spots are
          * territory owned by the same color, it is considered strong. */
         this.is_strong_eye = false;
-        let color:NumericPlayerColor;
+        let color:JGOFNumericPlayerColor;
         let board_state = this.board_state;
         if (this.is_eye) {
             let x = this.points[0].x;
@@ -141,7 +141,7 @@ export class GoStoneGroup {
             return;
         }
 
-        let color:NumericPlayerColor = 0;
+        let color:JGOFNumericPlayerColor = 0;
         for (let i = 0; i < this.neighbors.length; ++i) {
             if (this.neighbors[i].color !== 0) {
                 color = this.neighbors[i].color;

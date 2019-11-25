@@ -15,7 +15,7 @@
  */
 
 
-import { JGOF } from './JGOF';
+import { JGOF, JGOFNumericPlayerColor } from './JGOF';
 import { AdHocFormat } from './AdHocFormat';
 
 import {
@@ -27,7 +27,7 @@ import {
     SCORE_ESTIMATION_TRIALS,
     SCORE_ESTIMATION_TOLERANCE,
 } from './GobanCore';
-import { GoEngine, NumericPlayerColor, encodeMove, encodeMoves} from "./GoEngine";
+import { GoEngine, encodeMove, encodeMoves} from "./GoEngine";
 import {GoMath, Group} from "./GoMath";
 import {MoveTree} from "./MoveTree";
 import {GoTheme} from "./GoTheme";
@@ -95,7 +95,7 @@ export class GobanCanvas extends GobanCore  {
 
     private layer_offset_left:number = 0;
     private layer_offset_top:number = 0;
-    private pattern_search_color:NumericPlayerColor = 0;
+    private pattern_search_color:JGOFNumericPlayerColor = 0;
 
     private drawing_enabled:boolean = true;
     private pen_ctx?:CanvasRenderingContext2D;
@@ -640,7 +640,7 @@ export class GobanCanvas extends GobanCore  {
                 }
             }
             else if (this.mode === "pattern search") {
-                let color:NumericPlayerColor = (this.engine.board[y][x] + 1) % 3 as NumericPlayerColor; /* cycle through the colors */
+                let color:JGOFNumericPlayerColor = (this.engine.board[y][x] + 1) % 3 as JGOFNumericPlayerColor; /* cycle through the colors */
                 if (this.pattern_search_color) {
                     color = this.pattern_search_color;
                     if (this.engine.board[y][x] === this.pattern_search_color) {
@@ -660,7 +660,7 @@ export class GobanCanvas extends GobanCore  {
             }
             else if (this.mode === "puzzle") {
                 let puzzle_mode = "place";
-                let color:NumericPlayerColor = 0;
+                let color:JGOFNumericPlayerColor = 0;
                 if (this.getPuzzlePlacementSetting) {
                     let s = this.getPuzzlePlacementSetting();
                     puzzle_mode = s.mode;

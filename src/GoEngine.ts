@@ -19,14 +19,13 @@ import {MoveTree, MoveTreeJson} from "./MoveTree";
 import {
     GoMath,
     Move,
-    MoveArray,
     Intersection,
     Group,
-    Color,
 } from "./GoMath";
-import {ScoreEstimator} from "./ScoreEstimator";
-import {GobanCore} from './GobanCore';
-import {JGOFTimeControl} from './JGOF';
+import { ScoreEstimator } from "./ScoreEstimator";
+import { GobanCore } from './GobanCore';
+import { JGOFTimeControl, JGOFNumericPlayerColor } from './JGOF';
+import { AdHocPackedMove } from './AdHocFormat';
 import {_} from "./translate";
 
 
@@ -49,11 +48,11 @@ export interface Score {
 }
 
 export interface GoEngineState {
-    player: NumericPlayerColor;
+    player: JGOFNumericPlayerColor;
     board_is_repeating: boolean;
     white_prisoners: number;
     black_prisoners: number;
-    board: Array<Array<NumericPlayerColor>>;
+    board: Array<Array<JGOFNumericPlayerColor>>;
     isobranch_hash?: string;
 
     /** User data state, the Goban's usually want to store some state in here, which is
@@ -96,7 +95,7 @@ export interface GoEngineConfig {
         'white': GoEnginePlayerEntry;
     };
     //time_control?:JGOFTimeControl;
-    moves?:Array<MoveArray>;
+    moves?:Array<AdHocPackedMove>;
     move_tree?:MoveTreeJson;
     ranked?: boolean;
     original_disable_analysis?: boolean;
@@ -175,7 +174,7 @@ export interface PuzzleConfig {
 
 export type PuzzlePlayerMoveMode = 'free' | 'fixed';
 export type PuzzleOpponentMoveMode = 'manual'|'automatic';
-export type PuzzlePlacementSetting = {'mode': 'play'} | {'mode': 'setup', 'color': NumericPlayerColor} | {'mode': 'place', 'color': 0};
+export type PuzzlePlacementSetting = {'mode': 'play'} | {'mode': 'setup', 'color': JGOFNumericPlayerColor} | {'mode': 'place', 'color': 0};
 
 let __currentMarker = 0;
 
@@ -204,13 +203,11 @@ export function encodeMoves(lst:Array<Move>) {
 }
 
 export type PlayerColor = 'black' | 'white';
-/** 0 empty, 1 black, 2 white */
-export type NumericPlayerColor = Color.EMPTY | Color.BLACK | Color.WHITE;
 
 export class GoEngine {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
-    public board:Array<Array<NumericPlayerColor>>;
+    public board:Array<Array<JGOFNumericPlayerColor>>;
     public cur_move:MoveTree;
     public cur_review_move?:MoveTree;
     public getState_callback?:() => any;
@@ -225,7 +222,7 @@ export class GoEngine {
     public readonly name: string = '';
     public outcome:string = '';
     public phase:GoEnginePhase = 'play';
-    public player:NumericPlayerColor;
+    public player:JGOFNumericPlayerColor;
     public players:{
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
@@ -315,7 +312,7 @@ export class GoEngine {
             white: {username: 'white', id: NaN},
         };
         for (let y = 0; y < this.height; ++y) {
-            let row:Array<NumericPlayerColor> = [];
+            let row:Array<JGOFNumericPlayerColor> = [];
             let mark_row = [];
             let removal_row:Array<-1|0|1> = [];
             for (let x = 0; x < this.width; ++x) {
@@ -460,7 +457,7 @@ export class GoEngine {
         }
     }
 
-    public decodeMoves(move_obj:MoveArray | string | Array<MoveArray> | [object]):Array<Move> {
+    public decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object]):Array<Move> {
         return GoMath.decodeMoves(move_obj, this.width, this.height);
     }
     private getState():GoEngineState {
@@ -509,7 +506,7 @@ export class GoEngine {
 
         return state;
     }
-    public boardMatriciesAreTheSame(m1:Array<Array<NumericPlayerColor>>, m2:Array<Array<NumericPlayerColor>>):boolean {
+    public boardMatriciesAreTheSame(m1:Array<Array<JGOFNumericPlayerColor>>, m2:Array<Array<JGOFNumericPlayerColor>>):boolean {
         if (m1.length !== m2.length || m1[0].length !== m2[0].length) { return false; }
 
         for (let y = 0; y < m1.length; ++y) {
@@ -533,7 +530,7 @@ export class GoEngine {
         return true;
     }
 
-    public followPath(from_turn: number, moves:MoveArray | string, cb?:(x:number, y:number, edited:boolean, color:number) => void):Array<MoveTree> {
+    public followPath(from_turn: number, moves:AdHocPackedMove | string, cb?:(x:number, y:number, edited:boolean, color:number) => void):Array<MoveTree> {
         try {
             let ret = [];
             let from = this.move_tree.index(from_turn);
@@ -706,7 +703,7 @@ export class GoEngine {
         }
     }
 
-    private opponent():NumericPlayerColor {
+    private opponent():JGOFNumericPlayerColor {
         return this.player === 1 ? 2 : 1;
     }
     public prettyCoords(x:number, y:number):string {
@@ -854,7 +851,7 @@ export class GoEngine {
     public playerNotToMove():number {
         return this.player === 2 ? this.players.black.id : this.players.white.id;
     }
-    public otherPlayer():NumericPlayerColor {
+    public otherPlayer():JGOFNumericPlayerColor {
         return this.player === 2 ? 1 : 2;
     }
     public playerColor(player_id?:number):'black'|'white'|'invalid' {
@@ -868,7 +865,7 @@ export class GoEngine {
     public colorToMove():'black'|'white' {
         return this.player === 1 ? "black" : "white";
     }
-    public playerByColor(color:PlayerColor | NumericPlayerColor):NumericPlayerColor {
+    public playerByColor(color:PlayerColor | JGOFNumericPlayerColor):JGOFNumericPlayerColor {
         if (color === 1 || color === 2) {
             return color;
         }
@@ -1001,7 +998,7 @@ export class GoEngine {
         }
         return false;
     }
-    public editPlace(x:number, y:number, color:NumericPlayerColor, isTrunkMove?:boolean):void {
+    public editPlace(x:number, y:number, color:JGOFNumericPlayerColor, isTrunkMove?:boolean):void {
         let player = this.playerByColor(color);
 
         if (x >= 0 && y >= 0) {
@@ -1015,7 +1012,7 @@ export class GoEngine {
 
         this.cur_move = this.cur_move.move(x, y, trunk, true, player, this.cur_move.move_number, this.getState());
     }
-    public initialStatePlace(x:number, y:number, color:NumericPlayerColor, dont_record_placement?:boolean):void {
+    public initialStatePlace(x:number, y:number, color:JGOFNumericPlayerColor, dont_record_placement?:boolean):void {
         let moves = null;
         let p = this.player;
 

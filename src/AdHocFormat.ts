@@ -15,7 +15,7 @@
  */
 
 
-import { JGOFTimeControl } from './JGOF';
+import { JGOFTimeControl, JGOFNumericPlayerColor } from './JGOF';
 
 /**
  * The to-be-deprecated format used by Online-Go.com, will be replaced by JGOF
@@ -34,6 +34,14 @@ export interface AdHocPlayer {
     name: string;
     id: number;
 }
+
+export type AdHocPackedMove = [
+    number,  /* x */
+    number,  /* y */
+    number,  /* time delta */
+    JGOFNumericPlayerColor?,  /* color */
+    object?  /* extra */
+];
 
 export interface AdHocClock {
     /** OGS Game id */

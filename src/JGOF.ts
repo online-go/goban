@@ -25,11 +25,11 @@ export interface JGOF {
     jgof: 1;
 
     /** */
-    black: JGOFPlayer | Array<JGOFPlayer>;
-    white: JGOFPlayer | Array<JGOFPlayer>;
-    time_control: JGOFTimeControl;
-    clock: JGOFClock;
-    ai_reviews: {
+    black?: JGOFPlayer | Array<JGOFPlayer>;
+    white?: JGOFPlayer | Array<JGOFPlayer>;
+    time_control?: JGOFTimeControl;
+    clock?: JGOFClock;
+    ai_reviews?: {
         [id:string]: JGOFAIReview;
     };
 }
@@ -42,6 +42,20 @@ export interface JGOFIntersection {
 export interface JGOFPlayer {
     name: string;
     id?: string;
+}
+
+export enum JGOFNumericPlayerColor {
+    EMPTY = 0,
+    BLACK = 1,
+    WHITE = 2,
+}
+
+export interface JGOFMove extends JGOFIntersection {
+    x: number;
+    y: number;
+    color?: JGOFNumericPlayerColor;
+    timedelta?: number;
+    edited?: boolean;
 }
 
 /*********/
@@ -64,16 +78,21 @@ export interface JGOFClock {
     /** Time left on whites clock. */
     white_clock: JGOFPlayerClock;
 
-    /** True if the game has not begun yet and we are waiting for the first
-     *  move to be played. If this is true, `start_time_left` will be set. */
+    /**
+     * True if the game has not begun yet and we are waiting for the first
+     * move to be played. If this is true, `start_time_left` will be set.
+     */
     start_mode?:boolean;
 
-    /** If `start_mode` is true, this is the number of milliseconds left
-     *  on the start clock, when the clock reaches zero the game will be
-     *  canceled. */
+    /**
+     * If `start_mode` is true, this is the number of milliseconds left
+     * on the start clock, when the clock reaches zero the game will be
+     * canceled.
+     */
     start_time_left?:number;
 
-    /** If `puase_State.stone_removal` is true, this is the number of
+    /**
+     * If `puase_State.stone_removal` is true, this is the number of
      * milliseconds left before the result is automatically accepted.
      */
     stone_removal_time_left?:number;
@@ -95,12 +114,16 @@ export interface JGOFPlayerClock {
     /** Used with byo-yomi time control. Time left on the period time, in milliseconds. */
     period_time_left?: number;
 
-    /** Used with canadian time control. Number of moves left before a new
-     *  block of time. */
+    /**
+     * Used with canadian time control. Number of moves left before a new
+     * block of time.
+     */
     moves_left?: number;
 
-    /** Used with canadian time control. Time left in milliseconds to make the
-     * remainder of your moves in the current block */
+    /**
+     * Used with canadian time control. Time left in milliseconds to make the
+     * remainder of your moves in the current block
+     */
     block_time_left?: number;
 }
 
