@@ -175,7 +175,7 @@ export class GoMath {
         }
         return "pass";
     }
-    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object], width?:number, height?:number): Array<Move> {
+    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove>, width?:number, height?:number): Array<JGOFMove> {
         let ret: Array<Move> = [];
 
         function decodeSingleMoveArray(arr:[number, number, number, number?, object?]):Move {
@@ -193,13 +193,20 @@ export class GoMath {
         }
 
         if (move_obj instanceof Array) {
-            if (move_obj.length && typeof(move_obj[0]) === "number") {
+            if (move_obj.length === 0) {
+                return [];
+            }
+            if (typeof(move_obj[0]) === "number") {
                 ret.push(decodeSingleMoveArray(move_obj as [number, number, number, number]));
             }
             else {
+                if (typeof(move_obj[0]) === 'object' && 'x' in move_obj[0] && typeof(move_obj[0].x) === "number") {
+                    return move_obj as Array<JGOFMove>;
+                }
+
                 for (let i = 0; i < move_obj.length; ++i) {
                     let mv:any = move_obj[i];
-                    if (mv instanceof Array) {
+                    if (mv instanceof Array && typeof(mv[0]) === "number") {
                         ret.push(decodeSingleMoveArray(mv as [number, number, number, number]));
                     }
                     else {
@@ -328,6 +335,27 @@ export class GoMath {
             ret.push(GoMath.encodeMoveToArray(moves[i]));
         }
         return ret;
+    }
+
+    /** Removes superfluous fields from the JGOFMove objects, such as
+     * edited=false and color=0. This does not modify the original array. */
+    public static trimJGOFMoves(arr:Array<JGOFMove>):Array<JGOFMove> {
+        return arr.map(o => {
+            let r:JGOFMove = {
+                x: o.x,
+                y: o.y,
+            };
+            if (o.edited) {
+                r.edited = o.edited;
+            }
+            if (o.color) {
+                r.color = o.color;
+            }
+            if (o.timedelta) {
+                r.timedelta = o.timedelta;
+            }
+            return r;
+        });
     }
 
 

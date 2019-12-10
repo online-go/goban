@@ -24,7 +24,7 @@ import {
 } from "./GoMath";
 import { ScoreEstimator } from "./ScoreEstimator";
 import { GobanCore } from './GobanCore';
-import { JGOFTimeControl, JGOFNumericPlayerColor } from './JGOF';
+import { JGOFTimeControl, JGOFNumericPlayerColor, JGOFMove } from './JGOF';
 import { AdHocPackedMove } from './AdHocFormat';
 import {_} from "./translate";
 
@@ -95,7 +95,7 @@ export interface GoEngineConfig {
         'white': GoEnginePlayerEntry;
     };
     //time_control?:JGOFTimeControl;
-    moves?:Array<AdHocPackedMove>;
+    moves?:Array<AdHocPackedMove> | Array<JGOFMove>;
     move_tree?:MoveTreeJson;
     ranked?: boolean;
     original_disable_analysis?: boolean;
@@ -457,7 +457,7 @@ export class GoEngine {
         }
     }
 
-    public decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object]):Array<Move> {
+    public decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove>):Array<JGOFMove> {
         return GoMath.decodeMoves(move_obj, this.width, this.height);
     }
     private getState():GoEngineState {

@@ -24,23 +24,37 @@ export interface JGOF {
     /** JGOF version number */
     jgof: 1;
 
-    /** */
+    /** Player information for those playing Black */
     black?: JGOFPlayer | Array<JGOFPlayer>;
+
+    /** Player information for those playing White */
     white?: JGOFPlayer | Array<JGOFPlayer>;
+
+    /** Time control settings for the game */
     time_control?: JGOFTimeControl;
+
+    /** Current clock information, this is used for ongoing games */
     clock?: JGOFClock;
+
+    /** AI Review information computed for this game */
     ai_reviews?: {
         [id:string]: JGOFAIReview;
     };
 }
 
 export interface JGOFIntersection {
+    /** Horizontal coordinate, counting left to right, starting with zero */
     x: number;
+
+    /** Vertical coordinate, counting top to bottom, starting with zero */
     y: number;
 }
 
 export interface JGOFPlayer {
+    /** Name or username of the player */
     name: string;
+
+    /** Identifier for the player */
     id?: string;
 }
 
@@ -51,8 +65,6 @@ export enum JGOFNumericPlayerColor {
 }
 
 export interface JGOFMove extends JGOFIntersection {
-    x: number;
-    y: number;
     color?: JGOFNumericPlayerColor;
     timedelta?: number;
     edited?: boolean;
@@ -275,11 +287,22 @@ export interface JGOFAIReviewMoveVariation {
     post_move_win_rate: number;
     visits: number;
 
-    /** lower confidence bound */
+    /** lower confidence bound, both KataGo and LeelaZero provide this */
     lcb?: number;
+
+    /** From KataGo */
     score_mean?: number;
+
+    /** From KataGo */
     score_stdev?: number;
+
+    /** From KataGo */
     utility?: number;
+
+    /** From KataGo */
     utility_lcb?: number;
+
+    /** From Leela Zero */
+    policy?: number;
 }
 
