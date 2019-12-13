@@ -175,7 +175,7 @@ export class GoMath {
         }
         return "pass";
     }
-    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove>, width?:number, height?:number): Array<JGOFMove> {
+    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove> | JGOFMove, width?:number, height?:number): Array<JGOFMove> {
         let ret: Array<Move> = [];
 
         function decodeSingleMoveArray(arr:[number, number, number, number?, object?]):Move {
@@ -274,8 +274,11 @@ export class GoMath {
                 }
             }
         }
+        else if (typeof(move_obj) === 'object' && 'x' in move_obj && typeof(move_obj.x) === "number") {
+            return [move_obj] as Array<JGOFMove>;
+        }
         else {
-            throw new Error("Invalid move format: " + move_obj);
+            throw new Error("Invalid move format: " + JSON.stringify(move_obj));
         }
 
         return ret;

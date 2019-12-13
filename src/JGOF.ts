@@ -231,7 +231,8 @@ export type JGOFTimeControl =
 export interface JGOFAIReview {
     id: string;
 
-    /** A fast review typically only has a few moves reviewed, whereas a full
+    /**
+     * A fast review typically only has a few moves reviewed, whereas a full
      * review is expected to have every move reviewed. Note that this sets an
      * expectation but not a requirement on what values are stored in `moves`,
      * and while games are being reviewed these objects will have zero or more
@@ -260,31 +261,29 @@ export interface JGOFAIReview {
 }
 
 export interface JGOFAIReviewMove {
-    /** The move number */
+    /**
+     * The move number. This is 1 indexed.
+     */
     move_number: number;
 
-    /** The move that was played */
+    /** The move that was played. */
     move: JGOFIntersection;
 
-    /** Probability of black winning before this move was made */
-    pre_move_win_rate: number;
-
     /** Probability of black winning after this move was made */
-    post_move_win_rate?: number;
+    win_rate: number;
 
-    /** Alternative moves that the AI analyzed and reported on */
-    variations: Array<JGOFAIReviewMoveVariation>;
+    /** Followup move branches explored */
+    branches: Array<JGOFAIReviewMoveVariation>;
 }
 
 export interface JGOFAIReviewMoveVariation {
-    /** The first move of the branch we are analyzing */
-    move: JGOFIntersection;
-
     /** Followup predicted moves by the AI */
-    followup_moves: Array<JGOFIntersection>;
+    moves: Array<JGOFIntersection>;
 
     /** Probability of black wining to report for this variation */
-    post_move_win_rate: number;
+    win_rate: number;
+
+    /** Number of times the AI considered the first move of this variation */
     visits: number;
 
     /** lower confidence bound, both KataGo and LeelaZero provide this */
