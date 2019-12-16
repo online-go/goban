@@ -594,12 +594,22 @@ export class GoEngine {
 
         return false;
     }
-    /** Returns true if there was a previous to show */
+    /** Returns true if there was a next to show */
     public showNext():boolean {
         if (this.dontStoreBoardHistory) { return false; }
 
         if (this.cur_move.next()) {
             this.jumpTo(this.cur_move.next());
+            return true;
+        }
+        return false;
+    }
+    /** Returns true if there was a next to show */
+    public showNextTrunk():boolean {
+        if (this.dontStoreBoardHistory) { return false; }
+
+        if (this.cur_move.trunk_next) {
+            this.jumpTo(this.cur_move.trunk_next);
             return true;
         }
         return false;
