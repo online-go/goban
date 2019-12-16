@@ -30,6 +30,7 @@ export * from "./SFXManager";
 export * from "./translate";
 export * from "./TypedEventEmitter";
 export * from "./JGOF";
+export * from "./AIReview";
 export * from "./AdHocFormat";
 export {
     GobanCanvas as Goban,
