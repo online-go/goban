@@ -225,7 +225,7 @@ export class GoMath {
                 /* coordinate form, used from human input. */
                 let move_string = move_obj;
 
-                let moves = move_string.split(/([a-zA-Z][0-9]+|[.][.])/);
+                let moves = move_string.split(/([a-zA-Z][0-9]+|pass|[.][.])/);
                 for (let i = 0; i < moves.length; ++i) {
                     if (i % 2) { /* even are the 'splits', which should always be blank unless there is an error */
                         let x = GoMath.pretty_char2num(moves[i][0]);
