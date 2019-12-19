@@ -175,7 +175,7 @@ export class GoMath {
         }
         return "pass";
     }
-    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove> | JGOFMove, width?:number, height?:number): Array<JGOFMove> {
+    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove> | JGOFMove, width:number, height:number): Array<JGOFMove> {
         let ret: Array<Move> = [];
 
         function decodeSingleMoveArray(arr:[number, number, number, number?, object?]):Move {
