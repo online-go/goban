@@ -1217,7 +1217,7 @@ export class GobanCanvas extends GobanCore  {
                     && !this.scoring_mode
                     && (this.engine.phase === "play" || (this.engine.phase === "finished" && this.mode === "analyze"))
                     && ((this.engine.puzzle_player_move_mode !== "fixed" || movetree_contains_this_square)
-                        || (this.getPuzzlePlacementSetting && this.getPuzzlePlacementSetting().mode !== "play"))
+                        || (this.getPuzzlePlacementSetting && this.getPuzzlePlacementSetting().mode === "play"))
                    )
                 || (this.scoring_mode
                     && this.score_estimate

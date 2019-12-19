@@ -1890,16 +1890,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     break;
 
                 case "analyze":
-                    this.disableStonePlacement();
-                    this.enableStonePlacement();
-                    break;
-
                 case "conditional":
-                    this.disableStonePlacement();
-                    this.enableStonePlacement();
-                    break;
-
                 case "edit":
+                case "puzzle":
                     this.disableStonePlacement();
                     this.enableStonePlacement();
                     break;
