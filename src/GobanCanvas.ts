@@ -539,7 +539,7 @@ export class GobanCanvas extends GobanCore  {
         }
     }
     private onTap(event:MouseEvent | TouchEvent, double_tap:boolean):void {
-        if (!(this.stone_placement_enabled && (this.player_id || this.engine.players.black.id === 0 || this.mode === "analyze" || this.mode === "pattern search" || this.mode === "puzzle"))) { return; }
+        if (!(this.stone_placement_enabled && (this.player_id || !this.engine.players.black.id || this.mode === "analyze" || this.mode === "pattern search" || this.mode === "puzzle"))) { return; }
 
         let pos = getRelativeEventPosition(event);
         let xx = pos.x;
@@ -898,7 +898,7 @@ export class GobanCanvas extends GobanCore  {
     }
     private onMouseMove(event:MouseEvent | TouchEvent):void {
         if (!(this.stone_placement_enabled &&
-            (this.player_id || this.engine.players.black.id === 0 || this.mode === "analyze" || this.scoring_mode)
+            (this.player_id || !this.engine.players.black.id || this.mode === "analyze" || this.scoring_mode)
         )) {
             return;
         }
