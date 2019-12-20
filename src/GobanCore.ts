@@ -2983,6 +2983,7 @@ function AdHocPauseControl2JGOFPauseState(pause_control:AdHocPauseControl) {
                     break;
 
                 case 'server':
+                case 'system':
                     ret.server = true;
                     break;
 
