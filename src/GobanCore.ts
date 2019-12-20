@@ -811,15 +811,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 }
                 this.load(obj);
                 this.emit("gamedata", obj);
-
-                /*
-                if (this.wait_for_game_to_start) {
-                    sfx.play('beepbeep', true);
-                    if (this.onReset) {
-                        this.onReset();
-                    }
-                }
-                */
             });
             this._socket_on(prefix + "chat", (obj:any):void => {
                 if (this.disconnectedFromGame) { return; }
