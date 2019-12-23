@@ -416,7 +416,7 @@ export class GoEngine {
                             config.errors = [];
                         }
                         config.errors.push({
-                            "error": "Error placing stone at " + mv.x + "," + mv.y,
+                            "error": `Error placing ${this.cur_move.player === JGOFNumericPlayerColor.BLACK ? 'black' : 'white'} at ${this.prettyCoords(mv.x, mv.y)} (${mv.x}, ${mv.y})`,
                             "stack": e.stack,
                         });
                         console.log(config.errors[config.errors.length - 1]);
@@ -898,8 +898,8 @@ export class GoEngine {
                     }
 
                     try {
-                        console.warn("Stone already placed here stack trace: ");
-                        throw new Error("Stone already placed here stack trace: ");
+                        console.warn(`Move ${this.cur_move.move_number} error: stone already placed at ${this.prettyCoords(x, y)}`);
+                        throw new Error(`Move ${this.cur_move.move_number} error: stone already placed at ${this.prettyCoords(x, y)}`);
                     } catch (e) {
                         try {
                             console.warn(e.stack);
@@ -1886,16 +1886,17 @@ export class GoEngine {
                             inMainBranch = false;
                             instructions.push(() => {
                                 if (val === "") {
+                                    val = ".."; // make it a pass
+                                }
+
+                                let mv = self.decodeMoves(val)[0];
+                                if ((self.player === 1 && ident === "B") || (self.player !== 1 && ident === "W")) {
+                                    self.place(mv.x, mv.y, false, false, false, true, false);
                                 } else {
-                                    let mv = self.decodeMoves(val)[0];
-                                    if ((self.player === 1 && ident === "B") || (self.player !== 1 && ident === "W")) {
-                                        self.place(mv.x, mv.y, false, false, false, true, false);
-                                    } else {
-                                        self.editPlace(mv.x, mv.y, ident === "B" ? 1 : 2);
-                                    }
-                                    if (self.cur_move && (farthest_move == null || self.cur_move.move_number > farthest_move.move_number)) {
-                                        farthest_move = self.cur_move;
-                                    }
+                                    self.editPlace(mv.x, mv.y, ident === "B" ? 1 : 2);
+                                }
+                                if (self.cur_move && (farthest_move == null || self.cur_move.move_number > farthest_move.move_number)) {
+                                    farthest_move = self.cur_move;
                                 }
                             });
                         }
@@ -1930,6 +1931,14 @@ export class GoEngine {
                                         case "XX": marks.cross = true; break;
                                     }
                                 } catch (e) { console.error(e); }
+                            });
+                        }
+                        break;
+                    case "HA":
+                        {
+                            instructions.push(() => {
+                                self.handicap = parseInt(val);
+                                self.player = JGOFNumericPlayerColor.WHITE;
                             });
                         }
                         break;
