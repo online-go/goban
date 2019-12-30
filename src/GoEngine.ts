@@ -239,7 +239,8 @@ export class GoEngine {
     public readonly config:GoEngineConfig;
     public readonly disable_analysis:boolean = false;
     public readonly height:number = 19;
-    public readonly rules:GoEngineRules = 'japanese';
+    //public readonly rules:GoEngineRules = 'japanese';
+    public rules:GoEngineRules = 'japanese'; // can't be readonly at this point since parseSGF sets it
     public readonly width:number = 19;
     public removal:Array<Array<-1|0|1>>;
     public setState_callback?:(state:any) => void;
@@ -1938,7 +1939,53 @@ export class GoEngine {
                         {
                             instructions.push(() => {
                                 self.handicap = parseInt(val);
-                                self.player = JGOFNumericPlayerColor.WHITE;
+                                if (self.handicap !== 0) {
+                                    self.player = JGOFNumericPlayerColor.WHITE;
+                                }
+                            });
+                        }
+                        break;
+                    case "RU":
+                        {
+                            instructions.push(() => {
+                                let rules:GoEngineRules =  'japanese';
+
+                                switch (val.toLowerCase()) {
+                                    case "japanese":
+                                    case "jp":
+                                        rules = "japanese";
+                                        break;
+
+                                    case "chinese":
+                                    case "cn":
+                                    case "zh":
+                                        rules = "chinese";
+                                        break;
+
+                                    case "nz":
+                                        rules = "nz";
+                                        break;
+
+                                    case "aga":
+                                    case "us":
+                                        rules = "aga";
+                                        break;
+
+                                    case "korean":
+                                    case "ko":
+                                        rules = "korean";
+                                        break;
+
+                                    case "goe":
+                                    case "ing":
+                                        rules = "ing";
+                                        break;
+
+                                    default:
+                                        console.warn(`Unknown rule set ${val}, defaulting to Japanese`);
+                                }
+
+                                self.rules = rules;
                             });
                         }
                         break;
