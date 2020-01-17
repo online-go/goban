@@ -511,13 +511,13 @@ export class GobanCanvas extends GobanCore  {
     }
     public drawPenMarks(penmarks:MoveTreePenMarks):void {
         if (this.review_id && !this.done_loading_review) { return; }
-        if (!(penmarks.length || this.pen_layer)) {
+        if (!(penmarks.length)) {
             return;
         }
+        this.attachPenCanvas();
         if (!this.pen_ctx) {
             throw new Error(`onPenMove called with null pen_ctx`);
         }
-        this.attachPenCanvas();
         this.clearAnalysisDrawing();
         this.pen_marks = penmarks;
         for (let i = 0; i < penmarks.length; ++i) {

@@ -2896,6 +2896,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     if (deepEqual(marks, this.last_review_message.k)) {
                         delete msg["k"];
                     }
+                } else {
+                    this.scheduleRedrawPenLayer();
                 }
                 this.engine.cur_move.text = node_text;
                 this.last_review_message = tmp;
