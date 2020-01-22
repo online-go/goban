@@ -214,7 +214,18 @@ export class GobanCanvas extends GobanCore  {
             this.shadow_layer.setAttribute("id", "shadow-canvas");
             this.shadow_layer.className = "ShadowLayer";
 
-            this.parent.insertBefore(this.shadow_layer, this.board);
+            try {
+                this.parent.insertBefore(this.shadow_layer, this.board);
+            } catch (e) {
+                // I'm not really sure how we ever get into this state, but sentry.io reports that we do
+                console.warn("Error inserting shadow layer before board");
+                console.warn(e);
+                try {
+                    this.parent.appendChild(this.shadow_layer);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
             //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
             this.shadow_layer.style.left = this.layer_offset_left + 'px';
             this.shadow_layer.style.top = this.layer_offset_top + 'px';
