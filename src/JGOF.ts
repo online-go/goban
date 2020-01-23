@@ -254,6 +254,9 @@ export interface JGOFAIReview {
     /** predicted probability that black will win for all moves */
     win_rates?: Array<number>;
 
+    /** predicted scores that black will win or lose by (negative for loss) for all moves */
+    scores?: Array<number>;
+
     /** Analysis of moves in the game. */
     moves: {
         [move_number:string]:JGOFAIReviewMove;
@@ -272,6 +275,9 @@ export interface JGOFAIReviewMove {
     /** Probability of black winning after this move was made */
     win_rate: number;
 
+    /** How many points black is predicted to win by (if positive, lose by if negative) */
+    score?: number;
+
     /** Followup move branches explored */
     branches: Array<JGOFAIReviewMoveVariation>;
 }
@@ -282,6 +288,9 @@ export interface JGOFAIReviewMoveVariation {
 
     /** Probability of black wining to report for this variation */
     win_rate: number;
+
+    /** How many points black is predicted to win for this variation (or lose by if negative) */
+    score?: number;
 
     /** Number of times the AI considered the first move of this variation */
     visits: number;
