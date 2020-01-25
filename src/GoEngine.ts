@@ -119,6 +119,12 @@ export interface GoEngineConfig {
     opponent_plays_first_after_resume?:boolean;
     superko_algorithm?:GoEngineSuperKoAlgorithm;
 
+    /** When loading initial state or moves, by default GoEngine will try and
+     *  handle bad data by just resorting to 'edit placing' moves. If this is
+     *  true, then those errors are thrown instead.
+     */
+    throw_all_errors?: boolean;
+
     /** Removed stones in stone removal phase */
     removed?: string;
 
@@ -207,6 +213,7 @@ export type PlayerColor = 'black' | 'white';
 export class GoEngine {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
+    public throw_all_errors?: boolean;
     public board:Array<Array<JGOFNumericPlayerColor>>;
     public cur_move:MoveTree;
     public cur_review_move?:MoveTree;
@@ -415,6 +422,10 @@ export class GoEngine {
                     try {
                         this.place(mv.x, mv.y, false, false, true, true, true);
                     } catch (e) {
+                        if (this.throw_all_errors) {
+                            throw e;
+                        }
+
                         if (!config.errors) {
                             config.errors = [];
                         }

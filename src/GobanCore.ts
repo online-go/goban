@@ -24,7 +24,7 @@ import {
     PuzzlePlacementSetting,
     Score,
 } from "./GoEngine";
-import { GobanMoveError } from 'GobanError';
+import { GobanMoveError } from './GobanError';
 import {GoMath, Move, NumberMatrix, Intersection} from "./GoMath";
 import {GoConditionalMove} from "./GoConditionalMove";
 import {MoveTree, MarkInterface, MoveTreePenMarks} from "./MoveTree";
