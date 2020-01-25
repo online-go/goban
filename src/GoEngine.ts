@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import {GoError} from "./GoError";
-import {MoveTree, MoveTreeJson} from "./MoveTree";
+import { GobanMoveError } from "./GobanError";
+import { MoveTree, MoveTreeJson } from "./MoveTree";
 import {
     GoMath,
     Move,
@@ -249,6 +249,7 @@ export class GoEngine {
     public undo_requested: number = NaN;
     public winner?:'black'|'white';
     public game_id:number = NaN;
+    public review_id?:number;
     public decoded_moves:Array<Move> = [];
     public automatic_stone_removal:boolean = false;
 
@@ -899,16 +900,12 @@ export class GoEngine {
                         return;
                     }
 
-                    try {
-                        console.warn(`Move ${this.cur_move.move_number} error: stone already placed at ${this.prettyCoords(x, y)}`);
-                        throw new Error(`Move ${this.cur_move.move_number} error: stone already placed at ${this.prettyCoords(x, y)}`);
-                    } catch (e) {
-                        try {
-                            console.warn(e.stack);
-                        } catch (__) {
-                        }
-                    }
-                    throw new GoError(this, x, y, _("A stone has already been placed here"));
+                    throw new GobanMoveError(
+                        this.game_id || this.review_id || 0,
+                        this.cur_move?.move_number ?? -1,
+                        this.prettyCoords(x, y),
+                        "stone_already_placed_here"
+                    );
                 }
                 this.board[y][x] = this.player;
 
@@ -930,7 +927,12 @@ export class GoEngine {
                         }
                         else {
                             this.board[y][x] = 0;
-                            throw new GoError(this, x, y, _("Move is suicidal"));
+                            throw new GobanMoveError(
+                                this.game_id || this.review_id || 0,
+                                this.cur_move?.move_number ?? -1,
+                                this.prettyCoords(x, y),
+                                "move_is_suicidal"
+                            );
                         }
                     }
                 }
@@ -938,8 +940,12 @@ export class GoEngine {
                 if (checkForKo && !this.allow_ko && this.cur_move.move_number > 2) {
                     let current_state = this.getState();
                     if (!this.cur_move.edited && this.boardStatesAreTheSame(current_state, this.cur_move.index(-1).state)) {
-                        //console.log(current_state, this.cur_move.index(-1));
-                        throw new GoError(this, x, y, _("Illegal Ko Move"));
+                        throw new GobanMoveError(
+                            this.game_id || this.review_id || 0,
+                            this.cur_move?.move_number ?? -1,
+                            this.prettyCoords(x, y),
+                            "illegal_ko_move"
+                        );
                     }
                 }
 
@@ -948,7 +954,12 @@ export class GoEngine {
                     this.board_is_repeating = this.isBoardRepeating();
                     if (this.board_is_repeating) {
                         if (errorOnSuperKo && !this.allow_superko) {
-                            throw new GoError(this, x, y, _("Illegal board repetition"));
+                            throw new GobanMoveError(
+                                this.game_id || this.review_id || 0,
+                                this.cur_move?.move_number ?? -1,
+                                this.prettyCoords(x, y),
+                                "illegal_board_repetition"
+                            );
                         }
                     }
                 }

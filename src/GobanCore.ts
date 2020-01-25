@@ -24,6 +24,7 @@ import {
     PuzzlePlacementSetting,
     Score,
 } from "./GoEngine";
+import { GobanMoveError } from 'GobanError';
 import {GoMath, Move, NumberMatrix, Intersection} from "./GoMath";
 import {GoConditionalMove} from "./GoConditionalMove";
 import {MoveTree, MarkInterface, MoveTreePenMarks} from "./MoveTree";
@@ -503,9 +504,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.analysis_move_counter = 0;
         //this.wait_for_game_to_start = config.wait_for_game_to_start;
         this.errorHandler = (e) => {
+            if (e instanceof GobanMoveError) {
+                if (e.message_id === "stone_already_placed_here") {
+                    return;
+                }
+            }
+            /*
             if (e.message === _("A stone has already been placed here") || e.message === "A stone has already been placed here") {
                 return;
             }
+            */
             this.message(e.message, 5000);
             if (this.onError) {
                 this.onError(e);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export * from "./GoError";
+export * from "./GobanError";
 export * from "./GoStoneGroup";
 export * from "./GoUtil";
 export * from "./GoMath";

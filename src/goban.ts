@@ -18,7 +18,7 @@ export * from "./GobanCore";
 export * from "./GobanCanvas";
 export * from "./GoConditionalMove";
 export * from "./GoEngine";
-export * from "./GoError";
+export * from "./GobanError";
 export * from "./GoMath";
 export * from "./GoStoneGroup";
 export * from "./GoTheme";
