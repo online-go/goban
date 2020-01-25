@@ -2,7 +2,7 @@
     "compileOnSave": false,
     "buildOnSave": false,
     "compilerOptions": {
-        "target": "es5",
+        "target": "es2015",
         "module": "commonjs",
         "outDir": "./lib/",
         "moduleResolution": "node",
@@ -10,7 +10,7 @@
         "declaration": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "lib": ["es5", "dom"],
+        "lib": ["es2015", "dom"],
         "baseUrl": ".",
         "paths": {
             "*": [
