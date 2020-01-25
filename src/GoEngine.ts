@@ -364,6 +364,7 @@ export class GoEngine {
         }
 
         if (config.initial_state) {
+            this.initial_state = config.initial_state;
             let black_moves = this.decodeMoves(config.initial_state.black || '');
             let white_moves = this.decodeMoves(config.initial_state.white || '');
             for (let i = 0; i < black_moves.length; ++i) {
