@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-
+import { GobanMoveErrorMessageId } from './GobanError';
 
 /**
  * JSON Go Format
@@ -260,6 +260,13 @@ export interface JGOFAIReview {
     /** Analysis of moves in the game. */
     moves: {
         [move_number:string]:JGOFAIReviewMove;
+    };
+
+    /** If there was an error processing the review, it can be stored here */
+    error?: {
+        message_id: GobanMoveErrorMessageId;
+        move_number: number;
+        coords: string;
     };
 }
 
