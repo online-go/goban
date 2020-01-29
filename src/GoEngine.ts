@@ -1741,6 +1741,7 @@ export class GoEngine {
         let inMainBranch = true;
         let gametree_depth = 0;
         let farthest_move:MoveTree;
+        let initial_player:'black' | 'white' | undefined;
 
         if (sgf.charCodeAt(0) > 255) {
             /* Assume this is a Byte Order Mark */
@@ -1900,6 +1901,12 @@ export class GoEngine {
                                 } else {
                                     self.config.initial_state.white += val;
                                 }
+
+                                // If we have initial stones, we assume these
+                                // account for any free placement of handicap
+                                // stones
+                                self.config.free_handicap_placement = false;
+                                self.free_handicap_placement = false;
                             }
                         }
                     break;
@@ -1907,6 +1914,11 @@ export class GoEngine {
                     case "W":
                     case "B":
                         {
+                            if (!initial_player) {
+                                initial_player = ident === 'B' ? 'black' : 'white';
+                                self.config.initial_player = initial_player;
+                            }
+
                             inMainBranch = false;
                             instructions.push(() => {
                                 if (val === "") {
@@ -1962,9 +1974,14 @@ export class GoEngine {
                         {
                             instructions.push(() => {
                                 self.handicap = parseInt(val);
+                                if (self.config.initial_player) {
+                                    self.player = self.config.initial_player === 'black' ? JGOFNumericPlayerColor.BLACK : JGOFNumericPlayerColor.WHITE;
+                                }
+                                /*
                                 if (self.handicap !== 0) {
                                     self.player = JGOFNumericPlayerColor.WHITE;
                                 }
+                                */
                             });
                         }
                         break;
