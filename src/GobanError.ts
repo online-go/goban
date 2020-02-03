@@ -25,7 +25,8 @@ export type GobanMoveErrorMessageId =
     "stone_already_placed_here" |
     "move_is_suicidal" |
     "illegal_ko_move" |
-    "illegal_board_repetition"
+    "illegal_board_repetition" |
+    "move_error" // generic
 ;
 
 export interface GobanIOErrorMessageObject {
