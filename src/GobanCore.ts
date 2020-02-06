@@ -202,11 +202,21 @@ interface Events {
         player_id: number;
     };
     "set-for-removal": {x:number, y:number, removed:boolean};
-    "puzzle-place": {x:number, y:number};
+    "puzzle-place": {
+        x:number,
+        y:number,
+        width: number,
+        height: number,
+    };
     "audio-game-start": never;
-    "audio-game-end": never;
+    "audio-game-end": 'black' | 'white' | 'tie';
     "audio-pass": never;
-    "audio-stone": number;
+    "audio-stone": {
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+    };
     "audio-clock": AudioClockEvent;
     "clock": JGOFClock | null;
 }
@@ -810,7 +820,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.emit("chat-reset");
 
                 if (this.on_game_screen && this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
-                    this.emit('audio-game-end');
+                    this.emit('audio-game-end', this.engine.winner);
                 }
                 if (obj.phase) {
                     this.last_phase = obj.phase;
@@ -2200,7 +2210,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.last_sound_played_for_a_stone_placement === "-1,-1") {
                 this.emit('audio-pass');
             } else {
-                this.emit('audio-stone', idx);
+                this.emit('audio-stone', {
+                    'x': this.engine.cur_move.x,
+                    'y': this.engine.cur_move.y,
+                    'width': this.engine.width,
+                    'height': this.engine.height,
+                });
             }
         }
     }
