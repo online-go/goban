@@ -26,7 +26,6 @@ export * from "./GoThemes";
 export * from "./GoUtil";
 export * from "./MoveTree";
 export * from "./ScoreEstimator";
-export * from "./SFXManager";
 export * from "./translate";
 export * from "./TypedEventEmitter";
 export * from "./JGOF";
