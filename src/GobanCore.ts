@@ -151,8 +151,11 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
 }
 
 export interface AudioClockEvent {
-    /** The number of seconds left until the clock runs out of time */
+    /** Number of seconds left in the current period */
     countdown_seconds: number;
+
+    /** Full player clock information */
+    clock: JGOFPlayerClock;
 
     /** The player (id) whose turn it is */
     player_id: string;
@@ -208,8 +211,11 @@ interface Events {
         width: number,
         height: number,
     };
-    "audio-game-start": never;
-    "audio-game-end": 'black' | 'white' | 'tie';
+    "clock": JGOFClock | null;
+    "audio-game-started": {
+        player_id: number; // Player to move
+    };
+    "audio-game-ended": 'black' | 'white' | 'tie';
     "audio-pass": never;
     "audio-stone": {
         x: number,
@@ -217,8 +223,21 @@ interface Events {
         width: number,
         height: number,
     };
+    "audio-other-player-disconnected": {
+        player_id: number;
+    };
+    "audio-other-player-reconnected": {
+        player_id: number;
+    };
     "audio-clock": AudioClockEvent;
-    "clock": JGOFClock | null;
+    "audio-disconnected": never; // your connection has been lost to the server
+    "audio-reconnected": never; // your connection has been reestablished
+    "audio-game-paused": never;
+    "audio-game-resumed": never;
+    "audio-enter-stone-removal": never;
+    "audio-resume-game-from-stone-removal": never;
+    "audio-undo-requested": never;
+    "audio-undo-granted": never;
 }
 
 export interface GobanHooks {
@@ -320,6 +339,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public pause_control?:AdHocPauseControl;
     public paused_since?: number;
+
+    private last_paused_state:boolean | null = null;
 
     protected __board_redraw_pen_layer_timer:any = null;
     protected __clock_timer:any = null; /* number for web, Timeout for node - I don't think we can make them both happy so just 'any' */
@@ -730,7 +751,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //this.on_disconnects = [];
 
         let send_connect_message = () => {
-            if (this.disconnectedFromGame) { return; }
+            if (this.disconnectedFromGame) {
+                return;
+            }
 
             if (this.review_id) {
                 this.connectToReviewSent = true;
@@ -739,17 +762,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (!this.disconnectedFromGame) {
                     socket.send("review/connect", this.review_connection_data);
                 }
-                //this.onClearChatLogs();
                 this.emit("chat-reset");
             } else if (this.game_id) {
-                /*
-                if (this.wait_for_game_to_start) {
-                    this.message(_("Waiting for game to begin"), -1);
-                    this.waiting_for_game_to_begin = true;
-                    this.emit('update');
-                }
-                */
-
                 if (!this.disconnectedFromGame) {
                     socket.send("game/connect", this.game_connection_data);
                 }
@@ -762,7 +776,28 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this._socket_on("connect", send_connect_message);
         this._socket_on("disconnect", ():void => {
-            if (this.disconnectedFromGame) { return; }
+            if (this.disconnectedFromGame) {
+                return;
+            }
+        });
+
+
+        let reconnect = false;
+
+        this._socket_on("connect", () => {
+            if (this.disconnectedFromGame) {
+                return;
+            }
+            if (reconnect) {
+                this.emit('audio-reconnected')
+            }
+            reconnect = true;
+        });
+        this._socket_on("disconnect", ():void => {
+            if (this.disconnectedFromGame) {
+                return;
+            }
+            this.emit('audio-disconnected')
         });
 
 
@@ -780,7 +815,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.emit("reset", msg);
 
             if (msg.gamestart_beep) {
-                this.emit('audio-game-start');
+                this.emit('audio-game-started', { player_id: msg.player_to_move });
             }
             if (msg.message) {
                 if (
@@ -820,7 +855,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.emit("chat-reset");
 
                 if (this.on_game_screen && this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
-                    this.emit('audio-game-end', this.engine.winner);
+                    let winner:any = (obj as any).winner;
+                    let winner_color:'black' | 'white' | undefined = undefined;
+                    if (typeof(winner) === 'number') {
+                        winner_color = winner === obj.black_player_id ? 'black' : 'white';
+                    } else if (winner === 'black' || winner === 'white') {
+                        winner_color = winner;
+                    }
+
+                    if (winner_color) {
+                        this.emit('audio-game-ended', winner_color);
+                    }
                 }
                 if (obj.phase) {
                     this.last_phase = obj.phase;
@@ -864,13 +909,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (new_phase !== "finished") {
                     this.engine.clearRemoved();
                 }
-                /*
-                if (new_phase !== "play") {
-                    if (this.estimatingScore) {
-                        console.error(toggleScoreEstimation();
+
+                if (this.engine.phase !== new_phase) {
+                    if (new_phase === 'stone removal') {
+                        this.emit('audio-enter-stone-removal');
+                    }
+                    if (new_phase === 'play' && this.engine.phase === 'stone removal') {
+                        this.emit('audio-resume-game-from-stone-removal');
                     }
                 }
-                */
+
                 this.engine.phase = new_phase;
 
                 if (this.engine.phase === "stone removal") {
@@ -887,6 +935,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 this.engine.undo_requested = parseInt(move_number);
                 this.emit("update");
+                this.emit('audio-undo-requested');
+
             });
             this._socket_on(prefix + "undo_accepted", ():void => {
                 if (this.disconnectedFromGame) { return; }
@@ -908,6 +958,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 delete this.engine.undo_requested;
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
+                this.emit('audio-undo-granted');
             });
             this._socket_on(prefix + "move", (move_obj:any):void => {
                 try {
@@ -1039,11 +1090,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.emit("update");
             });
 
+            let auto_resign_state:{ [id:number]: boolean } = {};
+
             this._socket_on(prefix + "auto_resign", (obj:any) => {
                 this.emit('auto-resign', {
                     game_id: obj.game_id,
                     player_id: obj.player_id,
                     expiration: obj.expiration,
+                });
+                auto_resign_state[obj.player_id] = true;
+                this.emit('audio-other-player-disconnected', {
+                    player_id: obj.player_id,
                 });
             });
             this._socket_on(prefix + "clear_auto_resign", (obj:any) => {
@@ -1051,6 +1108,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     game_id: obj.game_id,
                     player_id: obj.player_id,
                 });
+                if (auto_resign_state[obj.player_id]) {
+                    this.emit('audio-other-player-reconnected', {
+                        player_id: obj.player_id,
+                    });
+                    delete auto_resign_state[obj.player_id];
+                }
             });
         }
 
@@ -2733,6 +2796,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         let last_audio_event:{[player_id:string]:AudioClockEvent} = {
             black: {
                 countdown_seconds: 0,
+                clock: { main_time: 0 },
                 player_id: '',
                 color: 'black',
                 time_control_system: 'none',
@@ -2740,12 +2804,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             },
             white: {
                 countdown_seconds: 0,
+                clock: { main_time: 0 },
                 player_id: '',
                 color: 'white',
                 time_control_system: 'none',
                 in_overtime: false,
             }
         };
+
 
         const do_update = () => {
             if (!time_control || !time_control.system) {
@@ -2776,6 +2842,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 delete clock.pause_state;
             }
 
+            if (this.last_paused_state === null) {
+                this.last_paused_state = !! clock.pause_state;
+            } else {
+                let cur_paused = !! clock.pause_state;
+                if (cur_paused !== this.last_paused_state) {
+                    this.last_paused_state = cur_paused;
+                    if (cur_paused) {
+                        this.emit('audio-game-paused');
+                    } else {
+                        this.emit('audio-game-resumed');
+                    }
+                }
+            }
+
+
             const elapsed:number = clock.paused_since
                 ? Math.max(clock.paused_since, original_clock.last_move) - original_clock.last_move
                 : current_server_time - original_clock.last_move;
@@ -2804,6 +2885,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     let player_clock:JGOFPlayerClock = clock.current_player === 'black' ? clock.black_clock : clock.white_clock;
                     let audio_clock:AudioClockEvent = {
                         countdown_seconds: 0,
+                        clock: player_clock,
                         player_id: this.engine.playerToMove().toString(),
                         color: this.engine.colorToMove(),
                         time_control_system: time_control.system,
@@ -2845,7 +2927,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             throw new Error(`Unsupported time control system: ${(time_control as any).system}`);
                     }
 
-                    if (!deepEqual(audio_clock, last_audio_event[clock.current_player])) {
+                    let cur = audio_clock;
+                    let last = last_audio_event[clock.current_player];
+                    if (cur.countdown_seconds !== last.countdown_seconds
+                        || cur.player_id !== last.player_id
+                        || cur.in_overtime !== last.in_overtime
+                    ) {
                         last_audio_event[clock.current_player] = audio_clock;
                         if (audio_clock.countdown_seconds > 0) {
                             this.emit('audio-clock', audio_clock);
@@ -2854,7 +2941,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 } else {
                     // Engine and clock code didn't agreen on whose turn it was, don't emit audio-clock event yet
                 }
-
             }
 
             if (this.engine.phase !== 'finished') {
