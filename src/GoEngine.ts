@@ -879,7 +879,7 @@ export class GoEngine {
         return this.player === 2 ? 1 : 2;
     }
     public playerColor(player_id?:number):'black'|'white'|'invalid' {
-        if (player_id) {
+        if (typeof(player_id) === 'number') {
             return (player_id === this.players.black.id ? "black" :
                     (player_id === this.players.white.id ? "white" : "invalid"));
         } else {
