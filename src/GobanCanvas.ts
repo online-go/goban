@@ -686,7 +686,7 @@ export class GobanCanvas extends GobanCore  {
                 if (puzzle_mode === "place") {
                     if (!double_tap) { /* we get called for each tap, then once for the final double tap so we only want to process this x2 */
                         this.engine.place(x, y, true, false, true, false, false);
-                        this.emit("puzzle-place", {x, y, width: this.engine.width, height: this.engine.height});
+                        this.emit("puzzle-place", {x, y, width: this.engine.width, height: this.engine.height, color: this.engine.colorToMove()});
                     }
                 }
                 if (puzzle_mode === "play") {
@@ -701,7 +701,7 @@ export class GobanCanvas extends GobanCore  {
                                 ++calls;
 
                                 this.engine.place(mv_x, mv_y, true, false, true, false, false);
-                                this.emit("puzzle-place", {x: mv_x, y: mv_y, width: this.engine.width, height: this.engine.height});
+                                this.emit("puzzle-place", {x: mv_x, y: mv_y, width: this.engine.width, height: this.engine.height, color: this.engine.colorToMove()});
                                 if (this.engine.cur_move.wrong_answer) {
                                     this.emit("puzzle-wrong-answer");
                                 }

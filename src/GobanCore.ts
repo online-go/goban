@@ -210,6 +210,7 @@ interface Events {
         y:number,
         width: number,
         height: number,
+        color: 'black' | 'white',
     };
     "clock": JGOFClock | null;
     "audio-game-started": {
@@ -222,6 +223,7 @@ interface Events {
         y: number,
         width: number,
         height: number,
+        color: 'black' | 'white',
     };
     "audio-other-player-disconnected": {
         player_id: number;
@@ -232,6 +234,10 @@ interface Events {
     "audio-clock": AudioClockEvent;
     "audio-disconnected": never; // your connection has been lost to the server
     "audio-reconnected": never; // your connection has been reestablished
+    "audio-capture-stones": {
+        count: number,  /* number of stones we just captured */
+        already_captured: number /* number of stones that have already been captured by this player */
+    };
     "audio-game-paused": never;
     "audio-game-resumed": never;
     "audio-enter-stone-removal": never;
@@ -1010,11 +1016,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         return;
                     }
 
+                    let score_before_move = this.engine.computeScore(true)[this.engine.colorToMove()].prisoners;;
+
+                    let removed_count:number = 0;
                     if (mv[0].edited) {
                         this.engine.editPlace(mv[0].x, mv[0].y, mv[0].color || 0);
                     }
                     else {
-                        this.engine.place(mv[0].x, mv[0].y, false, false, false, true, true);
+                        removed_count = this.engine.place(mv[0].x, mv[0].y, false, false, false, true, true);
                     }
 
                     this.setLastOfficialMove();
@@ -1029,6 +1038,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     this.emit("update");
                     this.playMovementSound();
+                    if (removed_count) {
+                        console.log("audio-capture-stones", {
+                            count: removed_count,
+                            already_captured: score_before_move,
+                        });
+                        this.emit("audio-capture-stones", {
+                            count: removed_count,
+                            already_captured: score_before_move,
+                        });
+                    }
 
                     this.emit('move-made');
 
@@ -2278,6 +2297,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     'y': this.engine.cur_move.y,
                     'width': this.engine.width,
                     'height': this.engine.height,
+                    'color': this.engine.colorNotToMove(),
                 });
             }
         }

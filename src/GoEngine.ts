@@ -889,6 +889,9 @@ export class GoEngine {
     public colorToMove():'black'|'white' {
         return this.player === 1 ? "black" : "white";
     }
+    public colorNotToMove():'black'|'white' {
+        return this.player !== 1 ? "black" : "white";
+    }
     public playerByColor(color:PlayerColor | JGOFNumericPlayerColor):JGOFNumericPlayerColor {
         if (color === 1 || color === 2) {
             return color;
@@ -897,7 +900,9 @@ export class GoEngine {
         if (color === "white") { return 2; }
         return 0;
     }
-    public place(x:number, y:number, checkForKo?:boolean, errorOnSuperKo?:boolean, dontCheckForSuperKo?:boolean, dontCheckForSuicide?:boolean, isTrunkMove?:boolean) {
+    public place(x:number, y:number, checkForKo?:boolean, errorOnSuperKo?:boolean, dontCheckForSuperKo?:boolean, dontCheckForSuicide?:boolean, isTrunkMove?:boolean):number {
+        let peices_removed = 0;
+
         try {
             if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
                 if (this.board[y][x]) {
@@ -908,7 +913,7 @@ export class GoEngine {
                                         this.editPlace(x, y, this.player);
                                         this.player = this.opponent();
                         }
-                        return;
+                        return 0;
                     }
 
                     throw new GobanMoveError(
@@ -924,7 +929,6 @@ export class GoEngine {
                 let player_group = this.getGroup(x, y, true);
                 let opponent_groups = this.getConnectedGroups(player_group);
 
-                let peices_removed = 0;
                 for (let i = 0; i < opponent_groups.length; ++i) {
                     if (this.countLiberties(opponent_groups[i]) === 0) {
                         peices_removed += this.captureGroup(opponent_groups[i]);
@@ -985,7 +989,7 @@ export class GoEngine {
 
             if (x < 0 && this.handicapMovesLeft() > 0) {
                 //console.log("Skipping old-style implicit pass on handicap: ", this.player);
-                return;
+                return 0;
             }
 
             let color = this.player;
@@ -1016,6 +1020,8 @@ export class GoEngine {
              */
             throw e;
         }
+
+        return peices_removed;
     }
     public isBoardRepeating():boolean {
         let MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
