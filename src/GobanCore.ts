@@ -399,7 +399,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     //protected onPendingResignation;
     //protected onPendingResignationCleared;
     protected on_game_screen:boolean;
-    protected on_review_screen:boolean;
     protected original_square_size:number | ((goban:GobanCore) => number) | 'auto';
     protected player_id: number;
     protected puzzle_autoplace_delay:number;
@@ -480,7 +479,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //window['active_gobans'][this.goban_id] = this;
         this.destroyed = false;
         this.on_game_screen = this.getLocation().indexOf("/game/") >= 0;
-        this.on_review_screen = this.getLocation().indexOf("/demo/") >= 0 || this.getLocation().indexOf("/review/") >= 0
         this.no_display = false;
 
         this.width = config.width || 19;
@@ -862,7 +860,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 //this.onClearChatLogs();
                 this.emit("chat-reset");
 
-                if (this.on_game_screen && this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
+                if (this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
                     let winner:any = (obj as any).winner;
                     let winner_color:'black' | 'white' | undefined = undefined;
                     if (typeof(winner) === 'number') {
@@ -2290,18 +2288,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         } while (idx === this.last_stone_sound);
         this.last_stone_sound = idx;
 
-        if (this.on_game_screen || this.on_review_screen) {
-            if (this.last_sound_played_for_a_stone_placement === "-1,-1") {
-                this.emit('audio-pass');
-            } else {
-                this.emit('audio-stone', {
-                    'x': this.engine.cur_move.x,
-                    'y': this.engine.cur_move.y,
-                    'width': this.engine.width,
-                    'height': this.engine.height,
-                    'color': this.engine.colorNotToMove(),
-                });
-            }
+        if (this.last_sound_played_for_a_stone_placement === "-1,-1") {
+            this.emit('audio-pass');
+        } else {
+            this.emit('audio-stone', {
+                'x': this.engine.cur_move.x,
+                'y': this.engine.cur_move.y,
+                'width': this.engine.width,
+                'height': this.engine.height,
+                'color': this.engine.colorNotToMove(),
+            });
         }
     }
     protected setState(state:any):void {
