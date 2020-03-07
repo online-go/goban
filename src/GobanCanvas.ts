@@ -605,6 +605,7 @@ export class GobanCanvas extends GobanCore  {
                     return;
                 }
             }
+            this.playMovementSound();
             this.sendMove({
                 "auth": this.config.auth,
                 "game_id": this.config.game_id,
@@ -857,7 +858,6 @@ export class GobanCanvas extends GobanCore  {
                     throw e;
                 }
 
-                this.playMovementSound();
 
                 switch (this.mode) {
                     case "play":
@@ -873,18 +873,21 @@ export class GobanCanvas extends GobanCore  {
                         delete this.move_selected;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
+                        this.playMovementSound();
                         break;
                     case "conditional":
                         this.followConditionalSegment(x, y);
                         delete this.move_selected;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
+                        this.playMovementSound();
                         break;
                     case "edit":
                         delete this.move_selected;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
 
+                        this.playMovementSound();
                         this.sendMove({
                             "auth": this.config.auth,
                             "game_id": this.config.game_id,
@@ -1617,12 +1620,38 @@ export class GobanCanvas extends GobanCore  {
                 this.last_move = this.engine.cur_move;
 
                 if (i >= 0 && j >= 0) {
+                    let color = stone_color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+
+                    if (this.submit_move) {
+
+                        ctx.lineCap = "square";
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.lineWidth = this.square_size * 0.075;
+                        //ctx.globalAlpha = 0.6;
+                        let r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
+                        ctx.moveTo(cx - r, cy);
+                        ctx.lineTo(cx + r, cy);
+                        ctx.moveTo(cx, cy - r);
+                        ctx.lineTo(cx, cy + r);
+                        ctx.strokeStyle = color;
+                        ctx.stroke();
+                        ctx.restore();
+                        draw_last_move = false;
+                    }
+
                     ctx.beginPath();
-                    ctx.strokeStyle = stone_color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+                    ctx.strokeStyle = color;
                     ctx.lineWidth = this.square_size * 0.075;
-                    ctx.arc(cx, cy, this.square_size * 0.25, 0, 2 * Math.PI, false);
+                    let r = this.square_size * 0.25;
+                    if (this.submit_move) {
+                        //ctx.globalAlpha = 0.6;
+                        r = this.square_size * 0.30;
+                    }
+                    ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
                     ctx.stroke();
                 }
+
             }
         }
 
