@@ -399,6 +399,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     //protected onPendingResignation;
     //protected onPendingResignationCleared;
     protected on_game_screen:boolean;
+    protected on_review_screen:boolean;
     protected original_square_size:number | ((goban:GobanCore) => number) | 'auto';
     protected player_id: number;
     protected puzzle_autoplace_delay:number;
@@ -479,6 +480,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //window['active_gobans'][this.goban_id] = this;
         this.destroyed = false;
         this.on_game_screen = this.getLocation().indexOf("/game/") >= 0;
+        this.on_review_screen = this.getLocation().indexOf("/demo/") >= 0 || this.getLocation().indexOf("/review/") >= 0
         this.no_display = false;
 
         this.width = config.width || 19;
@@ -2288,7 +2290,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         } while (idx === this.last_stone_sound);
         this.last_stone_sound = idx;
 
-        if (this.on_game_screen) {
+        if (this.on_game_screen || this.on_review_screen) {
             if (this.last_sound_played_for_a_stone_placement === "-1,-1") {
                 this.emit('audio-pass');
             } else {
