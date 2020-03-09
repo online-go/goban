@@ -1623,7 +1623,6 @@ export class GobanCanvas extends GobanCore  {
                     let color = stone_color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
 
                     if (this.submit_move) {
-
                         ctx.lineCap = "square";
                         ctx.save();
                         ctx.beginPath();
@@ -1639,17 +1638,18 @@ export class GobanCanvas extends GobanCore  {
                         ctx.restore();
                         draw_last_move = false;
                     }
-
-                    ctx.beginPath();
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = this.square_size * 0.075;
-                    let r = this.square_size * 0.25;
-                    if (this.submit_move) {
-                        //ctx.globalAlpha = 0.6;
-                        r = this.square_size * 0.30;
+                    else {
+                        ctx.beginPath();
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = this.square_size * 0.075;
+                        let r = this.square_size * 0.25;
+                        if (this.submit_move) {
+                            //ctx.globalAlpha = 0.6;
+                            r = this.square_size * 0.30;
+                        }
+                        ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
+                        ctx.stroke();
                     }
-                    ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
-                    ctx.stroke();
                 }
 
             }
