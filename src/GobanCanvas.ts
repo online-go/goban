@@ -2585,7 +2585,12 @@ export class GobanCanvas extends GobanCore  {
 
             case "move-number":
             default:
-                label = String(node.move_number);
+                if (node.pretty_coordinates === 'pass') {
+                    label = String('.');
+                }
+                else {
+                    label = String(node.move_number);
+                }
                 break;
         }
 
@@ -2638,6 +2643,7 @@ export class GobanCanvas extends GobanCore  {
         }
 
         if (!viewport || (node.layout_cx >= viewport.minx && node.layout_cx <= viewport.maxx && node.layout_cy >= viewport.miny && node.layout_cy <= viewport.maxy)) {
+            console.log("Stone:", node);
             this.move_tree_drawStone(ctx, node, active_path_number, viewport);
         }
     }
