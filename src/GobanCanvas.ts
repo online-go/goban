@@ -2585,7 +2585,12 @@ export class GobanCanvas extends GobanCore  {
 
             case "move-number":
             default:
-                label = String(node.move_number);
+                if (node.pretty_coordinates === 'pass') {
+                    label = String('.');
+                }
+                else {
+                    label = String(node.move_number);
+                }
                 break;
         }
 
