@@ -15,7 +15,7 @@
  */
 
 import { GobanMoveError } from "./GobanError";
-import { MoveTree, MoveTreeJson } from "./MoveTree";
+import { MoveTree, MoveTreeJson, MarkInterface } from "./MoveTree";
 import {
     GoMath,
     Move,
@@ -156,6 +156,39 @@ export interface GoEngineConfig {
 export interface GoEngineInitialState {
     black?: string;
     white?: string;
+}
+
+export interface ReviewMessage {
+    "f"?:number;   /* from (move) */
+    "m"?:string;   /* moves */
+    "om"?:[number, number, number];  /* offical move [reviewing live game] */
+    "undo"?:boolean; /* offical undo [reviewing live game] */
+    "t"?:string;   /* text */
+    "t+"?:string;  /* text append */
+    "k"?:MarkInterface;   /* marks */
+    "pp"?:[number, number];  /* pen point */
+    "pen"?: string; /* pen color / pen start */
+    "chat"?: {
+        chat_id: string;
+        player_id: number;
+        channel: string;
+        date: number
+    };
+    "remove-chat"?: string;
+    //"remove-chat";
+    //"voice";
+    //"unvoice";
+    "clearpen"?:boolean;
+    "delete"?: number;
+    //"id";
+    "owner"?: number | {id:number, username: string};
+    "gamedata"?:GoEngineConfig;
+    "controller"?: number | {id:number, username: string};
+    // not stored, but used for auth and message routing
+    "auth"?: string;
+    "review_id"?: number;
+    "player_id"?: number;
+    "username"?: string;
 }
 
 export interface PuzzleConfig {
