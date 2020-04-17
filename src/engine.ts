@@ -19,6 +19,7 @@ export * from "./GoStoneGroup";
 export * from "./GoUtil";
 export * from "./GoMath";
 export * from "./GoEngine";
+export * from "./GoConditionalMove";
 export * from "./MoveTree";
 export * from "./translate";
 export * from "./ScoreEstimator";

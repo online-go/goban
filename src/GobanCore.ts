@@ -26,12 +26,12 @@ import {
     Score,
 } from "./GoEngine";
 import { GobanMoveError } from './GobanError';
-import {GoMath, Move, NumberMatrix, Intersection} from "./GoMath";
-import {GoConditionalMove} from "./GoConditionalMove";
-import {MoveTree, MarkInterface, MoveTreePenMarks} from "./MoveTree";
-import {init_score_estimator, ScoreEstimator} from "./ScoreEstimator";
+import { GoMath, Move, NumberMatrix, Intersection } from "./GoMath";
+import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
+import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
+import { init_score_estimator, ScoreEstimator } from "./ScoreEstimator";
 import { deepEqual, dup, computeAverageMoveTime } from "./GoUtil";
-import {TypedEventEmitter} from "./TypedEventEmitter";
+import { TypedEventEmitter} from "./TypedEventEmitter";
 import {_, interpolate} from "./translate";
 import {
     JGOFClock,
@@ -1029,7 +1029,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     console.error(e);
                 }
             });
-            this._socket_on(prefix + "conditional_moves", (cmoves:any):void => {
+            this._socket_on(prefix + "conditional_moves", (cmoves:{'player_id': number, 'move_number': number, 'moves': ConditionalMoveResponse | null}):void => {
                 if (this.disconnectedFromGame) { return; }
 
                 if (cmoves.moves == null) {

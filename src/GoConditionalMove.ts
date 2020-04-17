@@ -15,7 +15,7 @@
  */
 
 
-type ConditionalMoveResponse = [
+export type ConditionalMoveResponse = [
     /** response_move */
     string | null,
 
@@ -23,7 +23,7 @@ type ConditionalMoveResponse = [
     ConditionalMoveTree
 ];
 
-interface ConditionalMoveTree {
+export interface ConditionalMoveTree {
     [move: string]: ConditionalMoveResponse;
 }
 

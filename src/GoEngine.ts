@@ -72,6 +72,10 @@ export interface GoEnginePlayerEntry {
 
     /** Whether or not the player has accepted scoring with strict seki mode on or not */
     accepted_strict_seki_mode?: boolean;
+
+    /** XXX: The server is using these, the client may or may not be, we need to normalize this */
+    name?: string;
+    pro?: 0 | 1;
 }
 
 export interface GoEngineConfig {
@@ -102,6 +106,7 @@ export interface GoEngineConfig {
     original_sgf?: string;
     free_handicap_placement?:boolean;
     score?:Score;
+    outcome?:string;
 
     allow_self_capture?:boolean;
     automatic_stone_removal?:boolean;
@@ -159,6 +164,7 @@ export interface GoEngineInitialState {
 }
 
 export interface ReviewMessage {
+    "ts"?:number;  /* timestamp (ms) */
     "f"?:number;   /* from (move) */
     "m"?:string;   /* moves */
     "om"?:[number, number, number];  /* offical move [reviewing live game] */
@@ -172,7 +178,9 @@ export interface ReviewMessage {
         chat_id: string;
         player_id: number;
         channel: string;
-        date: number
+        date: number;
+        from: number; /* turn number */
+        moves: AdHocPackedMove | string; /* this might just be "string", i'm not entirely sure */
     };
     "remove-chat"?: string;
     //"remove-chat";
@@ -661,9 +669,9 @@ export class GoEngine {
         }
         return false;
     }
-    public jumpTo(node:MoveTree | null):void {
+    public jumpTo(node?:MoveTree | null):void {
         if (!node) {
-            throw new Error('Attempted to jump to a null node');
+            throw new Error('Attempted to jump to a null/undefined node');
         }
         this.move_before_jump = this.cur_move;
         this.cur_move = node;
