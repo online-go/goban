@@ -48,6 +48,16 @@ module.exports = (env, argv) => {
             maxEntrypointSize: 1024 * 1024 * 2.5,
         },
 
+        optimization: {
+            minimizer: [
+            new TerserPlugin({
+                terserOptions: {
+                  safari10: true,
+                },
+            }),
+            ],
+        },
+
 
         devtool: 'source-map',
     };
