@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const webpack = require('webpack');
 const pkg = require('./package.json');
+const TerserPlugin = require('terser-webpack-plugin');
 
 let plugins = [];
 
@@ -152,6 +153,16 @@ module.exports = (env, argv) => {
                     SERVER: true,
                 }),
             ]),
+
+            optimization: {
+                minimizer: [
+                    new TerserPlugin({
+                        terserOptions: {
+                          safari10: true,
+                        },
+                    }),
+                ],
+            },
         }));
     }
 
