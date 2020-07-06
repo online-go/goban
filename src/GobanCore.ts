@@ -270,7 +270,8 @@ export interface GobanHooks {
     discWhiteStoneColor?: () => string;
     discWhiteTextColor?: () => string;
     plainBoardColor?: () => string;
-    plainBoardLineColor?: () => string;
+	plainBoardLineColor?: () => string;
+	plainBoardUrl?: () => string;
 
     addCoordinatesToChatInput?: (coordinates:string) => void;
     updateScoreEstimation?: (est_winning_color:"black"|"white", number_of_points:number) => void;
