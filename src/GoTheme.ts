@@ -19,13 +19,13 @@
 export interface GoThemeBackgroundCSS {
     'background-color'?: string;
     'background-image'?: string;
-	'background-size'?: string;
+    'background-size'?: string;
 }
 
 export interface GoThemeBackgroundReactStyles {
     'backgroundColor'?: string;
     'backgroundImage'?: string;
-	'backgroundSize'?: string;
+    'backgroundSize'?: string;
 }
 
 export class GoTheme {

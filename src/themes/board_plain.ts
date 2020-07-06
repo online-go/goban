@@ -40,7 +40,7 @@ export default function(GoThemes:GoThemesInterface) {
             return {
                 "background-color": GobanCore.hooks.plainBoardColor ? GobanCore.hooks.plainBoardColor() : '#DCB35C',
                 "background-image": GobanCore.hooks.plainBoardUrl ? "url('" + GobanCore.hooks.plainBoardUrl() + "')" : '',
-				"background-size": "cover"
+                "background-size": "cover"
             };
         }
         getLineColor():string { return GobanCore.hooks.plainBoardLineColor ? GobanCore.hooks.plainBoardLineColor() : '#000000'; }
