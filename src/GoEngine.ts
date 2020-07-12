@@ -1079,6 +1079,19 @@ export class GoEngine {
         }
         return false;
     }
+    public rotateBoard():void {
+        // rotates this.board by 90 degrees anti-clockwise
+        const N = 19; // board size
+        for (let x = 0; x < Math.floor(N/2); x++) {
+            for (let y = x; y < N-x-1; y++) {
+                let temp = this.board[x][y];
+                this.board[x][y] = this.board[y][N-1-x];
+                this.board[y][N-1-x] = this.board[N-1-x][N-1-y];
+                this.board[N-1-x][N-1-y] = this.board[N-1-y][x];
+                this.board[N-1-y][x] = temp;
+            }
+        }
+    }
     public editPlace(x:number, y:number, color:JGOFNumericPlayerColor, isTrunkMove?:boolean):void {
         let player = this.playerByColor(color);
 

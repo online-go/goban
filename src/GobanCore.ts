@@ -637,6 +637,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
     }
 
+    public rotateBoard():void {
+        this.engine.rotateBoard();    
+        this.redraw();
+    }
+
     protected getClockDrift():number {
         if (GobanCore.hooks.getClockDrift) {
             return GobanCore.hooks.getClockDrift();
