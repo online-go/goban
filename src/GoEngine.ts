@@ -1081,7 +1081,15 @@ export class GoEngine {
     }
     public rotateBoard():void {
         // rotates this.board by 90 degrees anti-clockwise
-        const N = 19; // board size
+        if (!this.config.width) {
+            console.log('rotateBoard: this.config.width is not defined. Aborting.');
+            return;
+        }
+        if (this.config.width !== this.config.height) {
+            console.log('rotateBoard: board size not square, aborting rotateBoard...');
+            return;
+        }
+        const N = this.config.width; // board size (width must be equal to height)
         for (let x = 0; x < Math.floor(N/2); x++) {
             for (let y = x; y < N-x-1; y++) {
                 let temp = this.board[x][y];

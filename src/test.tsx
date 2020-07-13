@@ -213,6 +213,11 @@ function Main():JSX.Element {
                     }} />
             </div>
         </div>
+        <div className='inline-block'>
+            <div className='setting'>
+                <button onClick={() => fiddler.emit('rotateBoard')}>Rotate Board</button>
+            </div>
+        </div>
     </div>
 
 
@@ -249,6 +254,10 @@ function ReactGoban<GobanClass extends GobanCore>(ctor:{new(x:GobanCanvasConfig)
             goban.setSquareSize(ss)
             const end = Date.now();
             console.log("SSS time: ", end - start);
+        });
+
+        fiddler.on('rotateBoard', () => {
+            goban.rotateBoard();
         });
 
         fiddler.on('redraw', () => {
