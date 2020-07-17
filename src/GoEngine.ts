@@ -85,6 +85,7 @@ export interface GoEngineConfig {
     player_id?: number;
     tournament_id?: number;
     ladder_id?: number;
+    group_ids?: Array<number>;
     initial_player?: PlayerColor;
     width?: number;
     height?: number;
@@ -300,6 +301,7 @@ export class GoEngine {
     public review_id?:number;
     public decoded_moves:Array<Move> = [];
     public automatic_stone_removal:boolean = false;
+    public group_ids?:Array<number>;
 
     private aga_handicap_scoring:boolean = false;
     private allow_ko:boolean = false;
