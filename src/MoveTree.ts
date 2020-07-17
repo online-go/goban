@@ -236,12 +236,14 @@ export class MoveTree {
         let recompute = (node:MoveTree):void => {
             node.isobranches = [];
 
-            for (let n of __isobranches_state_hash[node.isobranch_hash as string]) {
-                if (node.id !== n.id) {
-                    if (node.isAncestorOf(n) || n.isAncestorOf(node)) {
-                        continue;
+            if (node.x !== -1) { /* don't draw iso branches for passes */
+                for (let n of __isobranches_state_hash[node.isobranch_hash as string]) {
+                    if (node.id !== n.id) {
+                        if (node.isAncestorOf(n) || n.isAncestorOf(node)) {
+                            continue;
+                        }
+                        node.isobranches.push(n);
                     }
-                    node.isobranches.push(n);
                 }
             }
 
