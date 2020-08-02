@@ -31,7 +31,7 @@ import {_} from "./translate";
 
 export type GoEnginePhase = 'play'|'stone removal'|'finished';
 export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz';
-export type GoEngineSuperKoAlgorithm = 'ssk';
+export type GoEngineSuperKoAlgorithm = 'psk' | 'csk' | 'ssk' | 'noresult' | 'ing'; /* note, only psk, ssk, and noresult are implemented, ing and csk are treated as psk */
 
 export interface PlayerScore {
     total: number;
@@ -307,6 +307,7 @@ export class GoEngine {
     private allow_ko:boolean = false;
     private allow_self_capture:boolean = false;
     private allow_superko:boolean = false;
+    private superko_algorithm:GoEngineSuperKoAlgorithm = 'psk';
     private black_prisoners:number;
     private white_prisoners:number;
     private board_is_repeating:boolean;
@@ -1008,10 +1009,10 @@ export class GoEngine {
                 }
 
                 this.board_is_repeating = false;
-                if (!dontCheckForSuperKo) {
-                    this.board_is_repeating = this.isBoardRepeating();
+                if (!dontCheckForSuperKo && !this.allow_superko) {
+                    this.board_is_repeating = this.isBoardRepeating(this.superko_algorithm);
                     if (this.board_is_repeating) {
-                        if (errorOnSuperKo && !this.allow_superko) {
+                        if (errorOnSuperKo) {
                             throw new GobanMoveError(
                                 this.game_id || this.review_id || 0,
                                 this.cur_move?.move_number ?? -1,
@@ -1066,16 +1067,20 @@ export class GoEngine {
 
         return peices_removed;
     }
-    public isBoardRepeating():boolean {
+    public isBoardRepeating(superko_rule:GoEngineSuperKoAlgorithm):boolean {
         let MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
         let current_state = this.getState();
         //var current_state = this.cur_move.state;
+        let current_player_to_move = this.player;
+        const check_situational = superko_rule === 'ssk';
 
         let t:MoveTree | null | undefined = this.cur_move.index(-2);
         for (let i = Math.min(MAX_SUPERKO_SEARCH, this.cur_move.move_number - 2); i > 0; --i, t = t?.prev()) {
             if (t) {
-                if (this.boardStatesAreTheSame(t.state, current_state)) {
-                    return true;
+                if (!check_situational || t.player == current_player_to_move) {
+                    if (this.boardStatesAreTheSame(t.state, current_state)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -1532,7 +1537,7 @@ export class GoEngine {
         defaults.aga_handicap_scoring = false;
         defaults.allow_ko = false;
         defaults.allow_superko = false;
-        defaults.superko_algorithm = "ssk";
+        defaults.superko_algorithm = "psk";
         defaults.players = {
             black: {"username": "Black", id:NaN, "rank": -1},
             white: {"username": "White", id:NaN, "rank": -1},
@@ -1558,6 +1563,7 @@ export class GoEngine {
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
                 defaults.free_handicap_placement = true;
+                defaults.superko_algorithm = "csk";
                 defaults.score_handicap = true;
                 if ("ogs_import" in game_obj) {
                     defaults.free_handicap_placement = false;
@@ -1568,6 +1574,7 @@ export class GoEngine {
                 defaults.komi = 7.5;
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
+                defaults.superko_algorithm = "ssk";
                 defaults.white_must_pass_last = true;
                 defaults.aga_handicap_scoring = true;
                 defaults.score_handicap = true;
@@ -1578,6 +1585,7 @@ export class GoEngine {
                 defaults.allow_superko = true;
                 defaults.score_territory_in_seki = false;
                 defaults.score_stones = false;
+                defaults.superko_algorithm = "noresult";
                 defaults.opponent_plays_first_after_resume = true;
                 break;
 
@@ -1586,6 +1594,7 @@ export class GoEngine {
                 defaults.allow_superko = true;
                 defaults.score_territory_in_seki = false;
                 defaults.score_stones = false;
+                defaults.superko_algorithm = "noresult";
                 defaults.opponent_plays_first_after_resume = true;
                 break;
 
@@ -1593,6 +1602,7 @@ export class GoEngine {
                 defaults.komi = 8;
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
+                defaults.superko_algorithm = "ing";
                 defaults.free_handicap_placement = true;
                 defaults.allow_self_capture = true;
                 break;
@@ -1601,6 +1611,7 @@ export class GoEngine {
                 defaults.komi = 7;
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
+                defaults.superko_algorithm = "ssk";
                 defaults.free_handicap_placement = true;
                 defaults.allow_self_capture = true;
                 break;
