@@ -937,11 +937,11 @@ export class GoEngine {
         return this.player !== 1 ? "black" : "white";
     }
     public playerByColor(color:PlayerColor | JGOFNumericPlayerColor):JGOFNumericPlayerColor {
-        if (color === 1 || color === 2) {
-            return color;
-        }
         if (color === "black") { return 1; }
         if (color === "white") { return 2; }
+        if (color === 1 || color === 2) {
+            return color as JGOFNumericPlayerColor;
+        }
         return 0;
     }
     public place(x:number, y:number, checkForKo?:boolean, errorOnSuperKo?:boolean, dontCheckForSuperKo?:boolean, dontCheckForSuicide?:boolean, isTrunkMove?:boolean):number {
