@@ -38,7 +38,7 @@ export interface AdHocPlayer {
 export type AdHocPackedMove = [
     number,  /* x */
     number,  /* y */
-    number,  /* time delta */
+    number?,  /* time delta */
     JGOFNumericPlayerColor?,  /* color */
     object?  /* extra */
 ];

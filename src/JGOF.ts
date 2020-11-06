@@ -230,6 +230,7 @@ export type JGOFTimeControl =
 
 export interface JGOFAIReview {
     id: string;
+    uuid: string;
 
     /**
      * A fast review typically only has a few moves reviewed, whereas a full
