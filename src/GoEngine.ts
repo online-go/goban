@@ -109,6 +109,9 @@ export interface GoEngineConfig {
     score?:Score;
     outcome?:string;
 
+    start_time?:number;
+    end_time?:number;
+
     allow_self_capture?:boolean;
     automatic_stone_removal?:boolean;
     allow_ko?:boolean;
