@@ -3031,7 +3031,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.redraw(true);
             this.emit("update");
         } else {
-            this.setMode("play");
+            if (this.game_id) {
+                this.setMode("play");
+            } else {
+                this.setMode("analyze", true);
+            }
             this.redraw(true);
         }
 
