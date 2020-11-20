@@ -324,7 +324,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected __last_pt:{i:number, j:number, valid:boolean} = {i:-1, j:-1, valid:false};
     protected __update_move_tree:any = null; /* timer */
     protected analysis_move_counter:number;
-    protected auto_scoring_done:boolean = false;
+    protected auto_scoring_done?:boolean = false;
     //protected black_clock;
     //protected black_name;
     protected bounded_height:number;

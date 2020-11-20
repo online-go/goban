@@ -298,7 +298,7 @@ export class GoEngine {
     public setState_callback?:(state:any) => void;
     public strict_seki_mode:boolean = false;
     public time_control:JGOFTimeControl = { system: 'none', speed: 'correspondence', pause_on_weekends: true };
-    public undo_requested: number = NaN;
+    public undo_requested?: number = NaN;
     public winner?:'black'|'white';
     public game_id:number = NaN;
     public review_id?:number;
