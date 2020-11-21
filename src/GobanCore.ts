@@ -301,6 +301,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public height:number;
     public last_clock?:AdHocClock;
     public mode:string;
+    public previous_mode:string;
     public one_click_submit: boolean;
     public pen_marks:Array<any>;
     public readonly game_id: number | string;
@@ -501,6 +502,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.getPuzzlePlacementSetting = config.getPuzzlePlacementSetting;
         this.has_new_official_move = false;
         this.mode = "play";
+        this.previous_mode = this.mode;
         this.analyze_tool = "stone";
         this.analyze_subtool = "alternate";
         this.label_character = "A";
@@ -2070,6 +2072,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
 
+    public setToPreviousMode(dont_jump_to_official_move?:boolean):boolean {
+        return this.setMode(this.previous_mode as GobanModes, dont_jump_to_official_move);
+    }
     public setModeDeferred(mode:GobanModes):void {
         setTimeout(() => { this.setMode(mode); }, 1);
     }
@@ -2102,6 +2107,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.has_new_official_move = false;
         }
 
+        this.previous_mode = this.mode;
         this.mode = mode;
         if (!dont_jump_to_official_move) {
             this.jumpToLastOfficialMove();
@@ -3031,11 +3037,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.redraw(true);
             this.emit("update");
         } else {
-            if (this.game_id) {
-                this.setMode("play");
-            } else {
-                this.setMode("analyze", true);
-            }
+            this.setToPreviousMode(true);
             this.redraw(true);
         }
 
