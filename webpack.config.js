@@ -115,6 +115,7 @@ module.exports = (env, argv) => {
                 host: '0.0.0.0',
                 port: 9000,
                 writeToDisk: true,
+                disableHostCheck: true,
 
                 hot: false,
                 inline: false,
