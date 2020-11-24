@@ -111,6 +111,7 @@ export interface GoEngineConfig {
 
     start_time?:number;
     end_time?:number;
+    game_date?:string; // as reported by an SGF
 
     allow_self_capture?:boolean;
     automatic_stone_removal?:boolean;
@@ -1932,7 +1933,6 @@ export class GoEngine {
         }
 
 
-
         function processProperty(ident:string, values:Array<string>) {
             for (let i = 1; i < values.length; ++i) {
                 process(values[i]);
@@ -2103,6 +2103,14 @@ export class GoEngine {
                                 }
                             });
                         }
+                        break;
+
+                    case "DT":
+                        self.config.game_date = val;
+                        break;
+
+                    case "GN":
+                        self.config.game_name = val;
                         break;
                 }
             }
