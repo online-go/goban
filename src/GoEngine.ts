@@ -1932,6 +1932,20 @@ export class GoEngine {
             return ret;
         }
 
+        function parseRank(rank:string):number {
+            let b = parseInt(rank);
+            if (/[kK]/.test(rank)) {
+                return 30 - b;
+            }
+            if (/[d]/.test(rank)) {
+                return 29 + b;
+            }
+            if (/[p]/.test(rank)) {
+                return 1000 + 36 + b;
+            }
+            return -100;
+        }
+
 
         function processProperty(ident:string, values:Array<string>) {
             for (let i = 1; i < values.length; ++i) {
@@ -2112,6 +2126,34 @@ export class GoEngine {
                     case "GN":
                         self.config.game_name = val;
                         break;
+
+                    case "PW":
+                        if (self.config.players?.white) {
+                            self.config.players.white.username = val;
+                        }
+                        break;
+
+                    case "PB":
+                        if (self.config.players?.black) {
+                            self.config.players.black.username = val;
+                        } else {
+                            console.log("SHIT no dice");
+                        }
+                        break;
+
+                    case "WR":
+                        if (self.config.players?.white) {
+                            self.config.players.white.rank = parseRank(val);
+                            console.log("PARSED wr", val, self.config.players.white.rank);
+
+                        }
+                        break;
+
+                    case "BR":
+                        if (self.config.players?.black) {
+                            self.config.players.black.rank = parseRank(val);
+                        }
+                        break;
                 }
             }
         }
@@ -2125,6 +2167,19 @@ export class GoEngine {
 
 
         return () => {
+            self.config.players = self.config.players || {
+                'white': {
+                    'id': 0,
+                    'username': 'White',
+                    'rank': 0,
+                },
+                'black': {
+                    'id': 0,
+                    'username': 'Black',
+                    'rank': 0,
+                }
+            };
+
             instructions.map(f => f());
 
             this.move_tree.hoistFirstBranchToTrunk();
