@@ -2079,7 +2079,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         setTimeout(() => { this.setMode(mode); }, 1);
     }
     public setMode(mode:GobanModes, dont_jump_to_official_move?:boolean):boolean {
-        if (mode === "conditional" && this.player_id === this.engine.playerToMove()) {
+        if (mode === "conditional" && this.player_id === this.engine.playerToMove() &&
+            this.mode !== "score estimation") {
             /* this shouldn't ever get called, but incase we screw up.. */
             swal("Can't enter conditional move planning when it's your turn");
             return false;
@@ -3037,7 +3038,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.redraw(true);
             this.emit("update");
         } else {
-            this.setToPreviousMode(true);
+            if (this.previous_mode === "analyze" ||
+                this.previous_mode === "conditional") {
+                this.setToPreviousMode(true);
+            } else {
+                this.setMode("play");
+            }
             this.redraw(true);
         }
 
