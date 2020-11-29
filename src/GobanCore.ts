@@ -3038,9 +3038,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.redraw(true);
             this.emit("update");
         } else {
-            let dont_jump_to_official_move = (this.previous_mode === 'analyze' ||
-                                              this.previous_mode === 'conditional');
-            this.setToPreviousMode(dont_jump_to_official_move);
+            if (this.previous_mode === "analyze" ||
+                this.previous_mode === "conditional") {
+                this.setToPreviousMode(true);
+            } else {
+                this.setMode("play");
+            }
             this.redraw(true);
         }
 
