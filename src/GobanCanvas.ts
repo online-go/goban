@@ -904,9 +904,12 @@ export class GobanCanvas extends GobanCore  {
 
         } catch (e) {
             delete this.move_selected;
-            console.info(e);
-            this.errorHandler(e);
-            this.emit("error");
+            // stone already placed is just to be ignored, it's not really an error.
+            if (e.message_id !== "stone_already_placed_here") {
+                console.info(e);
+                this.errorHandler(e);
+                this.emit("error");
+            }
             this.emit("update");
         }
     }
