@@ -56,7 +56,7 @@ export const MARK_TYPES:Array<keyof MarkInterface> = ["letter", "circle", "squar
 
 let last_goban_id = 0;
 
-export type GobanModes = 'play' | 'puzzle' | "score estimation" | 'analyze' | 'conditional' | 'setup';
+export type GobanModes = 'play' | 'puzzle' | "score estimation" | 'analyze' | 'conditional' | 'setup' | 'edit' | 'pattern search';
 
 export type AnalysisTool = 'stone' | 'draw' | 'label';
 export type AnalysisSubTool = 'black' | 'white' | 'alternate' | 'letters' | 'numbers' | string /* label character(s) */;
@@ -97,7 +97,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     display_width?: number;
 
     interactive?: boolean;
-    mode?: 'puzzle';
+    mode?: GobanModes;
     square_size?: number | ((goban:GobanCore) => number) | 'auto';
 
     getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
@@ -302,7 +302,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public abstract engine: GoEngine;
     public height:number;
     public last_clock?:AdHocClock;
-    public mode:string;
+    public mode: GobanModes;
     public previous_mode:string;
     public one_click_submit: boolean;
     public pen_marks:Array<any>;
@@ -350,7 +350,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected game_type:string;
     protected getPuzzlePlacementSetting?:() => PuzzlePlacementSetting;
     protected goban_id: number;
-    protected has_new_official_move:boolean;
     protected highlight_movetree_moves:boolean;
     protected interactive:boolean;
     protected isInPushedAnalysis:() => boolean;
@@ -503,8 +502,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.dont_draw_last_move = !!config.dont_draw_last_move;
         this.getPuzzlePlacementSetting = config.getPuzzlePlacementSetting;
-        this.has_new_official_move = false;
-        this.mode = "play";
+        this.mode = config.mode || "play";
         this.previous_mode = this.mode;
         this.analyze_tool = "stone";
         this.analyze_subtool = "alternate";
@@ -1006,9 +1004,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     if (jumptomove) {
                         this.engine.jumpTo(jumptomove);
-                        this.has_new_official_move = true;
-                    } else {
-                        this.has_new_official_move = false;
                     }
 
                     this.emit("update");
@@ -2106,10 +2101,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         let redraw = true;
-
-        if (this.mode === "play" || this.mode === "finished") {
-            this.has_new_official_move = false;
-        }
 
         this.previous_mode = this.mode;
         this.mode = mode;
