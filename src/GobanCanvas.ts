@@ -2166,36 +2166,39 @@ export class GobanCanvas extends GobanCore  {
     public message(msg:string, timeout:number = 5000):void {
         this.clearMessage();
 
-        window.setTimeout(() => {
-            this.message_div = document.createElement('div');
-            this.message_div.className = "GobanMessage";
-            this.message_td = document.createElement("td");
-            let table = document.createElement("table");
-            let tr = document.createElement("tr");
-            tr.appendChild(this.message_td);
-            table.appendChild(tr);
-            this.message_div.appendChild(table);
-            this.message_text = document.createElement("div");
-            this.message_text.innerHTML = msg;
-            this.message_td.appendChild(this.message_text);
-            this.parent.appendChild(this.message_div);
+        this.message_div = document.createElement('div');
+        this.message_div.className = "GobanMessage";
+        this.message_td = document.createElement("td");
+        let table = document.createElement("table");
+        let tr = document.createElement("tr");
+        tr.appendChild(this.message_td);
+        table.appendChild(tr);
+        this.message_div.appendChild(table);
+        this.message_text = document.createElement("div");
+        this.message_text.innerHTML = msg;
+        this.message_td.appendChild(this.message_text);
+        this.parent.appendChild(this.message_div);
 
-            this.message_div.addEventListener("click", () => {
-                if (timeout > 0) {
-                    this.clearMessage();
-                }
-            });
-
-            if (!timeout) {
-                timeout = 5000;
+        let message_time = Date.now();
+        this.message_div.addEventListener("click", () => {
+            if (Date.now() - message_time < 100) {
+                return;
             }
 
             if (timeout > 0) {
-                this.message_timeout = window.setTimeout(() => {
-                    this.clearMessage();
-                }, timeout);
+                this.clearMessage();
             }
-        }, 100);
+        });
+
+        if (!timeout) {
+            timeout = 5000;
+        }
+
+        if (timeout > 0) {
+            this.message_timeout = window.setTimeout(() => {
+                this.clearMessage();
+            }, timeout);
+        }
     }
     public clearMessage():void {
         if (this.message_div) {
