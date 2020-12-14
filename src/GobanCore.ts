@@ -119,6 +119,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     dont_draw_last_move?: boolean;
     one_click_submit?: boolean;
     double_click_submit?: boolean;
+    variation_stone_transparency?: number;
 
     //
     auth?:string;
@@ -293,6 +294,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     //public black_pause_text: string;
     public conditional_tree:GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;
+    public variation_stone_transparency: number;
     public draw_bottom_labels:boolean;
     public draw_left_labels:boolean;
     public draw_right_labels:boolean;
@@ -474,6 +476,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.game_type = config.game_type || "";
         this.one_click_submit = "one_click_submit" in config ? !!config.one_click_submit : false;
         this.double_click_submit = "double_click_submit" in config ? !!config.double_click_submit : true;
+        this.variation_stone_transparency = typeof config.variation_stone_transparency !== 'undefined' ? config.variation_stone_transparency : 0.6;
         this.original_square_size = config.square_size || "auto";
         //this.square_size = config["square_size"] || "auto";
         this.interactive = !!config.interactive;
