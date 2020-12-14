@@ -1000,7 +1000,9 @@ export class GoEngine {
                     }
                 }
 
-                if (checkForKo && !this.allow_ko && this.cur_move.move_number > 2) {
+                if (checkForKo && !this.allow_ko &&
+                    (this.cur_move.move_number > 2 ||
+                     (this.goban_callback && this.goban_callback.mode === 'puzzle'))) {
                     let current_state = this.getState();
                     if (!this.cur_move.edited && this.boardStatesAreTheSame(current_state, this.cur_move.index(-1).state)) {
                         throw new GobanMoveError(
