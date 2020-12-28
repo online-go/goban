@@ -1644,16 +1644,30 @@ export class GobanCanvas extends GobanCore  {
                         draw_last_move = false;
                     }
                     else {
-                        ctx.beginPath();
-                        ctx.strokeStyle = color;
-                        ctx.lineWidth = this.square_size * 0.075;
-                        let r = this.square_size * 0.25;
-                        if (this.submit_move) {
-                            //ctx.globalAlpha = 0.6;
-                            r = this.square_size * 0.30;
+                        if (this.engine.undo_requested && this.visual_undo_request_indicator && this.engine.undo_requested === this.engine.cur_move.move_number) {
+                            const letter = '?';
+                            ctx.save();
+                            ctx.fillStyle = color;
+                            let metrics = ctx.measureText(letter);
+                            let xx = cx - metrics.width / 2;
+                            let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1); /* middle centering is different on firefox */
+                            ctx.textBaseline = "middle";
+                            ctx.fillText(letter, xx, yy);
+                            draw_last_move = false;
+                            ctx.restore();
                         }
-                        ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
-                        ctx.stroke();
+                        else {
+                            ctx.beginPath();
+                            ctx.strokeStyle = color;
+                            ctx.lineWidth = this.square_size * 0.075;
+                            let r = this.square_size * 0.25;
+                            if (this.submit_move) {
+                                //ctx.globalAlpha = 0.6;
+                                r = this.square_size * 0.30;
+                            }
+                            ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
+                            ctx.stroke();
+                        }
                     }
                 }
 
