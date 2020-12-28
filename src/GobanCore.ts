@@ -120,6 +120,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     one_click_submit?: boolean;
     double_click_submit?: boolean;
     variation_stone_transparency?: number;
+    visual_undo_request_indicator?: boolean;
 
     //
     auth?:string;
@@ -299,6 +300,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public draw_left_labels:boolean;
     public draw_right_labels:boolean;
     public draw_top_labels:boolean;
+    public visual_undo_request_indicator: boolean;
     public abstract engine: GoEngine;
     public height:number;
     public last_clock?:AdHocClock;
@@ -476,6 +478,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.one_click_submit = "one_click_submit" in config ? !!config.one_click_submit : false;
         this.double_click_submit = "double_click_submit" in config ? !!config.double_click_submit : true;
         this.variation_stone_transparency = typeof config.variation_stone_transparency !== 'undefined' ? config.variation_stone_transparency : 0.6;
+        this.visual_undo_request_indicator = "visual_undo_request_indicator" in config ? !!config.visual_undo_request_indicator : false;
         this.original_square_size = config.square_size || "auto";
         //this.square_size = config["square_size"] || "auto";
         this.interactive = !!config.interactive;
@@ -915,7 +918,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.engine.undo_requested = parseInt(move_number);
                 this.emit("update");
                 this.emit('audio-undo-requested');
-
+                if (this.visual_undo_request_indicator) {
+                    this.redraw(true);  // need to update the mark on the last move
+                }
             });
             this._socket_on(prefix + "undo_accepted", ():void => {
                 if (this.disconnectedFromGame) { return; }
