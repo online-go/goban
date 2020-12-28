@@ -771,7 +771,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 return;
             }
             if (reconnect) {
-                this.emit('audio-reconnected')
+                this.emit('audio-reconnected');
             }
             reconnect = true;
         });
@@ -779,7 +779,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.disconnectedFromGame) {
                 return;
             }
-            this.emit('audio-disconnected')
+            this.emit('audio-disconnected');
         });
 
 
@@ -838,7 +838,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 if (this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
                     let winner:any = (obj as any).winner;
-                    let winner_color:'black' | 'white' | undefined = undefined;
+                    let winner_color: 'black' | 'white' | undefined;
                     if (typeof(winner) === 'number') {
                         winner_color = winner === obj.black_player_id ? 'black' : 'white';
                     } else if (winner === 'black' || winner === 'white') {
@@ -994,7 +994,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         return;
                     }
 
-                    let score_before_move = this.engine.computeScore(true)[this.engine.colorToMove()].prisoners;;
+                    let score_before_move = this.engine.computeScore(true)[this.engine.colorToMove()].prisoners;
 
                     let removed_count:number = 0;
                     if (mv[0].edited) {
@@ -2335,7 +2335,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.colored_circles = GoMath.makeEmptyObjectMatrix<ColoredCircle>(this.width, this.height);
         for (let circle of circles) {
-            let mv = circle.move
+            let mv = circle.move;
             this.colored_circles[mv.y][mv.x] = circle;
         }
         if (!dont_draw) {
