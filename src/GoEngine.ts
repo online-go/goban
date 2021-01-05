@@ -499,7 +499,8 @@ export class GoEngine {
         if (config.removed) {
             removed = this.decodeMoves(config.removed);
         }
-        if (typeof(config.removed) === "undefined" && config.original_sgf) {
+        if (typeof(config.removed) === "undefined" && config.original_sgf &&
+            config.outcome !== "Resignation") {
             // 2021-01-05: Game data for SGF uploaded games currently don't include
             // removed stones, so we use score estimator to find probably dead stones to get a
             // closer approximation of what territories should be marked in the final board
@@ -1506,6 +1507,11 @@ export class GoEngine {
         }
         if ("ladder" in config) {
             delete config["ladder"];
+        }
+
+        if (config.outcome === "resign") {
+            // SGF games have this non-standard outcome, so we correct it.
+            config.outcome = "Resignation";
         }
 
         if (config.black_player_id || config.white_player_id) {
