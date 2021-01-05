@@ -506,8 +506,9 @@ export class GoEngine {
             // closer approximation of what territories should be marked in the final board
             // position.
             //
-            // NOTE: Some Go clients do include dead stones in their SGFs, so this is something
-            // we may be able to support in the future.
+            // NOTE: Some Go clients do include dead stones in their SGFs, however we ignore them,
+            // so this is something we may be able to support in the future with a server side
+            // change so we wouldn't require this hack.
             let se = new ScoreEstimator(this.goban_callback, this, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
             removed = this.decodeMoves(se.getProbablyDead());
         }
