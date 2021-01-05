@@ -29,6 +29,9 @@ import { AdHocPackedMove } from './AdHocFormat';
 import {_} from "./translate";
 
 
+export const AUTOSCORE_TRIALS = 1000;
+export const AUTOSCORE_TOLERANCE = 0.30;
+
 export type GoEnginePhase = 'play'|'stone removal'|'finished';
 export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz';
 export type GoEngineSuperKoAlgorithm = 'psk' | 'csk' | 'ssk' | 'noresult' | 'ing'; /* note, only psk, ssk, and noresult are implemented, ing and csk are treated as psk */
@@ -492,8 +495,22 @@ export class GoEngine {
             unpackMoveTree(this.move_tree, config.move_tree);
         }
 
+        let removed;
         if (config.removed) {
-            let removed = this.decodeMoves(config.removed);
+            removed = this.decodeMoves(config.removed);
+        }
+        if (typeof(config.removed) === "undefined" && config.original_sgf) {
+            // 2021-01-05: Game data for SGF uploaded games currently don't include
+            // removed stones, so we use score estimator to find probably dead stones to get a
+            // closer approximation of what territories should be marked in the final board
+            // position.
+            //
+            // NOTE: Some Go clients do include dead stones in their SGFs, so this is something
+            // we may be able to support in the future.
+            let se = new ScoreEstimator(this.goban_callback, this, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
+            removed = this.decodeMoves(se.getProbablyDead());
+        }
+        if (removed) {
             for (let i = 0; i < removed.length; ++i) {
                 this.setRemoved(removed[i].x, removed[i].y, true);
             }
