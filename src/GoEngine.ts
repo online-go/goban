@@ -2125,7 +2125,7 @@ export class GoEngine {
                                         result = match[1];
                                     }
 
-                                    if (match !== null && !isNaN(result as any)) {
+                                    if (match !== null && /[0-9.]+/.test(result)) {
                                         // There's a numeric score.
                                         self.outcome = result;
                                     } else {
