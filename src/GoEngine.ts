@@ -330,6 +330,7 @@ export class GoEngine {
     public score_handicap:boolean = false;
     public score_territory:boolean = false;
     public score_territory_in_seki:boolean = false;
+    public territory_included_in_sgf:boolean = false;
 
 
     constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?:boolean) {
@@ -499,18 +500,16 @@ export class GoEngine {
         if (config.removed) {
             removed = this.decodeMoves(config.removed);
         }
-        if (typeof(config.removed) === "undefined" &&
+        if (!this.territory_included_in_sgf &&
+            typeof(config.removed) === "undefined" &&
             config.original_sgf &&
-            typeof(self.outcome) !== "undefined" &&
             (/[0-9.]+/.test(self.outcome))) {
-            // 2021-01-05: Game data for SGF uploaded games currently don't include
-            // removed stones, so we use score estimator to find probably dead stones to get a
-            // closer approximation of what territories should be marked in the final board
-            // position.
+            // Game data for SGF uploaded games don't always include removed stones, so we use score
+            // estimator to find probably dead stones to get a closer approximation of what
+            // territories should be marked in the final board position.
             //
-            // NOTE: Some Go clients do include dead stones in their SGFs, however we ignore them,
-            // so this is something we may be able to support in the future with a server side
-            // change so we wouldn't require this hack.
+            // NOTE: Some Go clients (not OGS, at least for now) do include dead stones in their
+            // SGFs, which we respect if present and skip using the score estimator.
             let se = new ScoreEstimator(this.goban_callback, this, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
             removed = this.decodeMoves(se.getProbablyDead());
         }
@@ -2178,6 +2177,32 @@ export class GoEngine {
                     case "BR":
                         if (self.config.players?.black) {
                             self.config.players.black.rank = parseRank(val);
+                        }
+                        break;
+
+                    case "TB":
+                        {
+                            instructions.push(() => {
+                                self.territory_included_in_sgf = true;
+                                let black_territory_point = self.decodeMoves(val)[0];
+                                if (self.board[black_territory_point.y][black_territory_point.x] ===
+                                    JGOFNumericPlayerColor.WHITE) {
+                                    self.setRemoved(black_territory_point.x, black_territory_point.y, true);
+                                }
+                            });
+                        }
+                        break;
+
+                    case "TW":
+                        {
+                            instructions.push(() => {
+                                self.territory_included_in_sgf = true;
+                                let white_territory_point = self.decodeMoves(val)[0];
+                                if (self.board[white_territory_point.y][white_territory_point.x] ===
+                                    JGOFNumericPlayerColor.BLACK) {
+                                    self.setRemoved(white_territory_point.x, white_territory_point.y, true);
+                                }
+                            });
                         }
                         break;
                 }
