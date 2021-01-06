@@ -499,8 +499,10 @@ export class GoEngine {
         if (config.removed) {
             removed = this.decodeMoves(config.removed);
         }
-        if (typeof(config.removed) === "undefined" && config.original_sgf &&
-            config.outcome !== "Resignation") {
+        if (typeof(config.removed) === "undefined" &&
+            config.original_sgf &&
+            typeof(config.outcome) !== "undefined" &&
+            (/[0-9.]+/.test(config.outcome))) {
             // 2021-01-05: Game data for SGF uploaded games currently don't include
             // removed stones, so we use score estimator to find probably dead stones to get a
             // closer approximation of what territories should be marked in the final board
