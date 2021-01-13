@@ -29,6 +29,9 @@ import { AdHocPackedMove } from './AdHocFormat';
 import {_} from "./translate";
 
 
+declare const CLIENT:boolean;
+declare const SERVER:boolean;
+
 export const AUTOSCORE_TRIALS = 1000;
 export const AUTOSCORE_TOLERANCE = 0.30;
 
@@ -500,7 +503,8 @@ export class GoEngine {
         if (config.removed) {
             removed = this.decodeMoves(config.removed);
         }
-        if (!this.territory_included_in_sgf &&
+        if (CLIENT &&
+            !this.territory_included_in_sgf &&
             typeof(config.removed) === "undefined" &&
             config.original_sgf &&
             (/[0-9.]+/.test(self.outcome))) {
