@@ -15,6 +15,8 @@
  */
 
 import {
+    AUTOSCORE_TRIALS,
+    AUTOSCORE_TOLERANCE,
     GoEngine,
     GoEngineConfig,
     GoEnginePhase,
@@ -50,8 +52,6 @@ export const GOBAN_FONT =  "Verdana,Arial,sans-serif";
 
 export const SCORE_ESTIMATION_TRIALS = 1000;
 export const SCORE_ESTIMATION_TOLERANCE = 0.30;
-export const AUTOSCORE_TRIALS = 1000;
-export const AUTOSCORE_TOLERANCE = 0.30;
 export const MARK_TYPES:Array<keyof MarkInterface> = ["letter", "circle", "square", "triangle", "sub_triangle", "cross", "black", "white"];
 
 let last_goban_id = 0;

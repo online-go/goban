@@ -29,6 +29,12 @@ import { AdHocPackedMove } from './AdHocFormat';
 import {_} from "./translate";
 
 
+declare const CLIENT:boolean;
+declare const SERVER:boolean;
+
+export const AUTOSCORE_TRIALS = 1000;
+export const AUTOSCORE_TOLERANCE = 0.30;
+
 export type GoEnginePhase = 'play'|'stone removal'|'finished';
 export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz';
 export type GoEngineSuperKoAlgorithm = 'psk' | 'csk' | 'ssk' | 'noresult' | 'ing'; /* note, only psk, ssk, and noresult are implemented, ing and csk are treated as psk */
@@ -327,6 +333,7 @@ export class GoEngine {
     public score_handicap:boolean = false;
     public score_territory:boolean = false;
     public score_territory_in_seki:boolean = false;
+    public territory_included_in_sgf:boolean = false;
 
 
     constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?:boolean) {
@@ -492,8 +499,25 @@ export class GoEngine {
             unpackMoveTree(this.move_tree, config.move_tree);
         }
 
+        let removed;
         if (config.removed) {
-            let removed = this.decodeMoves(config.removed);
+            removed = this.decodeMoves(config.removed);
+        }
+        if (CLIENT &&
+            !this.territory_included_in_sgf &&
+            typeof(config.removed) === "undefined" &&
+            config.original_sgf &&
+            (/[0-9.]+/.test(self.outcome))) {
+            // Game data for SGF uploaded games don't always include removed stones, so we use score
+            // estimator to find probably dead stones to get a closer approximation of what
+            // territories should be marked in the final board position.
+            //
+            // NOTE: Some Go clients (not OGS, at least for now) do include dead stones in their
+            // SGFs, which we respect if present and skip using the score estimator.
+            let se = new ScoreEstimator(this.goban_callback, this, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
+            removed = this.decodeMoves(se.getProbablyDead());
+        }
+        if (removed) {
             for (let i = 0; i < removed.length; ++i) {
                 this.setRemoved(removed[i].x, removed[i].y, true);
             }
@@ -1491,6 +1515,11 @@ export class GoEngine {
             delete config["ladder"];
         }
 
+        if (config.outcome === "resign") {
+            // SGF games have this non-standard outcome, so we correct it.
+            config.outcome = "Resignation";
+        }
+
         if (config.black_player_id || config.white_player_id) {
             if (!config.players) {
                 config.players = {
@@ -2191,6 +2220,32 @@ export class GoEngine {
                     case "BR":
                         if (self.config.players?.black) {
                             self.config.players.black.rank = parseRank(val);
+                        }
+                        break;
+
+                    case "TB":
+                        {
+                            instructions.push(() => {
+                                self.territory_included_in_sgf = true;
+                                let black_territory_point = self.decodeMoves(val)[0];
+                                if (self.board[black_territory_point.y][black_territory_point.x] ===
+                                    JGOFNumericPlayerColor.WHITE) {
+                                    self.setRemoved(black_territory_point.x, black_territory_point.y, true);
+                                }
+                            });
+                        }
+                        break;
+
+                    case "TW":
+                        {
+                            instructions.push(() => {
+                                self.territory_included_in_sgf = true;
+                                let white_territory_point = self.decodeMoves(val)[0];
+                                if (self.board[white_territory_point.y][white_territory_point.x] ===
+                                    JGOFNumericPlayerColor.BLACK) {
+                                    self.setRemoved(white_territory_point.x, white_territory_point.y, true);
+                                }
+                            });
                         }
                         break;
                 }
