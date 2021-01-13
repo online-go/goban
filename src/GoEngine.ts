@@ -2115,6 +2115,45 @@ export class GoEngine {
                                 if (val[0].toLowerCase() === "w") {
                                     self.winner = "white";
                                 }
+
+                                if (self.outcome === "") {
+                                    let result;
+                                    let match = val.match(/[BW]\+(.*)/);
+                                    if (match === null) {
+                                        result = val;
+                                    } else {
+                                        result = match[1];
+                                    }
+
+                                    if (match !== null && /[0-9.]+/.test(result)) {
+                                        // There's a numeric score.
+                                        self.outcome = result;
+                                    } else {
+                                        switch (result[0].toUpperCase()) {
+                                            case "0": // Draw.
+                                            case "D": // Draw.
+                                                self.outcome = "0";
+                                                break;
+                                            case "R": // Resignation.
+                                                self.outcome = "Resignation";
+                                                break;
+                                            case "T": // Timeout.
+                                                self.outcome = "Timeout";
+                                                break;
+                                            case "F": // Forfeit.
+                                                // Disqualification seems the closest to forfeit.
+                                                self.outcome = "Disqualification";
+                                                break;
+                                            case "V": // Void.
+                                            case "?": // Unknown.
+                                                self.outcome = "";
+                                                break;
+                                            default:
+                                                self.outcome = "";
+                                                console.warn(`Unknown result: ${result}`);
+                                        }
+                                    }
+                                }
                             });
                         }
                         break;
