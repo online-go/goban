@@ -1515,8 +1515,8 @@ export class GoEngine {
             delete config["ladder"];
         }
 
-        if (config.outcome === "resign") {
-            // SGF games have this non-standard outcome, so we correct it.
+        if (config.outcome === "resign" || config.outcome === "r") {
+            // SGF games sometimes have these non-standard outcomes, so we correct it.
             config.outcome = "Resignation";
         }
 
