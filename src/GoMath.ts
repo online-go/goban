@@ -175,8 +175,12 @@ export class GoMath {
         }
         return "pass";
     }
-    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove> | JGOFMove, width:number, height:number): Array<JGOFMove> {
+    public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove> | JGOFMove | undefined, width:number, height:number): Array<JGOFMove> {
         let ret: Array<Move> = [];
+
+        if (!move_obj) {
+            return [];
+        }
 
         function decodeSingleMoveArray(arr:[number, number, number, number?, object?]):Move {
             let obj:Move = {
