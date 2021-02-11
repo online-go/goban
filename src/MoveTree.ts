@@ -580,6 +580,14 @@ export class MoveTree {
 
         return ret;
     }
+    get stoneColor(): 'black' | 'white' | 'empty' {
+        switch (this.player) {
+            case JGOFNumericPlayerColor.BLACK: return 'black';
+            case JGOFNumericPlayerColor.WHITE: return 'white';
+            case JGOFNumericPlayerColor.EMPTY: return 'empty';
+        }
+        throw new Error('Invalid stone color');
+    }
 
     /* Returns the node in the main trunk which is our ancestor. May be this node. */
     getBranchPoint():MoveTree {
