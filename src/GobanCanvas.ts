@@ -288,6 +288,13 @@ export class GobanCanvas extends GobanCore  {
                 /* if we didn't start the click in the canvas, don't respond to it */
                 return;
             }
+            let right_click = false;
+            if (ev instanceof MouseEvent) {
+                if (ev.button == 2) {
+                    right_click = true;
+                    ev.preventDefault();
+                }
+            }
 
             dragging = false;
 
@@ -330,7 +337,7 @@ export class GobanCanvas extends GobanCore  {
                     }
                 }
 
-                this.onTap(ev, double_clicked);
+                this.onTap(ev, double_clicked, right_click);
                 this.onMouseOut(ev);
             }
         };
@@ -379,6 +386,7 @@ export class GobanCanvas extends GobanCore  {
         canvas.addEventListener("mousedown", (ev) => { if (!mousedisabled) { pointerDown(ev); } ev.preventDefault(); return false; });
         canvas.addEventListener("mousemove", (ev) => { if (!mousedisabled) { pointerMove(ev); } ev.preventDefault(); return false; });
         canvas.addEventListener("mouseout", (ev) => { if (!mousedisabled) { pointerOut(ev); } else { ev.preventDefault(); } return false; });
+        canvas.addEventListener("contextmenu", (ev) => { if (!mousedisabled) { pointerUp(ev, false); } else { ev.preventDefault(); } return false; });
         canvas.addEventListener("focus", (ev) => { ev.preventDefault(); return false; });
 
 
@@ -549,7 +557,7 @@ export class GobanCanvas extends GobanCore  {
             this.pen_ctx.stroke();
         }
     }
-    private onTap(event:MouseEvent | TouchEvent, double_tap:boolean):void {
+    private onTap(event:MouseEvent | TouchEvent, double_tap:boolean, right_click:boolean):void {
         if (!(this.stone_placement_enabled && (this.player_id || !this.engine.players.black.id || this.mode === "analyze" || this.mode === "pattern search" || this.mode === "puzzle"))) { return; }
 
         let pos = getRelativeEventPosition(event);
@@ -678,7 +686,7 @@ export class GobanCanvas extends GobanCore  {
                     puzzle_mode = s.mode;
                     if (s.mode === 'setup') {
                         color = s.color;
-                        if (this.shift_key_is_down) {
+                        if (this.shift_key_is_down || right_click) {
                             color = color === 1 ? 2 : 1;
                         }
                     }
