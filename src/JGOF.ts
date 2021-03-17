@@ -263,6 +263,11 @@ export interface JGOFAIReview {
         [move_number:string]:JGOFAIReviewMove;
     };
 
+    /** Analysis of variations in the game. */
+    analyzed_variations?: {
+        [varkey:string]:JGOFAIReviewMove;
+    };
+
     /** If there was an error processing the review, it can be stored here */
     error?: {
         message_id: GobanMoveErrorMessageId;
