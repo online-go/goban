@@ -1529,22 +1529,14 @@ export class GobanCanvas extends GobanCore  {
                 letter_was_drawn = true;
                 ctx.save();
                 ctx.fillStyle = text_color;
-                let metrics = ctx.measureText(letter);
-
-                if (metrics.width > this.square_size) {
-                    /* For some wide labels, our default font size is too large.. so
-                     * for those labels, set the font size down. This is a slow
-                     * operation to do on every square, so we don't want to dynamically
-                     * size them like this unless we have to.  */
-                    ctx.font = "bold " + (Math.round(this.square_size * 0.35)) + "px " + GOBAN_FONT;
-                    metrics = ctx.measureText(letter);
-                }
+                let [, font , metrics] = fitText(ctx, letter, `bold FONT_SIZEpx ${GOBAN_FONT}`, this.square_size * 0.5, this.square_size * 0.8 * (subscript ? 0.9 : 1.0));
+                console.log("Letter font: ", font);
 
                 let xx = cx - metrics.width / 2;
                 let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1); /* middle centering is different on firefox */
 
                 if (subscript) {
-                    yy -= this.square_size * 0.2;
+                    yy -= this.square_size * 0.15;
                 }
 
                 ctx.textBaseline = "middle";
@@ -1560,27 +1552,18 @@ export class GobanCanvas extends GobanCore  {
                 letter_was_drawn = true;
                 ctx.save();
                 ctx.fillStyle = text_color;
-                if (letter && subscript == "0") {
+                if (letter && subscript === "0") {
                     subscript = "0.0"; // clarifies the markings on the blue move typically
                 }
 
-                let metrics = ctx.measureText(subscript);
-
-
-                if (metrics.width > this.square_size) {
-                    /* For some wide labels, our default font size is too large.. so
-                     * for those labels, set the font size down. This is a slow
-                     * operation to do on every square, so we don't want to dynamically
-                     * size them like this unless we have to.  */
-                    ctx.font = "bold " + (Math.round(this.square_size * 0.20)) + "px " + GOBAN_FONT;
-                    metrics = ctx.measureText(subscript);
-                }
+                let [, font , metrics] = fitText(ctx, subscript, `bold FONT_SIZEpx ${GOBAN_FONT}`, this.square_size * 0.5, this.square_size * 0.8* (letter ? 0.9 : 1.0));
+                console.log("Subscript font: ", font);
 
                 let xx = cx - metrics.width / 2;
                 let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1); /* middle centering is different on firefox */
 
                 if (letter) {
-                    yy += this.square_size * 0.2;
+                    yy += this.square_size * 0.30;
                 }
 
                 ctx.textBaseline = "middle";
@@ -2846,4 +2829,45 @@ export class GobanCanvas extends GobanCore  {
         this.move_tree_drawPath(ctx, node, viewport);
         //}
     }
+}
+
+
+
+let fitTextCache:{[key:string]: [number, string, TextMetrics]} = { };
+
+// fontPattern MUST have a FONT_SIZE string in it that will be replaced
+// ctx.font will be set to the appropriate size when this returns.
+// @returns font_size, font_string, metrics
+function fitText(ctx:CanvasRenderingContext2D, text: string, fontPattern:string, startingFontSize:number, width: number):[number, string, TextMetrics] {
+    const MIN_FONT_SIZE = 4;
+
+    if (fontPattern.indexOf("FONT_SIZE") < 0) {
+        throw new Error(`fitText expects FONT_SIZE to be present in the fontPattern, was ${fontPattern}`);
+    }
+
+    let key = `${width} ${fontPattern} ${startingFontSize} ${text}`;
+    if (key in fitTextCache) {
+        let cached = fitTextCache[key];
+        ctx.font = cached[1];
+        return cached;
+    }
+
+    let font_size = startingFontSize;
+
+    do {
+        let font = fontPattern.replace("FONT_SIZE", font_size.toString());
+        ctx.font = font;
+        let metrics = ctx.measureText(text);
+        if (font_size <= MIN_FONT_SIZE || metrics.width < width) {
+            fitTextCache[key] = [font_size, font, metrics];
+            return fitTextCache[key];
+        }
+
+        let new_font_size = Math.floor(font_size * width / metrics.width);
+        if (new_font_size >= font_size) {
+            font_size = font_size - 1;
+        } else {
+            font_size = new_font_size;
+        }
+    } while (true);
 }
