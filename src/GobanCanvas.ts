@@ -1044,6 +1044,9 @@ export class GobanCanvas extends GobanCore  {
         if (pos.letter && pos.letter.length > 0) {
             have_text_to_draw = true;
         }
+        if (pos.subscript && pos.subscript.length > 0) {
+            have_text_to_draw = true;
+        }
 
 
         /* clear and draw lines */
@@ -1228,6 +1231,7 @@ export class GobanCanvas extends GobanCore  {
                 ctx.restore();
 
             }
+
         }
 
 
@@ -1355,6 +1359,31 @@ export class GobanCanvas extends GobanCore  {
                     }
                     ctx.restore();
                 }
+
+
+
+                if (pos.blue_move && this.colored_circles && this.colored_circles[j] && this.colored_circles[j][i]) {
+                    let circle = this.colored_circles[j][i];
+
+                    ctx.save();
+                    ctx.globalAlpha = 1.0;
+                    let radius = Math.floor(this.square_size * 0.5) - 0.5;
+                    let lineWidth = radius * (circle.border_width || 0.10);
+
+                    if (lineWidth < 0.3) {
+                        lineWidth = 0;
+                    }
+                    ctx.strokeStyle = circle.border_color || "#000000";
+                    if (lineWidth > 0) {
+                        ctx.lineWidth = lineWidth;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius - lineWidth / 2, 0.001, 2 * Math.PI, false); /* 0.001 to workaround fucked up chrome bug */
+                    if (lineWidth > 0) {
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
             }
         }
 
@@ -1455,9 +1484,14 @@ export class GobanCanvas extends GobanCore  {
         let letter_was_drawn = false;
         {
             let letter:string | undefined;
+            let subscript:string | undefined;
             let transparent = false;
             if (pos.letter) {
                 letter = pos.letter;
+            }
+            if (pos.subscript) {
+                subscript = pos.subscript;
+                console.log("subscript: ", subscript);
             }
 
             if (this.mode === "play" && this.byoyomi_label && (this.last_hover_square && this.last_hover_square.x === i && this.last_hover_square.y === j)) {
@@ -1508,11 +1542,52 @@ export class GobanCanvas extends GobanCore  {
 
                 let xx = cx - metrics.width / 2;
                 let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1); /* middle centering is different on firefox */
+
+                if (subscript) {
+                    yy -= this.square_size * 0.2;
+                }
+
                 ctx.textBaseline = "middle";
                 if (transparent) {
                     ctx.globalAlpha = 0.6;
                 }
                 ctx.fillText(letter, xx, yy);
+                draw_last_move = false;
+                ctx.restore();
+            }
+
+            if (subscript) {
+                letter_was_drawn = true;
+                ctx.save();
+                ctx.fillStyle = text_color;
+                if (letter && subscript == "0") {
+                    subscript = "0.0"; // clarifies the markings on the blue move typically
+                }
+
+                let metrics = ctx.measureText(subscript);
+
+
+                if (metrics.width > this.square_size) {
+                    /* For some wide labels, our default font size is too large.. so
+                     * for those labels, set the font size down. This is a slow
+                     * operation to do on every square, so we don't want to dynamically
+                     * size them like this unless we have to.  */
+                    ctx.font = "bold " + (Math.round(this.square_size * 0.20)) + "px " + GOBAN_FONT;
+                    metrics = ctx.measureText(subscript);
+                }
+
+                let xx = cx - metrics.width / 2;
+                let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1); /* middle centering is different on firefox */
+
+                if (letter) {
+                    yy += this.square_size * 0.2;
+                }
+
+                ctx.textBaseline = "middle";
+                if (transparent) {
+                    ctx.globalAlpha = 0.6;
+                }
+                ctx.fillText(subscript, xx, yy);
                 draw_last_move = false;
                 ctx.restore();
             }
@@ -1948,6 +2023,9 @@ export class GobanCanvas extends GobanCore  {
 
             if (letter) {
                 ret += letter + (transparent ? " fade" : "") + ",";
+            }
+            if (pos.subscript) {
+                ret += " _ " + pos.subscript + (transparent ? " fade" : "") + ",";
             }
         }
 

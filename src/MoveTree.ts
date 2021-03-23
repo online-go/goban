@@ -25,7 +25,9 @@ export interface MarkInterface {
     square?           : boolean;
     circle?           : boolean;
     cross?            : boolean;
+    blue_move?        : boolean;
     letter?           : string;
+    subscript?        : string;
     transient_letter? : string;
     score?            : string | boolean;
     chat_triangle?    : boolean;

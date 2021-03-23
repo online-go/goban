@@ -2362,6 +2362,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.engine.cur_move.getMarks(x, y).letter = mark;
         if (drawSquare) { this.drawSquare(x, y);  }
     }
+    public setSubscriptMark(x:number, y:number, mark: string, drawSquare:boolean = true):void {
+        this.engine.cur_move.getMarks(x, y).subscript = mark;
+        if (drawSquare) { this.drawSquare(x, y);  }
+    }
     public setCustomMark(x:number, y:number, mark: string, drawSquare?:boolean):void {
         this.engine.cur_move.getMarks(x, y)[mark] = true;
         if (drawSquare) { this.drawSquare(x, y); }
