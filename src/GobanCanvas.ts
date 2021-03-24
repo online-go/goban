@@ -1491,7 +1491,6 @@ export class GobanCanvas extends GobanCore  {
             }
             if (pos.subscript) {
                 subscript = pos.subscript;
-                console.log("subscript: ", subscript);
             }
 
             if (this.mode === "play" && this.byoyomi_label && (this.last_hover_square && this.last_hover_square.x === i && this.last_hover_square.y === j)) {
@@ -1529,8 +1528,7 @@ export class GobanCanvas extends GobanCore  {
                 letter_was_drawn = true;
                 ctx.save();
                 ctx.fillStyle = text_color;
-                let [, font , metrics] = fitText(ctx, letter, `bold FONT_SIZEpx ${GOBAN_FONT}`, this.square_size * 0.5, this.square_size * 0.8 * (subscript ? 0.9 : 1.0));
-                console.log("Letter font: ", font);
+                let [, , metrics] = fitText(ctx, letter, `bold FONT_SIZEpx ${GOBAN_FONT}`, this.square_size * 0.4, this.square_size * 0.8 * (subscript ? 0.9 : 1.0));
 
                 let xx = cx - metrics.width / 2;
                 let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1); /* middle centering is different on firefox */
@@ -1556,8 +1554,7 @@ export class GobanCanvas extends GobanCore  {
                     subscript = "0.0"; // clarifies the markings on the blue move typically
                 }
 
-                let [, font , metrics] = fitText(ctx, subscript, `bold FONT_SIZEpx ${GOBAN_FONT}`, this.square_size * 0.5, this.square_size * 0.8* (letter ? 0.9 : 1.0));
-                console.log("Subscript font: ", font);
+                let [, , metrics] = fitText(ctx, subscript, `bold FONT_SIZEpx ${GOBAN_FONT}`, this.square_size * 0.4, this.square_size * 0.8* (letter ? 0.9 : 1.0));
 
                 let xx = cx - metrics.width / 2;
                 let yy = cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1); /* middle centering is different on firefox */
