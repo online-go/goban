@@ -328,11 +328,22 @@ export class GoMath {
         return ret;
     }
     public static encodeMoveToArray(mv:Move):AdHocPackedMove {
-        let arr:AdHocPackedMove = [mv.x, mv.y, mv.timedelta ? mv.timedelta : -1, undefined];
+        let extra = undefined;
+        if (mv.blur) {
+            extra = { blur: mv.blur };
+        }
+
+        let arr:AdHocPackedMove = [mv.x, mv.y, mv.timedelta ? mv.timedelta : -1, undefined, extra];
         if (mv.edited) {
             arr[3] = mv.color;
+            if (!extra) {
+                arr.pop();
+            }
         } else {
-            arr.pop();
+            if (!extra) {
+                arr.pop(); // extra
+                arr.pop(); // edited
+            }
         }
         return arr;
     }

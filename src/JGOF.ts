@@ -68,6 +68,8 @@ export interface JGOFMove extends JGOFIntersection {
     color?: JGOFNumericPlayerColor;
     timedelta?: number;
     edited?: boolean;
+    blur?: number; // maximum time the player was not focused on the window
+                   // while it was their turn to make a move
 }
 
 /*********/

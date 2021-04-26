@@ -175,6 +175,14 @@ export interface AudioClockEvent {
     in_overtime: boolean;
 }
 
+interface MoveCommand {
+    auth?: string;
+    game_id?: number | string;
+    player_id?: number;
+    move: string;
+    blur?: number;
+}
+
 interface Events {
     "destroy": never;
     "update": never;
@@ -835,6 +843,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.clearMessage();
                 //this.onClearChatLogs();
                 this.emit("chat-reset");
+                focus_tracker.reset();
 
                 if (this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
                     let winner:any = (obj as any).winner;
@@ -947,6 +956,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this._socket_on(prefix + "move", (move_obj:any):void => {
                 try {
                     if (this.disconnectedFromGame) { return; }
+                    focus_tracker.reset();
 
                     if (move_obj.game_id !== this.game_id) {
                         console.error("Invalid move for this game received [" + this.game_id + "]", move_obj);
@@ -2601,7 +2611,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
 
     /** deprecated, remove with socket stuff */
-    protected sendMove(mv:any):void {
+    protected sendMove(mv:MoveCommand):void {
+        if (!mv.blur) {
+            mv.blur = focus_tracker.getMaxBlurDurationSinceLastReset();
+            focus_tracker.reset();
+        }
+
         let timeout = setTimeout(() => {
             this.message(_("Error submitting move"), -1);
 
@@ -3137,3 +3152,56 @@ function repair_config(config:GobanConfig):GobanConfig {
 
     return config;
 }
+
+
+
+class FocusTracker {
+    hasFocus: boolean = true;
+    lastFocus: number = Date.now();
+    outOfFocusDurations: Array<number> = [];
+
+    constructor() {
+        try {
+            window.addEventListener('blur', this.onBlur);
+            window.addEventListener('focus', this.onFocus);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    reset():void {
+        this.lastFocus = Date.now();
+        this.outOfFocusDurations = [];
+    }
+
+    getMaxBlurDurationSinceLastReset():number {
+        if (!this.hasFocus) {
+            this.outOfFocusDurations.push(Date.now() - this.lastFocus);
+        }
+
+        if (this.outOfFocusDurations.length === 0) {
+            return 0;
+        }
+
+        let ret = Math.max.apply(Math.max, this.outOfFocusDurations);
+
+        if (!this.hasFocus) {
+            this.outOfFocusDurations.pop();
+        }
+
+        return ret;
+    }
+
+    onFocus = () => {
+        this.hasFocus = true;
+        this.outOfFocusDurations.push(Date.now() - this.lastFocus);
+        this.lastFocus = Date.now();
+    };
+
+    onBlur = () => {
+        this.hasFocus = false;
+        this.lastFocus = Date.now();
+    };
+}
+
+export const focus_tracker = new FocusTracker();
