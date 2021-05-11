@@ -239,7 +239,9 @@ export class GobanCanvas extends GobanCore  {
             if (ctx) {
                 this.shadow_ctx = ctx;
             } else {
-                throw new Error(`Failed to obtain shadow layer drawing context`);
+                //throw new Error(`Failed to obtain shadow layer drawing context`);
+                console.error(new Error(`Failed to obtain shadow layer drawing context`));
+                return;
             }
             this.bindPointerBindings(this.shadow_layer);
         }
