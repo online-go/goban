@@ -150,11 +150,15 @@ export class GobanCanvas extends GobanCore  {
         this.move_tree_container = config.move_tree_container;
 
         this.handleShiftKey = (ev) => {
-            if (ev.shiftKey !== this.shift_key_is_down) {
-                this.shift_key_is_down = ev.shiftKey;
-                if (this.last_hover_square) {
-                    this.__drawSquare(this.last_hover_square.x, this.last_hover_square.y);
+            try {
+                if (ev.shiftKey !== this.shift_key_is_down) {
+                    this.shift_key_is_down = ev.shiftKey;
+                    if (this.last_hover_square) {
+                        this.__drawSquare(this.last_hover_square.x, this.last_hover_square.y);
+                    }
                 }
+            } catch (e) {
+                console.error(e);
             }
         };
         window.addEventListener("keydown", this.handleShiftKey);
@@ -284,99 +288,115 @@ export class GobanCanvas extends GobanCore  {
         let last_click_square = this.xy2ij(0, 0);
 
         let pointerUp = (ev:MouseEvent | TouchEvent, double_clicked:boolean):void => {
-            if (!dragging) {
-                /* if we didn't start the click in the canvas, don't respond to it */
-                return;
-            }
-            let right_click = false;
-            if (ev instanceof MouseEvent) {
-                if (ev.button == 2) {
-                    right_click = true;
-                    ev.preventDefault();
+            try {
+                if (!dragging) {
+                    /* if we didn't start the click in the canvas, don't respond to it */
+                    return;
                 }
-            }
-
-            dragging = false;
-
-            if (this.scoring_mode) {
-                let pos = getRelativeEventPosition(ev);
-                let pt = this.xy2ij(pos.x, pos.y);
-                if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
-                    if (this.score_estimate) {
-                        this.score_estimate.handleClick(pt.i, pt.j, ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey);
+                let right_click = false;
+                if (ev instanceof MouseEvent) {
+                    if (ev.button == 2) {
+                        right_click = true;
+                        ev.preventDefault();
                     }
-                    this.emit("update");
                 }
-                return;
-            }
 
-            if (ev.ctrlKey || ev.metaKey || ev.altKey) {
-                try {
+                dragging = false;
+
+                if (this.scoring_mode) {
                     let pos = getRelativeEventPosition(ev);
                     let pt = this.xy2ij(pos.x, pos.y);
-                    if (GobanCore.hooks.addCoordinatesToChatInput) {
-                        GobanCore.hooks.addCoordinatesToChatInput(this.engine.prettyCoords(pt.i, pt.j));
+                    if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
+                        if (this.score_estimate) {
+                            this.score_estimate.handleClick(pt.i, pt.j, ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey);
+                        }
+                        this.emit("update");
                     }
-                } catch (e) {
-                    console.error(e);
+                    return;
                 }
-                return;
-            }
 
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                /* might want to interpret this as a start/stop of a line segment */
-            } else {
-                let pos = getRelativeEventPosition(ev);
-                let pt = this.xy2ij(pos.x, pos.y);
-                if (!double_clicked) {
-                    last_click_square = pt;
+                if (ev.ctrlKey || ev.metaKey || ev.altKey) {
+                    try {
+                        let pos = getRelativeEventPosition(ev);
+                        let pt = this.xy2ij(pos.x, pos.y);
+                        if (GobanCore.hooks.addCoordinatesToChatInput) {
+                            GobanCore.hooks.addCoordinatesToChatInput(this.engine.prettyCoords(pt.i, pt.j));
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    return;
+                }
+
+                if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                    /* might want to interpret this as a start/stop of a line segment */
                 } else {
-                    if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
-                        this.onMouseOut(ev);
-                        return;
+                    let pos = getRelativeEventPosition(ev);
+                    let pt = this.xy2ij(pos.x, pos.y);
+                    if (!double_clicked) {
+                        last_click_square = pt;
+                    } else {
+                        if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
+                            this.onMouseOut(ev);
+                            return;
+                        }
                     }
-                }
 
-                this.onTap(ev, double_clicked, right_click);
-                this.onMouseOut(ev);
+                    this.onTap(ev, double_clicked, right_click);
+                    this.onMouseOut(ev);
+                }
+            } catch (e) {
+                console.error(e);
             }
         };
 
         let pointerDown = (ev:MouseEvent | TouchEvent):void => {
-            dragging = true;
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                this.onPenStart(ev);
-            }
-            else if (this.mode === "analyze" && this.analyze_tool === "label") {
-                if (ev.shiftKey) {
-                    if (this.analyze_subtool === "letters") {
-                        let label_char = prompt(_("Enter the label you want to add to the board"), "");
-                        if (label_char) {
-                            this.label_character = label_char.substring(0, 3);
-                            dragging = false;
-                            return;
+            try {
+                dragging = true;
+                if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                    this.onPenStart(ev);
+                }
+                else if (this.mode === "analyze" && this.analyze_tool === "label") {
+                    if (ev.shiftKey) {
+                        if (this.analyze_subtool === "letters") {
+                            let label_char = prompt(_("Enter the label you want to add to the board"), "");
+                            if (label_char) {
+                                this.label_character = label_char.substring(0, 3);
+                                dragging = false;
+                                return;
+                            }
                         }
                     }
-                }
 
-                this.onLabelingStart(ev);
+                    this.onLabelingStart(ev);
+                }
+            } catch (e) {
+                console.error(e);
             }
         };
 
         let pointerMove = (ev:MouseEvent | TouchEvent):void => {
-            if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                if (!dragging) { return; }
-                this.onPenMove(ev);
-            } else if (dragging && this.mode === "analyze" && this.analyze_tool === "label") {
-                this.onLabelingMove(ev);
-            } else {
-                 this.onMouseMove(ev);
+            try {
+                if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                    if (!dragging) { return; }
+                    this.onPenMove(ev);
+                } else if (dragging && this.mode === "analyze" && this.analyze_tool === "label") {
+                    this.onLabelingMove(ev);
+                } else {
+                     this.onMouseMove(ev);
+                }
+            } catch (e) {
+                console.error(e);
             }
         };
 
         let pointerOut = (ev:MouseEvent | TouchEvent):void => {
-            dragging = false;
-            this.onMouseOut(ev);
+            try {
+                dragging = false;
+                this.onMouseOut(ev);
+            } catch (e) {
+                console.error(e);
+            }
         };
 
         let mousedisabled:any = 0;
@@ -396,57 +416,68 @@ export class GobanCanvas extends GobanCore  {
         let startY = 0;
 
         const onTouchStart = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-            getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
+            try {
+                if (mousedisabled) {
+                    clearTimeout(mousedisabled);
+                }
+                mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+                getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
 
-            if (ev.target === canvas) {
-                lastX = ev.touches[0].clientX;
-                lastY = ev.touches[0].clientY;
-                startX = ev.touches[0].clientX;
-                startY = ev.touches[0].clientY;
-                pointerDown(ev);
-            } else if (dragging) {
-                pointerOut(ev);
+                if (ev.target === canvas) {
+                    lastX = ev.touches[0].clientX;
+                    lastY = ev.touches[0].clientY;
+                    startX = ev.touches[0].clientX;
+                    startY = ev.touches[0].clientY;
+                    pointerDown(ev);
+                } else if (dragging) {
+                    pointerOut(ev);
+                }
+            } catch (e) {
+                console.error(e);
             }
         };
         const onTouchEnd = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-
-            if (ev.target === canvas) {
-                if (Math.sqrt((startX - lastX) * (startX - lastX) + (startY - lastY) * (startY - lastY)) > 10) {
-                    pointerOut(ev);
-                } else {
-                    pointerUp(ev, false);
+            try {
+                if (mousedisabled) {
+                    clearTimeout(mousedisabled);
                 }
-            } else if (dragging) {
-                pointerOut(ev);
+                mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+
+                if (ev.target === canvas) {
+                    if (Math.sqrt((startX - lastX) * (startX - lastX) + (startY - lastY) * (startY - lastY)) > 10) {
+                        pointerOut(ev);
+                    } else {
+                        pointerUp(ev, false);
+                    }
+                } else if (dragging) {
+                    pointerOut(ev);
+                }
+            } catch (e) {
+                console.error(e);
             }
         };
         const onTouchMove = (ev:TouchEvent) => {
-            if (mousedisabled) {
-                clearTimeout(mousedisabled);
-            }
-            mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
-            getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
-
-            if (ev.target === canvas) {
-                lastX = ev.touches[0].clientX;
-                lastY = ev.touches[0].clientY;
-                if (this.mode === "analyze" && this.analyze_tool === "draw") {
-                    pointerMove(ev);
-                    ev.preventDefault();
-                    return false;
+            try {
+                if (mousedisabled) {
+                    clearTimeout(mousedisabled);
                 }
-            } else if (dragging) {
-                pointerOut(ev);
-            }
+                mousedisabled = setTimeout(() => { mousedisabled = 0; }, 5000);
+                getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
 
+                if (ev.target === canvas) {
+                    lastX = ev.touches[0].clientX;
+                    lastY = ev.touches[0].clientY;
+                    if (this.mode === "analyze" && this.analyze_tool === "draw") {
+                        pointerMove(ev);
+                        ev.preventDefault();
+                        return false;
+                    }
+                } else if (dragging) {
+                    pointerOut(ev);
+                }
+            } catch (e) {
+                console.error(e);
+            }
             return undefined;
         };
 
@@ -2261,12 +2292,16 @@ export class GobanCanvas extends GobanCore  {
 
         let message_time = Date.now();
         this.message_div.addEventListener("click", () => {
-            if (Date.now() - message_time < 100) {
-                return;
-            }
+            try {
+                if (Date.now() - message_time < 100) {
+                    return;
+                }
 
-            if (timeout > 0) {
-                this.clearMessage();
+                if (timeout > 0) {
+                    this.clearMessage();
+                }
+            } catch (e) {
+                console.error(e);
             }
         });
 
@@ -2469,7 +2504,11 @@ export class GobanCanvas extends GobanCore  {
 
         if (do_init || this.move_tree_inner_container.parentNode !== this.move_tree_container) {
             let move_tree_on_scroll = (event:Event) => {
-                this.move_tree_redraw(true);
+                try {
+                    this.move_tree_redraw(true);
+                } catch (e) {
+                    console.error(e);
+                }
             };
 
             this.move_tree_container.appendChild(this.move_tree_inner_container);
@@ -2601,28 +2640,32 @@ export class GobanCanvas extends GobanCore  {
     }
     public move_tree_bindCanvasEvents(canvas:HTMLCanvasElement):void {
         let handler = (event:TouchEvent | MouseEvent) => {
-            if (!this.move_tree_container) {
-                throw new Error(`move_tree_container was not set`);
-            }
-
-            let ox = this.move_tree_container.scrollLeft;
-            let oy = this.move_tree_container.scrollTop;
-            let pos = getRelativeEventPosition(event);
-            pos.x += ox;
-            pos.y += oy;
-            let i = Math.floor(pos.x / MoveTree.stone_square_size);
-            let j = Math.floor(pos.y / MoveTree.stone_square_size);
-            let node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
-
-            if (node) {
-                if (this.engine.cur_move.id !== node.id) {
-                    this.engine.jumpTo(node);
-                    this.setLabelCharacterFromMarks();
-                    this.updateTitleAndStonePlacement();
-                    this.emit("update");
-                    this.syncReviewMove();
-                    this.redraw();
+            try {
+                if (!this.move_tree_container) {
+                    throw new Error(`move_tree_container was not set`);
                 }
+
+                let ox = this.move_tree_container.scrollLeft;
+                let oy = this.move_tree_container.scrollTop;
+                let pos = getRelativeEventPosition(event);
+                pos.x += ox;
+                pos.y += oy;
+                let i = Math.floor(pos.x / MoveTree.stone_square_size);
+                let j = Math.floor(pos.y / MoveTree.stone_square_size);
+                let node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
+
+                if (node) {
+                    if (this.engine.cur_move.id !== node.id) {
+                        this.engine.jumpTo(node);
+                        this.setLabelCharacterFromMarks();
+                        this.updateTitleAndStonePlacement();
+                        this.emit("update");
+                        this.syncReviewMove();
+                        this.redraw();
+                    }
+                }
+            } catch (e) {
+                console.error(e);
             }
         };
 
