@@ -68,6 +68,8 @@ export interface ScoreEstimateRequest {
 
 export interface ScoreEstimateResponse {
     ownership: Array<Array<number>>;
+    score?: number;
+    win_rate?: number;
 }
 
 let remote_scorer:((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined = undefined;
@@ -384,7 +386,7 @@ export class ScoreEstimator {
                     }
                 }
 
-                this.updateEstimate(score_estimate, res.ownership);
+                this.updateEstimate(score_estimate, res.ownership, res.score);
                 resolve();
             }).catch((err:any) => {
                 reject(err);
@@ -445,7 +447,7 @@ export class ScoreEstimator {
     }
 
 
-    updateEstimate(estimated_score:number, ownership:Array<Array<number>>) {
+    updateEstimate(estimated_score:number, ownership:Array<Array<number>>, score?:number) {
         /* Build up our heat map and ownership */
         /* negative for black, 0 for neutral, positive for white */
         //this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
@@ -461,9 +463,15 @@ export class ScoreEstimator {
         this.estimated_score = estimated_score - this.engine.komi;
         this.estimated_hard_score = estimated_score - this.engine.komi;
 
-        this.winner = this.estimated_hard_score > 0 ? _("Black") : _("White");
-        this.amount = Math.abs(this.estimated_hard_score);
-        this.amount_fractional = Math.abs(this.estimated_score).toFixed(1);
+        if (typeof(score) === "undefined") {
+            this.winner = this.estimated_hard_score > 0 ? _("Black") : _("White");
+            this.amount = Math.abs(this.estimated_hard_score);
+            this.amount_fractional = Math.abs(this.estimated_score).toFixed(1);
+        } else {
+            this.winner = score > 0 ? _("Black") : _("White");
+            this.amount = Math.abs(score);
+            this.amount_fractional = Math.abs(score).toFixed(1);
+        }
 
         /*
         if (this.goban_callback && this.goban_callback.heatmapUpdated) {
