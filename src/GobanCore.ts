@@ -2578,7 +2578,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.message(_("Processing..."), -1);
         let do_score_estimation = () => {
             //let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
-            let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, Math.min(0.1, AUTOSCORE_TOLERANCE));
+            let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, Math.min(0.1, AUTOSCORE_TOLERANCE), true);
 
             se.when_ready.then(() => {
                 let current_removed = this.engine.getStoneRemovalString();
@@ -3058,7 +3058,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
     }
-    public setScoringMode(tf:boolean):MoveTree {
+    public setScoringMode(tf:boolean, prefer_remote:boolean = false):MoveTree {
         this.scoring_mode = tf;
         let ret = this.engine.cur_move;
 
@@ -3066,7 +3066,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.message(_("Processing..."), -1);
             this.setMode("score estimation", true);
             this.clearMessage();
-            this.score_estimate = this.engine.estimateScore(SCORE_ESTIMATION_TRIALS, SCORE_ESTIMATION_TOLERANCE);
+            this.score_estimate = this.engine.estimateScore(SCORE_ESTIMATION_TRIALS, SCORE_ESTIMATION_TOLERANCE, prefer_remote);
             this.enableStonePlacement();
             this.redraw(true);
             this.emit("update");

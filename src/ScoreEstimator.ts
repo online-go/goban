@@ -81,9 +81,11 @@ let init_promise:Promise<boolean>;
 
 export function init_score_estimator():Promise<boolean> {
     if (CLIENT) {
+        /*
         if (remote_scorer) {
             return Promise.resolve(true);
         }
+        */
 
         if (OGSScoreEstimator_initialized) {
             //console.log("Already initialized");
@@ -308,10 +310,11 @@ export class ScoreEstimator {
     estimated_score:number;
     estimated_hard_score:number;
     when_ready:Promise<void>;
+    prefer_remote:boolean;
 
 
 
-    constructor(goban_callback:GobanCore | undefined, engine:GoEngine, trials:number, tolerance:number) {
+    constructor(goban_callback:GobanCore | undefined, engine:GoEngine, trials:number, tolerance:number, prefer_remote:boolean=false) {
         this.goban_callback = goban_callback;
 
         this.currentMarker = 1;
@@ -333,6 +336,7 @@ export class ScoreEstimator {
         this.group_list = [];
         this.trials = trials;
         this.tolerance = tolerance;
+        this.prefer_remote = prefer_remote;
 
         this.resetGroups();
         this.when_ready = this.estimateScore(this.trials, this.tolerance);
@@ -340,6 +344,10 @@ export class ScoreEstimator {
     }
 
     public estimateScore(trials:number, tolerance:number):Promise<void> {
+        if (!this.prefer_remote) {
+            return this.estimateScoreWASM(trials, tolerance);
+        }
+
         if (remote_scorer) {
             return this.estimateScoreRemote(tolerance);
         } else {

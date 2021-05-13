@@ -514,7 +514,7 @@ export class GoEngine {
             //
             // NOTE: Some Go clients (not OGS, at least for now) do include dead stones in their
             // SGFs, which we respect if present and skip using the score estimator.
-            let se = new ScoreEstimator(this.goban_callback, this, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
+            let se = new ScoreEstimator(this.goban_callback, this, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE, true);
             removed = this.decodeMoves(se.getProbablyDead());
         }
         if (removed) {
@@ -2284,8 +2284,8 @@ export class GoEngine {
             }
         };
     }
-    public estimateScore(trials:number, tolerance:number):Score {
-        let se = new ScoreEstimator(this.goban_callback, this, trials, tolerance);
+    public estimateScore(trials:number, tolerance:number, prefer_remote:boolean = false):Score {
+        let se = new ScoreEstimator(this.goban_callback, this, trials, tolerance, prefer_remote);
         return se.score();
     }
     public getMoveByLocation(x:number, y:number):MoveTree | null {
