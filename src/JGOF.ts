@@ -295,6 +295,9 @@ export interface JGOFAIReviewMove {
 
     /** Followup move branches explored */
     branches: Array<JGOFAIReviewMoveVariation>;
+
+    /** A width*height array of ownership values */
+    ownership?: Array<Array<number>>;
 }
 
 export interface JGOFAIReviewMoveVariation {

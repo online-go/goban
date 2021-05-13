@@ -133,6 +133,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     isInPushedAnalysis?: () => boolean;
     leavePushedAnalysis?: () => void;
     onError?: (err:Error) => void;
+    onScoreEstimationUpdated?: (winning_color:'black'|'white', points:number) => void;
 
     //
     game_type?: 'temporary';
@@ -2544,6 +2545,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             let est = this.score_estimate.estimated_hard_score - this.engine.komi;
             if (GobanCore.hooks.updateScoreEstimation) {
                 GobanCore.hooks.updateScoreEstimation(
+                    est > 0 ? "black" : "white",
+                    Math.abs(est)
+                );
+            }
+            if (this.config.onScoreEstimationUpdated) {
+                this.config.onScoreEstimationUpdated(
                     est > 0 ? "black" : "white",
                     Math.abs(est)
                 );

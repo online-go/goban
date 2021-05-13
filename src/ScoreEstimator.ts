@@ -29,12 +29,20 @@ declare const SERVER:boolean;
  * OGSScoreEstimator module is loaded is quite differente between the two.
  *
  * On the server, the OGSScoreEsimtator module is loaded by score-estimator.ts
- * and teh set_OGSScoreEstimator function is called with the module.
+ * and the set_OGSScoreEstimator function is called with the module.
  *
  * On the client, the OGSScoreEstimator script is loaded in an async fashion,
  * so at some point that global variable becomes not null and can be used.
- *
  */
+
+/* In addition to the OGSScoreEstimator method, which is a wasm compiled
+ * C program that does simple random playouts, we have a RemoteScoring system
+ * which needs to be initialized by either the client or the server if we want
+ * remote scoring enabled.
+ */
+
+
+
 
 declare var OGSScoreEstimator:any;
 let OGSScoreEstimator_initialized:boolean = false;
@@ -42,17 +50,42 @@ let OGSScoreEstimatorModule:any;
 
 
 /* This is used on the server side */
-export function set_OGSScoreEstimator(mod:any) {
+export function set_OGSScoreEstimator(mod:any):void {
     OGSScoreEstimatorModule = mod;
     init_score_estimator()
         .then((tf) => console.info('Score estimator intialized'))
         .catch(err => console.error(err));
 }
 
+
+export interface ScoreEstimateRequest {
+    player_to_move: 'black' | 'white';
+    width: number;
+    height: number;
+    board_state: Array<Array<number>>;
+    jwt: string;
+}
+
+export interface ScoreEstimateResponse {
+    ownership: Array<Array<number>>;
+}
+
+let remote_scorer:((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined = undefined;
+/* This is used on both the client and server side */
+export function set_remote_scorer(scorer:(req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>):void {
+    remote_scorer = scorer;
+}
+
+
 let init_promise:Promise<boolean>;
 
 export function init_score_estimator():Promise<boolean> {
     if (CLIENT) {
+        if (remote_scorer) {
+            console.log("Remote score estimation setup");
+            return Promise.resolve(true);
+        }
+
         if (OGSScoreEstimator_initialized) {
             //console.log("Already initialized");
             return Promise.resolve(true);
@@ -111,13 +144,6 @@ export function init_score_estimator():Promise<boolean> {
     // this can't be reached so long as one of CLIENT or SERVER is set, which
     // should always be the case.
     throw new Error("Unreachable code reached");
-}
-
-if (CLIENT) {
-    init_score_estimator().then((tf) => {
-        // console.log('SE Initialized');
-    })
-    .catch(err => console.error(err));
 }
 
 interface SEPoint {
@@ -312,11 +338,52 @@ export class ScoreEstimator {
     }
 
     estimateScore(trials:number, tolerance:number):void {
+        if (remote_scorer) {
+            this.estimateScoreRemote(tolerance);
+        } else {
+            this.estimateScoreWASM(trials, tolerance);
+        }
+    }
+
+    estimateScoreRemote(tolerance:number = 0.25):void {
+        if (!remote_scorer) {
+            throw new Error("Remote scoring not setup");
+        }
+
+        let board_state:Array<Array<number>> = [];
+        for (let y = 0; y < this.height; ++y) {
+            let row:Array<number> = [];
+            for (let x = 0; x < this.width; ++x) {
+                row.push(this.removal[y][x] ? 0 : this.board[y][x]);
+            }
+            board_state.push(row);
+        }
+
+        remote_scorer({
+            player_to_move: this.engine.colorToMove(),
+            width: this.engine.width,
+            height: this.engine.height,
+            board_state: board_state,
+            jwt: '', // this gets set by the remote_scorer method
+        }).then((res:ScoreEstimateResponse) => {
+            let score_estimate = 0;
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    score_estimate += res.ownership[y][x] > 0 ? 1 : -1;
+                }
+            }
+
+            this.updateEstimate(score_estimate, res.ownership);
+        });
+    }
+
+    /* Somewhat deprecated in-browser score estimator that utilizes our WASM compiled
+     * OGSScoreEstimatorModule */
+    estimateScoreWASM(trials:number, tolerance:number):void {
         if (!OGSScoreEstimator_initialized) {
             throw new Error("Score estimator not intialized yet");
         }
 
-        /* NEW STUFF */
         if (!trials) {
             trials = 1000;
         }
@@ -344,32 +411,33 @@ export class ScoreEstimator {
         }
         let _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", ["number", "number", "number", "number", "number", "number"]);
         let estimate = _estimate as (w:number, h:number, p:number, c:number, tr:number, to:number) => number;
-        let st = Date.now();
         let estimated_score = estimate(
                     this.width, this.height, ptr,
                     this.engine.colorToMove() === "black" ? 1 : -1,
                     trials, tolerance);
-        console.log("Score estimation time: ", Date.now() - st);
-        let result = GoMath.makeMatrix(this.width, this.height, 0);
+        let ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                //result[y][x] = ints[i] < 0 ? 2 : ints[i];
-                result[y][x] = ints[i];
+                //ownership[y][x] = ints[i] < 0 ? 2 : ints[i];
+                ownership[y][x] = ints[i];
                 ++i;
             }
         }
         OGSScoreEstimatorModule._free(ptr);
+        this.updateEstimate(estimated_score, ownership);
+    }
 
 
-        /* Build up our heat map and result */
+    updateEstimate(estimated_score:number, ownership:Array<Array<number>>) {
+        /* Build up our heat map and ownership */
         /* negative for black, 0 for neutral, positive for white */
         //this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                this.heat[y][x] = result[y][x];
-                this.area[y][x] = result[y][x] < 0 ? 2 : result[y][x];
-                //this.area[y][x] = result[y][x];
+                this.heat[y][x] = ownership[y][x];
+                this.area[y][x] = ownership[y][x] < 0 ? 2 : ownership[y][x];
+                //this.area[y][x] = ownership[y][x];
                 this.estimated_area[y][x] = this.area[y][x];
             }
         }
@@ -389,6 +457,9 @@ export class ScoreEstimator {
             this.goban_callback.updateScoreEstimation();
         }
     }
+
+
+
     getProbablyDead():string {
         let ret = "";
         let arr = [];
@@ -411,7 +482,6 @@ export class ScoreEstimator {
         return ret;
     }
     resetGroups():void {
-        console.log("resetting groups");
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.group_list = [];
