@@ -2577,36 +2577,44 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.message(_("Processing..."), -1);
         let do_score_estimation = () => {
-            let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
+            //let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
+            let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, Math.min(0.1, AUTOSCORE_TOLERANCE));
 
-            let current_removed = this.engine.getStoneRemovalString();
-            let new_removed = se.getProbablyDead();
+            se.when_ready.then(() => {
+                let current_removed = this.engine.getStoneRemovalString();
+                let new_removed = se.getProbablyDead();
 
-            this.engine.clearRemoved();
-            let moves = this.engine.decodeMoves(new_removed);
-            for (let i = 0; i < moves.length; ++i) {
-                this.engine.setRemoved(moves[i].x, moves[i].y, true);
-            }
+                this.engine.clearRemoved();
+                let moves = this.engine.decodeMoves(new_removed);
+                for (let i = 0; i < moves.length; ++i) {
+                    this.engine.setRemoved(moves[i].x, moves[i].y, true);
+                }
 
-            this.updateTitleAndStonePlacement();
-            this.emit("update");
+                this.updateTitleAndStonePlacement();
+                this.emit("update");
 
-            this.socket.send("game/removed_stones/set", {
-                "auth"        : this.config.auth,
-                "game_id"     : this.config.game_id,
-                "player_id"   : this.config.player_id,
-                "removed"     : false,
-                "stones"      : current_removed
+                this.socket.send("game/removed_stones/set", {
+                    "auth"        : this.config.auth,
+                    "game_id"     : this.config.game_id,
+                    "player_id"   : this.config.player_id,
+                    "removed"     : false,
+                    "stones"      : current_removed
+                });
+                this.socket.send("game/removed_stones/set", {
+                    "auth"        : this.config.auth,
+                    "game_id"     : this.config.game_id,
+                    "player_id"   : this.config.player_id,
+                    "removed"     : true,
+                    "stones"      : new_removed
+                });
+
+                this.clearMessage();
+            })
+            .catch(err => {
+                console.error(err);
+                this.clearMessage();
+                this.message("Auto-scoring error: " + err, -1);
             });
-            this.socket.send("game/removed_stones/set", {
-                "auth"        : this.config.auth,
-                "game_id"     : this.config.game_id,
-                "player_id"   : this.config.player_id,
-                "removed"     : true,
-                "stones"      : new_removed
-            });
-
-            this.clearMessage();
         };
 
 

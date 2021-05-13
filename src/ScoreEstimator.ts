@@ -82,7 +82,6 @@ let init_promise:Promise<boolean>;
 export function init_score_estimator():Promise<boolean> {
     if (CLIENT) {
         if (remote_scorer) {
-            console.log("Remote score estimation setup");
             return Promise.resolve(true);
         }
 
@@ -298,7 +297,8 @@ export class ScoreEstimator {
     marks:Array<Array<number>>;
     amount:number = NaN;
     amount_fractional:string = '[unset]';
-    area:Array<Array<number>>;
+    ownership:Array<Array<number>>;
+    area:Array<Array<number>>; // hard numeric values
     territory:Array<Array<number>>;
     trials:number;
     estimated_area:Array<Array<number>>;
@@ -307,6 +307,7 @@ export class ScoreEstimator {
     color_to_move:'black'|'white';
     estimated_score:number;
     estimated_hard_score:number;
+    when_ready:Promise<void>;
 
 
 
@@ -322,6 +323,7 @@ export class ScoreEstimator {
         this.removal = this.removed = GoMath.makeMatrix(this.width, this.height, 0);
         this.marks = GoMath.makeMatrix(this.width, this.height, 0);
         this.area = GoMath.makeMatrix(this.width, this.height, 0);
+        this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
         this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.estimated_area = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
@@ -333,53 +335,58 @@ export class ScoreEstimator {
         this.tolerance = tolerance;
 
         this.resetGroups();
-        this.estimateScore(this.trials, this.tolerance);
+        this.when_ready = this.estimateScore(this.trials, this.tolerance);
         //this.sealDame();
     }
 
-    estimateScore(trials:number, tolerance:number):void {
+    public estimateScore(trials:number, tolerance:number):Promise<void> {
         if (remote_scorer) {
-            this.estimateScoreRemote(tolerance);
+            return this.estimateScoreRemote(tolerance);
         } else {
-            this.estimateScoreWASM(trials, tolerance);
+            return this.estimateScoreWASM(trials, tolerance);
         }
     }
 
-    estimateScoreRemote(tolerance:number = 0.25):void {
-        if (!remote_scorer) {
-            throw new Error("Remote scoring not setup");
-        }
-
-        let board_state:Array<Array<number>> = [];
-        for (let y = 0; y < this.height; ++y) {
-            let row:Array<number> = [];
-            for (let x = 0; x < this.width; ++x) {
-                row.push(this.removal[y][x] ? 0 : this.board[y][x]);
+    private estimateScoreRemote(tolerance:number = 0.25):Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (!remote_scorer) {
+                throw new Error("Remote scoring not setup");
             }
-            board_state.push(row);
-        }
 
-        remote_scorer({
-            player_to_move: this.engine.colorToMove(),
-            width: this.engine.width,
-            height: this.engine.height,
-            board_state: board_state,
-            jwt: '', // this gets set by the remote_scorer method
-        }).then((res:ScoreEstimateResponse) => {
-            let score_estimate = 0;
+            let board_state:Array<Array<number>> = [];
             for (let y = 0; y < this.height; ++y) {
+                let row:Array<number> = [];
                 for (let x = 0; x < this.width; ++x) {
-                    score_estimate += res.ownership[y][x] > 0 ? 1 : -1;
+                    row.push(this.removal[y][x] ? 0 : this.board[y][x]);
                 }
+                board_state.push(row);
             }
 
-            this.updateEstimate(score_estimate, res.ownership);
+            remote_scorer({
+                player_to_move: this.engine.colorToMove(),
+                width: this.engine.width,
+                height: this.engine.height,
+                board_state: board_state,
+                jwt: '', // this gets set by the remote_scorer method
+            }).then((res:ScoreEstimateResponse) => {
+                let score_estimate = 0;
+                for (let y = 0; y < this.height; ++y) {
+                    for (let x = 0; x < this.width; ++x) {
+                        score_estimate += res.ownership[y][x] > 0 ? 1 : -1;
+                    }
+                }
+
+                this.updateEstimate(score_estimate, res.ownership);
+                resolve();
+            }).catch((err:any) => {
+                reject(err);
+            });
         });
     }
 
     /* Somewhat deprecated in-browser score estimator that utilizes our WASM compiled
      * OGSScoreEstimatorModule */
-    estimateScoreWASM(trials:number, tolerance:number):void {
+    private estimateScoreWASM(trials:number, tolerance:number):Promise<void> {
         if (!OGSScoreEstimator_initialized) {
             throw new Error("Score estimator not intialized yet");
         }
@@ -426,6 +433,7 @@ export class ScoreEstimator {
         }
         OGSScoreEstimatorModule._free(ptr);
         this.updateEstimate(estimated_score, ownership);
+        return Promise.resolve();
     }
 
 
@@ -433,6 +441,7 @@ export class ScoreEstimator {
         /* Build up our heat map and ownership */
         /* negative for black, 0 for neutral, positive for white */
         //this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
+        this.ownership = ownership;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 this.heat[y][x] = ownership[y][x];
@@ -463,18 +472,35 @@ export class ScoreEstimator {
     getProbablyDead():string {
         let ret = "";
         let arr = [];
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (
-                  //(this.board[y][x] === 0 && this.area[y][x] === 0) /* dame */
-                  //||
-                  //(this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x]) /* captured */
-                  (this.area[y][x] === 0 || (this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x]))
-                ) {
-                    arr.push(encodeMove(x, y));
+
+        if (remote_scorer) {
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    const current = this.board[y][x];
+                    const estimated =
+                        this.ownership[y][x] < -this.tolerance ? 2 // white
+                        : this.ownership[y][x] > this.tolerance ? 1 // black
+                        : 0; // unclear
+                    if (estimated === 0 /* dame */ || (current !== 0 && current !== estimated)) {
+                        arr.push(encodeMove(x, y));
+                    }
+                }
+            }
+        } else { // Old WASM
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    if (
+                      //(this.board[y][x] === 0 && this.area[y][x] === 0) /* dame */
+                      //||
+                      //(this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x]) /* captured */
+                      (this.area[y][x] === 0 || (this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x]))
+                    ) {
+                        arr.push(encodeMove(x, y));
+                    }
                 }
             }
         }
+
         arr.sort();
         for (let i = 0; i < arr.length; ++i) {
             ret += arr[i];
