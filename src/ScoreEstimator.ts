@@ -306,7 +306,7 @@ export class ScoreEstimator {
     territory:Array<Array<number>>;
     trials:number;
     estimated_area:Array<Array<number>>;
-    winner:string = '[unset]';
+    winner:string = '';
     heat:Array<Array<number>>;
     color_to_move:'black'|'white';
     estimated_score:number;
@@ -346,7 +346,7 @@ export class ScoreEstimator {
     }
 
     public estimateScore(trials:number, tolerance:number):Promise<void> {
-        if (!this.prefer_remote) {
+        if (!this.prefer_remote || this.height > 19 || this.width > 19) {
             return this.estimateScoreWASM(trials, tolerance);
         }
 
