@@ -63,6 +63,7 @@ export interface ScoreEstimateRequest {
     width: number;
     height: number;
     board_state: Array<Array<number>>;
+    rules: string;
     jwt: string;
 }
 
@@ -379,6 +380,7 @@ export class ScoreEstimator {
                 player_to_move: this.engine.colorToMove(),
                 width: this.engine.width,
                 height: this.engine.height,
+                rules: this.engine.rules,
                 board_state: board_state,
                 jwt: '', // this gets set by the remote_scorer method
             }).then((res:ScoreEstimateResponse) => {
