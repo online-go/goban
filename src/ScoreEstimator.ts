@@ -17,7 +17,7 @@
 import {dup} from "./GoUtil";
 import {GoMath, Intersection, Group} from "./GoMath";
 import {GobanCore} from "./GobanCore";
-import {GoEngine, encodeMove, encodeMoves, Score, PlayerScore} from "./GoEngine";
+import {GoEngine, encodeMove, encodeMoves, Score, PlayerScore, GoEngineRules} from "./GoEngine";
 import { JGOFNumericPlayerColor } from './JGOF';
 import {_} from "./translate";
 
@@ -63,7 +63,7 @@ export interface ScoreEstimateRequest {
     width: number;
     height: number;
     board_state: Array<Array<number>>;
-    rules: string;
+    rules: GoEngineRules;
     jwt: string;
 }
 
