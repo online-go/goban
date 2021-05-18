@@ -358,6 +358,9 @@ export class ScoreEstimator {
     }
 
     private estimateScoreRemote(tolerance:number = 0.25):Promise<void> {
+        let komi = this.engine.komi;
+        let captures_delta = this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners();
+
         return new Promise<void>((resolve, reject) => {
             if (!remote_scorer) {
                 throw new Error("Remote scoring not setup");
@@ -385,6 +388,14 @@ export class ScoreEstimator {
                         score_estimate += res.ownership[y][x] > 0 ? 1 : -1;
                     }
                 }
+
+                if (!res.score) {
+                    res.score = 0;
+                }
+
+                res.score += 7.5 - komi; // we always ask katago to use 7.5 komi, so correct if necessary
+                res.score += captures_delta;
+                res.score -= this.engine.getHandicapPointAdjustmentForWhite();
 
                 this.updateEstimate(score_estimate, res.ownership, res.score);
                 resolve();
@@ -432,6 +443,7 @@ export class ScoreEstimator {
                     this.width, this.height, ptr,
                     this.engine.colorToMove() === "black" ? 1 : -1,
                     trials, tolerance);
+        estimated_score -= this.engine.getHandicapPointAdjustmentForWhite();
         let ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
         for (let y = 0; y < this.height; ++y) {

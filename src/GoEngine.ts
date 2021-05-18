@@ -318,8 +318,8 @@ export class GoEngine {
     private allow_self_capture:boolean = false;
     private allow_superko:boolean = false;
     private superko_algorithm:GoEngineSuperKoAlgorithm = 'psk';
-    private black_prisoners:number;
-    private white_prisoners:number;
+    private black_prisoners:number = 0;
+    private white_prisoners:number = 0;
     private board_is_repeating:boolean;
     private goban_callback?:GobanCore;
     private dontStoreBoardHistory:boolean;
@@ -2323,6 +2323,25 @@ export class GoEngine {
             initial_player: this.config.initial_player,
             move_tree: this.move_tree.toJson()
         };
+    }
+    public getBlackPrisoners():number {
+        return this.black_prisoners;
+    }
+    public getWhitePrisoners():number {
+        return this.white_prisoners;
+    }
+    /* Returns the amount of points that should be given to white for any
+     * handicap stones in the game. */
+    public getHandicapPointAdjustmentForWhite():number {
+        let ret = 0;
+        if (this.score_handicap) {
+            if (this.aga_handicap_scoring && this.handicap > 0) {
+                ret = this.handicap - 1;
+            } else {
+                ret = this.handicap;
+            }
+        }
+        return ret;
     }
 
 }
