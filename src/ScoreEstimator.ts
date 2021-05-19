@@ -360,7 +360,7 @@ export class ScoreEstimator {
 
     private estimateScoreRemote(tolerance:number = 0.25):Promise<void> {
         let komi = this.engine.komi;
-        let captures_delta = this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners();
+        let captures_delta = this.engine.score_prisoners ? this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners() : 0;
 
         return new Promise<void>((resolve, reject) => {
             if (!remote_scorer) {
