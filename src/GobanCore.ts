@@ -947,7 +947,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.engine.showPrevious();
                 this.engine.setLastOfficialMove();
 
-                /* TODO: clear conditional trees */
+                this.setConditionalTree();
 
                 delete this.engine.undo_requested;
                 this.updateTitleAndStonePlacement();
@@ -2631,6 +2631,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             mv.blur = focus_tracker.getMaxBlurDurationSinceLastReset();
             focus_tracker.reset();
         }
+        this.setConditionalTree();
 
         let timeout = setTimeout(() => {
             this.message(_("Error submitting move"), -1);
