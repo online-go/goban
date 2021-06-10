@@ -101,6 +101,7 @@ export interface GoEngineConfig {
     rules?: GoEngineRules;
     phase?: GoEnginePhase;
     initial_state?: GoEngineInitialState;
+    marks?:{[mark:string]: string};
     players?: {
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
@@ -218,6 +219,7 @@ export interface PuzzleConfig {
     width?: number;
     height?: number;
     initial_state?: GoEngineInitialState;
+    marks?:{[mark:string]: string};
     puzzle_autoplace_delay?: number;
     puzzle_opponent_move_mode?: PuzzleOpponentMoveMode;
     puzzle_player_move_mode?: PuzzlePlayerMoveMode;

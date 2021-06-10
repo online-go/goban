@@ -5,23 +5,10 @@ const fs = require('fs');
 const webpack = require('webpack');
 const pkg = require('./package.json');
 const TerserPlugin = require('terser-webpack-plugin');
-const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 let plugins = [];
 
 
-plugins.push(
-    new ForkTsCheckerWebpackPlugin({
-        typescript: {
-            diagnosticOptions: { 
-                syntactic: true, 
-                semantic: true, 
-                declaration: true, 
-                global: true 
-            }
-        }
-    })
-);
 
 
 plugins.push(new webpack.BannerPlugin(
@@ -99,18 +86,10 @@ module.exports = (env, argv) => {
                     {
                         test: /\.tsx?$/,
                         exclude: /node_modules/,
-
-                        use: [
-                            { loader: 'cache-loader' },
-                            {
-                                loader: "ts-loader",
-                                options: {
-                                    configFile: 'tsconfig.json',
-                                    transpileOnly: true,
-                                    happyPackMode: true
-                                }
-                            }
-                        ]
+                        loader: "ts-loader",
+                        options: {
+                            configFile: 'tsconfig.json',
+                        }
                     }
                 ]
             },
