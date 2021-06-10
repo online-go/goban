@@ -2081,6 +2081,10 @@ export class GobanCanvas extends GobanCore  {
         if (!this.ready_to_draw) {
             return;
         }
+        if (this.destroyed) {
+            console.error("Attempting to redraw destroyed goban");
+            return;
+        }
         if (!this.drawing_enabled) {
             return;
         }

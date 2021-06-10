@@ -2386,6 +2386,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (drawSquare) { this.drawSquare(x, y); }
     }
 
+    public editPlaceByPrettyCoord(coord:string, color:JGOFNumericPlayerColor, isTrunkMove?:boolean):void {
+        for (let mv of this.engine.decodeMoves(coord)) {
+            this.engine.editPlace(mv.x, mv.y, color, isTrunkMove);
+        }
+    }
+    public placeByPrettyCoord(coord:string):void {
+        for (let mv of this.engine.decodeMoves(coord)) {
+            this.engine.place(mv.x, mv.y);
+        }
+    }
+    public setMarkByPrettyCoord(coord:string, mark:number|string, dont_draw?:boolean):void {
+        for (let mv of this.engine.decodeMoves(coord)) {
+            this.setMark(mv.x, mv.y, mark, dont_draw);
+        }
+    }
     public setMark(x:number, y:number, mark:number|string, dont_draw?:boolean):void {
         try {
             if (x >= 0 && y >= 0) {
