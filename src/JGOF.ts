@@ -70,6 +70,8 @@ export interface JGOFMove extends JGOFIntersection {
     edited?: boolean;
     blur?: number; // maximum time the player was not focused on the window
                    // while it was their turn to make a move
+    sgf_downloaded_by?: Array<number>; // Array of users who downloaded the
+                                       // game SGF before this move was made
 }
 
 /*********/

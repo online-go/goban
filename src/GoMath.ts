@@ -328,9 +328,18 @@ export class GoMath {
         return ret;
     }
     public static encodeMoveToArray(mv:Move):AdHocPackedMove {
-        let extra = undefined;
+        let extra:any = undefined;
         if (mv.blur) {
-            extra = { blur: mv.blur };
+            if (!extra) {
+                extra = {}
+            }
+            extra.blur = mv.blur;
+        }
+        if (mv.sgf_downloaded_by) {
+            if (!extra) {
+                extra = {}
+            }
+            extra.sgf_downloaded_by = mv.sgf_downloaded_by;
         }
 
         let arr:AdHocPackedMove = [mv.x, mv.y, mv.timedelta ? mv.timedelta : -1, undefined, extra];
