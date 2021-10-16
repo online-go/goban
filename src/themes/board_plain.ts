@@ -70,7 +70,7 @@ export default function(GoThemes:GoThemesInterface) {
         getFadedLineColor():string { return "#333333"; }
         getStarColor():string { return "#555555"; }
         getFadedStarColor():string { return "#333333"; }
-        getBlankTextColor():string { return "#777777"; }
+        getBlankTextColor():string { return "#ffffff"; }
         getLabelTextColor():string { return "#555555"; }
     }
 
@@ -94,7 +94,7 @@ export default function(GoThemes:GoThemesInterface) {
         getFadedLineColor():string { return "#00AFBF"; }
         getStarColor():string { return HNG.C; }
         getFadedStarColor():string { return "#00AFBF"; }
-        getBlankTextColor():string { return HNG.C2; }
+        getBlankTextColor():string { return "#000000"; }
         getLabelTextColor():string { return HNG.C2; }
     }
 
@@ -117,7 +117,7 @@ export default function(GoThemes:GoThemesInterface) {
         getFadedLineColor():string { return "#4481B5"; }
         getStarColor():string { return HNGNight.C; }
         getFadedStarColor():string { return "#4481B5"; }
-        getBlankTextColor():string { return "#3591DE"; }
+        getBlankTextColor():string { return "#ffffff"; }
         getLabelTextColor():string { return "#4481B5"; }
     }
 

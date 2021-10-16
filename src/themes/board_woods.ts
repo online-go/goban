@@ -128,7 +128,7 @@ export default function(GoThemes:GoThemesInterface) {
         getFadedLineColor():string { return "#888888"; }
         getStarColor():string { return "#cccccc"; }
         getFadedStarColor():string { return "#888888"; }
-        getBlankTextColor():string { return "#cccccc"; }
+        getBlankTextColor():string { return "#ffffff"; }
         getLabelTextColor():string { return "#cccccc"; }
     }
 
