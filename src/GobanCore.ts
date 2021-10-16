@@ -1436,8 +1436,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         }
 
-        let i = Math.floor(x / this.square_size);
-        let j = Math.floor(y / this.square_size);
+        let ii = x / this.square_size;
+        let jj = y / this.square_size;
+        let i = Math.floor(ii);
+        let j = Math.floor(jj);
+        let border_distance = Math.min(ii-i, jj-j, 1-(ii-i), 1-(jj-j));
+        if (border_distance < 0.1) {
+            // have a "dead zone" in between squares to avoid misclicks
+            i = -1;
+            j = -1;
+        }
         return {"i": i, "j": j, "valid": i >= 0 && j >= 0 && i < this.width && j < this.height};
     }
     public setAnalyzeTool(tool:AnalysisTool, subtool:AnalysisSubTool) {
