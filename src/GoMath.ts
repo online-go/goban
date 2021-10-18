@@ -175,6 +175,17 @@ export class GoMath {
         }
         return "pass";
     }
+    public static decodeGTPCoordinate(move: string, width:number, height:number): JGOFMove {
+        if (move === ".." || move.toLowerCase() === "pass") {
+            return {x: -1, y: -1};
+        }
+        let y = height - parseInt(move.substr(1));
+        let x = "ABCDEFGHJKLMNOPQRSTUVWXYZ".indexOf(move[0].toUpperCase());
+        if (x === -1) {
+            y = -1;
+        }
+        return {x, y};
+    }
     public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove> | JGOFMove | undefined, width:number, height:number): Array<JGOFMove> {
         let ret: Array<Move> = [];
 
