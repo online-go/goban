@@ -29,20 +29,31 @@ export interface AIReviewWorstMoveEntry {
  * Returns a list of all moves in the game, sorted by the negative change
  * in winrate for the player that made the move. So the first entry will be the
  * worst move in the game according to the ai.
+ *
+ * @param starting_move - The root of the move tree.
+ * @param ai_review - Corresponding AI Review.
+ * @param use_score - If true, this function uses score as the metric for
+ *     determining the worst moves, rather than win rate. This is useful for
+ *     handicap games where the winrate is 100% for a large portion of the game.
  */
-export function computeWorstMoves(starting_move:MoveTree, ai_review:JGOFAIReview):Array<AIReviewWorstMoveEntry> {
+export function computeWorstMoves(starting_move:MoveTree,
+                                  ai_review:JGOFAIReview,
+                                  use_score = false):Array<AIReviewWorstMoveEntry> {
     let ret:Array<AIReviewWorstMoveEntry> = [];
     let cur_move = starting_move;
 
-    if (ai_review.win_rates === undefined) {
+    const metric_array = use_score ? ai_review.scores : ai_review.win_rates;
+    const DEFAULT_VALUE = use_score ? 0.0 : 0.5;
+
+    if (metric_array === undefined) {
         return [];
     }
 
     while (cur_move.trunk_next) {
         let next_move = cur_move.trunk_next;
 
-        let cur_win_rate = ai_review.win_rates[cur_move.move_number] || 0.5;
-        let next_win_rate = ai_review.win_rates[next_move.move_number] || 0.5;
+        let cur_win_rate = metric_array[cur_move.move_number] || DEFAULT_VALUE;
+        let next_win_rate = metric_array[next_move.move_number] || DEFAULT_VALUE;
 
         let delta:number = next_move.player === JGOFNumericPlayerColor.WHITE
             ? (cur_win_rate) - (next_win_rate)
