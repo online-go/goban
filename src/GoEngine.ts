@@ -115,6 +115,7 @@ export interface GoEngineConfig {
     free_handicap_placement?:boolean;
     score?:Score;
     outcome?:string;
+    winner?:number; // Player ID of the winner
 
     start_time?:number;
     end_time?:number;
