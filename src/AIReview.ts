@@ -76,3 +76,26 @@ export function computeWorstMoves(starting_move:MoveTree,
 
     return ret;
 }
+
+// Similar to computeWorstMoves, but automatically determines whether to use
+// score and also filters out moves that are less bad than a certain threshold.
+export function getWorstMoves(starting_move:MoveTree, ai_review:JGOFAIReview) {
+    let worst_moves: AIReviewWorstMoveEntry[];
+    let threshhold: number;
+
+    if (ai_review.scores) {
+        worst_moves = computeWorstMoves(starting_move, ai_review, /*use_score=*/true);
+        threshhold = -5.0;
+    } else {
+        worst_moves = computeWorstMoves(starting_move, ai_review);
+        threshhold = -0.2;
+    }
+
+    const filtered_worst_moves = worst_moves.filter(de => de.delta <= threshhold);
+
+    if (filtered_worst_moves.length >= 3) {
+        return filtered_worst_moves;
+    }
+
+    return worst_moves.slice(0, 3);
+}
