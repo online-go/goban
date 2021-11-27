@@ -36,8 +36,8 @@ export interface MarkInterface {
     stone_removed?    : boolean;
     mark_x?           : boolean;
     hint?             : boolean;
-    black?            : boolean | string;
-    white?            : boolean | string;
+    black?            : boolean;
+    white?            : boolean;
     color?            : string;
 
     [label: string]: string | boolean | undefined;
