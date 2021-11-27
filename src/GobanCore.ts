@@ -2331,9 +2331,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
 
-    public setMarks(marks:MarkInterface, dont_draw?:boolean):void {
+    public setMarks(marks: { [mark: string]: string }, dont_draw?:boolean):void {
         for (let key in marks) {
-            let locations = this.engine.decodeMoves(marks[key] as string);
+            let locations = this.engine.decodeMoves(marks[key]);
             for (let i = 0; i < locations.length; ++i) {
                 let pt = locations[i];
                 this.setMark(pt.x, pt.y, key, dont_draw);
@@ -3014,7 +3014,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             let msg:ReviewMessage;
 
             if (!msg_override) {
-                let marks:MarkInterface = {};
+                let marks: {[mark:string]: string} = {};
                 for (let y = 0; y < this.height; ++y) {
                     for (let x = 0; x < this.width; ++x) {
                         let pos = this.getMarks(x, y);

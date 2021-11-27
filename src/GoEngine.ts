@@ -15,7 +15,7 @@
  */
 
 import { GobanMoveError } from "./GobanError";
-import { MoveTree, MoveTreeJson, MarkInterface } from "./MoveTree";
+import { MoveTree, MoveTreeJson } from "./MoveTree";
 import {
     GoMath,
     Move,
@@ -183,7 +183,7 @@ export interface ReviewMessage {
     "undo"?:boolean; /* offical undo [reviewing live game] */
     "t"?:string;   /* text */
     "t+"?:string;  /* text append */
-    "k"?:MarkInterface;   /* marks */
+    "k"?:{[mark: string] : string};   /* marks */
     "pp"?:[number, number];  /* pen point */
     "pen"?: string; /* pen color / pen start */
     "chat"?: {
