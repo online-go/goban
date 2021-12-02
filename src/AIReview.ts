@@ -36,7 +36,7 @@ export interface AIReviewWorstMoveEntry {
  *     determining the worst moves, rather than win rate. This is useful for
  *     handicap games where the winrate is 100% for a large portion of the game.
  */
-export function computeWorstMoves(starting_move:MoveTree,
+function computeWorstMoves(starting_move:MoveTree,
                                   ai_review:JGOFAIReview,
                                   use_score = false):Array<AIReviewWorstMoveEntry> {
     let ret:Array<AIReviewWorstMoveEntry> = [];
@@ -75,4 +75,32 @@ export function computeWorstMoves(starting_move:MoveTree,
     ret.sort((a, b) => a.delta - b.delta);
 
     return ret;
+}
+
+/**
+ * Returns a list of the worst moves in the game, as determined by the change in
+ * win rate or score, depending on what is provided in the ai review. So the
+ * first entry will be the worst move in the game according to the ai.
+ */
+export function getWorstMoves(starting_move:MoveTree, ai_review:JGOFAIReview) {
+    let worst_moves: AIReviewWorstMoveEntry[];
+    let threshhold: number;
+
+    if (ai_review.scores) {
+        worst_moves = computeWorstMoves(starting_move, ai_review, /*use_score=*/true);
+        threshhold = -5.0;
+    } else {
+        worst_moves = computeWorstMoves(starting_move, ai_review);
+        threshhold = -0.2;
+    }
+
+    const filtered_worst_moves = worst_moves.filter(de => de.delta <= threshhold);
+
+    if (filtered_worst_moves.length >= 3) {
+        return filtered_worst_moves;
+    }
+
+    // If there weren't enough moves below the threshhold, just return the top
+    // three.
+    return worst_moves.slice(0, 3);
 }
