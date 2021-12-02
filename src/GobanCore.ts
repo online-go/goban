@@ -847,7 +847,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 focus_tracker.reset();
 
                 if (this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
-                    let winner:any = (obj as any).winner;
+                    let winner = obj.winner;
                     let winner_color: 'black' | 'white' | undefined;
                     if (typeof(winner) === 'number') {
                         winner_color = winner === obj.black_player_id ? 'black' : 'white';
