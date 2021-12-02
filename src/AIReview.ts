@@ -82,7 +82,7 @@ function computeWorstMoves(starting_move:MoveTree,
  * win rate or score, depending on what is provided in the ai review. So the
  * first entry will be the worst move in the game according to the ai.
  */
-export function getWorstMoves(starting_move:MoveTree, ai_review:JGOFAIReview) {
+export function getWorstMoves(starting_move:MoveTree, ai_review:JGOFAIReview, max_moves:number=3):Array<AIReviewWorstMoveEntry> {
     let worst_moves: AIReviewWorstMoveEntry[];
     let threshhold: number;
 
@@ -96,11 +96,11 @@ export function getWorstMoves(starting_move:MoveTree, ai_review:JGOFAIReview) {
 
     const filtered_worst_moves = worst_moves.filter(de => de.delta <= threshhold);
 
-    if (filtered_worst_moves.length >= 3) {
-        return filtered_worst_moves;
+    if (filtered_worst_moves.length >= max_moves) {
+        return filtered_worst_moves.slice(0, max_moves);
     }
 
     // If there weren't enough moves below the threshhold, just return the top
     // three.
-    return worst_moves.slice(0, 3);
+    return worst_moves.slice(0, max_moves);
 }
