@@ -81,7 +81,7 @@ export interface GoEnginePlayerEntry {
 
     /** XXX: The server is using these, the client may or may not be, we need to normalize this */
     name?: string;
-    pro?: 0 | 1;
+    pro?: boolean;
 }
 
 export interface GoEngineConfig {
@@ -115,6 +115,7 @@ export interface GoEngineConfig {
     free_handicap_placement?:boolean;
     score?:Score;
     outcome?:string;
+    winner?:number; // Player ID of the winner
 
     start_time?:number;
     end_time?:number;
