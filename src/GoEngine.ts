@@ -184,7 +184,7 @@ export interface ReviewMessage {
     "undo"?:boolean; /* offical undo [reviewing live game] */
     "t"?:string;   /* text */
     "t+"?:string;  /* text append */
-    "k"?:{[mark: string] : string};   /* marks */
+    "k"?:{[mark: string]: string};   /* marks */
     "pp"?:[number, number];  /* pen point */
     "pen"?: string; /* pen color / pen start */
     "chat"?: {
@@ -315,6 +315,12 @@ export class GoEngine {
     public decoded_moves:Array<Move> = [];
     public automatic_stone_removal:boolean = false;
     public group_ids?:Array<number>;
+
+    rengo?: boolean;
+    rengo_teams?: {
+        'black': Array<GoEnginePlayerEntry>,
+        'white': Array<GoEnginePlayerEntry>;
+    };
 
     private aga_handicap_scoring:boolean = false;
     private allow_ko:boolean = false;
