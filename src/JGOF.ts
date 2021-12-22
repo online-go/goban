@@ -72,6 +72,7 @@ export interface JGOFMove extends JGOFIntersection {
                    // while it was their turn to make a move
     sgf_downloaded_by?: Array<number>; // Array of users who downloaded the
                                        // game SGF before this move was made
+    played_by?: number;  // player_id of person who played the move
 }
 
 /*********/
