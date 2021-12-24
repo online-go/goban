@@ -106,6 +106,12 @@ export interface GoEngineConfig {
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
     };
+    rengo?: boolean;
+    rengo_teams?: {
+        'black': Array<GoEnginePlayerEntry>,
+        'white': Array<GoEnginePlayerEntry>;
+    };
+
     //time_control?:JGOFTimeControl;
     moves?:Array<AdHocPackedMove> | Array<JGOFMove>;
     move_tree?:MoveTreeJson;
