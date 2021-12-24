@@ -843,7 +843,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 this.clearMessage();
                 //this.onClearChatLogs();
-                this.emit("chat-reset");
+
+                if (!obj.rengo_player_update) {
+                    this.emit("chat-reset");
+                }
                 focus_tracker.reset();
 
                 if (this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
