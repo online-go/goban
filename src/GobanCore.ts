@@ -844,9 +844,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.clearMessage();
                 //this.onClearChatLogs();
 
-                if (!obj.rengo_player_update) {
-                    this.emit("chat-reset");
-                }
+                this.emit("chat-reset");
                 focus_tracker.reset();
 
                 if (this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
@@ -1023,6 +1021,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     if (jumptomove) {
                         this.engine.jumpTo(jumptomove);
+                    }
+
+                    if (move_obj.player_update) {
+                        console.log("move got player update:", move_obj.player_update);
+                        this.engine.players = move_obj.player_update.players;
+                        this.engine.rengo_teams = move_obj.player_update.rengo_teams;
+                        this.engine.config.players = move_obj.player_update.players;
+                        this.engine.config.rengo_teams = move_obj.player_update.rengo_teams;
+
+                        // keeping deprecated fields up to date
+                        this.engine.config.black_player_id = move_obj.player_update.players['black'].id;
+                        this.engine.config.white_player_id = move_obj.player_update.players['white'].id;
                     }
 
                     this.emit("update");
@@ -1443,7 +1453,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         let jj = y / this.square_size;
         let i = Math.floor(ii);
         let j = Math.floor(jj);
-        let border_distance = Math.min(ii-i, jj-j, 1-(ii-i), 1-(jj-j));
+        let border_distance = Math.min(ii - i, jj - j, 1 - (ii - i), 1 - (jj - j));
         if (border_distance < 0.1) {
             // have a "dead zone" in between squares to avoid misclicks
             i = -1;

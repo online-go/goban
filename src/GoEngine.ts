@@ -111,7 +111,6 @@ export interface GoEngineConfig {
         'black': Array<GoEnginePlayerEntry>,
         'white': Array<GoEnginePlayerEntry>;
     };
-    rengo_player_update?: boolean;
 
     //time_control?:JGOFTimeControl;
     moves?:Array<AdHocPackedMove> | Array<JGOFMove>;
