@@ -178,7 +178,7 @@ export class GobanCanvas extends GobanCore  {
 
         this.ready_to_draw = true;
         this.redraw(true);
-        console.log("Goban Canvas v 0.5.63");
+        console.log("Goban Canvas v 0.5.64");
     }
     public enablePen():void {
         this.attachPenCanvas();

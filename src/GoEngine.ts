@@ -102,6 +102,7 @@ export interface GoEngineConfig {
     phase?: GoEnginePhase;
     initial_state?: GoEngineInitialState;
     marks?:{[mark:string]: string};
+    player_pool?: { [id: number]: GoEnginePlayerEntry }; // we need this to get player details from player_id in player_update events
     players?: {
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
@@ -291,6 +292,7 @@ export class GoEngine {
     public outcome:string = '';
     public phase:GoEnginePhase = 'play';
     public player:JGOFNumericPlayerColor;
+    player_pool?: { [id: number]: GoEnginePlayerEntry };
     public players:{
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
