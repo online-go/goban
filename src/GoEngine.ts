@@ -217,6 +217,10 @@ export interface ReviewMessage {
     "review_id"?: number;
     "player_id"?: number;
     "username"?: string;
+    "player_update"? : {
+        players : {'black': number, 'white': number},
+        rengo_teams: {'black': [number], 'white': [number]}
+    };
 }
 
 export interface PuzzleConfig {

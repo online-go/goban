@@ -1024,7 +1024,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
 
                     if (move_obj.player_update && this.engine.player_pool) {
-                        console.log("move got player update:", move_obj.player_update);
+                        //console.log("move got player update:", move_obj.player_update);
                         // note: the players sent to us in player_update must be in the pool already
                         // totally new players can only be added with a gamedata event
                         this.engine.players.black = this.engine.player_pool[move_obj.player_update.players.black];
@@ -1033,7 +1033,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         if (move_obj.player_update.rengo_teams) {
                             this.engine.rengo_teams = {'black': [], 'white': []};
                             for (let colour of ['black', 'white']) {
-                                console.log("looking at", colour, move_obj.player_update.rengo_teams[colour]);
+                                //console.log("looking at", colour, move_obj.player_update.rengo_teams[colour]);
                                 for (let id of move_obj.player_update.rengo_teams[colour]) {
                                     this.engine.rengo_teams[colour as 'black' | 'white'].push(this.engine.player_pool[id]);
                                 }
@@ -1172,6 +1172,28 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 this.load(obj.gamedata);
                 this.review_had_gamedata = true;
+            }
+
+            if (obj.player_update && this.engine.player_pool) {
+                console.log("process_r got player update:", obj.player_update);
+                // note: the players sent to us in player_update must be in the pool already
+                // totally new players can only be added with a gamedata event
+                this.engine.players.black = this.engine.player_pool[obj.player_update.players.black];
+                this.engine.players.white = this.engine.player_pool[obj.player_update.players.white];
+
+                if (obj.player_update.rengo_teams) {
+                    this.engine.rengo_teams = {'black': [], 'white': []};
+                    for (let colour of ['black', 'white']) {
+                        //console.log("looking at", colour, obj.player_update.rengo_teams[colour]);
+                        for (let id of obj.player_update.rengo_teams[colour as 'black' | 'white']) {
+                            this.engine.rengo_teams[colour as 'black' | 'white'].push(this.engine.player_pool[id]);
+                        }
+                    }
+                }
+
+                // keep deprecated fields up to date
+                this.engine.config.black_player_id = obj.player_update.players.black;
+                this.engine.config.white_player_id = obj.player_update.players.white;
             }
 
             if (obj.owner) {
@@ -1323,6 +1345,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         if (this.review_id) {
             this._socket_on(prefix + "full_state", (entries:Array<ReviewMessage>) => {
+                console.log("processing fullstate");
                 try {
                     if (!entries || entries.length === 0) {
                         console.error('Blank full state received, ignoring');
@@ -3271,12 +3294,12 @@ class FocusTracker {
         this.hasFocus = true;
         this.outOfFocusDurations.push(Date.now() - this.lastFocus);
         this.lastFocus = Date.now();
-    };
+    }
 
     onBlur = () => {
         this.hasFocus = false;
         this.lastFocus = Date.now();
-    };
+    }
 }
 
 export const focus_tracker = new FocusTracker();
