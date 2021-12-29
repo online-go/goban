@@ -102,6 +102,7 @@ export interface GoEngineConfig {
     phase?: GoEnginePhase;
     initial_state?: GoEngineInitialState;
     marks?:{[mark:string]: string};
+    player_pool?: { [id: number]: GoEnginePlayerEntry }; // we need this to get player details from player_id in player_update events
     players?: {
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
@@ -216,6 +217,10 @@ export interface ReviewMessage {
     "review_id"?: number;
     "player_id"?: number;
     "username"?: string;
+    "player_update"? : {
+        players : {'black': number, 'white': number},
+        rengo_teams: {'black': [number], 'white': [number]}
+    };
 }
 
 export interface PuzzleConfig {
@@ -291,6 +296,7 @@ export class GoEngine {
     public outcome:string = '';
     public phase:GoEnginePhase = 'play';
     public player:JGOFNumericPlayerColor;
+    player_pool?: { [id: number]: GoEnginePlayerEntry };
     public players:{
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
