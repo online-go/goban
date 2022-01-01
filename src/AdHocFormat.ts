@@ -40,7 +40,7 @@ export type AdHocPackedMove = [
     number,  /* y */
     number?,  /* time delta */
     JGOFNumericPlayerColor?,  /* color */
-    object?  /* extra */
+    {[index: string]: any}?  /* extra */
 ];
 
 export interface AdHocClock {
