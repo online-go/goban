@@ -339,25 +339,25 @@ export class GoMath {
         return ret;
     }
     public static encodeMoveToArray(mv:Move):AdHocPackedMove {
-        let extra:any;
+        let extra:any = {};
         if (mv.blur) {
-            if (!extra) {
-                extra = {};
-            }
             extra.blur = mv.blur;
         }
         if (mv.sgf_downloaded_by) {
-            if (!extra) {
-                extra = {};
-            }
             extra.sgf_downloaded_by = mv.sgf_downloaded_by;
         }
         if (mv.played_by) {
-            if (!extra) {
-                extra = {};
-            }
             extra.played_by = mv.played_by;
         }
+        if (mv.player_update) {
+            extra.player_update = mv.player_update;
+        }
+
+        // don't add an extra if there is nothing extra...
+        if (Object.keys(extra).length === 0) {
+            extra = undefined;
+        }
+
         let arr:AdHocPackedMove = [mv.x, mv.y, mv.timedelta ? mv.timedelta : -1, undefined, extra];
         if (mv.edited) {
             arr[3] = mv.color;

@@ -184,7 +184,7 @@ interface MoveCommand {
     blur?: number;
 }
 
-interface Events {
+export interface Events {
     "destroy": never;
     "update": never;
     "chat-reset": never;
@@ -973,7 +973,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     /* clear any undo state that may be hanging around */
                     delete this.engine.undo_requested;
 
-                    let mv = this.engine.decodeMoves(move);
+                    const mv = this.engine.decodeMoves(move);
+
+                    if (mv.length > 1)  { console.warn("More than one move provided in encoded move in a `move` event.  That's odd."); }
+
+                    const the_move = mv[0];
 
                     if (this.mode === "conditional" || this.mode === "play") {
                         this.setMode("play");
@@ -990,7 +994,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.engine.jumpToLastOfficialMove();
 
                     if (this.engine.playerToMove() !== this.player_id) {
-                        let t = this.conditional_tree.getChild(GoMath.encodeMove(mv[0].x, mv[0].y));
+                        let t = this.conditional_tree.getChild(GoMath.encodeMove(the_move.x, the_move.y));
                         t.move = null;
                         this.setConditionalTree(t);
                     }
@@ -1009,11 +1013,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     let score_before_move = this.engine.computeScore(true)[this.engine.colorToMove()].prisoners;
 
                     let removed_count:number = 0;
-                    if (mv[0].edited) {
-                        this.engine.editPlace(mv[0].x, mv[0].y, mv[0].color || 0);
+                    if (the_move.edited) {
+                        this.engine.editPlace(the_move.x, the_move.y, the_move.color || 0);
                     }
                     else {
-                        removed_count = this.engine.place(mv[0].x, mv[0].y, false, false, false, true, true);
+                        removed_count = this.engine.place(the_move.x, the_move.y, false, false, false, true, true);
+                    }
+
+                    if (the_move.player_update && this.engine.player_pool) {
+                        console.log("`move` got player update:", the_move.player_update);
+                        this.engine.cur_move.player_update = the_move.player_update;
+                        this.engine.updatePlayers(the_move.player_update);
                     }
 
                     this.setLastOfficialMove();
@@ -1021,28 +1031,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     if (jumptomove) {
                         this.engine.jumpTo(jumptomove);
-                    }
-
-                    if (move_obj.player_update && this.engine.player_pool) {
-                        //console.log("move got player update:", move_obj.player_update);
-                        // note: the players sent to us in player_update must be in the pool already
-                        // totally new players can only be added with a gamedata event
-                        this.engine.players.black = this.engine.player_pool[move_obj.player_update.players.black];
-                        this.engine.players.white = this.engine.player_pool[move_obj.player_update.players.white];
-
-                        if (move_obj.player_update.rengo_teams) {
-                            this.engine.rengo_teams = {'black': [], 'white': []};
-                            for (let colour of ['black', 'white']) {
-                                //console.log("looking at", colour, move_obj.player_update.rengo_teams[colour]);
-                                for (let id of move_obj.player_update.rengo_teams[colour]) {
-                                    this.engine.rengo_teams[colour as 'black' | 'white'].push(this.engine.player_pool[id]);
-                                }
-                            }
-                        }
-
-                        // keep deprecated fields up to date
-                        this.engine.config.black_player_id = move_obj.player_update.players.black;
-                        this.engine.config.white_player_id = move_obj.player_update.players.white;
                     }
 
                     this.emit("update");
@@ -1176,24 +1164,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             if (obj.player_update && this.engine.player_pool) {
                 console.log("process_r got player update:", obj.player_update);
-                // note: the players sent to us in player_update must be in the pool already
-                // totally new players can only be added with a gamedata event
-                this.engine.players.black = this.engine.player_pool[obj.player_update.players.black];
-                this.engine.players.white = this.engine.player_pool[obj.player_update.players.white];
-
-                if (obj.player_update.rengo_teams) {
-                    this.engine.rengo_teams = {'black': [], 'white': []};
-                    for (let colour of ['black', 'white']) {
-                        //console.log("looking at", colour, obj.player_update.rengo_teams[colour]);
-                        for (let id of obj.player_update.rengo_teams[colour as 'black' | 'white']) {
-                            this.engine.rengo_teams[colour as 'black' | 'white'].push(this.engine.player_pool[id]);
-                        }
-                    }
-                }
-
-                // keep deprecated fields up to date
-                this.engine.config.black_player_id = obj.player_update.players.black;
-                this.engine.config.white_player_id = obj.player_update.players.white;
+                this.engine.updatePlayers(obj.player_update);
             }
 
             if (obj.owner) {
@@ -1729,7 +1700,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         // set up player_pool so we can find player details by id later
-        config.player_pool = {};
+        if (!config.player_pool) {
+            config.player_pool = {};
+        }
 
         if (config.players) {
             config.player_pool[config.players.black.id] = config.players.black;

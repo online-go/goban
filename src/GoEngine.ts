@@ -23,10 +23,11 @@ import {
     Group,
 } from "./GoMath";
 import { ScoreEstimator } from "./ScoreEstimator";
-import { GobanCore } from './GobanCore';
-import { JGOFTimeControl, JGOFNumericPlayerColor, JGOFMove } from './JGOF';
+import { GobanCore, Events } from './GobanCore';
+import { JGOFTimeControl, JGOFNumericPlayerColor, JGOFMove, JGOFPlayerSummary } from './JGOF';
 import { AdHocPackedMove } from './AdHocFormat';
 import {_} from "./translate";
+import { TypedEventEmitter} from "./TypedEventEmitter";
 
 
 declare const CLIENT:boolean;
@@ -217,10 +218,7 @@ export interface ReviewMessage {
     "review_id"?: number;
     "player_id"?: number;
     "username"?: string;
-    "player_update"? : {
-        players : {'black': number, 'white': number},
-        rengo_teams: {'black': [number], 'white': [number]}
-    };
+    "player_update"? : JGOFPlayerSummary;
 }
 
 export interface PuzzleConfig {
@@ -276,7 +274,7 @@ export function encodeMoves(lst:Array<Move>) {
 
 export type PlayerColor = 'black' | 'white';
 
-export class GoEngine {
+export class GoEngine extends TypedEventEmitter<Events> {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
@@ -296,7 +294,7 @@ export class GoEngine {
     public outcome:string = '';
     public phase:GoEnginePhase = 'play';
     public player:JGOFNumericPlayerColor;
-    player_pool?: { [id: number]: GoEnginePlayerEntry };
+    player_pool: { [id: number]: GoEnginePlayerEntry };
     public players:{
         'black': GoEnginePlayerEntry;
         'white': GoEnginePlayerEntry;
@@ -330,8 +328,7 @@ export class GoEngine {
 
     rengo?: boolean;
     rengo_teams?: {
-        'black': Array<GoEnginePlayerEntry>,
-        'white': Array<GoEnginePlayerEntry>;
+        [colour:string]: Array<GoEnginePlayerEntry>  // TBD index this by PlayerColour
     };
 
     private aga_handicap_scoring:boolean = false;
@@ -358,6 +355,7 @@ export class GoEngine {
 
 
     constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?:boolean) {
+        super();
         try {
             /* We had a bug where we were filling in some initial state data incorrectly when we were dealing with
              * sgfs, so this code exists for sgf 'games' < 800k in the database.. -anoek 2014-08-13 */
@@ -377,7 +375,6 @@ export class GoEngine {
             }
         }
 
-
         let self = this;
         this.config = config;
         this.dontStoreBoardHistory = !!dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
@@ -396,6 +393,8 @@ export class GoEngine {
             black: {username: 'black', id: NaN},
             white: {username: 'white', id: NaN},
         };
+        this.player_pool = config.player_pool || {};
+
         for (let y = 0; y < this.height; ++y) {
             let row:Array<JGOFNumericPlayerColor> = [];
             let mark_row = [];
@@ -426,11 +425,21 @@ export class GoEngine {
             console.log(e);
         }
 
-
         this.player = 1;
 
         if ("initial_player" in config) {
             this.player = config["initial_player"] === "white" ? 2 : 1;
+        }
+
+        if (config.players) {
+            this.player_pool[config.players.black.id] = config.players.black;
+            this.player_pool[config.players.white.id] = config.players.white;
+        }
+
+        if (config.rengo_teams ) {
+            for (let player of (config.rengo_teams.black.concat(config.rengo_teams.white))) {
+                this.player_pool[player.id] = player;
+            }
         }
 
         let load_sgf_moves_if_needed = () => { };
@@ -471,7 +480,6 @@ export class GoEngine {
         this.last_official_move = this.cur_move;
         delete this.move_before_jump;
 
-
         try {
             this.loading_sgf = true;
             load_sgf_moves_if_needed();
@@ -482,7 +490,6 @@ export class GoEngine {
                 console.log(e.stack);
             }
         }
-
 
         if (config.moves) {
             let moves = this.decoded_moves = this.decodeMoves(config.moves);
@@ -497,6 +504,10 @@ export class GoEngine {
                 else {
                     try {
                         this.place(mv.x, mv.y, false, false, true, true, true);
+                        if (mv.player_update) {
+                            this.cur_move.player_update = mv.player_update;
+                            this.updatePlayers(mv.player_update);
+                        }
                     } catch (e) {
                         if (this.throw_all_errors) {
                             throw e;
@@ -690,6 +701,31 @@ export class GoEngine {
             return [];
         }
     }
+
+    public updatePlayers(player_update: JGOFPlayerSummary): void {
+        // note: the players sent to us in player_update must be in the pool already
+        // totally new players can only be added with a gamedata event
+        if (!this.player_pool) {
+            throw new Error("updatePlayers called with no player_pool available");
+        }
+        this.players.black = this.player_pool[player_update.players.black];
+        this.players.white = this.player_pool[player_update.players.white];
+
+        if (player_update.rengo_teams) {
+            this.rengo_teams = {'black': [], 'white': []};
+            for (let colour of ['black', 'white']) {
+                //console.log("looking at", colour, player_update.rengo_teams[colour]);
+                for (let id of player_update.rengo_teams[colour as 'black' | 'white']) {
+                    this.rengo_teams[colour as 'black' | 'white'].push(this.player_pool[id]);
+                }
+            }
+        }
+
+        // keep deprecated fields up to date
+        this.config.black_player_id = player_update.players.black;
+        this.config.white_player_id = player_update.players.white;
+    }
+
     /** Returns true if there was a previous to show */
     public showPrevious():boolean {
         if (this.dontStoreBoardHistory) { return false; }
@@ -729,6 +765,11 @@ export class GoEngine {
         this.cur_move = node;
         if (node.state) {
             this.setState(node.state);
+        }
+        if (node.player_update) {
+            console.log("Engine jumpTo doing player_update...");
+            this.updatePlayers(node.player_update);
+            this.emit("update");
         }
     }
     public jumpToLastOfficialMove():void {
@@ -1596,6 +1637,7 @@ export class GoEngine {
             black: {"username": "Black", id:NaN, "rank": -1},
             white: {"username": "White", id:NaN, "rank": -1},
         };
+        defaults.player_pool = {};
         defaults.disable_analysis = false;
 
         defaults.score_territory = true;

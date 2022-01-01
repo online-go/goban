@@ -64,6 +64,17 @@ export enum JGOFNumericPlayerColor {
     WHITE = 2,
 }
 
+export interface JGOFPlayerSummary {
+    players : {
+        'black': number,
+        'white': number
+    };
+    rengo_teams: {
+        'black': number[],
+        'white': number[]
+    };
+}
+
 export interface JGOFMove extends JGOFIntersection {
     color?: JGOFNumericPlayerColor;
     timedelta?: number;
@@ -73,6 +84,7 @@ export interface JGOFMove extends JGOFIntersection {
     sgf_downloaded_by?: Array<number>; // Array of users who downloaded the
                                        // game SGF before this move was made
     played_by?: number;  // player_id of person who played the move
+    player_update?: JGOFPlayerSummary;   // who the resulting players are after effects of this move
 }
 
 /*********/
