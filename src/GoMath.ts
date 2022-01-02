@@ -186,6 +186,9 @@ export class GoMath {
         }
         return {x, y};
     }
+
+    //  TBD: A description of the scope, intent, and even known use-cases of this would be very helpful.
+    //     (My head spins trying to understand what this takes care of, and how not to break that)
     public static decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove> | JGOFMove | undefined, width:number, height:number): Array<JGOFMove> {
         let ret: Array<Move> = [];
 
@@ -326,11 +329,13 @@ export class GoMath {
             }
         }
     }
-    public static encodePrettyCoord(coord: string, height: number) { // "C12" with no "I"
+
+    public static encodePrettyCoord(coord: string, height: number):string { // "C12" with no "I".   TBD: give these different `string`s proper type names.
         const x = GoMath.num2char(GoMath.pretty_char2num(coord.charAt(0).toLowerCase()));
         const y = GoMath.num2char(height - parseInt(coord.substring(1)));
         return x + y;
     }
+
     public static encodeMoves(lst:Array<Move>):string {
         let ret = "";
         for (let i = 0; i < lst.length; ++i) {
@@ -338,7 +343,7 @@ export class GoMath {
         }
         return ret;
     }
-    public static encodeMoveToArray(mv:Move):AdHocPackedMove {
+    public static encodeMoveToArray(mv:Move):AdHocPackedMove {   // Note: despite the name here, AdHocPackedMove became a tuple at some point!
         let extra:any = {};
         if (mv.blur) {
             extra.blur = mv.blur;
@@ -378,6 +383,24 @@ export class GoMath {
             ret.push(GoMath.encodeMoveToArray(moves[i]));
         }
         return ret;
+    }
+
+    public static stripModeratorOnlyExtraInformation(move: AdHocPackedMove): AdHocPackedMove {
+        const moderator_only_extra_info = ['blur', 'sgf_downloaded_by'];
+
+        if (move.length === 5 && move[4]) { // the packed move has a defined `extra` field that we have to filter
+            let filtered_extra = move[4];
+            for (const field of moderator_only_extra_info) {
+                let {[field]:hide_me, ...more_filtered} = filtered_extra;
+                filtered_extra = more_filtered;
+            }
+
+            filtered_extra.stripped = true;  // this is how you can tell by looking at a move structure in flight whether it went through here.
+
+            const filtered_move = [...move.slice(0, 4), filtered_extra];
+            return filtered_move as AdHocPackedMove;
+        }
+        return move;
     }
 
     /**
