@@ -767,7 +767,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.setState(node.state);
         }
         if (node.player_update) {
-            console.log("Engine jumpTo doing player_update...");
+            //console.log("Engine jumpTo doing player_update...");
             this.updatePlayers(node.player_update);
             this.emit("update");
         }
