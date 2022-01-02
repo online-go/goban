@@ -1021,7 +1021,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
 
                     if (the_move.player_update && this.engine.player_pool) {
-                        console.log("`move` got player update:", the_move.player_update);
+                        //console.log("`move` got player update:", the_move.player_update);
                         this.engine.cur_move.player_update = the_move.player_update;
                         this.engine.updatePlayers(the_move.player_update);
                     }
