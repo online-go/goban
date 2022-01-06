@@ -184,7 +184,7 @@ interface MoveCommand {
     blur?: number;
 }
 
-interface Events {
+export interface Events {
     "destroy": never;
     "update": never;
     "chat-reset": never;
@@ -973,7 +973,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     /* clear any undo state that may be hanging around */
                     delete this.engine.undo_requested;
 
-                    let mv = this.engine.decodeMoves(move);
+                    const mv = this.engine.decodeMoves(move);
+
+                    if (mv.length > 1)  { console.warn("More than one move provided in encoded move in a `move` event.  That's odd."); }
+
+                    const the_move = mv[0];
 
                     if (this.mode === "conditional" || this.mode === "play") {
                         this.setMode("play");
@@ -990,7 +994,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.engine.jumpToLastOfficialMove();
 
                     if (this.engine.playerToMove() !== this.player_id) {
-                        let t = this.conditional_tree.getChild(GoMath.encodeMove(mv[0].x, mv[0].y));
+                        let t = this.conditional_tree.getChild(GoMath.encodeMove(the_move.x, the_move.y));
                         t.move = null;
                         this.setConditionalTree(t);
                     }
@@ -1009,11 +1013,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     let score_before_move = this.engine.computeScore(true)[this.engine.colorToMove()].prisoners;
 
                     let removed_count:number = 0;
-                    if (mv[0].edited) {
-                        this.engine.editPlace(mv[0].x, mv[0].y, mv[0].color || 0);
+                    if (the_move.edited) {
+                        this.engine.editPlace(the_move.x, the_move.y, the_move.color || 0);
                     }
                     else {
-                        removed_count = this.engine.place(mv[0].x, mv[0].y, false, false, false, true, true);
+                        removed_count = this.engine.place(the_move.x, the_move.y, false, false, false, true, true);
+                    }
+
+                    if (the_move.player_update && this.engine.player_pool) {
+                        //console.log("`move` got player update:", the_move.player_update);
+                        this.engine.cur_move.player_update = the_move.player_update;
+                        this.engine.updatePlayers(the_move.player_update);
                     }
 
                     this.setLastOfficialMove();
@@ -1021,18 +1031,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     if (jumptomove) {
                         this.engine.jumpTo(jumptomove);
-                    }
-
-                    if (move_obj.player_update) {
-                        console.log("move got player update:", move_obj.player_update);
-                        this.engine.players = move_obj.player_update.players;
-                        this.engine.rengo_teams = move_obj.player_update.rengo_teams;
-                        this.engine.config.players = move_obj.player_update.players;
-                        this.engine.config.rengo_teams = move_obj.player_update.rengo_teams;
-
-                        // keeping deprecated fields up to date
-                        this.engine.config.black_player_id = move_obj.player_update.players['black'].id;
-                        this.engine.config.white_player_id = move_obj.player_update.players['white'].id;
                     }
 
                     this.emit("update");
@@ -1162,6 +1160,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 this.load(obj.gamedata);
                 this.review_had_gamedata = true;
+            }
+
+            if (obj.player_update && this.engine.player_pool) {
+                console.log("process_r got player update:", obj.player_update);
+                this.engine.updatePlayers(obj.player_update);
             }
 
             if (obj.owner) {
@@ -1313,6 +1316,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         if (this.review_id) {
             this._socket_on(prefix + "full_state", (entries:Array<ReviewMessage>) => {
+                console.log("processing fullstate");
                 try {
                     if (!entries || entries.length === 0) {
                         console.error('Blank full state received, ignoring');
@@ -1695,6 +1699,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.emit("chat", line);
         }
 
+        // set up player_pool so we can find player details by id later
+        if (!config.player_pool) {
+            config.player_pool = {};
+        }
+
+        if (config.players) {
+            config.player_pool[config.players.black.id] = config.players.black;
+            config.player_pool[config.players.white.id] = config.players.white;
+        }
+
+        if (config.rengo_teams) {
+            for (let player of (config.rengo_teams.black.concat(config.rengo_teams.white))) {
+                config.player_pool[player.id] = player;
+            }
+        }
 
         /* This must be done last as it will invoke the appropriate .set actions to set the board in it's correct state */
         let old_engine = this.engine;
@@ -3248,12 +3267,12 @@ class FocusTracker {
         this.hasFocus = true;
         this.outOfFocusDurations.push(Date.now() - this.lastFocus);
         this.lastFocus = Date.now();
-    };
+    }
 
     onBlur = () => {
         this.hasFocus = false;
         this.lastFocus = Date.now();
-    };
+    }
 }
 
 export const focus_tracker = new FocusTracker();

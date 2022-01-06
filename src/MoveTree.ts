@@ -18,7 +18,7 @@ import {GoMath} from "./GoMath";
 import {GoEngine, GoEngineState} from "./GoEngine";
 import {encodeMove} from "./GoEngine";
 import {AdHocPackedMove} from './AdHocFormat';
-import {JGOFNumericPlayerColor} from "./JGOF";
+import {JGOFNumericPlayerColor, JGOFPlayerSummary} from "./JGOF";
 
 export interface MarkInterface {
     triangle?         : boolean;
@@ -103,6 +103,7 @@ export class MoveTree {
     public edited: boolean;
     public state: GoEngineState;
     public pen_marks: MoveTreePenMarks = [];
+    public player_update: JGOFPlayerSummary | undefined;
 
     /* public for use by renderer */
     public active_path_number: number = 0;
