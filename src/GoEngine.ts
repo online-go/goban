@@ -436,7 +436,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.player_pool[config.players.white.id] = config.players.white;
         }
 
-        if (config.rengo_teams ) {
+        if (config.rengo && config.rengo_teams) {
             for (let player of (config.rengo_teams.black.concat(config.rengo_teams.white))) {
                 this.player_pool[player.id] = player;
             }
@@ -712,7 +712,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.players.white = this.player_pool[player_update.players.white];
 
         try {
-            if (player_update.rengo_teams) {
+            if (this.config.rengo && player_update.rengo_teams) {
                 this.rengo_teams = {'black': [], 'white': []};
                 for (let colour of ['black', 'white']) {
                     //console.log("looking at", colour, player_update.rengo_teams[colour]);
