@@ -389,15 +389,19 @@ export class GoMath {
         const moderator_only_extra_info = ['blur', 'sgf_downloaded_by'];
 
         if (move.length === 5 && move[4]) { // the packed move has a defined `extra` field that we have to filter
-            let filtered_extra = move[4];
+            let filtered_extra:any = {... move[4]};
             for (const field of moderator_only_extra_info) {
-                let {[field]:hide_me, ...more_filtered} = filtered_extra;
-                filtered_extra = more_filtered;
+                delete filtered_extra[field];
+            }
+            if (Object.keys(filtered_extra).length === 0) {
+                filtered_extra = undefined;
             }
 
-            filtered_extra.stripped = true;  // this is how you can tell by looking at a move structure in flight whether it went through here.
-
+            //filtered_extra.stripped = true;  // this is how you can tell by looking at a move structure in flight whether it went through here.
             const filtered_move = [...move.slice(0, 4), filtered_extra];
+            while (filtered_move.length > 3 && !filtered_move[filtered_move.length - 1]) {
+                filtered_move.pop();
+            }
             return filtered_move as AdHocPackedMove;
         }
         return move;
