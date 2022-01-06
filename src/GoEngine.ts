@@ -711,14 +711,19 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.players.black = this.player_pool[player_update.players.black];
         this.players.white = this.player_pool[player_update.players.white];
 
-        if (player_update.rengo_teams) {
-            this.rengo_teams = {'black': [], 'white': []};
-            for (let colour of ['black', 'white']) {
-                //console.log("looking at", colour, player_update.rengo_teams[colour]);
-                for (let id of player_update.rengo_teams[colour as 'black' | 'white']) {
-                    this.rengo_teams[colour as 'black' | 'white'].push(this.player_pool[id]);
+        try {
+            if (player_update.rengo_teams) {
+                this.rengo_teams = {'black': [], 'white': []};
+                for (let colour of ['black', 'white']) {
+                    //console.log("looking at", colour, player_update.rengo_teams[colour]);
+                    for (let id of player_update.rengo_teams[colour as 'black' | 'white']) {
+                        this.rengo_teams[colour as 'black' | 'white'].push(this.player_pool[id]);
+                    }
                 }
             }
+        } catch (e) {
+            console.error(e);
+            console.error(e.stack);
         }
 
         // keep deprecated fields up to date
