@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GobanMoveErrorMessageId } from './GobanError';
+import { GobanMoveErrorMessageId } from "./GobanError";
 
 /**
  * JSON Go Format
@@ -38,7 +38,7 @@ export interface JGOF {
 
     /** AI Review information computed for this game */
     ai_reviews?: {
-        [id:string]: JGOFAIReview;
+        [id: string]: JGOFAIReview;
     };
 }
 
@@ -65,13 +65,13 @@ export enum JGOFNumericPlayerColor {
 }
 
 export interface JGOFPlayerSummary {
-    players : {
-        'black': number,
-        'white': number
+    players: {
+        black: number;
+        white: number;
     };
     rengo_teams: {
-        'black': number[],
-        'white': number[]
+        black: number[];
+        white: number[];
     };
 }
 
@@ -79,13 +79,13 @@ export interface JGOFMove extends JGOFIntersection {
     color?: JGOFNumericPlayerColor;
     timedelta?: number;
     edited?: boolean;
-    played_by?: number;  // player_id of person who played the move
-    player_update?: JGOFPlayerSummary;   // who the resulting players are after effects of this move
+    played_by?: number; // player_id of person who played the move
+    player_update?: JGOFPlayerSummary; // who the resulting players are after effects of this move
     // typically restricted information...
     blur?: number; // maximum time the player was not focused on the window
-                   // while it was their turn to make a move
+    // while it was their turn to make a move
     sgf_downloaded_by?: Array<number>; // Array of users who downloaded the
-                                       // game SGF before this move was made
+    // game SGF before this move was made
 }
 
 /*********/
@@ -100,7 +100,7 @@ export interface JGOFClock {
     current_player_id: string;
 
     /** Time the last move was made, in milliseconds since 1970, as observed by the server. */
-    time_of_last_move:number;
+    time_of_last_move: number;
 
     /** Time left on blacks clock. */
     black_clock: JGOFPlayerClock;
@@ -112,23 +112,23 @@ export interface JGOFClock {
      * True if the game has not begun yet and we are waiting for the first
      * move to be played. If this is true, `start_time_left` will be set.
      */
-    start_mode?:boolean;
+    start_mode?: boolean;
 
     /**
      * If `start_mode` is true, this is the number of milliseconds left
      * on the start clock, when the clock reaches zero the game will be
      * canceled.
      */
-    start_time_left?:number;
+    start_time_left?: number;
 
     /**
      * If `puase_State.stone_removal` is true, this is the number of
      * milliseconds left before the result is automatically accepted.
      */
-    stone_removal_time_left?:number;
+    stone_removal_time_left?: number;
 
     /** Time the game was paused, in milliseconds since 1970, as observed by the server */
-    paused_since?:number;
+    paused_since?: number;
 
     /** If this field is set, the game clocks are paused for one or more reasons. */
     pause_state?: JGOFPauseState;
@@ -136,7 +136,7 @@ export interface JGOFClock {
 
 export interface JGOFPlayerClock {
     /** Main time left on the clock, in milliseconds. */
-    main_time:number;
+    main_time: number;
 
     /** Used with byo-yomi time control. Number of periods left. */
     periods_left?: number;
@@ -157,7 +157,6 @@ export interface JGOFPlayerClock {
     block_time_left?: number;
 }
 
-
 /* Pause control indicates if the game is currently paused for one or more reasons */
 export interface JGOFPauseState {
     /** Paused because the game is in the stone removal phase */
@@ -166,7 +165,7 @@ export interface JGOFPauseState {
     /** Paused because one or more players is on vacation */
     vacation?: {
         /** Player id that is on vacation */
-        [player_id:string]: true;
+        [player_id: string]: true;
     };
 
     /** Paused by the server */
@@ -189,7 +188,13 @@ export interface JGOFPauseState {
 }
 
 export type JGOFTimeControlSpeed = "blitz" | "live" | "correspondence";
-export type JGOFTimeControlSystem = "fischer" | "byoyomi" | "canadian" | "simple" | "absolute" | "none";
+export type JGOFTimeControlSystem =
+    | "fischer"
+    | "byoyomi"
+    | "canadian"
+    | "simple"
+    | "absolute"
+    | "none";
 
 export interface JGOFFischerTimeControl {
     system: "fischer";
@@ -234,13 +239,12 @@ export interface JGOFNoneTimeControl {
 }
 
 export type JGOFTimeControl =
-      JGOFFischerTimeControl
+    | JGOFFischerTimeControl
     | JGOFByoYomiTimeControl
     | JGOFSimpleTimeControl
     | JGOFCanadianTimeControl
     | JGOFAbsoluteTimeControl
     | JGOFNoneTimeControl;
-
 
 /******/
 /* AI */
@@ -257,7 +261,7 @@ export interface JGOFAIReview {
      * and while games are being reviewed these objects will have zero or more
      * entries in `moves` regardless of the type.
      */
-    type: 'fast' | 'full';
+    type: "fast" | "full";
     engine: string;
     engine_version: string;
     network: string;
@@ -278,12 +282,12 @@ export interface JGOFAIReview {
 
     /** Analysis of moves in the game. */
     moves: {
-        [move_number:string]:JGOFAIReviewMove;
+        [move_number: string]: JGOFAIReviewMove;
     };
 
     /** Analysis of variations in the game. */
     analyzed_variations?: {
-        [varkey:string]:JGOFAIReviewMove;
+        [varkey: string]: JGOFAIReviewMove;
     };
 
     /** If there was an error processing the review, it can be stored here */
@@ -347,4 +351,3 @@ export interface JGOFAIReviewMoveVariation {
     /** From Leela Zero */
     policy?: number;
 }
-

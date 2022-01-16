@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-import { JGOFAIReview, JGOFIntersection, JGOFNumericPlayerColor } from './JGOF';
-import { MoveTree } from './MoveTree';
-
+import { JGOFAIReview, JGOFIntersection, JGOFNumericPlayerColor } from "./JGOF";
+import { MoveTree } from "./MoveTree";
 
 export interface AIReviewWorstMoveEntry {
-    player:JGOFNumericPlayerColor;
-    delta:number;
-    move_number:number;
-    move:JGOFIntersection;
+    player: JGOFNumericPlayerColor;
+    delta: number;
+    move_number: number;
+    move: JGOFIntersection;
 }
 
 /**
@@ -36,10 +35,12 @@ export interface AIReviewWorstMoveEntry {
  *     determining the worst moves, rather than win rate. This is useful for
  *     handicap games where the winrate is 100% for a large portion of the game.
  */
-function computeWorstMoves(starting_move:MoveTree,
-                                  ai_review:JGOFAIReview,
-                                  use_score = false):Array<AIReviewWorstMoveEntry> {
-    let ret:Array<AIReviewWorstMoveEntry> = [];
+function computeWorstMoves(
+    starting_move: MoveTree,
+    ai_review: JGOFAIReview,
+    use_score = false,
+): Array<AIReviewWorstMoveEntry> {
+    let ret: Array<AIReviewWorstMoveEntry> = [];
     let cur_move = starting_move;
 
     const metric_array = use_score ? ai_review.scores : ai_review.win_rates;
@@ -55,9 +56,10 @@ function computeWorstMoves(starting_move:MoveTree,
         let cur_win_rate = metric_array[cur_move.move_number] || DEFAULT_VALUE;
         let next_win_rate = metric_array[next_move.move_number] || DEFAULT_VALUE;
 
-        let delta:number = next_move.player === JGOFNumericPlayerColor.WHITE
-            ? (cur_win_rate) - (next_win_rate)
-            : (next_win_rate) - (cur_win_rate);
+        let delta: number =
+            next_move.player === JGOFNumericPlayerColor.WHITE
+                ? cur_win_rate - next_win_rate
+                : next_win_rate - cur_win_rate;
 
         ret.push({
             player: next_move.player,
@@ -65,8 +67,8 @@ function computeWorstMoves(starting_move:MoveTree,
             move_number: next_move.move_number,
             move: {
                 x: next_move.x,
-                y: next_move.y
-            }
+                y: next_move.y,
+            },
         });
 
         cur_move = next_move;
@@ -82,19 +84,23 @@ function computeWorstMoves(starting_move:MoveTree,
  * win rate or score, depending on what is provided in the ai review. So the
  * first entry will be the worst move in the game according to the ai.
  */
-export function getWorstMoves(starting_move:MoveTree, ai_review:JGOFAIReview, max_moves:number=3):Array<AIReviewWorstMoveEntry> {
+export function getWorstMoves(
+    starting_move: MoveTree,
+    ai_review: JGOFAIReview,
+    max_moves: number = 3,
+): Array<AIReviewWorstMoveEntry> {
     let worst_moves: AIReviewWorstMoveEntry[];
     let threshhold: number;
 
     if (ai_review.scores) {
-        worst_moves = computeWorstMoves(starting_move, ai_review, /*use_score=*/true);
+        worst_moves = computeWorstMoves(starting_move, ai_review, /*use_score=*/ true);
         threshhold = -5.0;
     } else {
         worst_moves = computeWorstMoves(starting_move, ai_review);
         threshhold = -0.2;
     }
 
-    const filtered_worst_moves = worst_moves.filter(de => de.delta <= threshhold);
+    const filtered_worst_moves = worst_moves.filter((de) => de.delta <= threshhold);
 
     if (filtered_worst_moves.length >= max_moves) {
         return filtered_worst_moves.slice(0, max_moves);

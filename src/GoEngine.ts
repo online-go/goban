@@ -16,29 +16,28 @@
 
 import { GobanMoveError } from "./GobanError";
 import { MoveTree, MoveTreeJson } from "./MoveTree";
-import {
-    GoMath,
-    Move,
-    Intersection,
-    Group,
-} from "./GoMath";
+import { GoMath, Move, Intersection, Group } from "./GoMath";
 import { ScoreEstimator } from "./ScoreEstimator";
-import { GobanCore, Events } from './GobanCore';
-import { JGOFTimeControl, JGOFNumericPlayerColor, JGOFMove, JGOFPlayerSummary } from './JGOF';
-import { AdHocPackedMove } from './AdHocFormat';
-import {_} from "./translate";
-import { TypedEventEmitter} from "./TypedEventEmitter";
+import { GobanCore, Events } from "./GobanCore";
+import { JGOFTimeControl, JGOFNumericPlayerColor, JGOFMove, JGOFPlayerSummary } from "./JGOF";
+import { AdHocPackedMove } from "./AdHocFormat";
+import { _ } from "./translate";
+import { TypedEventEmitter } from "./TypedEventEmitter";
 
-
-declare const CLIENT:boolean;
-declare const SERVER:boolean;
+declare const CLIENT: boolean;
+declare const SERVER: boolean;
 
 export const AUTOSCORE_TRIALS = 1000;
-export const AUTOSCORE_TOLERANCE = 0.30;
+export const AUTOSCORE_TOLERANCE = 0.3;
 
-export type GoEnginePhase = 'play'|'stone removal'|'finished';
-export type GoEngineRules = 'chinese'|'aga'|'japanese'|'korean'|'ing'|'nz';
-export type GoEngineSuperKoAlgorithm = 'psk' | 'csk' | 'ssk' | 'noresult' | 'ing'; /* note, only psk, ssk, and noresult are implemented, ing and csk are treated as psk */
+export type GoEnginePhase = "play" | "stone removal" | "finished";
+export type GoEngineRules = "chinese" | "aga" | "japanese" | "korean" | "ing" | "nz";
+export type GoEngineSuperKoAlgorithm =
+    | "psk"
+    | "csk"
+    | "ssk"
+    | "noresult"
+    | "ing"; /* note, only psk, ssk, and noresult are implemented, ing and csk are treated as psk */
 
 export interface PlayerScore {
     total: number;
@@ -69,10 +68,10 @@ export interface GoEngineState {
 }
 
 export interface GoEnginePlayerEntry {
-    id:number;
-    username:string;
-    country?:string;
-    rank?:number;
+    id: number;
+    username: string;
+    country?: string;
+    rank?: number;
 
     /** The accepted stones for the stone removal phase that the player has accepted */
     accepted_stones?: string;
@@ -102,48 +101,48 @@ export interface GoEngineConfig {
     rules?: GoEngineRules;
     phase?: GoEnginePhase;
     initial_state?: GoEngineInitialState;
-    marks?:{[mark:string]: string};
+    marks?: { [mark: string]: string };
     player_pool?: { [id: number]: GoEnginePlayerEntry }; // we need this to get player details from player_id in player_update events
     players?: {
-        'black': GoEnginePlayerEntry;
-        'white': GoEnginePlayerEntry;
+        black: GoEnginePlayerEntry;
+        white: GoEnginePlayerEntry;
     };
     rengo?: boolean;
     rengo_teams?: {
-        'black': Array<GoEnginePlayerEntry>,
-        'white': Array<GoEnginePlayerEntry>;
+        black: Array<GoEnginePlayerEntry>;
+        white: Array<GoEnginePlayerEntry>;
     };
 
     //time_control?:JGOFTimeControl;
-    moves?:Array<AdHocPackedMove> | Array<JGOFMove>;
-    move_tree?:MoveTreeJson;
+    moves?: Array<AdHocPackedMove> | Array<JGOFMove>;
+    move_tree?: MoveTreeJson;
     ranked?: boolean;
     original_disable_analysis?: boolean;
     original_sgf?: string;
-    free_handicap_placement?:boolean;
-    score?:Score;
-    outcome?:string;
-    winner?:number; // Player ID of the winner
+    free_handicap_placement?: boolean;
+    score?: Score;
+    outcome?: string;
+    winner?: number; // Player ID of the winner
 
-    start_time?:number;
-    end_time?:number;
-    game_date?:string; // as reported by an SGF
+    start_time?: number;
+    end_time?: number;
+    game_date?: string; // as reported by an SGF
 
-    allow_self_capture?:boolean;
-    automatic_stone_removal?:boolean;
-    allow_ko?:boolean;
-    allow_superko?:boolean;
-    score_territory?:boolean;
-    score_territory_in_seki?:boolean;
-    strict_seki_mode?:boolean;
-    score_stones?:boolean;
-    score_passes?:boolean;
-    score_prisoners?:boolean;
-    score_handicap?:boolean;
-    white_must_pass_last?:boolean;
-    aga_handicap_scoring?:boolean;
-    opponent_plays_first_after_resume?:boolean;
-    superko_algorithm?:GoEngineSuperKoAlgorithm;
+    allow_self_capture?: boolean;
+    automatic_stone_removal?: boolean;
+    allow_ko?: boolean;
+    allow_superko?: boolean;
+    score_territory?: boolean;
+    score_territory_in_seki?: boolean;
+    strict_seki_mode?: boolean;
+    score_stones?: boolean;
+    score_passes?: boolean;
+    score_prisoners?: boolean;
+    score_handicap?: boolean;
+    white_must_pass_last?: boolean;
+    aga_handicap_scoring?: boolean;
+    opponent_plays_first_after_resume?: boolean;
+    superko_algorithm?: GoEngineSuperKoAlgorithm;
 
     /** When loading initial state or moves, by default GoEngine will try and
      *  handle bad data by just resorting to 'edit placing' moves. If this is
@@ -165,10 +164,10 @@ export interface GoEngineConfig {
         white_seki_eyes: string;
         white_dead_stones: string;
     };
-    time_per_move?:number;
+    time_per_move?: number;
 
     // unknown if we use this
-    errors?:Array<{error: string, stack:any}>;
+    errors?: Array<{ error: string; stack: any }>;
 
     /** Deprecated, I dno't think we need this anymore, but need to be sure */
     ogs_import?: boolean;
@@ -185,40 +184,40 @@ export interface GoEngineInitialState {
 }
 
 export interface ReviewMessage {
-    "ts"?:number;  /* timestamp (ms) */
-    "f"?:number;   /* from (move) */
-    "m"?:string;   /* moves */
-    "om"?:[number, number, number];  /* offical move [reviewing live game] */
-    "undo"?:boolean; /* offical undo [reviewing live game] */
-    "t"?:string;   /* text */
-    "t+"?:string;  /* text append */
-    "k"?:{[mark: string]: string};   /* marks */
-    "pp"?:[number, number];  /* pen point */
-    "pen"?: string; /* pen color / pen start */
-    "chat"?: {
+    ts?: number /* timestamp (ms) */;
+    f?: number /* from (move) */;
+    m?: string /* moves */;
+    om?: [number, number, number] /* offical move [reviewing live game] */;
+    undo?: boolean /* offical undo [reviewing live game] */;
+    t?: string /* text */;
+    "t+"?: string /* text append */;
+    k?: { [mark: string]: string } /* marks */;
+    pp?: [number, number] /* pen point */;
+    pen?: string /* pen color / pen start */;
+    chat?: {
         chat_id: string;
         player_id: number;
         channel: string;
         date: number;
-        from: number; /* turn number */
-        moves: AdHocPackedMove | string; /* this might just be "string", i'm not entirely sure */
+        from: number /* turn number */;
+        moves: AdHocPackedMove | string /* this might just be "string", i'm not entirely sure */;
     };
     "remove-chat"?: string;
     //"remove-chat";
     //"voice";
     //"unvoice";
-    "clearpen"?:boolean;
-    "delete"?: number;
+    clearpen?: boolean;
+    delete?: number;
     //"id";
-    "owner"?: number | {id:number, username: string};
-    "gamedata"?:GoEngineConfig;
-    "controller"?: number | {id:number, username: string};
+    owner?: number | { id: number; username: string };
+    gamedata?: GoEngineConfig;
+    controller?: number | { id: number; username: string };
     // not stored, but used for auth and message routing
-    "auth"?: string;
-    "review_id"?: number;
-    "player_id"?: number;
-    "username"?: string;
-    "player_update"? : JGOFPlayerSummary;
+    auth?: string;
+    review_id?: number;
+    player_id?: number;
+    username?: string;
+    player_update?: JGOFPlayerSummary;
 }
 
 export interface PuzzleConfig {
@@ -229,7 +228,7 @@ export interface PuzzleConfig {
     width?: number;
     height?: number;
     initial_state?: GoEngineInitialState;
-    marks?:{[mark:string]: string};
+    marks?: { [mark: string]: string };
     puzzle_autoplace_delay?: number;
     puzzle_opponent_move_mode?: PuzzleOpponentMoveMode;
     puzzle_player_move_mode?: PuzzlePlayerMoveMode;
@@ -241,21 +240,23 @@ export interface PuzzleConfig {
     move_tree?: MoveTreeJson;
 }
 
-
-export type PuzzlePlayerMoveMode = 'free' | 'fixed';
-export type PuzzleOpponentMoveMode = 'manual'|'automatic';
-export type PuzzlePlacementSetting = {'mode': 'play'} | {'mode': 'setup', 'color': JGOFNumericPlayerColor} | {'mode': 'place', 'color': 0};
+export type PuzzlePlayerMoveMode = "free" | "fixed";
+export type PuzzleOpponentMoveMode = "manual" | "automatic";
+export type PuzzlePlacementSetting =
+    | { mode: "play" }
+    | { mode: "setup"; color: JGOFNumericPlayerColor }
+    | { mode: "place"; color: 0 };
 
 let __currentMarker = 0;
 
-export function encodeMove(x:number | Move, y?:number):string {
-    if (typeof(x) === "number") {
-        if (typeof(y) !== "number") {
+export function encodeMove(x: number | Move, y?: number): string {
+    if (typeof x === "number") {
+        if (typeof y !== "number") {
             throw new Error(`Invalid y value passed to encodeMove`);
         }
         return GoMath.num2char(x) + GoMath.num2char(y);
     } else {
-        let mv:Move = x as Move;
+        let mv: Move = x as Move;
 
         if (!mv.edited) {
             return GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
@@ -264,7 +265,7 @@ export function encodeMove(x:number | Move, y?:number):string {
         }
     }
 }
-export function encodeMoves(lst:Array<Move>) {
+export function encodeMoves(lst: Array<Move>) {
     let ret = "";
     for (let i = 0; i < lst.length; ++i) {
         ret += encodeMove(lst[i]);
@@ -272,95 +273,104 @@ export function encodeMoves(lst:Array<Move>) {
     return ret;
 }
 
-export type PlayerColor = 'black' | 'white';
+export type PlayerColor = "black" | "white";
 
 export class GoEngine extends TypedEventEmitter<Events> {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
-    public board:Array<Array<JGOFNumericPlayerColor>>;
-    public cur_move:MoveTree;
-    public cur_review_move?:MoveTree;
-    public getState_callback?:() => any;
-    public handicap:number = NaN;
-    public initial_state:GoEngineInitialState = {black: '', white: ''};
-    public komi:number = NaN;
-    public last_official_move:MoveTree;
-    public move_tree:MoveTree;
-    public move_tree_layout_vector:Array<number> = []; /* For use by MoveTree layout and rendering */
-    public move_tree_layout_hash: {[coords:string]:MoveTree} = {}; /* For use by MoveTree layout and rendering */
+    public board: Array<Array<JGOFNumericPlayerColor>>;
+    public cur_move: MoveTree;
+    public cur_review_move?: MoveTree;
+    public getState_callback?: () => any;
+    public handicap: number = NaN;
+    public initial_state: GoEngineInitialState = { black: "", white: "" };
+    public komi: number = NaN;
+    public last_official_move: MoveTree;
+    public move_tree: MoveTree;
+    public move_tree_layout_vector: Array<number> =
+        []; /* For use by MoveTree layout and rendering */
+    public move_tree_layout_hash: { [coords: string]: MoveTree } =
+        {}; /* For use by MoveTree layout and rendering */
     public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
-    public readonly name: string = '';
-    public outcome:string = '';
-    public phase:GoEnginePhase = 'play';
-    public player:JGOFNumericPlayerColor;
+    public readonly name: string = "";
+    public outcome: string = "";
+    public phase: GoEnginePhase = "play";
+    public player: JGOFNumericPlayerColor;
     player_pool: { [id: number]: GoEnginePlayerEntry };
-    public players:{
-        'black': GoEnginePlayerEntry;
-        'white': GoEnginePlayerEntry;
+    public players: {
+        black: GoEnginePlayerEntry;
+        white: GoEnginePlayerEntry;
     } = {
-        black: {username: 'black', id: NaN},
-        white: {username: 'white', id: NaN},
+        black: { username: "black", id: NaN },
+        white: { username: "white", id: NaN },
     };
-    public puzzle_collection:number = NaN;
-    public puzzle_description:string = '[missing puzzle descripton]';
-    public puzzle_opponent_move_mode: PuzzleOpponentMoveMode = 'manual';
-    public puzzle_player_move_mode: PuzzlePlayerMoveMode = 'free';
-    public puzzle_rank:number = NaN;
-    public puzzle_type:string = '[missing puzzle type]';
-    public readonly config:GoEngineConfig;
-    public readonly disable_analysis:boolean = false;
-    public readonly height:number = 19;
+    public puzzle_collection: number = NaN;
+    public puzzle_description: string = "[missing puzzle descripton]";
+    public puzzle_opponent_move_mode: PuzzleOpponentMoveMode = "manual";
+    public puzzle_player_move_mode: PuzzlePlayerMoveMode = "free";
+    public puzzle_rank: number = NaN;
+    public puzzle_type: string = "[missing puzzle type]";
+    public readonly config: GoEngineConfig;
+    public readonly disable_analysis: boolean = false;
+    public readonly height: number = 19;
     //public readonly rules:GoEngineRules = 'japanese';
-    public rules:GoEngineRules = 'japanese'; // can't be readonly at this point since parseSGF sets it
-    public readonly width:number = 19;
-    public removal:Array<Array<-1|0|1>>;
-    public setState_callback?:(state:any) => void;
-    public strict_seki_mode:boolean = false;
-    public time_control:JGOFTimeControl = { system: 'none', speed: 'correspondence', pause_on_weekends: true };
+    public rules: GoEngineRules = "japanese"; // can't be readonly at this point since parseSGF sets it
+    public readonly width: number = 19;
+    public removal: Array<Array<-1 | 0 | 1>>;
+    public setState_callback?: (state: any) => void;
+    public strict_seki_mode: boolean = false;
+    public time_control: JGOFTimeControl = {
+        system: "none",
+        speed: "correspondence",
+        pause_on_weekends: true,
+    };
     public undo_requested?: number = NaN;
-    public winner?:'black'|'white';
-    public game_id:number = NaN;
-    public review_id?:number;
-    public decoded_moves:Array<Move> = [];
-    public automatic_stone_removal:boolean = false;
-    public group_ids?:Array<number>;
+    public winner?: "black" | "white";
+    public game_id: number = NaN;
+    public review_id?: number;
+    public decoded_moves: Array<Move> = [];
+    public automatic_stone_removal: boolean = false;
+    public group_ids?: Array<number>;
 
     rengo?: boolean;
     rengo_teams?: {
-        [colour:string]: Array<GoEnginePlayerEntry>  // TBD index this by PlayerColour
+        [colour: string]: Array<GoEnginePlayerEntry>; // TBD index this by PlayerColour
     };
 
-    private aga_handicap_scoring:boolean = false;
-    private allow_ko:boolean = false;
-    private allow_self_capture:boolean = false;
-    private allow_superko:boolean = false;
-    private superko_algorithm:GoEngineSuperKoAlgorithm = 'psk';
-    private black_prisoners:number = 0;
-    private white_prisoners:number = 0;
-    private board_is_repeating:boolean;
-    private goban_callback?:GobanCore;
-    private dontStoreBoardHistory:boolean;
-    public free_handicap_placement:boolean = false;
-    private loading_sgf:boolean = false;
-    private marks:Array<Array<number>>;
-    private move_before_jump?:MoveTree;
+    private aga_handicap_scoring: boolean = false;
+    private allow_ko: boolean = false;
+    private allow_self_capture: boolean = false;
+    private allow_superko: boolean = false;
+    private superko_algorithm: GoEngineSuperKoAlgorithm = "psk";
+    private black_prisoners: number = 0;
+    private white_prisoners: number = 0;
+    private board_is_repeating: boolean;
+    private goban_callback?: GobanCore;
+    private dontStoreBoardHistory: boolean;
+    public free_handicap_placement: boolean = false;
+    private loading_sgf: boolean = false;
+    private marks: Array<Array<number>>;
+    private move_before_jump?: MoveTree;
     //private mv:Move;
-    public score_prisoners:boolean = false;
-    public score_stones:boolean = false;
-    public score_handicap:boolean = false;
-    public score_territory:boolean = false;
-    public score_territory_in_seki:boolean = false;
-    public territory_included_in_sgf:boolean = false;
+    public score_prisoners: boolean = false;
+    public score_stones: boolean = false;
+    public score_handicap: boolean = false;
+    public score_territory: boolean = false;
+    public score_territory_in_seki: boolean = false;
+    public territory_included_in_sgf: boolean = false;
 
-
-    constructor(config:GoEngineConfig, goban_callback?:GobanCore, dontStoreBoardHistory?:boolean) {
+    constructor(
+        config: GoEngineConfig,
+        goban_callback?: GobanCore,
+        dontStoreBoardHistory?: boolean,
+    ) {
         super();
         try {
             /* We had a bug where we were filling in some initial state data incorrectly when we were dealing with
              * sgfs, so this code exists for sgf 'games' < 800k in the database.. -anoek 2014-08-13 */
             if ("original_sgf" in config) {
-                config.initial_state = {"black": "", "white": ""};
+                config.initial_state = { black: "", white: "" };
             }
         } catch (e) {
             console.log(e);
@@ -370,14 +380,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
         GoEngine.fillDefaults(config);
 
         for (let k in config) {
-            if (k !== 'move_tree') {
+            if (k !== "move_tree") {
                 (this as any)[k] = (config as any)[k];
             }
         }
 
         let self = this;
         this.config = config;
-        this.dontStoreBoardHistory = !!dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
+        this.dontStoreBoardHistory =
+            !!dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
 
         if (goban_callback) {
             this.goban_callback = goban_callback;
@@ -390,15 +401,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.black_prisoners = 0;
         this.board_is_repeating = false;
         this.players = config.players || {
-            black: {username: 'black', id: NaN},
-            white: {username: 'white', id: NaN},
+            black: { username: "black", id: NaN },
+            white: { username: "white", id: NaN },
         };
         this.player_pool = config.player_pool || {};
 
         for (let y = 0; y < this.height; ++y) {
-            let row:Array<JGOFNumericPlayerColor> = [];
+            let row: Array<JGOFNumericPlayerColor> = [];
             let mark_row = [];
-            let removal_row:Array<-1|0|1> = [];
+            let removal_row: Array<-1 | 0 | 1> = [];
             for (let x = 0; x < this.width; ++x) {
                 row.push(0);
                 mark_row.push(0);
@@ -412,11 +423,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
         try {
             this.config.original_disable_analysis = this.config.disable_analysis;
             if (
-                typeof(window) !== "undefined"
-                && typeof((window as any)["user"]) !== "undefined"
-                && (window as any)["user"]
-                && (window as any)["user"].id as number !== this.players.black.id
-                && (window as any)["user"].id as number !== this.players.white.id
+                typeof window !== "undefined" &&
+                typeof (window as any)["user"] !== "undefined" &&
+                (window as any)["user"] &&
+                ((window as any)["user"].id as number) !== this.players.black.id &&
+                ((window as any)["user"].id as number) !== this.players.white.id
             ) {
                 this.disable_analysis = false;
                 this.config.disable_analysis = false;
@@ -437,16 +448,16 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         if (config.rengo && config.rengo_teams) {
-            for (let player of (config.rengo_teams.black.concat(config.rengo_teams.white))) {
+            for (let player of config.rengo_teams.black.concat(config.rengo_teams.white)) {
                 this.player_pool[player.id] = player;
             }
         }
 
-        let load_sgf_moves_if_needed = () => { };
+        let load_sgf_moves_if_needed = () => {};
         if (config.original_sgf) {
             config.initial_state = {
-                black: config.initial_state?.black || '',
-                white: config.initial_state?.white || '',
+                black: config.initial_state?.black || "",
+                white: config.initial_state?.white || "",
             };
 
             if (this.phase === "play") {
@@ -458,8 +469,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         if (config.initial_state) {
             this.initial_state = config.initial_state;
-            let black_moves = this.decodeMoves(config.initial_state.black || '');
-            let white_moves = this.decodeMoves(config.initial_state.white || '');
+            let black_moves = this.decodeMoves(config.initial_state.black || "");
+            let white_moves = this.decodeMoves(config.initial_state.white || "");
             for (let i = 0; i < black_moves.length; ++i) {
                 let x = black_moves[i].x;
                 let y = black_moves[i].y;
@@ -471,7 +482,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 this.initialStatePlace(x, y, 2, true);
             }
         }
-
 
         /* Must be after initial state setup */
         this.move_tree = new MoveTree(this, true, -1, -1, false, 0, 0, null, this.getState());
@@ -492,7 +502,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         if (config.moves) {
-            let moves = this.decoded_moves = this.decodeMoves(config.moves);
+            let moves = (this.decoded_moves = this.decodeMoves(config.moves));
 
             //var have_edited = false;
             for (let i = 0; i < moves.length; ++i) {
@@ -500,8 +510,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 if (mv.edited) {
                     this.editPlace(mv.x, mv.y, mv.color || 0, true);
                     //have_edited = true;
-                }
-                else {
+                } else {
                     try {
                         this.place(mv.x, mv.y, false, false, true, true, true);
                         if (mv.player_update) {
@@ -517,8 +526,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
                             config.errors = [];
                         }
                         config.errors.push({
-                            "error": `Error placing ${this.cur_move.player === JGOFNumericPlayerColor.BLACK ? 'black' : 'white'} at ${this.prettyCoords(mv.x, mv.y)} (${mv.x}, ${mv.y})`,
-                            "stack": e.stack,
+                            error: `Error placing ${
+                                this.cur_move.player === JGOFNumericPlayerColor.BLACK
+                                    ? "black"
+                                    : "white"
+                            } at ${this.prettyCoords(mv.x, mv.y)} (${mv.x}, ${mv.y})`,
+                            stack: e.stack,
                         });
                         console.log(config.errors[config.errors.length - 1]);
                         this.editPlace(mv.x, mv.y, mv.color || 0, true);
@@ -535,18 +548,26 @@ export class GoEngine extends TypedEventEmitter<Events> {
         if (config.removed) {
             removed = this.decodeMoves(config.removed);
         }
-        if (CLIENT &&
+        if (
+            CLIENT &&
             !this.territory_included_in_sgf &&
-            typeof(config.removed) === "undefined" &&
+            typeof config.removed === "undefined" &&
             config.original_sgf &&
-            (/[0-9.]+/.test(self.outcome))) {
+            /[0-9.]+/.test(self.outcome)
+        ) {
             // Game data for SGF uploaded games don't always include removed stones, so we use score
             // estimator to find probably dead stones to get a closer approximation of what
             // territories should be marked in the final board position.
             //
             // NOTE: Some Go clients (not OGS, at least for now) do include dead stones in their
             // SGFs, which we respect if present and skip using the score estimator.
-            let se = new ScoreEstimator(this.goban_callback, this, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE, true);
+            let se = new ScoreEstimator(
+                this.goban_callback,
+                this,
+                AUTOSCORE_TRIALS,
+                AUTOSCORE_TOLERANCE,
+                true,
+            );
             removed = this.decodeMoves(se.getProbablyDead());
         }
         if (removed) {
@@ -555,7 +576,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
         }
 
-        function unpackMoveTree(cur:MoveTree, tree:MoveTreeJson):void {
+        function unpackMoveTree(cur: MoveTree, tree: MoveTreeJson): void {
             cur.loadJsonForThisNode(tree);
             if (tree.trunk_next) {
                 let n = tree.trunk_next;
@@ -575,17 +596,19 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
     }
 
-    public decodeMoves(move_obj:AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove>):Array<JGOFMove> {
+    public decodeMoves(
+        move_obj: AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove>,
+    ): Array<JGOFMove> {
         return GoMath.decodeMoves(move_obj, this.width, this.height);
     }
-    private getState():GoEngineState {
-        let state:GoEngineState = {
-            "player": this.player,
-            "board_is_repeating": this.board_is_repeating,
-            "white_prisoners": this.white_prisoners,
-            "black_prisoners": this.black_prisoners,
-            "udata_state": (this.getState_callback ? this.getState_callback() : null),
-            "board": new Array(this.height)
+    private getState(): GoEngineState {
+        let state: GoEngineState = {
+            player: this.player,
+            board_is_repeating: this.board_is_repeating,
+            white_prisoners: this.white_prisoners,
+            black_prisoners: this.black_prisoners,
+            udata_state: this.getState_callback ? this.getState_callback() : null,
+            board: new Array(this.height),
         };
 
         for (let y = 0; y < this.height; ++y) {
@@ -598,7 +621,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         return state;
     }
-    private setState(state:GoEngineState):GoEngineState {
+    private setState(state: GoEngineState): GoEngineState {
         this.player = state.player;
         this.white_prisoners = state.white_prisoners;
         this.black_prisoners = state.black_prisoners;
@@ -608,11 +631,14 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.setState_callback(state.udata_state);
         }
 
-        let redrawn:{[s:string]: boolean} = {};
+        let redrawn: { [s: string]: boolean } = {};
 
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                if (this.board[y][x] !== state.board[y][x] || (this.cur_move.x === x && this.cur_move.y === y)) {
+                if (
+                    this.board[y][x] !== state.board[y][x] ||
+                    (this.cur_move.x === x && this.cur_move.y === y)
+                ) {
                     this.board[y][x] = state.board[y][x];
                     if (this.goban_callback) {
                         this.goban_callback.set(x, y, this.board[y][x]);
@@ -624,8 +650,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         return state;
     }
-    public boardMatriciesAreTheSame(m1:Array<Array<JGOFNumericPlayerColor>>, m2:Array<Array<JGOFNumericPlayerColor>>):boolean {
-        if (m1.length !== m2.length || m1[0].length !== m2[0].length) { return false; }
+    public boardMatriciesAreTheSame(
+        m1: Array<Array<JGOFNumericPlayerColor>>,
+        m2: Array<Array<JGOFNumericPlayerColor>>,
+    ): boolean {
+        if (m1.length !== m2.length || m1[0].length !== m2[0].length) {
+            return false;
+        }
 
         for (let y = 0; y < m1.length; ++y) {
             for (let x = 0; x < m1[0].length; ++x) {
@@ -636,7 +667,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return true;
     }
-    private boardStatesAreTheSame(state1:GoEngineState, state2:GoEngineState):boolean {
+    private boardStatesAreTheSame(state1: GoEngineState, state2: GoEngineState): boolean {
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (state1.board[y][x] !== state2.board[y][x]) {
@@ -648,11 +679,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return true;
     }
 
-    public followPath(from_turn: number, moves:AdHocPackedMove | string, cb?:(x:number, y:number, edited:boolean, color:number) => void):Array<MoveTree> {
+    public followPath(
+        from_turn: number,
+        moves: AdHocPackedMove | string,
+        cb?: (x: number, y: number, edited: boolean, color: number) => void,
+    ): Array<MoveTree> {
         try {
             let ret = [];
             let from = this.move_tree.index(from_turn);
-            let cur:MoveTree;
+            let cur: MoveTree;
             if (from) {
                 cur = from;
             } else {
@@ -664,7 +699,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
             while (i < _moves.length) {
                 let mv = _moves[i];
-                let existing:MoveTree | null = cur.lookupMove(mv.x, mv.y, this.playerByColor(mv.color || 0), !!mv.edited);
+                let existing: MoveTree | null = cur.lookupMove(
+                    mv.x,
+                    mv.y,
+                    this.playerByColor(mv.color || 0),
+                    !!mv.edited,
+                );
                 if (existing) {
                     cur = existing;
                     ++i;
@@ -713,11 +753,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         try {
             if (this.config.rengo && player_update.rengo_teams) {
-                this.rengo_teams = {'black': [], 'white': []};
-                for (let colour of ['black', 'white']) {
+                this.rengo_teams = { black: [], white: [] };
+                for (let colour of ["black", "white"]) {
                     //console.log("looking at", colour, player_update.rengo_teams[colour]);
-                    for (let id of player_update.rengo_teams[colour as 'black' | 'white']) {
-                        this.rengo_teams[colour as 'black' | 'white'].push(this.player_pool[id]);
+                    for (let id of player_update.rengo_teams[colour as "black" | "white"]) {
+                        this.rengo_teams[colour as "black" | "white"].push(this.player_pool[id]);
                     }
                 }
             }
@@ -732,8 +772,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
 
     /** Returns true if there was a previous to show */
-    public showPrevious():boolean {
-        if (this.dontStoreBoardHistory) { return false; }
+    public showPrevious(): boolean {
+        if (this.dontStoreBoardHistory) {
+            return false;
+        }
 
         if (this.cur_move.prev()) {
             this.jumpTo(this.cur_move.prev());
@@ -743,8 +785,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return false;
     }
     /** Returns true if there was a next to show */
-    public showNext():boolean {
-        if (this.dontStoreBoardHistory) { return false; }
+    public showNext(): boolean {
+        if (this.dontStoreBoardHistory) {
+            return false;
+        }
 
         if (this.cur_move.next()) {
             this.jumpTo(this.cur_move.next());
@@ -753,8 +797,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return false;
     }
     /** Returns true if there was a next to show */
-    public showNextTrunk():boolean {
-        if (this.dontStoreBoardHistory) { return false; }
+    public showNextTrunk(): boolean {
+        if (this.dontStoreBoardHistory) {
+            return false;
+        }
 
         if (this.cur_move.trunk_next) {
             this.jumpTo(this.cur_move.trunk_next);
@@ -762,9 +808,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return false;
     }
-    public jumpTo(node?:MoveTree | null):void {
+    public jumpTo(node?: MoveTree | null): void {
         if (!node) {
-            throw new Error('Attempted to jump to a null/undefined node');
+            throw new Error("Attempted to jump to a null/undefined node");
         }
         this.move_before_jump = this.cur_move;
         this.cur_move = node;
@@ -777,14 +823,18 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.emit("update");
         }
     }
-    public jumpToLastOfficialMove():void {
-        if (this.dontStoreBoardHistory) { return; }
+    public jumpToLastOfficialMove(): void {
+        if (this.dontStoreBoardHistory) {
+            return;
+        }
 
         this.jumpTo(this.last_official_move);
     }
     /** Saves our current move as our last official move */
-    public setLastOfficialMove():void {
-        if (this.dontStoreBoardHistory) { return; }
+    public setLastOfficialMove(): void {
+        if (this.dontStoreBoardHistory) {
+            return;
+        }
         if (!this.cur_move.trunk) {
             if (!("original_sgf" in this.config)) {
                 throw new Error("Attempted to set official move to non-trunk move.");
@@ -795,14 +845,14 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
 
     /** return strue if our current move is our last official move */
-    public isLastOfficialMove():boolean {
+    public isLastOfficialMove(): boolean {
         return this.cur_move.is(this.last_official_move);
     }
     /** Returns a move string from the given official move number (aka branch point) */
-    public getMoveDiff():{'from': number, 'moves': string} {
+    public getMoveDiff(): { from: number; moves: string } {
         let branch_point = this.cur_move.getBranchPoint();
-        let cur:MoveTree | null = this.cur_move;
-        let moves:Array<Move> = [];
+        let cur: MoveTree | null = this.cur_move;
+        let moves: Array<Move> = [];
 
         while (cur && cur.id !== branch_point.id) {
             moves.push({
@@ -815,32 +865,38 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         moves.reverse();
-        return { "from": branch_point.getMoveIndex(), "moves": encodeMoves(moves) };
+        return { from: branch_point.getMoveIndex(), moves: encodeMoves(moves) };
     }
-    public setAsCurrentReviewMove():void {
+    public setAsCurrentReviewMove(): void {
         if (this.dontStoreBoardHistory) {
             return;
         }
         this.cur_review_move = this.cur_move;
     }
-    public deleteCurMove():void {
-        if (this.cur_move.id === this.move_tree.id) { console.log("Wont remove move tree itself."); return; }
-        if (this.cur_move.trunk) { console.log("Wont remove trunk node"); return; }
+    public deleteCurMove(): void {
+        if (this.cur_move.id === this.move_tree.id) {
+            console.log("Wont remove move tree itself.");
+            return;
+        }
+        if (this.cur_move.trunk) {
+            console.log("Wont remove trunk node");
+            return;
+        }
         let t = this.cur_move.parent;
         this.cur_move.remove();
         this.cur_move = t ? t : this.move_tree;
         this.jumpTo(t);
     }
-    public gameCanBeCanceled():boolean {
-        if (this.phase !== 'play') {
+    public gameCanBeCanceled(): boolean {
+        if (this.phase !== "play") {
             return false;
         }
 
-        if ('tournament_id' in this.config && this.config.tournament_id) {
+        if ("tournament_id" in this.config && this.config.tournament_id) {
             return false;
         }
 
-        if ('ladder_id' in this.config && this.config.ladder_id) {
+        if ("ladder_id" in this.config && this.config.ladder_id) {
             return false;
         }
 
@@ -853,8 +909,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         return false;
     }
-    public jumpToOfficialMoveNumber(move_number:number):void {
-        if (this.dontStoreBoardHistory) { return; }
+    public jumpToOfficialMoveNumber(move_number: number): void {
+        if (this.dontStoreBoardHistory) {
+            return;
+        }
 
         while (this.showPrevious()) {
             // spin
@@ -866,22 +924,27 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
     }
 
-    private opponent():JGOFNumericPlayerColor {
+    private opponent(): JGOFNumericPlayerColor {
         return this.player === 1 ? 2 : 1;
     }
-    public prettyCoords(x:number, y:number):string {
+    public prettyCoords(x: number, y: number): string {
         return GoMath.prettyCoords(x, y, this.height);
     }
-    private incrementCurrentMarker():void {
+    private incrementCurrentMarker(): void {
         ++__currentMarker;
     }
-    private markGroup(group:Group):void {
+    private markGroup(group: Group): void {
         for (let i = 0; i < group.length; ++i) {
             this.marks[group[i].y][group[i].x] = __currentMarker;
         }
     }
 
-    private foreachNeighbor_checkAndDo(x:number, y:number, done_array:Array<boolean>, fn_of_neighbor_pt:(x:number, y:number) => void):void {
+    private foreachNeighbor_checkAndDo(
+        x: number,
+        y: number,
+        done_array: Array<boolean>,
+        fn_of_neighbor_pt: (x: number, y: number) => void,
+    ): void {
         let idx = x + y * this.width;
         if (done_array[idx]) {
             return;
@@ -890,31 +953,50 @@ export class GoEngine extends TypedEventEmitter<Events> {
         fn_of_neighbor_pt(x, y);
     }
     /** Public for usage in GoStoneGroup */
-    public foreachNeighbor(pt_or_group:Intersection | Group, fn_of_neighbor_pt:(x:number, y:number) => void):void {
+    public foreachNeighbor(
+        pt_or_group: Intersection | Group,
+        fn_of_neighbor_pt: (x: number, y: number) => void,
+    ): void {
         if (pt_or_group instanceof Array) {
             let group = pt_or_group;
-            let done_array =  new Array(this.height * this.width);
+            let done_array = new Array(this.height * this.width);
             for (let i = 0; i < group.length; ++i) {
                 done_array[group[i].x + group[i].y * this.width] = true;
             }
 
             for (let i = 0; i < group.length; ++i) {
                 let pt = group[i];
-                if (pt.x - 1 >= 0)            { this.foreachNeighbor_checkAndDo(pt.x - 1, pt.y, done_array, fn_of_neighbor_pt); }
-                if (pt.x + 1 !== this.width)  { this.foreachNeighbor_checkAndDo(pt.x + 1, pt.y, done_array, fn_of_neighbor_pt); }
-                if (pt.y - 1 >= 0)            { this.foreachNeighbor_checkAndDo(pt.x, pt.y - 1, done_array, fn_of_neighbor_pt); }
-                if (pt.y + 1 !== this.height) { this.foreachNeighbor_checkAndDo(pt.x, pt.y + 1, done_array, fn_of_neighbor_pt); }
+                if (pt.x - 1 >= 0) {
+                    this.foreachNeighbor_checkAndDo(pt.x - 1, pt.y, done_array, fn_of_neighbor_pt);
+                }
+                if (pt.x + 1 !== this.width) {
+                    this.foreachNeighbor_checkAndDo(pt.x + 1, pt.y, done_array, fn_of_neighbor_pt);
+                }
+                if (pt.y - 1 >= 0) {
+                    this.foreachNeighbor_checkAndDo(pt.x, pt.y - 1, done_array, fn_of_neighbor_pt);
+                }
+                if (pt.y + 1 !== this.height) {
+                    this.foreachNeighbor_checkAndDo(pt.x, pt.y + 1, done_array, fn_of_neighbor_pt);
+                }
             }
         } else {
             let pt = pt_or_group;
-            if (pt.x - 1 >= 0)            { fn_of_neighbor_pt(pt.x - 1, pt.y); }
-            if (pt.x + 1 !== this.width)  { fn_of_neighbor_pt(pt.x + 1, pt.y); }
-            if (pt.y - 1 >= 0)            { fn_of_neighbor_pt(pt.x, pt.y - 1); }
-            if (pt.y + 1 !== this.height) { fn_of_neighbor_pt(pt.x, pt.y + 1); }
+            if (pt.x - 1 >= 0) {
+                fn_of_neighbor_pt(pt.x - 1, pt.y);
+            }
+            if (pt.x + 1 !== this.width) {
+                fn_of_neighbor_pt(pt.x + 1, pt.y);
+            }
+            if (pt.y - 1 >= 0) {
+                fn_of_neighbor_pt(pt.x, pt.y - 1);
+            }
+            if (pt.y + 1 !== this.height) {
+                fn_of_neighbor_pt(pt.x, pt.y + 1);
+            }
         }
     }
     /** Returns an array of x/y pairs of all the same color */
-    private getGroup(x:number, y:number, clearMarks:boolean):Group {
+    private getGroup(x: number, y: number, clearMarks: boolean): Group {
         let color = this.board[y][x];
         if (clearMarks) {
             this.incrementCurrentMarker();
@@ -932,21 +1014,24 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.marks[y][x] = __currentMarker;
 
             if (this.board[y][x] === color) {
-                let pt = {"x": x, "y": y};
+                let pt = { x: x, y: y };
                 ret.push(pt);
                 this.foreachNeighbor(pt, addToCheck);
             }
         }
-        function addToCheck(x:number, y:number):void { toCheckX.push(x); toCheckY.push(y); }
+        function addToCheck(x: number, y: number): void {
+            toCheckX.push(x);
+            toCheckY.push(y);
+        }
 
         return ret;
     }
     /** Returns an array of groups connected to the given group */
-    private getConnectedGroups(group:Group):Array<Group> {
+    private getConnectedGroups(group: Group): Array<Group> {
         let gr = group;
         this.incrementCurrentMarker();
         this.markGroup(group);
-        let ret:Array<Group> = [];
+        let ret: Array<Group> = [];
         this.foreachNeighbor(group, (x, y) => {
             if (this.board[y][x]) {
                 this.incrementCurrentMarker();
@@ -955,19 +1040,20 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     this.markGroup(ret[i]);
                 }
                 let g = this.getGroup(x, y, false);
-                if (g.length) { /* can be zero if the peice has already been marked */
+                if (g.length) {
+                    /* can be zero if the peice has already been marked */
                     ret.push(g);
                 }
             }
         });
         return ret;
     }
-    private getConnectedOpenSpace(group:Group):Group {
+    private getConnectedOpenSpace(group: Group): Group {
         let gr = group;
         this.incrementCurrentMarker();
         this.markGroup(group);
-        let ret:Group = [];
-        let included:{[s:string]: boolean} = {};
+        let ret: Group = [];
+        let included: { [s: string]: boolean } = {};
 
         this.foreachNeighbor(group, (x, y) => {
             if (!this.board[y][x]) {
@@ -987,20 +1073,24 @@ export class GoEngine extends TypedEventEmitter<Events> {
         });
         return ret;
     }
-    private countLiberties(group:Group):number {
+    private countLiberties(group: Group): number {
         let ct = 0;
-        let counter = (x:number, y:number):number => ct += this.board[y][x] ? 0 : 1;
+        let counter = (x: number, y: number): number => (ct += this.board[y][x] ? 0 : 1);
         for (let i = 0; i < group.length; ++i) {
             this.foreachNeighbor(group[i], counter);
         }
         return ct;
     }
-    private captureGroup(group:Group):number {
+    private captureGroup(group: Group): number {
         for (let i = 0; i < group.length; ++i) {
             let x = group[i].x;
             let y = group[i].y;
-            if (this.board[y][x] === 1) { ++this.white_prisoners; }
-            if (this.board[y][x] === 2) { ++this.black_prisoners; }
+            if (this.board[y][x] === 1) {
+                ++this.white_prisoners;
+            }
+            if (this.board[y][x] === 2) {
+                ++this.black_prisoners;
+            }
             this.board[y][x] = 0;
             if (this.goban_callback) {
                 this.goban_callback.set(x, y, 0);
@@ -1008,38 +1098,53 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return group.length;
     }
-    public playerToMove():number {
+    public playerToMove(): number {
         return this.player === 1 ? this.players.black.id : this.players.white.id;
     }
-    public playerNotToMove():number {
+    public playerNotToMove(): number {
         return this.player === 2 ? this.players.black.id : this.players.white.id;
     }
-    public otherPlayer():JGOFNumericPlayerColor {
+    public otherPlayer(): JGOFNumericPlayerColor {
         return this.player === 2 ? 1 : 2;
     }
-    public playerColor(player_id?:number):'black'|'white'|'invalid' {
-        if (typeof(player_id) === 'number') {
-            return (player_id === this.players.black.id ? "black" :
-                    (player_id === this.players.white.id ? "white" : "invalid"));
+    public playerColor(player_id?: number): "black" | "white" | "invalid" {
+        if (typeof player_id === "number") {
+            return player_id === this.players.black.id
+                ? "black"
+                : player_id === this.players.white.id
+                ? "white"
+                : "invalid";
         } else {
             return this.colorToMove();
         }
     }
-    public colorToMove():'black'|'white' {
+    public colorToMove(): "black" | "white" {
         return this.player === 1 ? "black" : "white";
     }
-    public colorNotToMove():'black'|'white' {
+    public colorNotToMove(): "black" | "white" {
         return this.player !== 1 ? "black" : "white";
     }
-    public playerByColor(color:PlayerColor | JGOFNumericPlayerColor):JGOFNumericPlayerColor {
-        if (color === "black") { return 1; }
-        if (color === "white") { return 2; }
+    public playerByColor(color: PlayerColor | JGOFNumericPlayerColor): JGOFNumericPlayerColor {
+        if (color === "black") {
+            return 1;
+        }
+        if (color === "white") {
+            return 2;
+        }
         if (color === 1 || color === 2) {
             return color as JGOFNumericPlayerColor;
         }
         return 0;
     }
-    public place(x:number, y:number, checkForKo?:boolean, errorOnSuperKo?:boolean, dontCheckForSuperKo?:boolean, dontCheckForSuicide?:boolean, isTrunkMove?:boolean):number {
+    public place(
+        x: number,
+        y: number,
+        checkForKo?: boolean,
+        errorOnSuperKo?: boolean,
+        dontCheckForSuperKo?: boolean,
+        dontCheckForSuicide?: boolean,
+        isTrunkMove?: boolean,
+    ): number {
         let peices_removed = 0;
 
         try {
@@ -1047,10 +1152,17 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 if (this.board[y][x]) {
                     if ("loading_sgf" in this && this.loading_sgf) {
                         if (this.board[y][x] !== this.player) {
-                            console.log("Invalid duplicate stone placement at " + this.prettyCoords(x, y) + " board color: "
-                                        + this.board[y][x] + "   placed color: " + this.player + " - edit placing into new branch");
-                                        this.editPlace(x, y, this.player);
-                                        this.player = this.opponent();
+                            console.log(
+                                "Invalid duplicate stone placement at " +
+                                    this.prettyCoords(x, y) +
+                                    " board color: " +
+                                    this.board[y][x] +
+                                    "   placed color: " +
+                                    this.player +
+                                    " - edit placing into new branch",
+                            );
+                            this.editPlace(x, y, this.player);
+                            this.player = this.opponent();
                         }
                         return 0;
                     }
@@ -1059,7 +1171,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         this.game_id || this.review_id || 0,
                         this.cur_move?.move_number ?? -1,
                         this.prettyCoords(x, y),
-                        "stone_already_placed_here"
+                        "stone_already_placed_here",
                     );
                 }
                 this.board[y][x] = this.player;
@@ -1078,14 +1190,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         if (this.allow_self_capture || dontCheckForSuicide) {
                             peices_removed += this.captureGroup(player_group);
                             suicide_move = true;
-                        }
-                        else {
+                        } else {
                             this.board[y][x] = 0;
                             throw new GobanMoveError(
                                 this.game_id || this.review_id || 0,
                                 this.cur_move?.move_number ?? -1,
                                 this.prettyCoords(x, y),
-                                "move_is_suicidal"
+                                "move_is_suicidal",
                             );
                         }
                     }
@@ -1093,12 +1204,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
                 if (checkForKo && !this.allow_ko) {
                     let current_state = this.getState();
-                    if (!this.cur_move.edited && this.boardStatesAreTheSame(current_state, this.cur_move.index(-1).state)) {
+                    if (
+                        !this.cur_move.edited &&
+                        this.boardStatesAreTheSame(current_state, this.cur_move.index(-1).state)
+                    ) {
                         throw new GobanMoveError(
                             this.game_id || this.review_id || 0,
                             this.cur_move?.move_number ?? -1,
                             this.prettyCoords(x, y),
-                            "illegal_ko_move"
+                            "illegal_ko_move",
                         );
                     }
                 }
@@ -1112,7 +1226,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                                 this.game_id || this.review_id || 0,
                                 this.cur_move?.move_number ?? -1,
                                 this.prettyCoords(x, y),
-                                "illegal_board_repetition"
+                                "illegal_board_repetition",
                             );
                         }
                     }
@@ -1124,7 +1238,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     }
                 }
             }
-
 
             if (x < 0 && this.handicapMovesLeft() > 0) {
                 //console.log("Skipping old-style implicit pass on handicap: ", this.player);
@@ -1140,7 +1253,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
             let trunk = isTrunkMove ? true : false;
             //console.log("Trunk move: ", trunk, this.goban_callback.mode);
             //this.cur_move = this.cur_move.move(x, y, trunk, false, color, next_move_number, !this.dontStoreBoardHistory ? this.getState() : null);
-            this.cur_move = this.cur_move.move(x, y, trunk, false, color, next_move_number, this.getState());
+            this.cur_move = this.cur_move.move(
+                x,
+                y,
+                trunk,
+                false,
+                color,
+                next_move_number,
+                this.getState(),
+            );
         } catch (e) {
             this.jumpTo(this.cur_move);
             /*
@@ -1162,15 +1283,19 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         return peices_removed;
     }
-    public isBoardRepeating(superko_rule:GoEngineSuperKoAlgorithm):boolean {
+    public isBoardRepeating(superko_rule: GoEngineSuperKoAlgorithm): boolean {
         let MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
         let current_state = this.getState();
         //var current_state = this.cur_move.state;
         let current_player_to_move = this.player;
-        const check_situational = superko_rule === 'ssk';
+        const check_situational = superko_rule === "ssk";
 
-        let t:MoveTree | null | undefined = this.cur_move.index(-2);
-        for (let i = Math.min(MAX_SUPERKO_SEARCH, this.cur_move.move_number - 2); i > 0; --i, t = t?.prev()) {
+        let t: MoveTree | null | undefined = this.cur_move.index(-2);
+        for (
+            let i = Math.min(MAX_SUPERKO_SEARCH, this.cur_move.move_number - 2);
+            i > 0;
+            --i, t = t?.prev()
+        ) {
             if (t) {
                 if (!check_situational || t.player == current_player_to_move) {
                     if (this.boardStatesAreTheSame(t.state, current_state)) {
@@ -1181,7 +1306,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return false;
     }
-    public editPlace(x:number, y:number, color:JGOFNumericPlayerColor, isTrunkMove?:boolean):void {
+    public editPlace(
+        x: number,
+        y: number,
+        color: JGOFNumericPlayerColor,
+        isTrunkMove?: boolean,
+    ): void {
         let player = this.playerByColor(color);
 
         if (x >= 0 && y >= 0) {
@@ -1193,9 +1323,22 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         let trunk = isTrunkMove ? true : false;
 
-        this.cur_move = this.cur_move.move(x, y, trunk, true, player, this.cur_move.move_number, this.getState());
+        this.cur_move = this.cur_move.move(
+            x,
+            y,
+            trunk,
+            true,
+            player,
+            this.cur_move.move_number,
+            this.getState(),
+        );
     }
-    public initialStatePlace(x:number, y:number, color:JGOFNumericPlayerColor, dont_record_placement?:boolean):void {
+    public initialStatePlace(
+        x: number,
+        y: number,
+        color: JGOFNumericPlayerColor,
+        dont_record_placement?: boolean,
+    ): void {
         let moves = null;
         let p = this.player;
 
@@ -1214,7 +1357,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         if (!dont_record_placement) {
             /* Remove */
-            moves = this.decodeMoves(this.initial_state?.black || '');
+            moves = this.decodeMoves(this.initial_state?.black || "");
             for (let i = 0; i < moves.length; ++i) {
                 if (moves[i].x === x && moves[i].y === y) {
                     moves.splice(i, 1);
@@ -1223,7 +1366,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
             this.initial_state.black = encodeMoves(moves);
 
-            moves = this.decodeMoves(this.initial_state?.white || '');
+            moves = this.decodeMoves(this.initial_state?.white || "");
             for (let i = 0; i < moves.length; ++i) {
                 if (moves[i].x === x && moves[i].y === y) {
                     moves.splice(i, 1);
@@ -1234,15 +1377,17 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
             /* Then add if applicable */
             if (color) {
-                let moves = this.decodeMoves(this.initial_state[color === 1 ? "black" : "white"] || '');
-                moves.push({"x": x, "y": y, "color": color});
+                let moves = this.decodeMoves(
+                    this.initial_state[color === 1 ? "black" : "white"] || "",
+                );
+                moves.push({ x: x, y: y, color: color });
                 this.initial_state[color === 1 ? "black" : "white"] = encodeMoves(moves);
             }
         }
 
         this.resetMoveTree();
     }
-    public resetMoveTree():void {
+    public resetMoveTree(): void {
         let marks = null;
         if (this.move_tree) {
             marks = this.move_tree.getAllMarks();
@@ -1261,7 +1406,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.player = this.config["initial_player"] === "white" ? 2 : 1;
         }
     }
-    public computeInitialStateForForkedGame():{black:string; white:string} {
+    public computeInitialStateForForkedGame(): { black: string; white: string } {
         let black = "";
         let white = "";
         for (let y = 0; y < this.height; ++y) {
@@ -1280,10 +1425,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
         };
     }
 
-    public toggleMetaGroupRemoval(x:number, y:number): Array<[-1|0|1, Group]> {
+    public toggleMetaGroupRemoval(x: number, y: number): Array<[-1 | 0 | 1, Group]> {
         try {
             if (x >= 0 && y >= 0) {
-                let removing:(-1|0|1) = (!this.removal[y][x] ? 1 : 0);
+                let removing: -1 | 0 | 1 = !this.removal[y][x] ? 1 : 0;
                 let group = this.getGroup(x, y, true);
                 let removed_stones = this.setGroupForRemoval(x, y, removing)[1];
                 let empty_spaces = [];
@@ -1291,12 +1436,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 let group_color = this.board[y][x];
                 if (group_color === 0) {
                     /* just toggle open area */
-
                 } else {
-
                     /* for stones though, toggle the selected stone group any any stone
                      * groups which are adjacent to it through open area */
-                    let already_done:{[str:string]: boolean} = {};
+                    let already_done: { [str: string]: boolean } = {};
 
                     let space = this.getConnectedOpenSpace(group);
                     for (let i = 0; i < space.length; ++i) {
@@ -1325,7 +1468,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 if (!removing) {
                     return [[removing, removed_stones]];
                 } else {
-                    return [[removing, removed_stones], [(!removing ? 1 : 0), empty_spaces]];
+                    return [
+                        [removing, removed_stones],
+                        [!removing ? 1 : 0, empty_spaces],
+                    ];
                 }
             }
         } catch (err) {
@@ -1334,7 +1480,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         return [[0, []]];
     }
-    private setGroupForRemoval(x:number, y:number, toggle_set:-1|0|1):[-1|0|1, Group] {
+    private setGroupForRemoval(x: number, y: number, toggle_set: -1 | 0 | 1): [-1 | 0 | 1, Group] {
         /*
            If toggle_set === -1, toggle the selection from marked / unmarked.
            If toggle_set === 0, unmark the group for removal
@@ -1357,15 +1503,19 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return [0, []];
     }
-    public setRemoved(x:number, y:number, removed:boolean | 0 | 1):void {
-        if (x < 0 || y < 0) { return; }
-        if (x > this.width || y > this.height) { return; }
+    public setRemoved(x: number, y: number, removed: boolean | 0 | 1): void {
+        if (x < 0 || y < 0) {
+            return;
+        }
+        if (x > this.width || y > this.height) {
+            return;
+        }
         this.removal[y][x] = removed ? 1 : 0;
         if (this.goban_callback) {
             this.goban_callback.setForRemoval(x, y, this.removal[y][x]);
         }
     }
-    public clearRemoved():void {
+    public clearRemoved(): void {
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
@@ -1374,7 +1524,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
         }
     }
-    public getStoneRemovalString():string {
+    public getStoneRemovalString(): string {
         let ret = "";
         let arr = [];
         for (let y = 0; y < this.height; ++y) {
@@ -1391,35 +1541,35 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return GoMath.sortMoves(ret, this.width, this.height);
     }
 
-    public getMoveNumber():number {
+    public getMoveNumber(): number {
         return this.cur_move ? this.cur_move.move_number : 0;
     }
-    public getCurrentMoveNumber():number {
+    public getCurrentMoveNumber(): number {
         return this.last_official_move.move_number;
     }
 
     /* Returns a details object containing the total score and the breakdown of the
      * scoring details */
-    public computeScore(only_prisoners?:boolean):Score {
+    public computeScore(only_prisoners?: boolean): Score {
         let ret = {
-            "white": {
-                "total": 0,
-                "stones": 0,
-                "territory": 0,
-                "prisoners": 0,
-                "scoring_positions": "",
-                "handicap": this.handicap,
-                "komi": this.komi
+            white: {
+                total: 0,
+                stones: 0,
+                territory: 0,
+                prisoners: 0,
+                scoring_positions: "",
+                handicap: this.handicap,
+                komi: this.komi,
             },
-            "black": {
-                "total": 0,
-                "stones": 0,
-                "territory": 0,
-                "prisoners": 0,
-                "scoring_positions": "",
-                "handicap": 0,
-                "komi": 0
-            }
+            black: {
+                total: 0,
+                stones: 0,
+                territory: 0,
+                prisoners: 0,
+                scoring_positions: "",
+                handicap: 0,
+                komi: 0,
+            },
         };
 
         if (this.aga_handicap_scoring && ret.white.handicap > 0) {
@@ -1430,7 +1580,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         let removed_white = 0;
 
         /* clear removed */
-        if ((!this.goban_callback || this.goban_callback.mode !== "analyze")) {
+        if (!this.goban_callback || this.goban_callback.mode !== "analyze") {
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
                     if (this.removal[y][x]) {
@@ -1446,7 +1596,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
         }
 
-        let scored:Array<Array<number>> = [];
+        let scored: Array<Array<number>> = [];
         for (let y = 0; y < this.height; ++y) {
             let row = [];
             for (let x = 0; x < this.width; ++x) {
@@ -1455,7 +1605,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             scored.push(row);
         }
 
-        let markScored = (group:Group) => {
+        let markScored = (group: Group) => {
             let ct = 0;
             for (let i = 0; i < group.length; ++i) {
                 let x = group[i].x;
@@ -1473,7 +1623,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         in_review = true;
                     }
                     */
-                } catch (e) { }
+                } catch (e) {}
                 if (!this.removal[y][x] || oldboard[y][x] || in_review) {
                     ++ct;
                     scored[y][x] = 1;
@@ -1481,7 +1631,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
             return ct;
         };
-
 
         //if (this.phase !== "play") {
         if (!only_prisoners && this.score_territory) {
@@ -1491,7 +1640,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
             gm.foreachGroup((gr) => {
                 if (gr.is_territory) {
                     //console.log(gr);
-                    if (!this.score_territory_in_seki && gr.is_territory_in_seki && this.strict_seki_mode) {
+                    if (
+                        !this.score_territory_in_seki &&
+                        gr.is_territory_in_seki &&
+                        this.strict_seki_mode
+                    ) {
                         return;
                     }
                     if (gr.territory_color === 1) {
@@ -1536,11 +1689,19 @@ export class GoEngine extends TypedEventEmitter<Events> {
             ret["white"].prisoners = this.white_prisoners + removed_black;
         }
 
-        ret["black"].total = ret["black"].stones + ret["black"].territory + ret["black"].prisoners + ret["black"].komi;
+        ret["black"].total =
+            ret["black"].stones +
+            ret["black"].territory +
+            ret["black"].prisoners +
+            ret["black"].komi;
         if (this.score_handicap) {
             ret["black"].total += ret["black"].handicap;
         }
-        ret["white"].total = ret["white"].stones + ret["white"].territory + ret["white"].prisoners + ret["white"].komi;
+        ret["white"].total =
+            ret["white"].stones +
+            ret["white"].territory +
+            ret["white"].prisoners +
+            ret["white"].komi;
         if (this.score_handicap) {
             ret["white"].total += ret["white"].handicap;
         }
@@ -1554,7 +1715,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                  *   - anoek 2015-02-01
                  */
                 let f = parseFloat(this.outcome);
-                if (f - 1 === (Math.abs(ret.white.total - ret.black.total))) {
+                if (f - 1 === Math.abs(ret.white.total - ret.black.total)) {
                     ret.white.handicap += 1;
                 }
             }
@@ -1562,19 +1723,18 @@ export class GoEngine extends TypedEventEmitter<Events> {
             console.log(e);
         }
 
-
         this.jumpTo(this.cur_move);
 
         return ret;
     }
-    public handicapMovesLeft():number {
+    public handicapMovesLeft(): number {
         if (this.free_handicap_placement) {
             return Math.max(0, this.handicap - this.getMoveNumber());
         }
         return 0;
     }
 
-    private static normalizeConfig(config:GoEngineConfig):void {
+    private static normalizeConfig(config: GoEngineConfig): void {
         if (config.ladder !== config.ladder_id) {
             config.ladder_id = config.ladder;
         }
@@ -1591,13 +1751,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
             if (!config.players) {
                 config.players = {
                     black: {
-                        username: 'black',
+                        username: "black",
                         id: config.black_player_id || NaN,
                     },
                     white: {
-                        username: 'white',
+                        username: "white",
                         id: config.white_player_id || NaN,
-                    }
+                    },
                 };
             }
 
@@ -1609,16 +1769,24 @@ export class GoEngine extends TypedEventEmitter<Events> {
             config.players.white.id = config.players.white.id ?? config.white_player_id;
 
             if (config.players.black.id !== config.black_player_id) {
-                throw new Error(`config.players.black.id (${config.players.black.id}) !== deprecated config.black_player_id (${config.black_player_id})`);
+                throw new Error(
+                    `config.players.black.id (${config.players.black.id}) !== deprecated config.black_player_id (${config.black_player_id})`,
+                );
             }
             if (config.players.white.id !== config.white_player_id) {
-                throw new Error(`config.players.white.id (${config.players.white.id}) !== deprecated config.white_player_id (${config.white_player_id})`);
+                throw new Error(
+                    `config.players.white.id (${config.players.white.id}) !== deprecated config.white_player_id (${config.white_player_id})`,
+                );
             }
         }
     }
-    public static fillDefaults(game_obj:GoEngineConfig):GoEngineConfig {
-        if (!("phase" in game_obj)) { game_obj.phase = "play"; }
-        if (!("rules" in game_obj)) { game_obj.rules = "japanese"; }
+    public static fillDefaults(game_obj: GoEngineConfig): GoEngineConfig {
+        if (!("phase" in game_obj)) {
+            game_obj.phase = "play";
+        }
+        if (!("rules" in game_obj)) {
+            game_obj.rules = "japanese";
+        }
 
         let defaults: GoEngineConfig = {};
 
@@ -1639,8 +1807,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         defaults.allow_superko = false;
         defaults.superko_algorithm = "psk";
         defaults.players = {
-            black: {"username": "Black", id:NaN, "rank": -1},
-            white: {"username": "White", id:NaN, "rank": -1},
+            black: { username: "Black", id: NaN, rank: -1 },
+            white: { username: "White", id: NaN, rank: -1 },
         };
         defaults.player_pool = {};
         defaults.disable_analysis = false;
@@ -1658,7 +1826,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         let rules = game_obj.rules || defaults.rules;
 
         switch (rules.toLowerCase()) {
-            case "chinese"  :
+            case "chinese":
                 //defaults.komi = 5.5;
                 defaults.komi = 7.5;
                 defaults.score_prisoners = false;
@@ -1671,7 +1839,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 }
                 break;
 
-            case "aga"      :
+            case "aga":
                 defaults.komi = 7.5;
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
@@ -1681,7 +1849,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 defaults.score_handicap = true;
                 break;
 
-            case "japanese" :
+            case "japanese":
                 defaults.komi = 6.5;
                 defaults.allow_superko = true;
                 defaults.score_territory_in_seki = false;
@@ -1690,7 +1858,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 defaults.opponent_plays_first_after_resume = true;
                 break;
 
-            case "korean"   :
+            case "korean":
                 defaults.komi = 6.5;
                 defaults.allow_superko = true;
                 defaults.score_territory_in_seki = false;
@@ -1699,7 +1867,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 defaults.opponent_plays_first_after_resume = true;
                 break;
 
-            case "ing"      :
+            case "ing":
                 defaults.komi = 8;
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
@@ -1708,7 +1876,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 defaults.allow_self_capture = true;
                 break;
 
-            case "nz"       :
+            case "nz":
                 defaults.komi = 7;
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
@@ -1738,7 +1906,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         //if (typeof(game_obj.time_control) !== "object") {
         //    throw new Error(`Unhandled time control: was not object, instead found ${game_obj.time_control}`)
-            /*
+        /*
             if (!game_obj.time_control) {
                 game_obj.time_control = "none";
             }
@@ -1774,94 +1942,111 @@ export class GoEngine extends TypedEventEmitter<Events> {
             */
         //}
 
-
-
         if (!("initial_state" in game_obj) && !("original_sgf" in game_obj)) {
-            if ((game_obj.width !== 19 || game_obj.height !== 19) &&
+            if (
+                (game_obj.width !== 19 || game_obj.height !== 19) &&
                 (game_obj.width !== 13 || game_obj.height !== 13) &&
-                    (game_obj.width !== 9  || game_obj.height !== 9)
-                ) {
+                (game_obj.width !== 9 || game_obj.height !== 9)
+            ) {
+                game_obj.free_handicap_placement = true;
+            }
+
+            if (game_obj.handicap && !game_obj.free_handicap_placement) {
+                let white = "";
+                let black = "";
+                let stars;
+                if (game_obj.width === 19) {
+                    stars = [
+                        [encodeMove(3, 3), encodeMove(9, 3), encodeMove(15, 3)],
+                        [encodeMove(3, 9), encodeMove(9, 9), encodeMove(15, 9)],
+                        [encodeMove(3, 15), encodeMove(9, 15), encodeMove(15, 15)],
+                    ];
+                }
+                if (game_obj.width === 13) {
+                    stars = [
+                        [encodeMove(3, 3), encodeMove(6, 3), encodeMove(9, 3)],
+                        [encodeMove(3, 6), encodeMove(6, 6), encodeMove(9, 6)],
+                        [encodeMove(3, 9), encodeMove(6, 9), encodeMove(9, 9)],
+                    ];
+                }
+                if (game_obj.width === 9) {
+                    stars = [
+                        [encodeMove(2, 2), encodeMove(4, 2), encodeMove(6, 2)],
+                        [encodeMove(2, 4), encodeMove(4, 4), encodeMove(6, 4)],
+                        [encodeMove(2, 6), encodeMove(4, 6), encodeMove(6, 6)],
+                    ];
+                }
+
+                if (stars) {
+                    switch (game_obj.handicap) {
+                        case 8:
+                            black += stars[0][1] + stars[2][1];
+                        /* falls through */
+                        case 6:
+                            black += stars[1][0] + stars[1][2];
+                        /* falls through */
+                        case 4:
+                            black += stars[0][0];
+                        /* falls through */
+                        case 3:
+                            black += stars[2][2];
+                        /* falls through */
+                        case 2:
+                            black += stars[0][2] + stars[2][0];
+                            /* falls through */
+                            game_obj.initial_player = "white";
+                            break;
+
+                        case 9:
+                            black += stars[0][1] + stars[2][1];
+                        /* falls through */
+                        case 7:
+                            black += stars[1][0] + stars[1][2];
+                        /* falls through */
+                        case 5:
+                            black += stars[1][1];
+                            black += stars[0][0];
+                            black += stars[2][2];
+                            black += stars[0][2] + stars[2][0];
+                            game_obj.initial_player = "white";
+                            break;
+
+                        default:
+                            /* covers 1 stone too */
+                            game_obj.free_handicap_placement = true;
+                            break;
+                    }
+
+                    if ("ogs_import" in game_obj) {
+                        /* ogs had the starting stones for 2 and 3 swapped from the cannonical positioning */
+                        if (game_obj.handicap === 2) {
+                            black = stars[0][0] + stars[2][2];
+                        }
+                        if (game_obj.handicap === 3) {
+                            black = stars[0][0] + stars[0][2] + stars[2][2];
+                        }
+                    }
+                } else {
                     game_obj.free_handicap_placement = true;
                 }
 
-                if (game_obj.handicap && !game_obj.free_handicap_placement) {
-                    let white = "";
-                    let black = "";
-                    let stars;
-                    if (game_obj.width === 19) {
-                        stars = [
-                            [ encodeMove(3, 3), encodeMove(9, 3), encodeMove(15, 3)],
-                            [ encodeMove(3, 9), encodeMove(9, 9), encodeMove(15, 9)],
-                            [ encodeMove(3, 15), encodeMove(9, 15), encodeMove(15, 15)],
-                        ];
-                    }
-                    if (game_obj.width === 13) {
-                        stars = [
-                            [ encodeMove(3, 3), encodeMove(6, 3), encodeMove(9, 3)],
-                            [ encodeMove(3, 6), encodeMove(6, 6), encodeMove(9, 6)],
-                            [ encodeMove(3, 9), encodeMove(6, 9), encodeMove(9, 9)],
-                        ];
-                    }
-                    if (game_obj.width === 9) {
-                        stars = [
-                            [ encodeMove(2, 2), encodeMove(4, 2), encodeMove(6, 2)],
-                            [ encodeMove(2, 4), encodeMove(4, 4), encodeMove(6, 4)],
-                            [ encodeMove(2, 6), encodeMove(4, 6), encodeMove(6, 6)],
-                        ];
-                    }
-
-                    if (stars) {
-                        switch (game_obj.handicap) {
-                            case 8: black += stars[0][1] + stars[2][1];
-                                /* falls through */
-                            case 6: black += stars[1][0] + stars[1][2];
-                                /* falls through */
-                            case 4: black += stars[0][0];
-                                /* falls through */
-                            case 3: black += stars[2][2];
-                                /* falls through */
-                            case 2: black += stars[0][2] + stars[2][0];
-                                /* falls through */
-                                game_obj.initial_player = "white";
-                                break;
-
-                            case 9: black += stars[0][1] + stars[2][1];
-                                /* falls through */
-                            case 7: black += stars[1][0] + stars[1][2];
-                                /* falls through */
-                            case 5: black += stars[1][1];
-                                black += stars[0][0];
-                                black += stars[2][2];
-                                black += stars[0][2] + stars[2][0];
-                                game_obj.initial_player = "white";
-                                break;
-
-                            default: /* covers 1 stone too */
-                                game_obj.free_handicap_placement = true;
-                                break;
-                        }
-
-                        if ("ogs_import" in game_obj) {
-                            /* ogs had the starting stones for 2 and 3 swapped from the cannonical positioning */
-                            if (game_obj.handicap === 2) { black = stars[0][0] + stars[2][2]; }
-                            if (game_obj.handicap === 3) { black = stars[0][0] + stars[0][2] + stars[2][2]; }
-                        }
-                    } else {
-                        game_obj.free_handicap_placement = true;
-                    }
-
-                    game_obj.initial_state = {"black": black, "white": white};
-                } else {
-                    game_obj.initial_state = {"black": "", "white": ""};
-                }
+                game_obj.initial_state = { black: black, white: white };
+            } else {
+                game_obj.initial_state = { black: "", white: "" };
+            }
         }
-
 
         if (game_obj.phase === "finished" && game_obj.ogs && game_obj.score) {
             let ogs = game_obj.ogs;
-            game_obj.score.white.scoring_positions = (game_obj.rules !== "japanese" ? ogs.white_stones : "") + ogs.white_territory;
-            game_obj.score.black.scoring_positions = (game_obj.rules !== "japanese" ? ogs.black_stones : "") + ogs.black_territory;
-            let dead = ogs.black_seki_eyes + ogs.white_seki_eyes + ogs.black_dead_stones + ogs.white_dead_stones;
+            game_obj.score.white.scoring_positions =
+                (game_obj.rules !== "japanese" ? ogs.white_stones : "") + ogs.white_territory;
+            game_obj.score.black.scoring_positions =
+                (game_obj.rules !== "japanese" ? ogs.black_stones : "") + ogs.black_territory;
+            let dead =
+                ogs.black_seki_eyes +
+                ogs.white_seki_eyes +
+                ogs.black_dead_stones +
+                ogs.white_dead_stones;
             if (game_obj.players?.white) {
                 game_obj.players.white.accepted_stones = dead;
             }
@@ -1873,7 +2058,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         return game_obj;
     }
-    public static clearRuleSettings(game_obj:GoEngineConfig):GoEngineConfig {
+    public static clearRuleSettings(game_obj: GoEngineConfig): GoEngineConfig {
         delete game_obj.allow_self_capture;
         delete game_obj.automatic_stone_removal;
         delete game_obj.allow_ko;
@@ -1888,12 +2073,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
         delete game_obj.komi;
         return game_obj;
     }
-    private parseSGF(sgf:string):() => void {
+    private parseSGF(sgf: string): () => void {
         /* This callback is eventually returned after the parse. It is the function
          * that should be run which will perform the actual moves. This function is
          * constructed by making a bunch of dyanmic functions and chaining them
          * together.. slick or sick, depending on your PoV..  */
-        let instructions:Array<() => void> = [];
+        let instructions: Array<() => void> = [];
 
         let self = this;
         let pos = 0;
@@ -1901,8 +2086,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         let inMainBranch = true;
         let gametree_depth = 0;
-        let farthest_move:MoveTree;
-        let initial_player:'black' | 'white' | undefined;
+        let farthest_move: MoveTree;
+        let initial_player: "black" | "white" | undefined;
 
         if (sgf.charCodeAt(0) > 255) {
             /* Assume this is a Byte Order Mark */
@@ -1919,15 +2104,18 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         function whitespace() {
-            while (sgf[pos] === " " || sgf[pos] === "\t" || sgf[pos] === "\n" || sgf[pos] === "\r") {
+            while (
+                sgf[pos] === " " ||
+                sgf[pos] === "\t" ||
+                sgf[pos] === "\n" ||
+                sgf[pos] === "\r"
+            ) {
                 if (sgf[pos] === "\n") {
                     ++line;
                 }
                 ++pos;
             }
         }
-
-
 
         function gametree() {
             gametree_depth++;
@@ -1937,7 +2125,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
             let ret = [];
             whitespace();
-            if (sgf[pos] !== "(") { throw new Error("Expecting '(' to start a GameTree"); }
+            if (sgf[pos] !== "(") {
+                throw new Error("Expecting '(' to start a GameTree");
+            }
             ++pos;
             let s = sequence();
             ret.push(s);
@@ -1945,8 +2135,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
             while (sgf[pos] === "(") {
                 process();
             }
-            function process():void {
-                let cur:MoveTree;
+            function process(): void {
+                let cur: MoveTree;
                 instructions.push(() => {
                     cur = self.cur_move;
                     //console.log("Stashing jump pos: ", cur.id);
@@ -1962,28 +2152,35 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
 
             whitespace();
-            if (sgf[pos] !== ")") { throw new Error("Expecting ')' to end GameTree (found 0x" + sgf.charCodeAt(pos) + ")"); }
+            if (sgf[pos] !== ")") {
+                throw new Error(
+                    "Expecting ')' to end GameTree (found 0x" + sgf.charCodeAt(pos) + ")",
+                );
+            }
             ++pos;
             whitespace();
             --gametree_depth;
             return ret;
-
         }
 
-        function sequence():Array<Array<Array<string>>> {
+        function sequence(): Array<Array<Array<string>>> {
             whitespace();
-            let ret:Array<Array<Array<string>>> = [];
+            let ret: Array<Array<Array<string>>> = [];
             while (sgf[pos] === ";") {
                 let n = node();
                 ret.push(n);
             }
-            if (ret.length === 0) { throw new Error("Expecting Sequence"); }
+            if (ret.length === 0) {
+                throw new Error("Expecting Sequence");
+            }
             return ret;
         }
 
-        function node():Array<Array<string>> {
-            let ret:Array<Array<string>> = [];
-            if (sgf[pos] !== ";") { throw new Error("Expecting ';' to start a Node"); }
+        function node(): Array<Array<string>> {
+            let ret: Array<Array<string>> = [];
+            if (sgf[pos] !== ";") {
+                throw new Error("Expecting ';' to start a Node");
+            }
             ++pos;
             whitespace();
             while (/[A-Za-z]/.test(sgf[pos])) {
@@ -1992,18 +2189,22 @@ export class GoEngine extends TypedEventEmitter<Events> {
             return ret;
         }
 
-        function property():Array<string> {
-            let ret:Array<string> = [];
+        function property(): Array<string> {
+            let ret: Array<string> = [];
             let ident = "";
             while (/[a-zA-Z]/.test(sgf[pos])) {
                 ident += sgf[pos++];
             }
-            if (ident === "") { throw new Error("Expecting PropIdent"); }
+            if (ident === "") {
+                throw new Error("Expecting PropIdent");
+            }
             ret.push(ident);
 
             whitespace();
 
-            if (sgf[pos] !== "[") { throw new Error("Expecting '[' to start a PropValue"); }
+            if (sgf[pos] !== "[") {
+                throw new Error("Expecting '[' to start a PropValue");
+            }
 
             while (sgf[pos] === "[") {
                 ++pos;
@@ -2020,7 +2221,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 }
                 ret.push(value);
 
-                if (sgf[pos] !== "]") { throw new Error("Expecting ']' to close a PropValue"); }
+                if (sgf[pos] !== "]") {
+                    throw new Error("Expecting ']' to close a PropValue");
+                }
                 ++pos;
                 whitespace();
             }
@@ -2029,7 +2232,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             return ret;
         }
 
-        function parseRank(rank:string):number {
+        function parseRank(rank: string): number {
             let b = parseInt(rank);
             if (/[kK]/.test(rank)) {
                 return 30 - b;
@@ -2043,17 +2246,16 @@ export class GoEngine extends TypedEventEmitter<Events> {
             return -100;
         }
 
-
-        function processProperty(ident:string, values:Array<string>) {
+        function processProperty(ident: string, values: Array<string>) {
             for (let i = 1; i < values.length; ++i) {
                 process(values[i]);
             }
 
-            function process(val:string) {
+            function process(val: string) {
                 switch (ident) {
                     case "AB":
                     case "AW":
-                            {
+                        {
                             if (!inMainBranch) {
                                 instructions.push(() => {
                                     if (val === "") {
@@ -2065,8 +2267,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
                             } else {
                                 if (!self.config.initial_state) {
                                     self.config.initial_state = {
-                                        black: '',
-                                        white: ''
+                                        black: "",
+                                        white: "",
                                     };
                                 }
 
@@ -2083,13 +2285,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
                                 self.free_handicap_placement = false;
                             }
                         }
-                    break;
+                        break;
 
                     case "W":
                     case "B":
                         {
                             if (!initial_player) {
-                                initial_player = ident === 'B' ? 'black' : 'white';
+                                initial_player = ident === "B" ? "black" : "white";
                                 self.config.initial_player = initial_player;
                             }
 
@@ -2100,18 +2302,25 @@ export class GoEngine extends TypedEventEmitter<Events> {
                                 }
 
                                 let mv = self.decodeMoves(val)[0];
-                                if ((self.player === 1 && ident === "B") || (self.player !== 1 && ident === "W")) {
+                                if (
+                                    (self.player === 1 && ident === "B") ||
+                                    (self.player !== 1 && ident === "W")
+                                ) {
                                     self.place(mv.x, mv.y, false, false, false, true, false);
                                 } else {
                                     self.editPlace(mv.x, mv.y, ident === "B" ? 1 : 2);
                                 }
-                                if (self.cur_move && (farthest_move == null || self.cur_move.move_number > farthest_move.move_number)) {
+                                if (
+                                    self.cur_move &&
+                                    (farthest_move == null ||
+                                        self.cur_move.move_number > farthest_move.move_number)
+                                ) {
                                     farthest_move = self.cur_move;
                                 }
                             });
                         }
 
-                    break;
+                        break;
                     case "C":
                         {
                             instructions.push(() => {
@@ -2127,20 +2336,32 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         {
                             instructions.push(() => {
                                 try {
-                                    let s:string = val.substr(0, 2);
+                                    let s: string = val.substr(0, 2);
                                     let extra = val.substr(3);
                                     let mv = self.decodeMoves(s)[0];
                                     //console.log(mv);
 
                                     let marks = self.cur_move.getMarks(mv.x, mv.y);
                                     switch (ident) {
-                                        case "LB": marks.letter = extra; break;
-                                        case "TR": marks.triangle = true; break;
-                                        case "CR": marks.circle = true; break;
-                                        case "SQ": marks.square = true; break;
-                                        case "XX": marks.cross = true; break;
+                                        case "LB":
+                                            marks.letter = extra;
+                                            break;
+                                        case "TR":
+                                            marks.triangle = true;
+                                            break;
+                                        case "CR":
+                                            marks.circle = true;
+                                            break;
+                                        case "SQ":
+                                            marks.square = true;
+                                            break;
+                                        case "XX":
+                                            marks.cross = true;
+                                            break;
                                     }
-                                } catch (e) { console.error(e); }
+                                } catch (e) {
+                                    console.error(e);
+                                }
                             });
                         }
                         break;
@@ -2149,7 +2370,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
                             instructions.push(() => {
                                 self.handicap = parseInt(val);
                                 if (self.config.initial_player) {
-                                    self.player = self.config.initial_player === 'black' ? JGOFNumericPlayerColor.BLACK : JGOFNumericPlayerColor.WHITE;
+                                    self.player =
+                                        self.config.initial_player === "black"
+                                            ? JGOFNumericPlayerColor.BLACK
+                                            : JGOFNumericPlayerColor.WHITE;
                                 }
                                 /*
                                 if (self.handicap !== 0) {
@@ -2162,7 +2386,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     case "RU":
                         {
                             instructions.push(() => {
-                                let rules:GoEngineRules =  'japanese';
+                                let rules: GoEngineRules = "japanese";
 
                                 switch (val.toLowerCase()) {
                                     case "japanese":
@@ -2196,7 +2420,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
                                         break;
 
                                     default:
-                                        console.warn(`Unknown rule set ${val}, defaulting to Japanese`);
+                                        console.warn(
+                                            `Unknown rule set ${val}, defaulting to Japanese`,
+                                        );
                                 }
 
                                 self.rules = rules;
@@ -2281,7 +2507,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         if (self.config.players?.white) {
                             self.config.players.white.rank = parseRank(val);
                             console.log("PARSED wr", val, self.config.players.white.rank);
-
                         }
                         break;
 
@@ -2296,9 +2521,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
                             instructions.push(() => {
                                 self.territory_included_in_sgf = true;
                                 let black_territory_point = self.decodeMoves(val)[0];
-                                if (self.board[black_territory_point.y][black_territory_point.x] ===
-                                    JGOFNumericPlayerColor.WHITE) {
-                                    self.setRemoved(black_territory_point.x, black_territory_point.y, true);
+                                if (
+                                    self.board[black_territory_point.y][black_territory_point.x] ===
+                                    JGOFNumericPlayerColor.WHITE
+                                ) {
+                                    self.setRemoved(
+                                        black_territory_point.x,
+                                        black_territory_point.y,
+                                        true,
+                                    );
                                 }
                             });
                         }
@@ -2309,9 +2540,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
                             instructions.push(() => {
                                 self.territory_included_in_sgf = true;
                                 let white_territory_point = self.decodeMoves(val)[0];
-                                if (self.board[white_territory_point.y][white_territory_point.x] ===
-                                    JGOFNumericPlayerColor.BLACK) {
-                                    self.setRemoved(white_territory_point.x, white_territory_point.y, true);
+                                if (
+                                    self.board[white_territory_point.y][white_territory_point.x] ===
+                                    JGOFNumericPlayerColor.BLACK
+                                ) {
+                                    self.setRemoved(
+                                        white_territory_point.x,
+                                        white_territory_point.y,
+                                        true,
+                                    );
                                 }
                             });
                         }
@@ -2323,26 +2560,33 @@ export class GoEngine extends TypedEventEmitter<Events> {
         try {
             collection();
         } catch (e) {
-            console.log("Failed to parse SGF on line " + line + " at char '" + sgf[pos] + "' (right after '" + sgf.substr(pos - 10, 10) + "')");
+            console.log(
+                "Failed to parse SGF on line " +
+                    line +
+                    " at char '" +
+                    sgf[pos] +
+                    "' (right after '" +
+                    sgf.substr(pos - 10, 10) +
+                    "')",
+            );
             console.log(e.stack);
         }
 
-
         return () => {
             self.config.players = self.config.players || {
-                'white': {
-                    'id': 0,
-                    'username': 'White',
-                    'rank': 0,
+                white: {
+                    id: 0,
+                    username: "White",
+                    rank: 0,
                 },
-                'black': {
-                    'id': 0,
-                    'username': 'Black',
-                    'rank': 0,
-                }
+                black: {
+                    id: 0,
+                    username: "Black",
+                    rank: 0,
+                },
             };
 
-            instructions.map(f => f());
+            instructions.map((f) => f());
 
             this.move_tree.hoistFirstBranchToTrunk();
 
@@ -2352,13 +2596,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
         };
     }
-    public estimateScore(trials:number, tolerance:number, prefer_remote:boolean = false):Score {
+    public estimateScore(trials: number, tolerance: number, prefer_remote: boolean = false): Score {
         let se = new ScoreEstimator(this.goban_callback, this, trials, tolerance, prefer_remote);
         return se.score();
     }
-    public getMoveByLocation(x:number, y:number):MoveTree | null {
-        let m:MoveTree | null = null;
-        let cur_move:MoveTree | null = this.cur_move;
+    public getMoveByLocation(x: number, y: number): MoveTree | null {
+        let m: MoveTree | null = null;
+        let cur_move: MoveTree | null = this.cur_move;
         while (!m && cur_move) {
             if (cur_move.x === x && cur_move.y === y) {
                 m = cur_move;
@@ -2375,7 +2619,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return m;
     }
 
-    public exportAsPuzzle():PuzzleConfig {
+    public exportAsPuzzle(): PuzzleConfig {
         return {
             mode: "puzzle",
             name: this.name,
@@ -2389,18 +2633,18 @@ export class GoEngine extends TypedEventEmitter<Events> {
             puzzle_description: this.puzzle_description,
             puzzle_collection: this.puzzle_collection,
             initial_player: this.config.initial_player,
-            move_tree: this.move_tree.toJson()
+            move_tree: this.move_tree.toJson(),
         };
     }
-    public getBlackPrisoners():number {
+    public getBlackPrisoners(): number {
         return this.black_prisoners;
     }
-    public getWhitePrisoners():number {
+    public getWhitePrisoners(): number {
         return this.white_prisoners;
     }
     /* Returns the amount of points that should be given to white for any
      * handicap stones in the game. */
-    public getHandicapPointAdjustmentForWhite():number {
+    public getHandicapPointAdjustmentForWhite(): number {
         let ret = 0;
         if (this.score_handicap) {
             if (this.aga_handicap_scoring && this.handicap > 0) {
@@ -2411,5 +2655,4 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return ret;
     }
-
 }

@@ -17,121 +17,192 @@
 import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
-import { GobanCore } from '../GobanCore';
+import { GobanCore } from "../GobanCore";
 
 function getCDNReleaseBase() {
     if (GobanCore.hooks.getCDNReleaseBase) {
         return GobanCore.hooks.getCDNReleaseBase();
     }
-    return '';
+    return "";
 }
 
-export default function(GoThemes:GoThemesInterface) {
+export default function (GoThemes: GoThemesInterface) {
     class Kaya extends GoTheme {
-        sort():number { return 10; }
-        get theme_name():string { return 'Kaya' };
-        getBackgroundCSS():GoThemeBackgroundCSS {
+        sort(): number {
+            return 10;
+        }
+        get theme_name(): string {
+            return "Kaya";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",
             };
         }
-        getLineColor():string { return "#000000"; }
-        getFadedLineColor():string { return "#888888"; }
-        getStarColor():string { return "#000000"; }
-        getFadedStarColor():string { return "#888888"; }
-        getBlankTextColor():string { return "#000000"; }
-        getLabelTextColor():string { return "#444444"; }
+        getLineColor(): string {
+            return "#000000";
+        }
+        getFadedLineColor(): string {
+            return "#888888";
+        }
+        getStarColor(): string {
+            return "#000000";
+        }
+        getFadedStarColor(): string {
+            return "#888888";
+        }
+        getBlankTextColor(): string {
+            return "#000000";
+        }
+        getLabelTextColor(): string {
+            return "#444444";
+        }
     }
 
     _("Kaya"); // ensure translation
     GoThemes["board"]["Kaya"] = Kaya;
 
-
     class RedOak extends GoTheme {
-        sort():number { return  20; }
-        get theme_name():string { return 'Red Oak' };
-        getBackgroundCSS():GoThemeBackgroundCSS {
+        sort(): number {
+            return 20;
+        }
+        get theme_name(): string {
+            return "Red Oak";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + getCDNReleaseBase() + "/img/oak.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/oak.jpg')",
             };
         }
-        getLineColor():string { return "#000000"; }
-        getFadedLineColor():string { return "#888888"; }
-        getStarColor():string { return "#000000"; }
-        getFadedStarColor():string { return "#888888"; }
-        getBlankTextColor():string { return "#000000"; }
-        getLabelTextColor():string { return "#000000"; }
+        getLineColor(): string {
+            return "#000000";
+        }
+        getFadedLineColor(): string {
+            return "#888888";
+        }
+        getStarColor(): string {
+            return "#000000";
+        }
+        getFadedStarColor(): string {
+            return "#888888";
+        }
+        getBlankTextColor(): string {
+            return "#000000";
+        }
+        getLabelTextColor(): string {
+            return "#000000";
+        }
     }
-
 
     _("Red Oak"); // ensure translation
     GoThemes["board"]["Red Oak"] = RedOak;
 
-
-
     class Persimmon extends GoTheme {
-        sort():number { return  30; }
-        get theme_name():string { return 'Persimmon' };
-        getBackgroundCSS():GoThemeBackgroundCSS {
+        sort(): number {
+            return 30;
+        }
+        get theme_name(): string {
+            return "Persimmon";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + getCDNReleaseBase() + "/img/persimmon.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/persimmon.jpg')",
             };
         }
-        getLineColor():string { return "#000000"; }
-        getFadedLineColor():string { return "#888888"; }
-        getStarColor():string { return "#000000"; }
-        getFadedStarColor():string { return "#888888"; }
-        getBlankTextColor():string { return "#000000"; }
-        getLabelTextColor():string { return "#000000"; }
+        getLineColor(): string {
+            return "#000000";
+        }
+        getFadedLineColor(): string {
+            return "#888888";
+        }
+        getStarColor(): string {
+            return "#000000";
+        }
+        getFadedStarColor(): string {
+            return "#888888";
+        }
+        getBlankTextColor(): string {
+            return "#000000";
+        }
+        getLabelTextColor(): string {
+            return "#000000";
+        }
     }
-
 
     _("Persimmon"); // ensure translation
     GoThemes["board"]["Persimmon"] = Persimmon;
 
-
     class BlackWalnut extends GoTheme {
-        sort():number { return  40; }
-        get theme_name():string { return 'Black Walnut' };
-        getBackgroundCSS():GoThemeBackgroundCSS {
+        sort(): number {
+            return 40;
+        }
+        get theme_name(): string {
+            return "Black Walnut";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + getCDNReleaseBase() + "/img/black_walnut.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/black_walnut.jpg')",
             };
         }
-        getLineColor():string { return "#000000"; }
-        getFadedLineColor():string { return "#4A2F24"; }
-        getStarColor():string { return "#000000"; }
-        getFadedStarColor():string { return "#4A2F24"; }
-        getBlankTextColor():string { return "#000000"; }
-        getLabelTextColor():string { return "#000000"; }
+        getLineColor(): string {
+            return "#000000";
+        }
+        getFadedLineColor(): string {
+            return "#4A2F24";
+        }
+        getStarColor(): string {
+            return "#000000";
+        }
+        getFadedStarColor(): string {
+            return "#4A2F24";
+        }
+        getBlankTextColor(): string {
+            return "#000000";
+        }
+        getLabelTextColor(): string {
+            return "#000000";
+        }
     }
-
 
     _("Black Walnut"); // ensure translation
     GoThemes["board"]["Black Walnut"] = BlackWalnut;
 
-
     class Granite extends GoTheme {
-        sort():number { return  40; }
-        get theme_name():string { return 'Granite' };
-        getBackgroundCSS():GoThemeBackgroundCSS {
+        sort(): number {
+            return 40;
+        }
+        get theme_name(): string {
+            return "Granite";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + getCDNReleaseBase() + "/img/granite.jpg')"
+                "background-image": "url('" + getCDNReleaseBase() + "/img/granite.jpg')",
             };
         }
-        getLineColor():string { return "#cccccc"; }
-        getFadedLineColor():string { return "#888888"; }
-        getStarColor():string { return "#cccccc"; }
-        getFadedStarColor():string { return "#888888"; }
-        getBlankTextColor():string { return "#ffffff"; }
-        getLabelTextColor():string { return "#cccccc"; }
+        getLineColor(): string {
+            return "#cccccc";
+        }
+        getFadedLineColor(): string {
+            return "#888888";
+        }
+        getStarColor(): string {
+            return "#cccccc";
+        }
+        getFadedStarColor(): string {
+            return "#888888";
+        }
+        getBlankTextColor(): string {
+            return "#ffffff";
+        }
+        getLabelTextColor(): string {
+            return "#cccccc";
+        }
     }
-
 
     _("Granite"); // ensure translation
     GoThemes["board"]["Granite"] = Granite;
