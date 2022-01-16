@@ -884,10 +884,10 @@ export class GobanCanvas extends GobanCore {
                                         ];
 
                                     if (
-                                        calls === 1
+                                        calls === 1 &&
                                         /* only move if it's the "ai" turn.. if we undo we can get into states where we
-                                         * are playing for the ai for some moves so don't automove blindly */ &&
-                                        ((next.player === 2 &&
+                                         * are playing for the ai for some moves so don't automove blindly */ ((next.player ===
+                                            2 &&
                                             this.engine.config.initial_player === "black") ||
                                             (next.player === 1 &&
                                                 this.engine.config.initial_player === "white")) &&
