@@ -43,6 +43,7 @@
         "cache-loader": "^4.1.0",
         "eventemitter3": "^4.0.7",
         "fork-ts-checker-webpack-plugin": "^6.3.4",
+        "prettier": "^2.5.1",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",
         "thread-loader": "^3.0.4",
