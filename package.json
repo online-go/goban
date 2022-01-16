@@ -23,7 +23,9 @@
         "build-debug": "webpack",
         "build-production": "webpack --mode production",
         "lint": "tslint -p tsconfig.json",
-        "typedoc": "typedoc --mode file --out doc/ --theme minimal --tsconfig tsconfig.json --excludeExternals --externalPattern '**/node_modules/**' --includeDeclarations src/"
+        "typedoc": "typedoc --mode file --out doc/ --theme minimal --tsconfig tsconfig.json --excludeExternals --externalPattern '**/node_modules/**' --includeDeclarations src/",
+        "prettier": "prettier --write \"src/**/*.{ts,tsx}\"",
+        "prettier:check": "prettier --check \"src/**/*.{ts,tsx}\""
     },
     "repository": {
         "type": "git",
