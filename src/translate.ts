@@ -14,57 +14,57 @@
  * limitations under the License.
  */
 
-let catalog:any = {};
+let catalog: any = {};
 let debug_mode = false;
-const debug_wrap = debug_mode ? (s:string) => `[${s}]` : (s:string) => s;
+const debug_wrap = debug_mode ? (s: string) => `[${s}]` : (s: string) => s;
 
 export interface GobanStrings {
-    'Your move': string;
-    'White': string;
-    'Black': string;
-    'Illegal Ko Move': string;
-    'Move is suicidal': string;
-    'Loading...': string;
-    'Processing...': string;
-    'Submitting...': string;
-    'A stone has already been placed here': string;
-    'Illegal board repetition': string;
-    'Error submitting move': string;
-    'Game Finished': string;
-    'Black to move': string;
-    'White to move': string;
-    'Your move - opponent passed': string;
-    'Review': string;
-    'Control passed to %s': string;
-    'Synchronization error, reloading': string;
-    'Stone Removal': string;
-    'Stone Removal Phase': string;
-    'Enter the label you want to add to the board': string;
+    "Your move": string;
+    White: string;
+    Black: string;
+    "Illegal Ko Move": string;
+    "Move is suicidal": string;
+    "Loading...": string;
+    "Processing...": string;
+    "Submitting...": string;
+    "A stone has already been placed here": string;
+    "Illegal board repetition": string;
+    "Error submitting move": string;
+    "Game Finished": string;
+    "Black to move": string;
+    "White to move": string;
+    "Your move - opponent passed": string;
+    Review: string;
+    "Control passed to %s": string;
+    "Synchronization error, reloading": string;
+    "Stone Removal": string;
+    "Stone Removal Phase": string;
+    "Enter the label you want to add to the board": string;
 
-    'Black Walnut': string;
-    'Book': string;
-    'Glass': string;
-    'Granite': string;
-    'HNG Night': string;
-    'HNG': string;
-    'Kaya': string;
-    'Night Play': string;
-    'Night': string;
-    'Persimmon': string;
-    'Plain': string;
-    'Red Oak': string;
-    'Shell': string;
-    'Slate': string;
-    'Worn Glass': string;
+    "Black Walnut": string;
+    Book: string;
+    Glass: string;
+    Granite: string;
+    "HNG Night": string;
+    HNG: string;
+    Kaya: string;
+    "Night Play": string;
+    Night: string;
+    Persimmon: string;
+    Plain: string;
+    "Red Oak": string;
+    Shell: string;
+    Slate: string;
+    "Worn Glass": string;
 
-    '%swk': string; /* short time week */
-    '%sd': string; /* short time day */
-    '%sh': string; /* short time hour */
-    '%sm': string; /* short time minute */
-    '%ss': string; /* short time second */
+    "%swk": string /* short time week */;
+    "%sd": string /* short time day */;
+    "%sh": string /* short time hour */;
+    "%sm": string /* short time minute */;
+    "%ss": string /* short time second */;
 }
 
-export function setGobanTranslations(_catalog:GobanStrings, _debug_mode:boolean = false):void {
+export function setGobanTranslations(_catalog: GobanStrings, _debug_mode: boolean = false): void {
     catalog = _catalog;
     debug_mode = _debug_mode;
 }
@@ -79,8 +79,8 @@ export function interpolate(str: string, params: any): string {
             return params[idx++];
         });
     }
-    if (typeof(params) === "object") {
-        return str.replace(/{{([^}]+)}}/g,  (_, key, position) => {
+    if (typeof params === "object") {
+        return str.replace(/{{([^}]+)}}/g, (_, key, position) => {
             if (!(key in params)) {
                 throw new Error(`Missing interpolation key: ${key} for string: ${str}`);
             }
@@ -90,7 +90,7 @@ export function interpolate(str: string, params: any): string {
     return str.replace(/%[sd]/g, (_, __, position) => params);
 }
 
-export function _(msgid:keyof GobanStrings): string {
+export function _(msgid: keyof GobanStrings): string {
     if (msgid in catalog) {
         return catalog[msgid];
     }

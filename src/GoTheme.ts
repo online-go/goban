@@ -17,50 +17,57 @@
 //import * as PIXI from 'pixi.js-legacy';
 
 export interface GoThemeBackgroundCSS {
-    'background-color'?: string;
-    'background-image'?: string;
-    'background-size'?: string;
+    "background-color"?: string;
+    "background-image"?: string;
+    "background-size"?: string;
 }
 
 export interface GoThemeBackgroundReactStyles {
-    'backgroundColor'?: string;
-    'backgroundImage'?: string;
-    'backgroundSize'?: string;
+    backgroundColor?: string;
+    backgroundImage?: string;
+    backgroundSize?: string;
 }
 
 export class GoTheme {
     public name: string;
-    public styles: {[style_name:string]: string} = {};
+    public styles: { [style_name: string]: string } = {};
     protected parent?: GoTheme; // An optional parent theme
 
-    constructor(parent?:GoTheme) {
+    constructor(parent?: GoTheme) {
         this.name = `[ERROR theme missing name]`;
         this.parent = parent;
     }
 
-    get theme_name():string {
-        return 'ERROR missing theme_name';
+    get theme_name(): string {
+        return "ERROR missing theme_name";
     }
-    public sort():number {
+    public sort(): number {
         return 0;
     }
 
     /* Returns an array of black stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeBlackStone method */
-    public preRenderBlack(radius:number, seed:number): any {
-        return {"black": "stone"};
+    public preRenderBlack(radius: number, seed: number): any {
+        return { black: "stone" };
     }
 
     /* Returns an array of white stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeWhiteStone method */
-    public preRenderWhite(radius:number, seed:number): any {
-        return {"white": "stone"};
+    public preRenderWhite(radius: number, seed: number): any {
+        return { white: "stone" };
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
-    public placeWhiteStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D | null, stone:any, cx:number, cy:number, radius:number) {
+    public placeWhiteStone(
+        ctx: CanvasRenderingContext2D,
+        shadow_ctx: CanvasRenderingContext2D | null,
+        stone: any,
+        cx: number,
+        cy: number,
+        radius: number,
+    ) {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getWhiteStoneColor();
         ctx.beginPath();
@@ -68,7 +75,14 @@ export class GoTheme {
         ctx.fill();
     }
 
-    public placeBlackStone(ctx:CanvasRenderingContext2D, shadow_ctx:CanvasRenderingContext2D | null, stone:any, cx:number, cy:number, radius:number) {
+    public placeBlackStone(
+        ctx: CanvasRenderingContext2D,
+        shadow_ctx: CanvasRenderingContext2D | null,
+        stone: any,
+        cx: number,
+        cy: number,
+        radius: number,
+    ) {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getBlackStoneColor();
         ctx.beginPath();
@@ -118,77 +132,77 @@ export class GoTheme {
 
     /* Should return true if you would like the shadow layer to be present. False
      * speeds up rendering typically */
-    public stoneCastsShadow(radius:number):boolean {
+    public stoneCastsShadow(radius: number): boolean {
         return false;
     }
 
     /* Returns the color that should be used for white stones */
-    public getWhiteStoneColor():string {
+    public getWhiteStoneColor(): string {
         return "#ffffff";
     }
 
     /* Returns the color that should be used for black stones */
-    public getBlackStoneColor():string {
+    public getBlackStoneColor(): string {
         return "#000000";
     }
 
     /* Returns the color that should be used for text over white stones */
-    public getWhiteTextColor(color?:string):string {
+    public getWhiteTextColor(color?: string): string {
         return "#000000";
     }
 
     /* Returns the color that should be used for text over black stones */
-    public getBlackTextColor(color?:string):string {
+    public getBlackTextColor(color?: string): string {
         return "#ffffff";
     }
 
     /* Returns a set of CSS styles that should be applied to the background layer (ie the board) */
-    public getBackgroundCSS():GoThemeBackgroundCSS {
+    public getBackgroundCSS(): GoThemeBackgroundCSS {
         return {
             "background-color": "#DCB35C",
-            "background-image": ""
+            "background-image": "",
         };
     }
 
     /* Returns a set of CSS styles (for react) that should be applied to the background layer (ie the board) */
-    public getReactStyles():GoThemeBackgroundReactStyles {
-        let ret:GoThemeBackgroundReactStyles = {};
-        let css:GoThemeBackgroundCSS  = this.getBackgroundCSS();
+    public getReactStyles(): GoThemeBackgroundReactStyles {
+        let ret: GoThemeBackgroundReactStyles = {};
+        let css: GoThemeBackgroundCSS = this.getBackgroundCSS();
 
-        ret.backgroundColor = css['background-color'];
-        ret.backgroundImage = css['background-image'];
+        ret.backgroundColor = css["background-color"];
+        ret.backgroundImage = css["background-image"];
 
         return ret;
     }
 
     /* Returns the color that should be used for lines */
-    public getLineColor():string {
+    public getLineColor(): string {
         return "#000000";
     }
 
     /* Returns the color that should be used for lines * when there is text over the square */
-    public getFadedLineColor():string {
+    public getFadedLineColor(): string {
         return "#888888";
     }
 
     /* Returns the color that should be used for star points */
-    public getStarColor():string {
+    public getStarColor(): string {
         return "#000000";
     }
 
     /* Returns the color that should be used for star points
      * when there is text over the square */
-    public getFadedStarColor():string {
+    public getFadedStarColor(): string {
         return "#888888";
     }
 
     /* Returns the color that text should be over empty intersections */
-    public getBlankTextColor():string {
+    public getBlankTextColor(): string {
         return "#000000";
     }
 
     /** Returns the color that should be used for labels */
-    public getLabelTextColor():string {
+    public getLabelTextColor(): string {
         return "#000000";
     }
 }

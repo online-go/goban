@@ -17,17 +17,14 @@
 export type GobanErrorMessageId = GobanMoveErrorMessageId | GobanIOErrorMessageId;
 export type GobanErrorMessageObject = GobanMoveErrorMessageObject | GobanIOErrorMessageObject;
 
-export type GobanIOErrorMessageId =
-    "failed_to_load_sgf"
-;
+export type GobanIOErrorMessageId = "failed_to_load_sgf";
 
 export type GobanMoveErrorMessageId =
-    "stone_already_placed_here" |
-    "move_is_suicidal" |
-    "illegal_ko_move" |
-    "illegal_board_repetition" |
-    "move_error" // generic
-;
+    | "stone_already_placed_here"
+    | "move_is_suicidal"
+    | "illegal_ko_move"
+    | "illegal_board_repetition"
+    | "move_error"; // generic
 
 export interface GobanIOErrorMessageObject {
     message_id: GobanIOErrorMessageId;
@@ -40,8 +37,7 @@ export interface GobanMoveErrorMessageObject {
     coords: string;
 }
 
-
-export class GobanError extends Error{
+export class GobanError extends Error {
     constructor(message?: string) {
         super(message); // 'Error' breaks prototype chain here
         Object.setPrototypeOf(this, new.target.prototype); // restore prototype chain
@@ -54,7 +50,12 @@ export class GobanMoveError extends GobanError {
     coords: string;
     message_id: GobanMoveErrorMessageId;
 
-    constructor(game_id: number, move_number: number, coords: string, message_id: GobanMoveErrorMessageId) {
+    constructor(
+        game_id: number,
+        move_number: number,
+        coords: string,
+        message_id: GobanMoveErrorMessageId,
+    ) {
         super(`Move error in ${game_id} on move number ${move_number} at ${coords}: ${message_id}`);
 
         this.game_id = game_id;

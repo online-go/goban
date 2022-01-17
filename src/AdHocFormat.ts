@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-
-import { JGOFTimeControl, JGOFNumericPlayerColor } from './JGOF';
+import { JGOFTimeControl, JGOFNumericPlayerColor } from "./JGOF";
 
 /**
  * The to-be-deprecated format used by Online-Go.com, will be replaced by JGOF
@@ -36,38 +35,38 @@ export interface AdHocPlayer {
 }
 
 export type AdHocPackedMove = [
-    number,  /* x */
-    number,  /* y */
-    number?,  /* time delta */
-    JGOFNumericPlayerColor?,  /* color */
-    {[index: string]: any}?  /* extra */
+    number /* x */,
+    number /* y */,
+    number? /* time delta */,
+    JGOFNumericPlayerColor? /* color */,
+    { [index: string]: any }? /* extra */,
 ];
 
 export interface AdHocClock {
     /** OGS Game id */
-    game_id:number;
+    game_id: number;
 
     /** Current player to move */
-    current_player:number;
+    current_player: number;
 
     /** OGS player id for black */
-    black_player_id:number;
+    black_player_id: number;
 
     /** OGS player id for white */
-    white_player_id:number;
+    white_player_id: number;
 
     /** Title of the game. This field will be removed. */
-    title:string;
+    title: string;
 
     /** Time the last move was made, in milliseconds since 1970 */
-    last_move:number;
+    last_move: number;
 
     /** Time the game will end if no move is played, in milliseconds since
      *  1970.  This is computed by adding together any main and overtime left
      *  on the clock. If start_mode is set, this is the number of milliseconds
      *  left on the start clock.
      */
-    expiration:number;
+    expiration: number;
 
     /** Time left on black's clock. If this is a number (such as is the case
      *  with simple time), it is expressed in milliseconds. */
@@ -82,30 +81,30 @@ export interface AdHocClock {
 
     /** Time the game was paused. This field erronously exists even after the
      *  game has been resumed, this will be removed in these cases. */
-    paused_since?:number;
+    paused_since?: number;
 
     /** If true, the game has not started and this is the count down until
      *  the game is canceled if a move has not been played yet. If this is
      *  true, then the duration left on the start clock is stored in
      *  `expiration` (in ms) */
-    start_mode?:boolean;
+    start_mode?: boolean;
 
     /** If set, this AdHocClock is updating the pause state */
     pause?: {
         paused: boolean;
         paused_since: number;
         pause_control: AdHocPauseControl;
-    }
+    };
 }
 
 export interface AdHocPlayerClock {
     /** Thinking time left, in seconds. Also used as main time for byo-yomi and
      *  canadian clocks. */
-    thinking_time:number;
+    thinking_time: number;
 
     /** Used with fischer time control to denote that the next move should not
      *  increment the clock. */
-    skip_bonus?:boolean;
+    skip_bonus?: boolean;
 
     /** Used with byo-yomi time control. Number of periods left. */
     periods?: number;
@@ -120,11 +119,10 @@ export interface AdHocPlayerClock {
     /** Used with canadian time control. Time left (in seconds) to make the
      *  remainder of your moves in yu */
     block_time?: number;
-
 }
 
 export interface AdHocPauseControl {
-    'stone-removal'?: true;
+    "stone-removal"?: true;
     weekend?: true;
     system?: true;
     paused?: {
@@ -133,6 +131,8 @@ export interface AdHocPauseControl {
     };
     moderator_paused?: {
         moderator_id: number;
-    }
-    [vacation:string]: any; /* This is a string in the format of "vacation-${player_id}", it is always true - the any here is to make typescript happy with object and undefined possible values */
+    };
+    [
+        vacation: string
+    ]: any /* This is a string in the format of "vacation-${player_id}", it is always true - the any here is to make typescript happy with object and undefined possible values */;
 }

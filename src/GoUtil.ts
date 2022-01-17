@@ -15,32 +15,38 @@
  */
 
 import { _, interpolate } from "./translate";
-import { JGOFTimeControl } from './JGOF';
+import { JGOFTimeControl } from "./JGOF";
 
-let __deviceCanvasScalingRatio:number = 0;
+let __deviceCanvasScalingRatio: number = 0;
 
 /* Creates a non-blury canvas object. Most systems don't have an issue with
  * this, but HDPI android devices deal with scaling canvases and images in a
  * retarded fashion and require this hack to get around it. */
-export function createDeviceScaledCanvas(width:number, height:number):HTMLCanvasElement {
+export function createDeviceScaledCanvas(width: number, height: number): HTMLCanvasElement {
     let canvas = document.createElement("canvas");
     canvas.setAttribute("width", `${width}px`);
     canvas.setAttribute("height", `${height}px`);
     return canvas;
 }
 
-export function resizeDeviceScaledCanvas(canvas:HTMLCanvasElement, width:number, height:number):HTMLCanvasElement {
+export function resizeDeviceScaledCanvas(
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number,
+): HTMLCanvasElement {
     let context = canvas.getContext("2d");
     if (!context) {
         throw new Error(`Failed to get context for canvas`);
     }
 
     let devicePixelRatio = window.devicePixelRatio || 1;
-    let backingStoreRatio = (context as any).webkitBackingStorePixelRatio ||
-                            (context as any).mozBackingStorePixelRatio ||
-                            (context as any).msBackingStorePixelRatio ||
-                            (context as any).oBackingStorePixelRatio ||
-                            (context as any).backingStorePixelRatio || 1;
+    let backingStoreRatio =
+        (context as any).webkitBackingStorePixelRatio ||
+        (context as any).mozBackingStorePixelRatio ||
+        (context as any).msBackingStorePixelRatio ||
+        (context as any).oBackingStorePixelRatio ||
+        (context as any).backingStorePixelRatio ||
+        1;
 
     let ratio = devicePixelRatio / backingStoreRatio;
 
@@ -72,17 +78,19 @@ export function resizeDeviceScaledCanvas(canvas:HTMLCanvasElement, width:number,
 
 export function deviceCanvasScalingRatio() {
     if (!__deviceCanvasScalingRatio) {
-        let canvas = document.createElement('canvas');
+        let canvas = document.createElement("canvas");
         canvas.width = 257;
         canvas.height = 257;
         let context = (canvas as HTMLCanvasElement).getContext("2d");
 
         let devicePixelRatio = window.devicePixelRatio || 1;
-        let backingStoreRatio = (context as any).webkitBackingStorePixelRatio ||
-                                (context as any).mozBackingStorePixelRatio ||
-                                (context as any).msBackingStorePixelRatio ||
-                                (context as any).oBackingStorePixelRatio ||
-                                (context as any).backingStorePixelRatio || 1;
+        let backingStoreRatio =
+            (context as any).webkitBackingStorePixelRatio ||
+            (context as any).mozBackingStorePixelRatio ||
+            (context as any).msBackingStorePixelRatio ||
+            (context as any).oBackingStorePixelRatio ||
+            (context as any).backingStorePixelRatio ||
+            1;
         let ratio = devicePixelRatio / backingStoreRatio;
         __deviceCanvasScalingRatio = ratio;
     }
@@ -94,18 +102,18 @@ let last_touch_x = -1000;
 let last_touch_y = -1000;
 
 /** Returns {x,y} of the event relative to the event target */
-export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
+export function getRelativeEventPosition(event: TouchEvent | MouseEvent) {
     let x = -1000;
     let y = -1000;
 
     let rect = (event.target as HTMLElement).getBoundingClientRect();
 
-    if (typeof(TouchEvent) !== "undefined" && event instanceof TouchEvent) {
+    if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
         if (event.touches && event.touches.length) {
             x = event.touches[0].clientX - rect.left;
             y = event.touches[0].clientY - rect.top;
         } else {
-            if (event.type !== 'touchend') {
+            if (event.type !== "touchend") {
                 console.log("Missing event tap location:", event);
             } else {
                 x = last_touch_x;
@@ -123,26 +131,32 @@ export function getRelativeEventPosition(event:TouchEvent | MouseEvent) {
         }
     }
 
-    return {"x": x, "y": y};
+    return { x: x, y: y };
 }
-export function getRandomInt(min:number, max:number) {
-  return Math.floor(Math.random() * (max - min)) + min;
+export function getRandomInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min)) + min;
 }
-export function shortDurationString(seconds:number) {
-    let weeks = Math.floor(seconds / (86400 * 7)); seconds -= weeks * 86400 * 7;
-    let days = Math.floor(seconds / 86400); seconds -= days * 86400;
-    let hours = Math.floor(seconds / 3600); seconds -= hours * 3600;
-    let minutes = Math.floor(seconds / 60); seconds -= minutes * 60;
-    return "" +
+export function shortDurationString(seconds: number) {
+    let weeks = Math.floor(seconds / (86400 * 7));
+    seconds -= weeks * 86400 * 7;
+    let days = Math.floor(seconds / 86400);
+    seconds -= days * 86400;
+    let hours = Math.floor(seconds / 3600);
+    seconds -= hours * 3600;
+    let minutes = Math.floor(seconds / 60);
+    seconds -= minutes * 60;
+    return (
+        "" +
         (weeks ? " " + interpolate(_("%swk"), [weeks]) : "") +
         (days ? " " + interpolate(_("%sd"), [days]) : "") +
         (hours ? " " + interpolate(_("%sh"), [hours]) : "") +
         (minutes ? " " + interpolate(_("%sm"), [minutes]) : "") +
-        (seconds ? " " + interpolate(_("%ss"), [seconds]) : "");
+        (seconds ? " " + interpolate(_("%ss"), [seconds]) : "")
+    );
 }
 export function dup(obj: any): any {
-    let ret:any;
-    if (typeof(obj) === "object") {
+    let ret: any;
+    if (typeof obj === "object") {
         if (Array.isArray(obj)) {
             ret = [];
             for (let i = 0; i < obj.length; ++i) {
@@ -160,9 +174,11 @@ export function dup(obj: any): any {
     return ret;
 }
 export function deepEqual(a: any, b: any) {
-    if (typeof(a) !== typeof(b)) { return false; }
+    if (typeof a !== typeof b) {
+        return false;
+    }
 
-    if (typeof(a) === "object") {
+    if (typeof a === "object") {
         if (Array.isArray(a)) {
             if (Array.isArray(b)) {
                 if (a.length !== b.length) {
@@ -197,7 +213,7 @@ export function deepEqual(a: any, b: any) {
     }
 }
 
-export function elementOffset(element:HTMLElement):{top: number, left: number} {
+export function elementOffset(element: HTMLElement): { top: number; left: number } {
     if (!element) {
         throw new Error(`No element passed to elementOffset`);
     }
@@ -210,16 +226,21 @@ export function elementOffset(element:HTMLElement):{top: number, left: number} {
 
     return {
         top: rect.top + document.body.scrollTop,
-        left: rect.left + document.body.scrollLeft
+        left: rect.left + document.body.scrollLeft,
     };
 }
 
-export function computeAverageMoveTime(time_control:JGOFTimeControl, old_time_per_move?:number):number {
+export function computeAverageMoveTime(
+    time_control: JGOFTimeControl,
+    old_time_per_move?: number,
+): number {
     if (old_time_per_move) {
         return old_time_per_move;
     }
-    if (typeof(time_control) !== "object") {
-        console.warn(`computAverageMoveTime passed ${time_control} instead of a time_control object`);
+    if (typeof time_control !== "object") {
+        console.warn(
+            `computAverageMoveTime passed ${time_control} instead of a time_control object`,
+        );
         return time_control;
     }
 
@@ -236,7 +257,9 @@ export function computeAverageMoveTime(time_control:JGOFTimeControl, old_time_pe
                 t = time_control.per_move;
                 break;
             case "canadian":
-                t = time_control.main_time / 90 + time_control.period_time / time_control.stones_per_period;
+                t =
+                    time_control.main_time / 90 +
+                    time_control.period_time / time_control.stones_per_period;
                 break;
             case "absolute":
                 t = time_control.total_time / 90;

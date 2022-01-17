@@ -14,55 +14,54 @@
  * limitations under the License.
  */
 
-import {GoMath} from "./GoMath";
-import {GoEngine, GoEngineState} from "./GoEngine";
-import {encodeMove} from "./GoEngine";
-import {AdHocPackedMove} from './AdHocFormat';
-import {JGOFNumericPlayerColor, JGOFPlayerSummary} from "./JGOF";
+import { GoMath } from "./GoMath";
+import { GoEngine, GoEngineState } from "./GoEngine";
+import { encodeMove } from "./GoEngine";
+import { AdHocPackedMove } from "./AdHocFormat";
+import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
 
 export interface MarkInterface {
-    triangle?         : boolean;
-    square?           : boolean;
-    circle?           : boolean;
-    cross?            : boolean;
-    blue_move?        : boolean;
-    letter?           : string;
-    subscript?        : string;
-    transient_letter? : string;
-    score?            : string | boolean;
-    chat_triangle?    : boolean;
-    sub_triangle?     : boolean;
-    remove?           : boolean;
-    stone_removed?    : boolean;
-    mark_x?           : boolean;
-    hint?             : boolean;
-    black?            : boolean;
-    white?            : boolean;
-    color?            : string;
+    triangle?: boolean;
+    square?: boolean;
+    circle?: boolean;
+    cross?: boolean;
+    blue_move?: boolean;
+    letter?: string;
+    subscript?: string;
+    transient_letter?: string;
+    score?: string | boolean;
+    chat_triangle?: boolean;
+    sub_triangle?: boolean;
+    remove?: boolean;
+    stone_removed?: boolean;
+    mark_x?: boolean;
+    hint?: boolean;
+    black?: boolean;
+    white?: boolean;
+    color?: string;
 
     [label: string]: string | boolean | undefined;
 }
 
 export type MoveTreePenMarks = Array<{
-    color:string;
-    points:Array<number>; /* [x1,y1, x2,y2, ...] */
+    color: string;
+    points: Array<number> /* [x1,y1, x2,y2, ...] */;
 }>;
 
 export interface MoveTreeJson {
-    x               : number;
-    y               : number;
-    pen_marks?      : MoveTreePenMarks;
-    marks?          : Array<{x: number, y: number, marks: MarkInterface}>;
-    text?           : string;
-    trunk_next?     : MoveTreeJson;
-    branches?       : Array<MoveTreeJson>;
-    correct_answer? : boolean;
-    wrong_answer?   : boolean;
+    x: number;
+    y: number;
+    pen_marks?: MoveTreePenMarks;
+    marks?: Array<{ x: number; y: number; marks: MarkInterface }>;
+    text?: string;
+    trunk_next?: MoveTreeJson;
+    branches?: Array<MoveTreeJson>;
+    correct_answer?: boolean;
+    wrong_answer?: boolean;
 }
 
-
 export interface MoveTreeChatLineBody {
-    'type': 'analysis';
+    type: "analysis";
     name: string;
     from: number;
     moves: AdHocPackedMove | string;
@@ -73,7 +72,8 @@ export interface MoveTreeChatLine {
 }
 
 let __move_tree_id = 0;
-let __isobranches_state_hash:{[hash:string]: Array<MoveTree>} = {}; /* used while finding isobranches */
+let __isobranches_state_hash: { [hash: string]: Array<MoveTree> } =
+    {}; /* used while finding isobranches */
 
 /* TODO: If we're on the server side, we shouldn't be doing anything with marks */
 export class MoveTree {
@@ -81,8 +81,7 @@ export class MoveTree {
     public static readonly stone_padding = 3;
     public static readonly stone_square_size = (MoveTree.stone_radius + MoveTree.stone_padding) * 2;
 
-
-    public label: string = '[unset]';
+    public label: string = "[unset]";
 
     public move_number: number;
     public readonly pretty_coordinates: string;
@@ -120,7 +119,17 @@ export class MoveTree {
     public isobranches: any;
     private isobranch_hash?: string;
 
-    constructor(engine:GoEngine, trunk:boolean, x:number, y:number, edited:boolean, player:JGOFNumericPlayerColor, move_number:number, parent:MoveTree | null, state:GoEngineState) {
+    constructor(
+        engine: GoEngine,
+        trunk: boolean,
+        x: number,
+        y: number,
+        edited: boolean,
+        player: JGOFNumericPlayerColor,
+        move_number: number,
+        parent: MoveTree | null,
+        state: GoEngineState,
+    ) {
         this.id = ++__move_tree_id;
         this.x = x;
         this.y = y;
@@ -144,8 +153,7 @@ export class MoveTree {
         this.text = "";
     }
 
-
-    toJson():MoveTreeJson {
+    toJson(): MoveTreeJson {
         let ret: MoveTreeJson = {
             x: this.x,
             y: this.y,
@@ -157,7 +165,7 @@ export class MoveTree {
         if (this.hasMarks()) {
             ret.marks = [];
             this.foreachMarkedPosition((x, y) => {
-                ret.marks?.push({"x": x, "y": y, "marks": this.getMarks(x, y)});
+                ret.marks?.push({ x: x, y: y, marks: this.getMarks(x, y) });
             });
         }
         if (this.text) {
@@ -182,7 +190,7 @@ export class MoveTree {
 
         return ret;
     }
-    loadJsonForThisNode(json:MoveTreeJson):void {
+    loadJsonForThisNode(json: MoveTreeJson): void {
         /* Unlike toJson, restoring from the json blob is a collaborative effort between
          * MoveTree and the GoEngine because of all the state we capture along the way..
          * so during restoration GoEngine will form the tree, and for each node call this
@@ -209,16 +217,18 @@ export class MoveTree {
         }
     }
 
-    recomputeIsobranches():void {
+    recomputeIsobranches(): void {
         if (this.parent) {
             throw new Error("MoveTree.recomputeIsobranches needs to be called from the root node");
         }
 
         __isobranches_state_hash = {};
 
-        let buildHashes = (node:MoveTree):void => {
-            let hash = node.state.isobranch_hash ? node.state.isobranch_hash :
-                node.state.isobranch_hash = node.state.board.map(arr => arr.join('')).join('') + node.player;
+        let buildHashes = (node: MoveTree): void => {
+            let hash = node.state.isobranch_hash
+                ? node.state.isobranch_hash
+                : (node.state.isobranch_hash =
+                      node.state.board.map((arr) => arr.join("")).join("") + node.player);
             node.isobranch_hash = hash;
 
             if (!(hash in __isobranches_state_hash)) {
@@ -236,10 +246,11 @@ export class MoveTree {
             }
         };
 
-        let recompute = (node:MoveTree):void => {
+        let recompute = (node: MoveTree): void => {
             node.isobranches = [];
 
-            if (node.x !== -1) { /* don't draw iso branches for passes */
+            if (node.x !== -1) {
+                /* don't draw iso branches for passes */
                 for (let n of __isobranches_state_hash[node.isobranch_hash as string]) {
                     if (node.id !== n.id) {
                         if (node.isAncestorOf(n) || n.isAncestorOf(node)) {
@@ -263,33 +274,47 @@ export class MoveTree {
         recompute(this);
     }
 
-    lookupMove(x:number, y:number, player:number, edited:boolean):MoveTree | null {
-        if (typeof(player) !== 'number') {
+    lookupMove(x: number, y: number, player: number, edited: boolean): MoveTree | null {
+        if (typeof player !== "number") {
             throw new Error(`Invalid player color: ${player}`);
         }
 
-        if (this.trunk_next &&
+        if (
+            this.trunk_next &&
             this.trunk_next.x === x &&
-                this.trunk_next.y === y &&
-                    this.trunk_next.edited === edited &&
-                        (!edited || this.trunk_next.player)
+            this.trunk_next.y === y &&
+            this.trunk_next.edited === edited &&
+            (!edited || this.trunk_next.player)
         ) {
             return this.trunk_next;
         }
 
         for (let i = 0; i < this.branches.length; ++i) {
-            if (this.branches[i].x === x && this.branches[i].y === y && (!edited || this.branches[i].player === player) && this.branches[i].edited === edited) {
+            if (
+                this.branches[i].x === x &&
+                this.branches[i].y === y &&
+                (!edited || this.branches[i].player === player) &&
+                this.branches[i].edited === edited
+            ) {
                 return this.branches[i];
             }
         }
 
         return null;
     }
-    move(x:number, y:number, trunk:boolean, edited:boolean, player:JGOFNumericPlayerColor, move_number:number, state:any):MoveTree {
-        if (typeof(player) === "undefined") {
+    move(
+        x: number,
+        y: number,
+        trunk: boolean,
+        edited: boolean,
+        player: JGOFNumericPlayerColor,
+        move_number: number,
+        state: any,
+    ): MoveTree {
+        if (typeof player === "undefined") {
             throw new Error("Invalid player");
         }
-        if (typeof(player) !== 'number') {
+        if (typeof player !== "number") {
             throw new Error(`Invalid player color: ${player}`);
         }
 
@@ -312,7 +337,6 @@ export class MoveTree {
                 throw new Error("Attempted trunk move made on non-trunk");
             }
 
-
             if (this.trunk_next) {
                 m = this.trunk_next;
                 m.edited = edited;
@@ -325,10 +349,10 @@ export class MoveTree {
                 this.trunk_next = m;
             }
 
-
             /* Join any branches that may have already been describing this move */
             for (let i = 0; i < this.branches.length; ++i) {
-                if (this.branches[i].x === x &&
+                if (
+                    this.branches[i].x === x &&
                     this.branches[i].y === y &&
                     this.branches[i].player === player
                 ) {
@@ -346,7 +370,11 @@ export class MoveTree {
 
             /* TODO: I think we can remove this, we have the lookupMove up above now */
             for (let i = 0; i < this.branches.length; ++i) {
-                if (this.branches[i].x === x && this.branches[i].y === y && this.branches[i].player === player) {
+                if (
+                    this.branches[i].x === x &&
+                    this.branches[i].y === y &&
+                    this.branches[i].player === player
+                ) {
                     found = true;
                     m = this.branches[i];
                     m.edited = edited;
@@ -361,7 +389,7 @@ export class MoveTree {
 
         return m;
     }
-    next(dont_follow_hints?:boolean):MoveTree | null {
+    next(dont_follow_hints?: boolean): MoveTree | null {
         if (this.trunk_next) {
             /* always follow a trunk first if it's available */
             return this.trunk_next;
@@ -389,22 +417,28 @@ export class MoveTree {
         }
         return null;
     }
-    prev():MoveTree | null {
+    prev(): MoveTree | null {
         if (this.parent) {
             this.parent.hint_next = this;
         }
         return this.parent;
     }
-    index(idx:number):MoveTree {
-        let cur:MoveTree = this;
-        while (cur.prev() && idx < 0) { cur = cur.prev() as MoveTree; ++idx; }
-        while (cur.next(true) && idx > 0) { cur = cur.next(true) as MoveTree; --idx; }
+    index(idx: number): MoveTree {
+        let cur: MoveTree = this;
+        while (cur.prev() && idx < 0) {
+            cur = cur.prev() as MoveTree;
+            ++idx;
+        }
+        while (cur.next(true) && idx > 0) {
+            cur = cur.next(true) as MoveTree;
+            --idx;
+        }
         return cur;
     }
-    is(other?:MoveTree):boolean {
+    is(other?: MoveTree): boolean {
         return !!(other && this.id === other.id);
     }
-    remove():MoveTree {
+    remove(): MoveTree {
         if (!this.parent) {
             throw new Error(`Cannot remove MoveTree child without a parent`);
         }
@@ -421,38 +455,38 @@ export class MoveTree {
         }
         return this.parent;
     }
-    getRoot():MoveTree {
-        let ret:MoveTree = this;
+    getRoot(): MoveTree {
+        let ret: MoveTree = this;
         while (ret.parent) {
             ret = ret.parent;
         }
         return ret;
     }
-    removeIfNoChildren():void {
+    removeIfNoChildren(): void {
         if (this.trunk_next == null && this.branches.length === 0) {
             this.remove();
         }
     }
-    getChatLog():Array<any> {
+    getChatLog(): Array<any> {
         if (!this.chatlog) {
             this.chatlog = [];
         }
         return this.chatlog;
     }
-    getAllMarks():Array<Array<MarkInterface>> {
+    getAllMarks(): Array<Array<MarkInterface>> {
         if (!this.marks) {
             this.marks = this.clearMarks();
         }
         return this.marks;
     }
-    setAllMarks(marks:Array<Array<MarkInterface>>):void {
+    setAllMarks(marks: Array<Array<MarkInterface>>): void {
         this.marks = marks;
     }
-    clearMarks():Array<Array<MarkInterface>> {
+    clearMarks(): Array<Array<MarkInterface>> {
         this.marks = GoMath.makeObjectMatrix<MarkInterface>(this.engine.width, this.engine.height);
         return this.marks;
     }
-    hasMarks():boolean {
+    hasMarks(): boolean {
         if (!this.marks) {
             return false;
         }
@@ -468,7 +502,7 @@ export class MoveTree {
         }
         return false;
     }
-    foreachMarkedPosition(fn:(i:number, j:number) => void):void {
+    foreachMarkedPosition(fn: (i: number, j: number) => void): void {
         if (!this.marks) {
             return;
         }
@@ -487,7 +521,7 @@ export class MoveTree {
             }
         }
     }
-    isAncestorOf(other:MoveTree | null):boolean {
+    isAncestorOf(other: MoveTree | null): boolean {
         if (!other) {
             return false;
         }
@@ -499,10 +533,10 @@ export class MoveTree {
         } while (other);
         return false;
     }
-    passed():boolean {
+    passed(): boolean {
         return this.x === -1;
     }
-    debug(depth:number):string {
+    debug(depth: number): string {
         let str = "";
         for (let i = 0; i < depth; ++i) {
             str += " ";
@@ -517,7 +551,7 @@ export class MoveTree {
         }
         return str;
     }
-    toSGF():string {
+    toSGF(): string {
         let ret = "";
 
         try {
@@ -527,7 +561,7 @@ export class MoveTree {
                 if (this.edited) {
                     ret += "A";
                 }
-                ret += this.player === 1 ? "B" : (this.player === 2 ? "W" : "E");
+                ret += this.player === 1 ? "B" : this.player === 2 ? "W" : "E";
 
                 ret += "[";
                 if (this.x === -1) {
@@ -543,7 +577,15 @@ export class MoveTree {
             if (this.chatlog && this.chatlog.length) {
                 txt += "\n\n-- chat --\n";
                 for (let i = 0; i < this.chatlog.length; ++i) {
-                    txt += this.chatlog[i].username + ": " + MoveTree.markupSGFChatMessage(this.chatlog[i].body, this.engine.width, this.engine.height) + "\n";
+                    txt +=
+                        this.chatlog[i].username +
+                        ": " +
+                        MoveTree.markupSGFChatMessage(
+                            this.chatlog[i].body,
+                            this.engine.width,
+                            this.engine.height,
+                        ) +
+                        "\n";
                 }
             }
 
@@ -552,17 +594,38 @@ export class MoveTree {
                     for (let x = 0; x < this.marks[0].length; ++x) {
                         let m = this.marks[y][x];
                         let pos = "abcdefghijklmnopqrstuvwxyz"[x] + "abcdefghijklmnopqrstuvwxyz"[y];
-                        if (m.triangle) { ret += "TR[" + pos + "]"; }
-                        if (m.square) { ret += "SQ[" + pos + "]"; }
-                        if (m.cross) { ret += "XX[" + pos + "]"; }
-                        if (m.circle) { ret += "CR[" + pos + "]"; }
-                        if (m.letter) { ret += "LB[" + pos + ":" + (m.letter).replace(/[\\]/, "\\\\").replace(/\]/g, "\\]").replace(/[[]/g, "\\[") + "]"; }
+                        if (m.triangle) {
+                            ret += "TR[" + pos + "]";
+                        }
+                        if (m.square) {
+                            ret += "SQ[" + pos + "]";
+                        }
+                        if (m.cross) {
+                            ret += "XX[" + pos + "]";
+                        }
+                        if (m.circle) {
+                            ret += "CR[" + pos + "]";
+                        }
+                        if (m.letter) {
+                            ret +=
+                                "LB[" +
+                                pos +
+                                ":" +
+                                m.letter
+                                    .replace(/[\\]/, "\\\\")
+                                    .replace(/\]/g, "\\]")
+                                    .replace(/[[]/g, "\\[") +
+                                "]";
+                        }
                     }
                 }
             }
 
             if (txt !== "") {
-                ret += "C[" + (txt).replace(/[\\]/, "\\\\").replace(/\]/g, "\\]").replace(/[[]/g, "\\[") + "\n]\n";
+                ret +=
+                    "C[" +
+                    txt.replace(/[\\]/, "\\\\").replace(/\]/g, "\\]").replace(/[[]/g, "\\[") +
+                    "\n]\n";
             }
             ret += "\n";
 
@@ -583,18 +646,21 @@ export class MoveTree {
 
         return ret;
     }
-    get stoneColor(): 'black' | 'white' | 'empty' {
+    get stoneColor(): "black" | "white" | "empty" {
         switch (this.player) {
-            case JGOFNumericPlayerColor.BLACK: return 'black';
-            case JGOFNumericPlayerColor.WHITE: return 'white';
-            case JGOFNumericPlayerColor.EMPTY: return 'empty';
+            case JGOFNumericPlayerColor.BLACK:
+                return "black";
+            case JGOFNumericPlayerColor.WHITE:
+                return "white";
+            case JGOFNumericPlayerColor.EMPTY:
+                return "empty";
         }
-        throw new Error('Invalid stone color');
+        throw new Error("Invalid stone color");
     }
 
     /* Returns the node in the main trunk which is our ancestor. May be this node. */
-    getBranchPoint():MoveTree {
-        let cur:MoveTree = this;
+    getBranchPoint(): MoveTree {
+        let cur: MoveTree = this;
         while (!cur.trunk && cur.parent) {
             cur = cur.parent;
         }
@@ -604,9 +670,9 @@ export class MoveTree {
     /* Returns the index of the node from root. This is only really meaningful as
      * an index on trunk nodes, but will give the distance of the node from the
      * root for any node. */
-    getMoveIndex():number {
+    getMoveIndex(): number {
         let ct = 0;
-        let cur:MoveTree = this;
+        let cur: MoveTree = this;
         while (cur.parent) {
             ++ct;
             cur = cur.parent;
@@ -615,9 +681,9 @@ export class MoveTree {
     }
 
     /* Returns the distance to the given node, or -1 if the node is not a descendent */
-    getDistance(node:MoveTree):number {
+    getDistance(node: MoveTree): number {
         let ct = 0;
-        let cur:MoveTree = this;
+        let cur: MoveTree = this;
         while (cur.parent && cur.id !== node.id) {
             ++ct;
             cur = cur.parent;
@@ -626,11 +692,11 @@ export class MoveTree {
     }
 
     /* Returns the difference between this move_number and the move number at our branch point */
-    getMoveNumberDifferenceFromTrunk():number {
+    getMoveNumberDifferenceFromTrunk(): number {
         return this.move_number - this.getBranchPoint().move_number;
     }
 
-    getMarks(x:number, y:number):MarkInterface {
+    getMarks(x: number, y: number): MarkInterface {
         if (!this.marks) {
             this.marks = this.clearMarks();
         }
@@ -638,11 +704,18 @@ export class MoveTree {
         if (y < this.marks.length && x < this.marks[y].length) {
             return this.marks[y][x];
         } else {
-            console.warn('getMarks called with invalid x,y = ', x, y, ' engine width/height = ', this.engine.width, this.engine.height);
+            console.warn(
+                "getMarks called with invalid x,y = ",
+                x,
+                y,
+                " engine width/height = ",
+                this.engine.width,
+                this.engine.height,
+            );
             return {};
         }
     }
-    setActivePath(path_number:number):void {
+    setActivePath(path_number: number): void {
         this.active_path_number = path_number;
         let parent = this.parent;
         while (parent) {
@@ -655,9 +728,9 @@ export class MoveTree {
             next = next.next();
         }
     }
-    getMoveStringToThisPoint():string {
+    getMoveStringToThisPoint(): string {
         let move_stack = [];
-        let cur:MoveTree | null = this;
+        let cur: MoveTree | null = this;
         let ret = "";
         while (cur) {
             move_stack.push(cur);
@@ -670,32 +743,34 @@ export class MoveTree {
         return ret;
     }
 
-
-
     /**** Layout & Rendering ****/
-    static active_path_number:number = 0;
-    static current_line_color:number = 0;
+    static active_path_number: number = 0;
+    static current_line_color: number = 0;
 
-    static line_colors:Array<string> = [
+    static line_colors: Array<string> = [
         "#ff0000",
         "#00ff00",
         "#0000ff",
         "#00ffff",
         "#ffff00",
         "#FF9A00",
-        "#9200FF"
+        "#9200FF",
         //"#ff00ff"
     ];
 
     static isobranch_colors = {
-        "strong": "#C100FF",
-        "weak": "#A582A3",
+        strong: "#C100FF",
+        weak: "#A582A3",
         //"strong": "#ff0000",
         //"weak": "#0000ff",
     };
 
-
-    layout(x:number, min_y:number, layout_hash:{[coords:string]:MoveTree}, line_color:number):number {
+    layout(
+        x: number,
+        min_y: number,
+        layout_hash: { [coords: string]: MoveTree },
+        line_color: number,
+    ): number {
         if (!this.engine.move_tree_layout_vector[x]) {
             this.engine.move_tree_layout_vector[x] = 0;
         }
@@ -707,7 +782,12 @@ export class MoveTree {
         min_y = Math.max(this.engine.move_tree_layout_vector[x] + 1, min_y);
 
         if (this.trunk_next) {
-            this.trunk_next.layout(x + 1, 0, layout_hash, (this.move_number + 1) % MoveTree.line_colors.length);
+            this.trunk_next.layout(
+                x + 1,
+                0,
+                layout_hash,
+                (this.move_number + 1) % MoveTree.line_colors.length,
+            );
         }
 
         if (this.line_color === -1) {
@@ -722,7 +802,12 @@ export class MoveTree {
                 next_line_color %= MoveTree.line_colors.length;
             }
 
-            let by = this.branches[i].layout(x + 1, min_y, layout_hash, i === 0 ? this.line_color : next_line_color++);
+            let by = this.branches[i].layout(
+                x + 1,
+                min_y,
+                layout_hash,
+                i === 0 ? this.line_color : next_line_color++,
+            );
             if (i === 0) {
                 min_y = Math.max(min_y, by - 1);
             }
@@ -741,29 +826,36 @@ export class MoveTree {
         this.layout_cx = Math.floor((this.layout_x + 0.5) * MoveTree.stone_square_size) + 0.5;
         this.layout_cy = Math.floor((this.layout_y + 0.5) * MoveTree.stone_square_size) + 0.5;
 
-        this.engine.move_tree_layout_vector[x] = Math.max(min_y, this.engine.move_tree_layout_vector[x]);
-        if (x) { /* allocate space for our branch lines */
-            this.engine.move_tree_layout_vector[x - 1] = Math.max(min_y - 1, this.engine.move_tree_layout_vector[x - 1]);
+        this.engine.move_tree_layout_vector[x] = Math.max(
+            min_y,
+            this.engine.move_tree_layout_vector[x],
+        );
+        if (x) {
+            /* allocate space for our branch lines */
+            this.engine.move_tree_layout_vector[x - 1] = Math.max(
+                min_y - 1,
+                this.engine.move_tree_layout_vector[x - 1],
+            );
         }
 
         return min_y;
     }
-    getNodeAtLayoutPosition(layout_x:number, layout_y:number):MoveTree | null {
-        let key = layout_x  + "," + layout_y;
+    getNodeAtLayoutPosition(layout_x: number, layout_y: number): MoveTree | null {
+        let key = layout_x + "," + layout_y;
         if (key in this.engine.move_tree_layout_hash) {
             return this.engine.move_tree_layout_hash[key];
         }
         return null;
     }
-    findStrongIsobranches():Array<MoveTree> {
-        let c:MoveTree = this;
+    findStrongIsobranches(): Array<MoveTree> {
+        let c: MoveTree = this;
         while (c.parent) {
             c = c.parent;
         }
 
         c.recomputeIsobranches();
 
-        let ret:Array<MoveTree> = [];
+        let ret: Array<MoveTree> = [];
         if (this.isobranches) {
             for (let i = 0; i < this.isobranches.length; ++i) {
                 if (this.isobranches[i].trunk_next || this.isobranches[i].branches.length) {
@@ -775,15 +867,14 @@ export class MoveTree {
         return ret;
     }
 
-
-    nextSibling():MoveTree | null {
+    nextSibling(): MoveTree | null {
         let ret = null;
         for (let i = 1; i < 30 && ret == null; ++i) {
             ret = this.getNodeAtLayoutPosition(this.layout_x, this.layout_y + i);
         }
-        return  ret;
+        return ret;
     }
-    prevSibling():MoveTree | null {
+    prevSibling(): MoveTree | null {
         let ret = null;
         for (let i = 1; i < 30 && ret == null; ++i) {
             ret = this.getNodeAtLayoutPosition(this.layout_x, this.layout_y - i);
@@ -792,7 +883,7 @@ export class MoveTree {
         //return  this.getNodeAtLayoutPosition(this.layout_x, this.layout_y-1);
     }
 
-    getPositionInParent():number {
+    getPositionInParent(): number {
         if (this.parent == null) {
             return -5;
         }
@@ -818,10 +909,10 @@ export class MoveTree {
             return false;
         }
 
-        return branch.branches.some( item => this.isBranchWithCorrectAnswer(item));
+        return branch.branches.some((item) => this.isBranchWithCorrectAnswer(item));
     }
 
-    public hoistFirstBranchToTrunk():void {
+    public hoistFirstBranchToTrunk(): void {
         if (this.trunk_next) {
             this.trunk_next.hoistFirstBranchToTrunk();
             return;
@@ -841,12 +932,16 @@ export class MoveTree {
      * Find branches containing node with correct_answer === true
      */
     findBranchesWithCorrectAnswer(): Array<MoveTree> {
-        return this.branches.filter( branch => this.isBranchWithCorrectAnswer(branch));
+        return this.branches.filter((branch) => this.isBranchWithCorrectAnswer(branch));
     }
 
-    static markupSGFChatMessage(message:MoveTreeChatLineBody | string, width:number, height:number):string {
+    static markupSGFChatMessage(
+        message: MoveTreeChatLineBody | string,
+        width: number,
+        height: number,
+    ): string {
         try {
-            if (typeof(message) === "object") {
+            if (typeof message === "object") {
                 if (message.type === "analysis") {
                     let moves = GoMath.decodeMoves(message.moves, width, height);
                     let movestr = "";
@@ -863,10 +958,38 @@ export class MoveTree {
 
         return `${message}`;
     }
-    static markupSGFChat(username:string, message:MoveTreeChatLineBody | string, width:number, height:number):string {
-        return "C[" + ((username ? (username + ": ") : "") + MoveTree.markupSGFChatMessage(message, width, height)).replace(/[\\]/, "\\\\").replace(/\]/g, "\\]").replace(/[[]/g, "\\[") + "\n]\n";
+    static markupSGFChat(
+        username: string,
+        message: MoveTreeChatLineBody | string,
+        width: number,
+        height: number,
+    ): string {
+        return (
+            "C[" +
+            (
+                (username ? username + ": " : "") +
+                MoveTree.markupSGFChatMessage(message, width, height)
+            )
+                .replace(/[\\]/, "\\\\")
+                .replace(/\]/g, "\\]")
+                .replace(/[[]/g, "\\[") +
+            "\n]\n"
+        );
     }
-    static markupSGFChatWithoutNode(username:string, message:MoveTreeChatLineBody | string, width:number, height:number):string {
-        return ((username ? (username + ": ") : "") + MoveTree.markupSGFChatMessage(message, width, height)).replace(/[\\]/, "\\\\").replace(/\]/g, "\\]").replace(/[[]/g, "\\[") + "\n";
+    static markupSGFChatWithoutNode(
+        username: string,
+        message: MoveTreeChatLineBody | string,
+        width: number,
+        height: number,
+    ): string {
+        return (
+            (
+                (username ? username + ": " : "") +
+                MoveTree.markupSGFChatMessage(message, width, height)
+            )
+                .replace(/[\\]/, "\\\\")
+                .replace(/\]/g, "\\]")
+                .replace(/[[]/g, "\\[") + "\n"
+        );
     }
 }
