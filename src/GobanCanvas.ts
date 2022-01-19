@@ -297,7 +297,7 @@ export class GobanCanvas extends GobanCore {
                 }
                 let right_click = false;
                 if (ev instanceof MouseEvent) {
-                    if (ev.button == 2) {
+                    if (ev.button === 2) {
                         right_click = true;
                         ev.preventDefault();
                     }
