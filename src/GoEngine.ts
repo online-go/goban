@@ -1297,7 +1297,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             --i, t = t?.prev()
         ) {
             if (t) {
-                if (!check_situational || t.player == current_player_to_move) {
+                if (!check_situational || t.player === current_player_to_move) {
                     if (this.boardStatesAreTheSame(t.state, current_state)) {
                         return true;
                     }
