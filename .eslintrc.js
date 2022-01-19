@@ -82,12 +82,6 @@ module.exports = {
         "no-cond-assign": "error",
         "no-debugger": "error",
         "no-eval": "error",
-        "no-fallthrough": [
-            "error",
-            {
-                "commentPattern": "break[\\s\\w]*omitted"
-            }
-        ],
         // Using the typescript-eslint version of this rule because of class
         // properties, which are not yet supported in ESLint.  For more info,
         // see: https://github.com/typescript-eslint/typescript-eslint/issues/491
