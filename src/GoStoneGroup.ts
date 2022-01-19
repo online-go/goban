@@ -97,14 +97,14 @@ export class GoStoneGroup {
          * territory owned by the same color, it is considered strong. */
         this.is_strong_eye = false;
         let color: JGOFNumericPlayerColor;
-        let board_state = this.board_state;
+        const board_state = this.board_state;
         if (this.is_eye) {
-            let x = this.points[0].x;
-            let y = this.points[0].y;
+            const x = this.points[0].x;
+            const y = this.points[0].y;
             color = board_state.board[y][x === 0 ? x + 1 : x - 1];
             let not_color = 0;
 
-            let chk = (x: number, y: number): 0 | 1 => {
+            const chk = (x: number, y: number): 0 | 1 => {
                 /* If there is a stone on the board and it's not our color,
                  * or if the spot is part of some territory which is not our color,
                  * then return true, else false. */
@@ -181,8 +181,8 @@ export class GoStoneGroup {
                          * territory hasn't been negated. */
                         let is_not_negated = true;
                         for (let i = 0; i < border_of_border.points.length; ++i) {
-                            let x = border_of_border.points[i].x;
-                            let y = border_of_border.points[i].y;
+                            const x = border_of_border.points[i].x;
+                            const y = border_of_border.points[i].y;
                             if (!this.board_state.removal[y][x]) {
                                 is_not_negated = false;
                             }
@@ -202,7 +202,7 @@ export class GoStoneGroup {
         this.adjacent_white = 0;
         this.probable_color = 0;
         this.board_state.foreachNeighbor(this.points, (x, y) => {
-            let color = this.board_state.board[y][x];
+            const color = this.board_state.board[y][x];
             if (color === 1) {
                 this.adjacent_black++;
             }
@@ -222,7 +222,7 @@ export class GoStoneGroup {
 
         if (this.color) {
             let probably_alive = false;
-            let open_areas = [];
+            const open_areas = [];
 
             this.foreachNeighborGroup((gr) => {
                 if (gr.is_territory && gr.territory_color === this.color) {

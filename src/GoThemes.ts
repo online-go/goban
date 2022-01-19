@@ -25,12 +25,12 @@ export interface GoThemesInterface {
     [_: string]: { [name: string]: typeof GoTheme };
 }
 
-export let GoThemes: GoThemesInterface = {
+export const GoThemes: GoThemesInterface = {
     white: {},
     black: {},
     board: {},
 };
-export let GoThemesSorted: { [n: string]: Array<GoTheme> } = {
+export const GoThemesSorted: { [n: string]: Array<GoTheme> } = {
     white: [],
     black: [],
     board: [],
@@ -50,7 +50,7 @@ function theme_sort(a: GoTheme, b: GoTheme) {
     return a.sort() - b.sort();
 }
 
-for (let k in GoThemes) {
+for (const k in GoThemes) {
     GoThemesSorted[k] = Object.keys(GoThemes[k]).map((n) => {
         return new GoThemes[k][n]();
     });

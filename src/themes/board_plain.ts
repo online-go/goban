@@ -21,13 +21,13 @@ import { _ } from "../translate";
 
 // Converts a six-digit hex string to rgba() notation
 function hexToRgba(raw: string, alpha: number = 1): string {
-    let hex = raw.replace("#", "");
+    const hex = raw.replace("#", "");
     if (hex.length !== 6) {
         return raw;
     }
-    let r = parseInt(`0x${hex.substr(0, 2)}`);
-    let g = parseInt(`0x${hex.substr(2, 2)}`);
-    let b = parseInt(`0x${hex.substr(4, 2)}`);
+    const r = parseInt(`0x${hex.substr(0, 2)}`);
+    const g = parseInt(`0x${hex.substr(2, 2)}`);
+    const b = parseInt(`0x${hex.substr(4, 2)}`);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 

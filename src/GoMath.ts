@@ -41,14 +41,14 @@ export class GoMath {
     public groups: Array<GoStoneGroup>;
 
     constructor(state: BoardState, original_board?: Array<Array<number>>) {
-        let groups: Array<GoStoneGroup> = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
-        let group_id_map: Array<Array<number>> = GoMath.makeMatrix(state.width, state.height);
+        const groups: Array<GoStoneGroup> = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
+        const group_id_map: Array<Array<number>> = GoMath.makeMatrix(state.width, state.height);
 
         this.state = state;
         this.group_id_map = group_id_map;
         this.groups = groups;
 
-        let floodFill = (
+        const floodFill = (
             x: number,
             y: number,
             color: JGOFNumericPlayerColor,
@@ -113,8 +113,8 @@ export class GoMath {
         /* Compute group neighbors */
         this.foreachGroup((gr) => {
             gr.foreachStone((pt) => {
-                let x = pt.x;
-                let y = pt.y;
+                const x = pt.x;
+                const y = pt.y;
                 if (x - 1 >= 0 && group_id_map[y][x - 1] !== gr.id) {
                     gr.addNeighborGroup(groups[group_id_map[y][x - 1]]);
                 }
@@ -172,7 +172,7 @@ export class GoMath {
         height: number,
         initialValue: number = 0,
     ): NumberMatrix {
-        let ret: NumberMatrix = [];
+        const ret: NumberMatrix = [];
         for (let y = 0; y < height; ++y) {
             ret.push([]);
             for (let x = 0; x < width; ++x) {
@@ -186,7 +186,7 @@ export class GoMath {
         height: number,
         initialValue: string = "",
     ): StringMatrix {
-        let ret: StringMatrix = [];
+        const ret: StringMatrix = [];
         for (let y = 0; y < height; ++y) {
             ret.push([]);
             for (let x = 0; x < width; ++x) {
@@ -196,9 +196,9 @@ export class GoMath {
         return ret;
     }
     public static makeObjectMatrix<T>(width: number, height: number): Array<Array<T>> {
-        let ret = new Array<Array<T>>(height);
+        const ret = new Array<Array<T>>(height);
         for (let y = 0; y < height; ++y) {
-            let row = new Array<T>(width);
+            const row = new Array<T>(width);
             for (let x = 0; x < width; ++x) {
                 row[x] = {} as T;
             }
@@ -207,9 +207,9 @@ export class GoMath {
         return ret;
     }
     public static makeEmptyObjectMatrix<T>(width: number, height: number): Array<Array<T>> {
-        let ret = new Array<Array<T>>(height);
+        const ret = new Array<Array<T>>(height);
         for (let y = 0; y < height; ++y) {
-            let row = new Array<T>(width);
+            const row = new Array<T>(width);
             ret[y] = row;
         }
         return ret;
@@ -225,7 +225,7 @@ export class GoMath {
             return { x: -1, y: -1 };
         }
         let y = height - parseInt(move.substr(1));
-        let x = "ABCDEFGHJKLMNOPQRSTUVWXYZ".indexOf(move[0].toUpperCase());
+        const x = "ABCDEFGHJKLMNOPQRSTUVWXYZ".indexOf(move[0].toUpperCase());
         if (x === -1) {
             y = -1;
         }
@@ -246,21 +246,21 @@ export class GoMath {
         width: number,
         height: number,
     ): Array<JGOFMove> {
-        let ret: Array<Move> = [];
+        const ret: Array<Move> = [];
 
         if (!move_obj) {
             return [];
         }
 
         function decodeSingleMoveArray(arr: [number, number, number, number?, object?]): Move {
-            let obj: Move = {
+            const obj: Move = {
                 x: arr[0],
                 y: arr[1],
                 timedelta: arr.length > 2 ? arr[2] : -1,
                 color: (arr.length > 3 ? arr[3] : 0) as JGOFNumericPlayerColor,
             };
-            let extra: any = arr.length > 4 ? arr[4] : {};
-            for (let k in extra) {
+            const extra: any = arr.length > 4 ? arr[4] : {};
+            for (const k in extra) {
                 (obj as any)[k] = extra[k];
             }
             return obj;
@@ -282,7 +282,7 @@ export class GoMath {
                 }
 
                 for (let i = 0; i < move_obj.length; ++i) {
-                    let mv: any = move_obj[i];
+                    const mv: any = move_obj[i];
                     if (mv instanceof Array && typeof mv[0] === "number") {
                         ret.push(decodeSingleMoveArray(mv as [number, number, number, number]));
                     } else {
@@ -300,9 +300,9 @@ export class GoMath {
 
             if (/[a-zA-Z][0-9]/.test(move_obj)) {
                 /* coordinate form, used from human input. */
-                let move_string = move_obj;
+                const move_string = move_obj;
 
-                let moves = move_string.split(/([a-zA-Z][0-9]+|pass|[.][.])/);
+                const moves = move_string.split(/([a-zA-Z][0-9]+|pass|[.][.])/);
                 for (let i = 0; i < moves.length; ++i) {
                     if (i % 2) {
                         /* even are the 'splits', which should always be blank unless there is an error */
@@ -323,7 +323,7 @@ export class GoMath {
                 }
             } else {
                 /* Pure letter encoded form, used for all records */
-                let move_string = move_obj;
+                const move_string = move_obj;
 
                 for (let i = 0; i < move_string.length - 1; i += 2) {
                     let edited = false;
@@ -388,7 +388,7 @@ export class GoMath {
             }
             return GoMath.num2char(x) + GoMath.num2char(y);
         } else {
-            let mv: Move = x;
+            const mv: Move = x;
 
             if (!mv.edited) {
                 return GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
@@ -433,7 +433,13 @@ export class GoMath {
             extra = undefined;
         }
 
-        let arr: AdHocPackedMove = [mv.x, mv.y, mv.timedelta ? mv.timedelta : -1, undefined, extra];
+        const arr: AdHocPackedMove = [
+            mv.x,
+            mv.y,
+            mv.timedelta ? mv.timedelta : -1,
+            undefined,
+            extra,
+        ];
         if (mv.edited) {
             arr[3] = mv.color;
             if (!extra) {
@@ -448,7 +454,7 @@ export class GoMath {
         return arr;
     }
     public static encodeMovesToArray(moves: Array<Move>): Array<AdHocPackedMove> {
-        let ret: Array<AdHocPackedMove> = [];
+        const ret: Array<AdHocPackedMove> = [];
         for (let i = 0; i < moves.length; ++i) {
             ret.push(GoMath.encodeMoveToArray(moves[i]));
         }
@@ -484,7 +490,7 @@ export class GoMath {
      */
     public static trimJGOFMoves(arr: Array<JGOFMove>): Array<JGOFMove> {
         return arr.map((o) => {
-            let r: JGOFMove = {
+            const r: JGOFMove = {
                 x: o.x,
                 y: o.y,
             };
@@ -503,10 +509,10 @@ export class GoMath {
 
     /** Returns a sorted move string, this is used in our stone removal logic */
     public static sortMoves(move_string: string, width: number, height: number): string {
-        let moves = GoMath.decodeMoves(move_string, width, height);
+        const moves = GoMath.decodeMoves(move_string, width, height);
         moves.sort((a, b) => {
-            let av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
-            let bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
+            const av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
+            const bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
             return av - bv;
         });
         return GoMath.encodeMoves(moves);

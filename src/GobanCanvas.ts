@@ -36,14 +36,14 @@ import { createDeviceScaledCanvas, resizeDeviceScaledCanvas } from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 
-let __theme_cache: {
+const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
 } = {
     black: {},
     white: {},
 };
 
-declare var ResizeObserver: any;
+declare let ResizeObserver: any;
 
 export interface GobanCanvasConfig extends GobanConfig {
     board_div?: HTMLElement;
@@ -139,7 +139,7 @@ export class GobanCanvas extends GobanCore {
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
-        let ctx = this.board.getContext("2d");
+        const ctx = this.board.getContext("2d");
         if (ctx) {
             this.ctx = ctx;
         } else {
@@ -170,7 +170,7 @@ export class GobanCanvas extends GobanCore {
         this.theme_board = new GoThemes["board"][this.themes.board]();
         this.theme_white = new GoThemes["white"][this.themes.white](this.theme_board);
         this.theme_black = new GoThemes["black"][this.themes.black](this.theme_board);
-        let watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
+        const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
             this.setThemes(themes, first_pass ? true : false);
             first_pass = false;
         });
@@ -236,7 +236,7 @@ export class GobanCanvas extends GobanCore {
             this.shadow_layer.style.left = this.layer_offset_left + "px";
             this.shadow_layer.style.top = this.layer_offset_top + "px";
 
-            let ctx = this.shadow_layer.getContext("2d");
+            const ctx = this.shadow_layer.getContext("2d");
             if (ctx) {
                 this.shadow_ctx = ctx;
             } else {
@@ -265,7 +265,7 @@ export class GobanCanvas extends GobanCore {
             //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
             this.pen_layer.style.left = this.layer_offset_left + "px";
             this.pen_layer.style.top = this.layer_offset_top + "px";
-            let ctx = this.pen_layer.getContext("2d");
+            const ctx = this.pen_layer.getContext("2d");
             if (ctx) {
                 this.pen_ctx = ctx;
             } else {
@@ -289,7 +289,7 @@ export class GobanCanvas extends GobanCore {
 
         let last_click_square = this.xy2ij(0, 0);
 
-        let pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
+        const pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
             try {
                 if (!dragging) {
                     /* if we didn't start the click in the canvas, don't respond to it */
@@ -306,8 +306,8 @@ export class GobanCanvas extends GobanCore {
                 dragging = false;
 
                 if (this.scoring_mode) {
-                    let pos = getRelativeEventPosition(ev);
-                    let pt = this.xy2ij(pos.x, pos.y);
+                    const pos = getRelativeEventPosition(ev);
+                    const pt = this.xy2ij(pos.x, pos.y);
                     if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
                         if (this.score_estimate) {
                             this.score_estimate.handleClick(
@@ -323,8 +323,8 @@ export class GobanCanvas extends GobanCore {
 
                 if (ev.ctrlKey || ev.metaKey || ev.altKey) {
                     try {
-                        let pos = getRelativeEventPosition(ev);
-                        let pt = this.xy2ij(pos.x, pos.y);
+                        const pos = getRelativeEventPosition(ev);
+                        const pt = this.xy2ij(pos.x, pos.y);
                         if (GobanCore.hooks.addCoordinatesToChatInput) {
                             GobanCore.hooks.addCoordinatesToChatInput(
                                 this.engine.prettyCoords(pt.i, pt.j),
@@ -339,8 +339,8 @@ export class GobanCanvas extends GobanCore {
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
                     /* might want to interpret this as a start/stop of a line segment */
                 } else {
-                    let pos = getRelativeEventPosition(ev);
-                    let pt = this.xy2ij(pos.x, pos.y);
+                    const pos = getRelativeEventPosition(ev);
+                    const pt = this.xy2ij(pos.x, pos.y);
                     if (!double_clicked) {
                         last_click_square = pt;
                     } else {
@@ -358,7 +358,7 @@ export class GobanCanvas extends GobanCore {
             }
         };
 
-        let pointerDown = (ev: MouseEvent | TouchEvent): void => {
+        const pointerDown = (ev: MouseEvent | TouchEvent): void => {
             try {
                 dragging = true;
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
@@ -366,7 +366,7 @@ export class GobanCanvas extends GobanCore {
                 } else if (this.mode === "analyze" && this.analyze_tool === "label") {
                     if (ev.shiftKey) {
                         if (this.analyze_subtool === "letters") {
-                            let label_char = prompt(
+                            const label_char = prompt(
                                 _("Enter the label you want to add to the board"),
                                 "",
                             );
@@ -385,7 +385,7 @@ export class GobanCanvas extends GobanCore {
             }
         };
 
-        let pointerMove = (ev: MouseEvent | TouchEvent): void => {
+        const pointerMove = (ev: MouseEvent | TouchEvent): void => {
             try {
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
                     if (!dragging) {
@@ -402,7 +402,7 @@ export class GobanCanvas extends GobanCore {
             }
         };
 
-        let pointerOut = (ev: MouseEvent | TouchEvent): void => {
+        const pointerOut = (ev: MouseEvent | TouchEvent): void => {
             try {
                 dragging = false;
                 this.onMouseOut(ev);
@@ -562,16 +562,16 @@ export class GobanCanvas extends GobanCore {
         }
     }
     private xy2pen(x: number, y: number): [number, number] {
-        let lx = this.draw_left_labels ? 0.0 : 1.0;
-        let ly = this.draw_top_labels ? 0.0 : 1.0;
+        const lx = this.draw_left_labels ? 0.0 : 1.0;
+        const ly = this.draw_top_labels ? 0.0 : 1.0;
         return [
             Math.round((x / this.square_size + lx) * 64),
             Math.round((y / this.square_size + ly) * 64),
         ];
     }
     private pen2xy(x: number, y: number): [number, number] {
-        let lx = this.draw_left_labels ? 0.0 : 1.0;
-        let ly = this.draw_top_labels ? 0.0 : 1.0;
+        const lx = this.draw_left_labels ? 0.0 : 1.0;
+        const ly = this.draw_top_labels ? 0.0 : 1.0;
 
         return [(x / 64 - lx) * this.square_size, (y / 64 - ly) * this.square_size];
     }
@@ -587,7 +587,7 @@ export class GobanCanvas extends GobanCore {
     private onPenStart(ev: MouseEvent | TouchEvent): void {
         this.attachPenCanvas();
 
-        let pos = getRelativeEventPosition(ev);
+        const pos = getRelativeEventPosition(ev);
         this.last_pen_position = this.xy2pen(pos.x, pos.y);
         this.current_pen_mark = { color: this.analyze_subtool, points: this.xy2pen(pos.x, pos.y) };
         this.pen_marks.push(this.current_pen_mark);
@@ -603,14 +603,14 @@ export class GobanCanvas extends GobanCore {
             throw new Error(`onPenMove called with invalid last pen position or current pen mark`);
         }
 
-        let pos = getRelativeEventPosition(ev);
-        let start = this.last_pen_position;
-        let s = this.pen2xy(start[0], start[1]);
-        let end = this.xy2pen(pos.x, pos.y);
-        let e = this.pen2xy(end[0], end[1]);
+        const pos = getRelativeEventPosition(ev);
+        const start = this.last_pen_position;
+        const s = this.pen2xy(start[0], start[1]);
+        const end = this.xy2pen(pos.x, pos.y);
+        const e = this.pen2xy(end[0], end[1]);
 
-        let dx = end[0] - start[0];
-        let dy = end[1] - start[1];
+        const dx = end[0] - start[0];
+        const dy = end[1] - start[1];
 
         if (dx * dx + dy * dy < 64) {
             return;
@@ -641,18 +641,18 @@ export class GobanCanvas extends GobanCore {
         this.clearAnalysisDrawing();
         this.pen_marks = penmarks;
         for (let i = 0; i < penmarks.length; ++i) {
-            let stroke = penmarks[i];
+            const stroke = penmarks[i];
             this.setPenStyle(stroke.color);
 
             let px = stroke.points[0];
             let py = stroke.points[1];
             this.pen_ctx.beginPath();
-            let pt = this.pen2xy(px, py);
+            const pt = this.pen2xy(px, py);
             this.pen_ctx.moveTo(pt[0], pt[1]);
             for (let j = 2; j < stroke.points.length; j += 2) {
                 px += stroke.points[j];
                 py += stroke.points[j + 1];
-                let pt = this.pen2xy(px, py);
+                const pt = this.pen2xy(px, py);
                 this.pen_ctx.lineTo(pt[0], pt[1]);
             }
             this.pen_ctx.stroke();
@@ -672,13 +672,13 @@ export class GobanCanvas extends GobanCore {
             return;
         }
 
-        let pos = getRelativeEventPosition(event);
-        let xx = pos.x;
-        let yy = pos.y;
+        const pos = getRelativeEventPosition(event);
+        const xx = pos.x;
+        const yy = pos.y;
 
-        let pt = this.xy2ij(xx, yy);
-        let x = pt.i;
-        let y = pt.j;
+        const pt = this.xy2ij(xx, yy);
+        const x = pt.i;
+        const y = pt.j;
 
         if (x < 0 || y < 0 || x >= this.engine.width || y >= this.engine.height) {
             return;
@@ -699,7 +699,7 @@ export class GobanCanvas extends GobanCore {
             /* nor when in labeling mode */
             this.analyze_tool !== "label"
         ) {
-            let m = this.engine.getMoveByLocation(x, y);
+            const m = this.engine.getMoveByLocation(x, y);
             if (m) {
                 this.engine.jumpTo(m);
                 this.emit("update");
@@ -717,12 +717,12 @@ export class GobanCanvas extends GobanCore {
         }
         this.submitBlinkTimer = null;
 
-        let tap_time = Date.now();
-        let submit = () => {
-            let submit_time = Date.now();
+        const tap_time = Date.now();
+        const submit = () => {
+            const submit_time = Date.now();
             if (!this.one_click_submit && (!this.double_click_submit || !double_tap)) {
                 /* then submit button was pressed, so check to make sure this didn't happen too quick */
-                let delta = submit_time - tap_time;
+                const delta = submit_time - tap_time;
                 if (delta <= 50) {
                     console.info(
                         "Submit button pressed only ",
@@ -754,17 +754,17 @@ export class GobanCanvas extends GobanCore {
             ) {
                 let arrs: Array<[-1 | 0 | 1, Group]>;
                 if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
-                    let removed: 0 | 1 = !this.engine.removal[y][x] ? 1 : 0;
+                    const removed: 0 | 1 = !this.engine.removal[y][x] ? 1 : 0;
                     arrs = [[removed, [{ x: x, y: y }]]];
                 } else {
                     arrs = this.engine.toggleMetaGroupRemoval(x, y);
                 }
 
                 for (let i = 0; i < arrs.length; ++i) {
-                    let arr: [-1 | 0 | 1, Group] = arrs[i];
+                    const arr: [-1 | 0 | 1, Group] = arrs[i];
 
-                    let removed = arr[0];
-                    let group = arr[1];
+                    const removed = arr[0];
+                    const group = arr[1];
                     if (group.length && !this.scoring_mode) {
                         this.socket.send("game/removed_stones/set", {
                             auth: this.config.auth,
@@ -808,7 +808,7 @@ export class GobanCanvas extends GobanCore {
                 let puzzle_mode = "place";
                 let color: JGOFNumericPlayerColor = 0;
                 if (this.getPuzzlePlacementSetting) {
-                    let s = this.getPuzzlePlacementSetting();
+                    const s = this.getPuzzlePlacementSetting();
                     puzzle_mode = s.mode;
                     if (s.mode === "setup") {
                         color = s.color;
@@ -842,7 +842,7 @@ export class GobanCanvas extends GobanCore {
                             this.engine.puzzle_player_move_mode !== "fixed" ||
                             this.engine.cur_move.lookupMove(x, y, this.engine.player, false)
                         ) {
-                            let puzzle_place = (mv_x: number, mv_y: number): void => {
+                            const puzzle_place = (mv_x: number, mv_y: number): void => {
                                 ++calls;
 
                                 this.engine.place(mv_x, mv_y, true, false, true, false, false);
@@ -861,10 +861,11 @@ export class GobanCanvas extends GobanCore {
                                 }
 
                                 if (this.engine.cur_move.branches.length === 0) {
-                                    let isobranches = this.engine.cur_move.findStrongIsobranches();
+                                    const isobranches =
+                                        this.engine.cur_move.findStrongIsobranches();
                                     if (isobranches.length > 0) {
-                                        let w = getRandomInt(0, isobranches.length);
-                                        let which = isobranches[w];
+                                        const w = getRandomInt(0, isobranches.length);
+                                        const which = isobranches[w];
                                         console.info(
                                             "Following isomorphism (" +
                                                 (w + 1) +
@@ -878,7 +879,7 @@ export class GobanCanvas extends GobanCore {
                                 }
 
                                 if (this.engine.cur_move.branches.length) {
-                                    let next =
+                                    const next =
                                         this.engine.cur_move.branches[
                                             getRandomInt(0, this.engine.cur_move.branches.length)
                                         ];
@@ -1092,15 +1093,15 @@ export class GobanCanvas extends GobanCore {
             return;
         }
 
-        let pos = getRelativeEventPosition(event);
-        let pt = this.xy2ij(pos.x, pos.y);
+        const pos = getRelativeEventPosition(event);
+        const pt = this.xy2ij(pos.x, pos.y);
 
         if (this.__last_pt.i === pt.i && this.__last_pt.j === pt.j) {
             return;
         }
 
         if (this.__last_pt.valid) {
-            let last_hover = this.last_hover_square;
+            const last_hover = this.last_hover_square;
             delete this.last_hover_square;
             if (last_hover) {
                 this.drawSquare(last_hover.x, last_hover.y);
@@ -1116,7 +1117,7 @@ export class GobanCanvas extends GobanCore {
     }
     private onMouseOut(event: MouseEvent | TouchEvent): void {
         if (this.__last_pt.valid) {
-            let last_hover = this.last_hover_square;
+            const last_hover = this.last_hover_square;
             delete this.last_hover_square;
             if (last_hover) {
                 this.drawSquare(last_hover.x, last_hover.y);
@@ -1153,14 +1154,14 @@ export class GobanCanvas extends GobanCore {
         if (this.no_display) {
             return;
         }
-        let ctx = this.ctx;
+        const ctx = this.ctx;
         if (!ctx) {
             return;
         }
         if (i < 0 || j < 0) {
             return;
         }
-        let s = this.square_size;
+        const s = this.square_size;
         let ox = this.draw_left_labels ? s : 0;
         let oy = this.draw_top_labels ? s : 0;
         if (this.bounds.left > 0) {
@@ -1172,9 +1173,9 @@ export class GobanCanvas extends GobanCore {
 
         let cx: number;
         let cy: number;
-        let draw_last_move: boolean = !this.dont_draw_last_move;
+        let draw_last_move = !this.dont_draw_last_move;
 
-        let stone_color: number = 0;
+        let stone_color = 0;
         if (this.engine) {
             stone_color = this.engine.board[j][i];
         }
@@ -1195,7 +1196,7 @@ export class GobanCanvas extends GobanCore {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {
                 if (cur.x === i && cur.y === j) {
-                    let move_diff = cur.getMoveNumberDifferenceFromTrunk();
+                    const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
                         if (!cur.edited && this.show_move_numbers) {
                             altmarking = cur.getMoveNumberDifferenceFromTrunk().toString();
@@ -1212,7 +1213,7 @@ export class GobanCanvas extends GobanCore {
 
         let have_text_to_draw = false;
         let text_color = this.theme_blank_text_color;
-        for (let key in pos) {
+        for (const key in pos) {
             if (key.length <= 3) {
                 have_text_to_draw = true;
             }
@@ -1236,10 +1237,10 @@ export class GobanCanvas extends GobanCore {
 
         /* clear and draw lines */
         {
-            let l = i * s + ox;
-            let r = (i + 1) * s + ox;
-            let t = j * s + oy;
-            let b = (j + 1) * s + oy;
+            const l = i * s + ox;
+            const r = (i + 1) * s + ox;
+            const t = j * s + oy;
+            const b = (j + 1) * s + oy;
 
             ctx.clearRect(l, t, r - l, b - t);
             if (this.shadow_ctx) {
@@ -1272,10 +1273,10 @@ export class GobanCanvas extends GobanCore {
             /* draw line */
             let sx = l;
             let ex = r;
-            let mx = (r + l) / 2 - this.metrics.offset;
+            const mx = (r + l) / 2 - this.metrics.offset;
             let sy = t;
             let ey = b;
-            let my = (t + b) / 2 - this.metrics.offset;
+            const my = (t + b) / 2 - this.metrics.offset;
 
             if (i === 0) {
                 sx += this.metrics.mid;
@@ -1377,12 +1378,12 @@ export class GobanCanvas extends GobanCore {
 
         if (this.heatmap) {
             if (this.heatmap[j][i] > 0.001) {
-                let color = "#00FF00";
+                const color = "#00FF00";
                 ctx.lineCap = "square";
                 ctx.save();
                 ctx.beginPath();
                 ctx.globalAlpha = Math.min(this.heatmap[j][i], 0.5);
-                let r = Math.floor(this.square_size * 0.5) - 0.5;
+                const r = Math.floor(this.square_size * 0.5) - 0.5;
                 ctx.moveTo(cx - r, cy - r);
                 ctx.lineTo(cx + r, cy - r);
                 ctx.lineTo(cx + r, cy + r);
@@ -1401,13 +1402,13 @@ export class GobanCanvas extends GobanCore {
                 (this.highlight_movetree_moves && movetree_contains_this_square) ||
                 pos.color
             ) {
-                let color = pos.color ? pos.color : pos.hint ? "#8EFF0A" : "#FF8E0A";
+                const color = pos.color ? pos.color : pos.hint ? "#8EFF0A" : "#FF8E0A";
 
                 ctx.lineCap = "square";
                 ctx.save();
                 ctx.beginPath();
                 ctx.globalAlpha = 0.6;
-                let r = Math.floor(this.square_size * 0.5) - 0.5;
+                const r = Math.floor(this.square_size * 0.5) - 0.5;
                 ctx.moveTo(cx - r, cy - r);
                 ctx.lineTo(cx + r, cy - r);
                 ctx.lineTo(cx + r, cy + r);
@@ -1423,12 +1424,12 @@ export class GobanCanvas extends GobanCore {
 
         if (this.colored_circles) {
             if (this.colored_circles[j][i]) {
-                let circle = this.colored_circles[j][i];
-                let color = circle.color;
+                const circle = this.colored_circles[j][i];
+                const color = circle.color;
 
                 ctx.save();
                 ctx.globalAlpha = 1.0;
-                let radius = Math.floor(this.square_size * 0.5) - 0.5;
+                const radius = Math.floor(this.square_size * 0.5) - 0.5;
                 let lineWidth = radius * (circle.border_width || 0.1);
 
                 if (lineWidth < 0.3) {
@@ -1527,7 +1528,7 @@ export class GobanCanvas extends GobanCore {
                     }
                 } else if (this.mode === "puzzle") {
                     if (this.getPuzzlePlacementSetting) {
-                        let s = this.getPuzzlePlacementSetting();
+                        const s = this.getPuzzlePlacementSetting();
                         if (s.mode === "setup") {
                             color = s.color;
                             if (this.shift_key_is_down) {
@@ -1556,7 +1557,7 @@ export class GobanCanvas extends GobanCore {
                         color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
 
                     if (!this.theme_black_stones) {
-                        let err = new Error(
+                        const err = new Error(
                             `Goban.theme_black_stones not set. Current themes is ${JSON.stringify(
                                 this.themes,
                             )}`,
@@ -1567,7 +1568,7 @@ export class GobanCanvas extends GobanCore {
                         return;
                     }
                     if (!this.theme_white_stones) {
-                        let err = new Error(
+                        const err = new Error(
                             `Goban.theme_white_stones not set. Current themes is ${JSON.stringify(
                                 this.themes,
                             )}`,
@@ -1588,7 +1589,7 @@ export class GobanCanvas extends GobanCore {
                         shadow_ctx = null;
                     }
                     if (color === 1) {
-                        let stone =
+                        const stone =
                             this.theme_black_stones[
                                 ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_black_stones.length
                             ];
@@ -1601,7 +1602,7 @@ export class GobanCanvas extends GobanCore {
                             this.theme_stone_radius,
                         );
                     } else {
-                        let stone =
+                        const stone =
                             this.theme_white_stones[
                                 ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_white_stones.length
                             ];
@@ -1623,11 +1624,11 @@ export class GobanCanvas extends GobanCore {
                     this.colored_circles[j] &&
                     this.colored_circles[j][i]
                 ) {
-                    let circle = this.colored_circles[j][i];
+                    const circle = this.colored_circles[j][i];
 
                     ctx.save();
                     ctx.globalAlpha = 1.0;
-                    let radius = Math.floor(this.square_size * 0.5) - 0.5;
+                    const radius = Math.floor(this.square_size * 0.5) - 0.5;
                     let lineWidth = radius * (circle.border_width || 0.1);
 
                     if (lineWidth < 0.3) {
@@ -1686,7 +1687,7 @@ export class GobanCanvas extends GobanCore {
                 if (transparent_x) {
                     ctx.globalAlpha = 0.6;
                 }
-                let r = Math.max(1, this.metrics.mid * 0.7);
+                const r = Math.max(1, this.metrics.mid * 0.7);
                 ctx.moveTo(cx - r, cy - r);
                 ctx.lineTo(cx + r, cy + r);
                 ctx.moveTo(cx + r, cy - r);
@@ -1750,7 +1751,7 @@ export class GobanCanvas extends GobanCore {
                 }
                 ctx.lineWidth = Math.ceil(this.square_size * 0.065) - 0.5;
 
-                let r = this.square_size * 0.15;
+                const r = this.square_size * 0.15;
                 ctx.rect(cx - r, cy - r, r * 2, r * 2);
                 if (color !== "dame") {
                     ctx.fill();
@@ -1808,7 +1809,7 @@ export class GobanCanvas extends GobanCore {
                     pos.square
                 )
             ) {
-                let m = this.engine.getMoveByLocation(i, j);
+                const m = this.engine.getMoveByLocation(i, j);
                 if (m && !m.trunk) {
                     if (m.edited) {
                         //letter = "triangle";
@@ -1825,7 +1826,7 @@ export class GobanCanvas extends GobanCore {
                 letter_was_drawn = true;
                 ctx.save();
                 ctx.fillStyle = text_color;
-                let [, , metrics] = fitText(
+                const [, , metrics] = fitText(
                     ctx,
                     letter,
                     `bold FONT_SIZEpx ${GOBAN_FONT}`,
@@ -1833,7 +1834,7 @@ export class GobanCanvas extends GobanCore {
                     this.square_size * 0.8 * (subscript ? 0.9 : 1.0),
                 );
 
-                let xx = cx - metrics.width / 2;
+                const xx = cx - metrics.width / 2;
                 let yy =
                     cy +
                     (/WebKit|Trident/.test(navigator.userAgent)
@@ -1861,7 +1862,7 @@ export class GobanCanvas extends GobanCore {
                     subscript = "0.0"; // clarifies the markings on the blue move typically
                 }
 
-                let [, , metrics] = fitText(
+                const [, , metrics] = fitText(
                     ctx,
                     subscript,
                     `bold FONT_SIZEpx ${GOBAN_FONT}`,
@@ -1869,7 +1870,7 @@ export class GobanCanvas extends GobanCore {
                     this.square_size * 0.8 * (letter ? 0.9 : 1.0),
                 );
 
-                let xx = cx - metrics.width / 2;
+                const xx = cx - metrics.width / 2;
                 let yy =
                     cy +
                     (/WebKit|Trident/.test(navigator.userAgent)
@@ -1894,7 +1895,7 @@ export class GobanCanvas extends GobanCore {
         {
             let transparent = letter_was_drawn;
             let hovermark: string | undefined;
-            let symbol_color =
+            const symbol_color =
                 stone_color === 1
                     ? this.theme_black_text_color
                     : stone_color === 2
@@ -1958,7 +1959,7 @@ export class GobanCanvas extends GobanCore {
                 }
                 ctx.lineWidth = this.square_size * 0.075 * scale;
                 let theta = -(Math.PI * 2) / 4;
-                let r = this.square_size * 0.3 * scale;
+                const r = this.square_size * 0.3 * scale;
                 ctx.moveTo(cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta));
                 theta += (Math.PI * 2) / 3;
                 ctx.lineTo(cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta));
@@ -1978,7 +1979,7 @@ export class GobanCanvas extends GobanCore {
                 if (transparent) {
                     ctx.globalAlpha = 0.6;
                 }
-                let r = Math.max(1, this.metrics.mid * 0.35);
+                const r = Math.max(1, this.metrics.mid * 0.35);
                 ctx.moveTo(cx - r, cy - r);
                 ctx.lineTo(cx + r, cy + r);
                 ctx.moveTo(cx + r, cy - r);
@@ -1997,7 +1998,7 @@ export class GobanCanvas extends GobanCore {
                 if (transparent) {
                     ctx.globalAlpha = 0.6;
                 }
-                let r = Math.max(1, this.metrics.mid * 0.4);
+                const r = Math.max(1, this.metrics.mid * 0.4);
                 ctx.moveTo(cx - r, cy - r);
                 ctx.lineTo(cx + r, cy - r);
                 ctx.lineTo(cx + r, cy + r);
@@ -2012,7 +2013,7 @@ export class GobanCanvas extends GobanCore {
 
         /* Clear last move */
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
-            let m = this.last_move;
+            const m = this.last_move;
             delete this.last_move;
             this.drawSquare(m.x, m.y);
         }
@@ -2028,7 +2029,7 @@ export class GobanCanvas extends GobanCore {
                 this.last_move = this.engine.cur_move;
 
                 if (i >= 0 && j >= 0) {
-                    let color =
+                    const color =
                         stone_color === 1
                             ? this.theme_black_text_color
                             : this.theme_white_text_color;
@@ -2039,7 +2040,7 @@ export class GobanCanvas extends GobanCore {
                         ctx.beginPath();
                         ctx.lineWidth = this.square_size * 0.075;
                         //ctx.globalAlpha = 0.6;
-                        let r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
+                        const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
                         ctx.moveTo(cx - r, cy);
                         ctx.lineTo(cx + r, cy);
                         ctx.moveTo(cx, cy - r);
@@ -2057,9 +2058,9 @@ export class GobanCanvas extends GobanCore {
                             const letter = "?";
                             ctx.save();
                             ctx.fillStyle = color;
-                            let metrics = ctx.measureText(letter);
-                            let xx = cx - metrics.width / 2;
-                            let yy =
+                            const metrics = ctx.measureText(letter);
+                            const xx = cx - metrics.width / 2;
+                            const yy =
                                 cy +
                                 (/WebKit|Trident/.test(navigator.userAgent)
                                     ? this.square_size * -0.03
@@ -2088,12 +2089,12 @@ export class GobanCanvas extends GobanCore {
         /* Score Estimation */
 
         if (this.scoring_mode && this.score_estimate) {
-            let se = this.score_estimate;
-            let est = se.heat[j][i];
+            const se = this.score_estimate;
+            const est = se.heat[j][i];
 
             ctx.beginPath();
 
-            let color = est < 0 ? "white" : "black";
+            const color = est < 0 ? "white" : "black";
 
             if (color === "white") {
                 ctx.fillStyle = this.theme_black_text_color;
@@ -2103,7 +2104,7 @@ export class GobanCanvas extends GobanCore {
                 ctx.strokeStyle = "#888888";
             }
             ctx.lineWidth = Math.ceil(this.square_size * 0.035) - 0.5;
-            let r = this.square_size * 0.2 * Math.abs(est);
+            const r = this.square_size * 0.2 * Math.abs(est);
             ctx.rect(cx - r, cy - r, r * 2, r * 2);
             ctx.fill();
             ctx.stroke();
@@ -2118,7 +2119,7 @@ export class GobanCanvas extends GobanCore {
 
         let ret = this.square_size + ",";
 
-        let draw_last_move = !this.dont_draw_last_move;
+        const draw_last_move = !this.dont_draw_last_move;
         let stone_color = 0;
         if (this.engine) {
             stone_color = this.engine.board[j][i];
@@ -2136,7 +2137,7 @@ export class GobanCanvas extends GobanCore {
         /* Colored stones */
         if (this.colored_circles) {
             if (this.colored_circles[j][i]) {
-                let circle = this.colored_circles[j][i];
+                const circle = this.colored_circles[j][i];
                 ret += "circle " + circle.color;
             }
         }
@@ -2157,7 +2158,7 @@ export class GobanCanvas extends GobanCore {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {
                 if (cur.x === i && cur.y === j) {
-                    let move_diff = cur.getMoveNumberDifferenceFromTrunk();
+                    const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
                         if (!cur.edited && this.show_move_numbers) {
                             altmarking = cur.getMoveNumberDifferenceFromTrunk().toString();
@@ -2379,7 +2380,7 @@ export class GobanCanvas extends GobanCore {
                 !letter &&
                 !(pos.circle || pos.triangle || pos.chat_triangle || pos.cross || pos.square)
             ) {
-                let m = this.engine.getMoveByLocation(i, j);
+                const m = this.engine.getMoveByLocation(i, j);
                 if (m && !m.trunk) {
                     if (m.edited) {
                         //letter = "triangle";
@@ -2461,7 +2462,7 @@ export class GobanCanvas extends GobanCore {
             return;
         }
 
-        let metrics = (this.metrics = this.computeMetrics());
+        const metrics = (this.metrics = this.computeMetrics());
         if (
             force_clear ||
             !(
@@ -2486,7 +2487,7 @@ export class GobanCanvas extends GobanCore {
                         //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
                         this.pen_layer.style.left = this.layer_offset_left + "px";
                         this.pen_layer.style.top = this.layer_offset_top + "px";
-                        let ctx = this.pen_layer.getContext("2d");
+                        const ctx = this.pen_layer.getContext("2d");
                         if (ctx) {
                             this.pen_ctx = ctx;
                         } else {
@@ -2502,7 +2503,7 @@ export class GobanCanvas extends GobanCore {
                     //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
                     this.shadow_layer.style.left = this.layer_offset_left + "px";
                     this.shadow_layer.style.top = this.layer_offset_top + "px";
-                    let ctx = this.shadow_layer.getContext("2d");
+                    const ctx = this.shadow_layer.getContext("2d");
                     if (ctx) {
                         this.shadow_ctx = ctx;
                     } else {
@@ -2512,7 +2513,7 @@ export class GobanCanvas extends GobanCore {
 
                 this.__set_board_width = metrics.width;
                 this.__set_board_height = metrics.height;
-                let ctx = this.board.getContext("2d");
+                const ctx = this.board.getContext("2d");
                 if (ctx) {
                     this.ctx = ctx;
                 } else {
@@ -2527,22 +2528,22 @@ export class GobanCanvas extends GobanCore {
                 return;
             }
         }
-        let ctx = this.ctx;
+        const ctx = this.ctx;
 
-        let place = (ch: string, x: number, y: number): void => {
+        const place = (ch: string, x: number, y: number): void => {
             /* places centered (horizontally & veritcally) text at x,y */
-            let metrics = ctx.measureText(ch);
-            let xx = x - metrics.width / 2;
-            let yy = y;
+            const metrics = ctx.measureText(ch);
+            const xx = x - metrics.width / 2;
+            const yy = y;
             ctx.fillText(ch, xx, yy);
         };
-        let vplace = (ch: string, x: number, y: number): void => {
+        const vplace = (ch: string, x: number, y: number): void => {
             /* places centered (horizontally & veritcally) text at x,y, with text going down vertically. */
             for (let i = 0; i < ch.length; ++i) {
-                let metrics = ctx.measureText(ch[i]);
-                let xx = x - metrics.width / 2;
+                const metrics = ctx.measureText(ch[i]);
+                const xx = x - metrics.width / 2;
                 let yy = y;
-                let H =
+                const H =
                     metrics.width; /* should be height in an ideal world, measureText doesn't seem to return it though. For our purposes this works well enough though. */
 
                 if (ch.length === 2) {
@@ -2556,41 +2557,41 @@ export class GobanCanvas extends GobanCore {
             }
         };
 
-        let drawHorizontal = (i: number, j: number): void => {
+        const drawHorizontal = (i: number, j: number): void => {
             switch (this.getCoordinateDisplaySystem()) {
                 case "A1":
                     for (let c = 0; c < this.width; ++i, ++c) {
-                        let x =
+                        const x =
                             (i -
                                 this.bounds.left -
                                 (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
                                 this.square_size +
                             this.square_size / 2;
-                        let y = j * this.square_size + this.square_size / 2;
+                        const y = j * this.square_size + this.square_size / 2;
                         place("ABCDEFGHJKLMNOPQRSTUVWXYZ"[c], x, y);
                     }
                     break;
                 case "1-1":
                     for (let c = 0; c < this.width; ++i, ++c) {
-                        let x =
+                        const x =
                             (i -
                                 this.bounds.left -
                                 (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
                                 this.square_size +
                             this.square_size / 2;
-                        let y = j * this.square_size + this.square_size / 2;
+                        const y = j * this.square_size + this.square_size / 2;
                         place("" + (c + 1), x, y);
                     }
                     break;
             }
         };
 
-        let drawVertical = (i: number, j: number): void => {
+        const drawVertical = (i: number, j: number): void => {
             switch (this.getCoordinateDisplaySystem()) {
                 case "A1":
                     for (let c = 0; c < this.height; ++j, ++c) {
-                        let x = i * this.square_size + this.square_size / 2;
-                        let y =
+                        const x = i * this.square_size + this.square_size / 2;
+                        const y =
                             (j -
                                 this.bounds.top -
                                 (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
@@ -2600,7 +2601,7 @@ export class GobanCanvas extends GobanCore {
                     }
                     break;
                 case "1-1":
-                    let chinese_japanese_numbers = [
+                    const chinese_japanese_numbers = [
                         "一",
                         "二",
                         "三",
@@ -2628,8 +2629,8 @@ export class GobanCanvas extends GobanCore {
                         "二十五",
                     ];
                     for (let c = 0; c < this.height; ++j, ++c) {
-                        let x = i * this.square_size + this.square_size / 2;
-                        let y =
+                        const x = i * this.square_size + this.square_size / 2;
+                        const y =
                             (j -
                                 this.bounds.top -
                                 (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
@@ -2696,7 +2697,7 @@ export class GobanCanvas extends GobanCore {
 
         /* Set font for text overlay */
         {
-            let text_size = Math.round(this.square_size * 0.45);
+            const text_size = Math.round(this.square_size * 0.45);
             ctx.font = "bold " + text_size + "px " + GOBAN_FONT;
         }
 
@@ -2715,8 +2716,8 @@ export class GobanCanvas extends GobanCore {
         this.message_div = document.createElement("div");
         this.message_div.className = "GobanMessage";
         this.message_td = document.createElement("td");
-        let table = document.createElement("table");
-        let tr = document.createElement("tr");
+        const table = document.createElement("table");
+        const tr = document.createElement("tr");
         tr.appendChild(this.message_td);
         table.appendChild(tr);
         this.message_div.appendChild(table);
@@ -2725,7 +2726,7 @@ export class GobanCanvas extends GobanCore {
         this.message_td.appendChild(this.message_text);
         this.parent.appendChild(this.message_div);
 
-        let message_time = Date.now();
+        const message_time = Date.now();
         this.message_div.addEventListener("click", () => {
             try {
                 if (Date.now() - message_time < 100) {
@@ -2795,7 +2796,7 @@ export class GobanCanvas extends GobanCore {
                 //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
                 this.shadow_layer.style.left = this.layer_offset_left + "px";
                 this.shadow_layer.style.top = this.layer_offset_top + "px";
-                let ctx = this.shadow_layer.getContext("2d");
+                const ctx = this.shadow_layer.getContext("2d");
                 if (ctx) {
                     this.shadow_ctx = ctx;
                 } else {
@@ -2842,9 +2843,9 @@ export class GobanCanvas extends GobanCore {
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         //this.parent.css(this.theme_board.getBackgroundCSS());
-        let bgcss = this.theme_board.getBackgroundCSS();
+        const bgcss = this.theme_board.getBackgroundCSS();
         if (this.parent) {
-            for (let key in bgcss) {
+            for (const key in bgcss) {
                 (this.parent.style as any)[key] = (bgcss as any)[key];
             }
         }
@@ -2855,12 +2856,12 @@ export class GobanCanvas extends GobanCore {
         }
     }
     private onLabelingStart(ev: MouseEvent | TouchEvent) {
-        let pos = getRelativeEventPosition(ev);
+        const pos = getRelativeEventPosition(ev);
         this.last_label_position = this.xy2ij(pos.x, pos.y);
 
         {
-            let x = this.last_label_position.i;
-            let y = this.last_label_position.j;
+            const x = this.last_label_position.i;
+            const y = this.last_label_position.j;
             if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
                 return;
             }
@@ -2875,7 +2876,7 @@ export class GobanCanvas extends GobanCore {
 
         /* clear hover */
         if (this.__last_pt.valid) {
-            let last_hover = this.last_hover_square;
+            const last_hover = this.last_hover_square;
             delete this.last_hover_square;
             if (last_hover) {
                 this.drawSquare(last_hover.x, last_hover.y);
@@ -2885,12 +2886,12 @@ export class GobanCanvas extends GobanCore {
         this.drawSquare(this.last_label_position.i, this.last_label_position.j);
     }
     private onLabelingMove(ev: MouseEvent | TouchEvent) {
-        let pos = getRelativeEventPosition(ev);
-        let cur = this.xy2ij(pos.x, pos.y);
+        const pos = getRelativeEventPosition(ev);
+        const cur = this.xy2ij(pos.x, pos.y);
 
         {
-            let x = cur.i;
-            let y = cur.j;
+            const x = cur.i;
+            const y = cur.j;
             if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
                 return;
             }
@@ -2944,7 +2945,7 @@ export class GobanCanvas extends GobanCore {
             this.move_tree_canvas.style.position = "absolute";
 
             try {
-                let observer = new ResizeObserver(() => {
+                const observer = new ResizeObserver(() => {
                     this.move_tree_redraw(true);
                 });
                 observer.observe(this.move_tree_container);
@@ -2962,7 +2963,7 @@ export class GobanCanvas extends GobanCore {
         }
 
         if (do_init || this.move_tree_inner_container.parentNode !== this.move_tree_container) {
-            let move_tree_on_scroll = (event: Event) => {
+            const move_tree_on_scroll = (event: Event) => {
                 try {
                     this.move_tree_redraw(true);
                 } catch (e) {
@@ -2974,7 +2975,7 @@ export class GobanCanvas extends GobanCore {
             this.move_tree_container.style.position = "relative";
             this.move_tree_container.removeEventListener("scroll", move_tree_on_scroll);
             this.move_tree_container.addEventListener("scroll", move_tree_on_scroll);
-            let mt = this.move_tree_container;
+            const mt = this.move_tree_container;
             this.on("destroy", () => {
                 mt.removeEventListener("scroll", move_tree_on_scroll);
             });
@@ -2994,7 +2995,7 @@ export class GobanCanvas extends GobanCore {
         */
 
         this.engine.move_tree.recomputeIsobranches();
-        let active_path_end = this.engine.cur_move;
+        const active_path_end = this.engine.cur_move;
 
         this.engine.move_tree_layout_dirty = false;
 
@@ -3011,11 +3012,11 @@ export class GobanCanvas extends GobanCore {
         }
         */
 
-        let canvas = this.move_tree_canvas;
-        let engine = this.engine;
+        const canvas = this.move_tree_canvas;
+        const engine = this.engine;
 
         this.engine.move_tree_layout_vector = [];
-        let layout_hash = {};
+        const layout_hash = {};
         this.engine.move_tree.layout(0, 0, layout_hash, 0);
         this.engine.move_tree_layout_hash = layout_hash;
         let max_height = 0;
@@ -3023,13 +3024,13 @@ export class GobanCanvas extends GobanCore {
             max_height = Math.max(this.engine.move_tree_layout_vector[i] + 1, max_height);
         }
 
-        let div_clientWidth = this.move_tree_container.clientWidth;
-        let div_clientHeight = this.move_tree_container.clientHeight;
-        let width = Math.max(
+        const div_clientWidth = this.move_tree_container.clientWidth;
+        const div_clientHeight = this.move_tree_container.clientHeight;
+        const width = Math.max(
             div_clientWidth,
             this.engine.move_tree_layout_vector.length * MoveTree.stone_square_size,
         );
-        let height = Math.max(div_clientHeight, max_height * MoveTree.stone_square_size);
+        const height = Math.max(div_clientHeight, max_height * MoveTree.stone_square_size);
 
         let div_scroll_top = this.move_tree_container.scrollTop;
         let div_scroll_left = this.move_tree_container.scrollLeft;
@@ -3065,7 +3066,7 @@ export class GobanCanvas extends GobanCore {
         canvas.style.top = div_scroll_top + "px";
         canvas.style.left = div_scroll_left + "px";
 
-        let viewport = {
+        const viewport = {
             offset_x: div_scroll_left,
             offset_y: div_scroll_top,
             minx: div_scroll_left - MoveTree.stone_square_size,
@@ -3074,7 +3075,7 @@ export class GobanCanvas extends GobanCore {
             maxy: div_scroll_top + div_clientHeight + MoveTree.stone_square_size,
         };
 
-        let ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d");
         if (!ctx) {
             throw new Error(`Failed to get drawing context for move tree canvas`);
         }
@@ -3094,7 +3095,7 @@ export class GobanCanvas extends GobanCore {
 
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
-        let text_size = 10;
+        const text_size = 10;
         ctx.font = `bold ${text_size}px Verdana,Arial,sans-serif`;
         ctx.textBaseline = "middle";
         this.move_tree_drawRecursive(
@@ -3106,20 +3107,20 @@ export class GobanCanvas extends GobanCore {
         ctx.restore();
     }
     public move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void {
-        let handler = (event: TouchEvent | MouseEvent) => {
+        const handler = (event: TouchEvent | MouseEvent) => {
             try {
                 if (!this.move_tree_container) {
                     throw new Error(`move_tree_container was not set`);
                 }
 
-                let ox = this.move_tree_container.scrollLeft;
-                let oy = this.move_tree_container.scrollTop;
-                let pos = getRelativeEventPosition(event);
+                const ox = this.move_tree_container.scrollLeft;
+                const oy = this.move_tree_container.scrollTop;
+                const pos = getRelativeEventPosition(event);
                 pos.x += ox;
                 pos.y += oy;
-                let i = Math.floor(pos.x / MoveTree.stone_square_size);
-                let j = Math.floor(pos.y / MoveTree.stone_square_size);
-                let node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
+                const i = Math.floor(pos.x / MoveTree.stone_square_size);
+                const j = Math.floor(pos.y / MoveTree.stone_square_size);
+                const node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
 
                 if (node) {
                     if (this.engine.cur_move.id !== node.id) {
@@ -3151,31 +3152,31 @@ export class GobanCanvas extends GobanCore {
         active_path_number: number,
         viewport: ViewPortInterface,
     ): void {
-        let stone_idx = node.move_number * 31;
-        let cx = node.layout_cx - viewport.offset_x;
-        let cy = node.layout_cy - viewport.offset_y;
-        let color = node.player;
-        let on_path = node.active_path_number === active_path_number;
+        const stone_idx = node.move_number * 31;
+        const cx = node.layout_cx - viewport.offset_x;
+        const cy = node.layout_cy - viewport.offset_y;
+        const color = node.player;
+        const on_path = node.active_path_number === active_path_number;
 
         if (!on_path) {
             ctx.save();
             ctx.globalAlpha = 0.4;
         }
 
-        let theme_white_stones = __theme_cache.white[this.themes.white][MoveTree.stone_radius];
-        let theme_black_stones = __theme_cache.black[this.themes.black][MoveTree.stone_radius];
+        const theme_white_stones = __theme_cache.white[this.themes.white][MoveTree.stone_radius];
+        const theme_black_stones = __theme_cache.black[this.themes.black][MoveTree.stone_radius];
 
         if (color === 1) {
-            let stone = theme_black_stones[stone_idx % theme_black_stones.length];
+            const stone = theme_black_stones[stone_idx % theme_black_stones.length];
             this.theme_black.placeBlackStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
         } else if (color === 2) {
-            let stone = theme_white_stones[stone_idx % theme_white_stones.length];
+            const stone = theme_white_stones[stone_idx % theme_white_stones.length];
             this.theme_white.placeWhiteStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
         } else {
             return;
         }
 
-        let text_color = color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+        const text_color = color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
 
         let label = "";
         switch (
@@ -3211,9 +3212,9 @@ export class GobanCanvas extends GobanCore {
         if (!node.label_metrics) {
             node.label_metrics = ctx.measureText(node.label);
         }
-        let metrics = node.label_metrics;
-        let xx = cx - metrics.width / 2;
-        let yy =
+        const metrics = node.label_metrics;
+        const xx = cx - metrics.width / 2;
+        const yy =
             cy +
             (/WebKit|Trident/.test(navigator.userAgent)
                 ? MoveTree.stone_radius * -0.01
@@ -3274,8 +3275,10 @@ export class GobanCanvas extends GobanCore {
         viewport: ViewPortInterface,
     ): void {
         ctx.beginPath();
-        let sx = Math.round(node.layout_cx - MoveTree.stone_square_size * 0.5) - viewport.offset_x;
-        let sy = Math.round(node.layout_cy - MoveTree.stone_square_size * 0.5) - viewport.offset_y;
+        const sx =
+            Math.round(node.layout_cx - MoveTree.stone_square_size * 0.5) - viewport.offset_x;
+        const sy =
+            Math.round(node.layout_cy - MoveTree.stone_square_size * 0.5) - viewport.offset_y;
         ctx.rect(sx, sy, MoveTree.stone_square_size, MoveTree.stone_square_size);
         ctx.fillStyle = color;
         ctx.fill();
@@ -3302,8 +3305,8 @@ export class GobanCanvas extends GobanCore {
 
             ctx.beginPath();
             ctx.strokeStyle = node.trunk ? "#000000" : MoveTree.line_colors[node.line_color];
-            let ox = viewport.offset_x;
-            let oy = viewport.offset_y;
+            const ox = viewport.offset_x;
+            const oy = viewport.offset_y;
             ctx.moveTo(node.parent.layout_cx - ox, node.parent.layout_cy - oy);
             ctx.quadraticCurveTo(
                 node.layout_cx - MoveTree.stone_square_size * 0.5 - ox,
@@ -3349,26 +3352,26 @@ export class GobanCanvas extends GobanCore {
             B.branches.length === 0 &&
             (A.trunk_next !== null || A.branches.length !== 0)
         ) {
-            let t = A;
+            const t = A;
             A = B;
             B = t;
         }
 
         //isStrong(A, B);
-        let strong =
+        const strong =
             A.trunk_next == null &&
             A.branches.length === 0 &&
             (B.trunk_next !== null || B.branches.length !== 0);
 
-        let ox = viewport.offset_x;
-        let oy = viewport.offset_y;
+        const ox = viewport.offset_x;
+        const oy = viewport.offset_y;
         ctx.beginPath();
         ctx.strokeStyle = MoveTree.isobranch_colors[strong ? "strong" : "weak"];
-        let cur_line_width = ctx.lineWidth;
+        const cur_line_width = ctx.lineWidth;
         ctx.lineWidth = 2;
         ctx.moveTo(B.layout_cx - ox, B.layout_cy - oy);
-        let my = strong ? B.layout_cy : (A.layout_cy + B.layout_cy) / 2;
-        let mx = (A.layout_cx + B.layout_cx) / 2 + MoveTree.stone_square_size * 0.5;
+        const my = strong ? B.layout_cy : (A.layout_cy + B.layout_cy) / 2;
+        const mx = (A.layout_cx + B.layout_cx) / 2 + MoveTree.stone_square_size * 0.5;
         ctx.quadraticCurveTo(mx - ox, my - oy, A.layout_cx - ox, A.layout_cy - oy);
         ctx.stroke();
         ctx.lineWidth = cur_line_width;
@@ -3398,7 +3401,7 @@ export class GobanCanvas extends GobanCore {
     }
 }
 
-let fitTextCache: { [key: string]: [number, string, TextMetrics] } = {};
+const fitTextCache: { [key: string]: [number, string, TextMetrics] } = {};
 
 // fontPattern MUST have a FONT_SIZE string in it that will be replaced
 // ctx.font will be set to the appropriate size when this returns.
@@ -3418,9 +3421,9 @@ function fitText(
         );
     }
 
-    let key = `${width} ${fontPattern} ${startingFontSize} ${text}`;
+    const key = `${width} ${fontPattern} ${startingFontSize} ${text}`;
     if (key in fitTextCache) {
-        let cached = fitTextCache[key];
+        const cached = fitTextCache[key];
         ctx.font = cached[1];
         return cached;
     }
@@ -3428,15 +3431,15 @@ function fitText(
     let font_size = startingFontSize;
 
     do {
-        let font = fontPattern.replace("FONT_SIZE", font_size.toString());
+        const font = fontPattern.replace("FONT_SIZE", font_size.toString());
         ctx.font = font;
-        let metrics = ctx.measureText(text);
+        const metrics = ctx.measureText(text);
         if (font_size <= MIN_FONT_SIZE || metrics.width < width) {
             fitTextCache[key] = [font_size, font, metrics];
             return fitTextCache[key];
         }
 
-        let new_font_size = Math.floor((font_size * width) / metrics.width);
+        const new_font_size = Math.floor((font_size * width) / metrics.width);
         if (new_font_size >= font_size) {
             font_size = font_size - 1;
         } else {

@@ -26,7 +26,7 @@ try {
     stored_config = JSON.parse(localStorage.getItem("config") || "{}");
 } catch (e) {}
 
-let base_config: GobanConfig = Object.assign(
+const base_config: GobanConfig = Object.assign(
     {
         interactive: true,
         mode: "puzzle",
@@ -90,10 +90,10 @@ function clear() {
             },
             */
 
-let fiddler = new EventEmitter();
+const fiddler = new EventEmitter();
 
 function Main(): JSX.Element {
-    let [_update, _setUpdate] = React.useState(1);
+    const [_update, _setUpdate] = React.useState(1);
     function forceUpdate() {
         _setUpdate(_update + 1);
     }
@@ -263,7 +263,7 @@ function ReactGoban<GobanClass extends GobanCore>(
     let goban: GobanCore;
 
     React.useEffect(() => {
-        let config: GobanCanvasConfig = Object.assign({}, base_config, {
+        const config: GobanCanvasConfig = Object.assign({}, base_config, {
             board_div: container.current || undefined,
             move_tree_container: move_tree_container.current || undefined,
         });
@@ -296,12 +296,12 @@ function ReactGoban<GobanClass extends GobanCore>(
         });
 
         let i = 0;
-        let start = Date.now();
-        let interval = setInterval(() => {
+        const start = Date.now();
+        const interval = setInterval(() => {
             i++;
             if (i >= 300) {
                 if (i === 300) {
-                    let end = Date.now();
+                    const end = Date.now();
                     console.log("Done in ", end - start);
                 }
                 clearInterval(interval);

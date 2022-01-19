@@ -40,7 +40,7 @@ function computeWorstMoves(
     ai_review: JGOFAIReview,
     use_score = false,
 ): Array<AIReviewWorstMoveEntry> {
-    let ret: Array<AIReviewWorstMoveEntry> = [];
+    const ret: Array<AIReviewWorstMoveEntry> = [];
     let cur_move = starting_move;
 
     const metric_array = use_score ? ai_review.scores : ai_review.win_rates;
@@ -51,12 +51,12 @@ function computeWorstMoves(
     }
 
     while (cur_move.trunk_next) {
-        let next_move = cur_move.trunk_next;
+        const next_move = cur_move.trunk_next;
 
-        let cur_win_rate = metric_array[cur_move.move_number] || DEFAULT_VALUE;
-        let next_win_rate = metric_array[next_move.move_number] || DEFAULT_VALUE;
+        const cur_win_rate = metric_array[cur_move.move_number] || DEFAULT_VALUE;
+        const next_win_rate = metric_array[next_move.move_number] || DEFAULT_VALUE;
 
-        let delta: number =
+        const delta: number =
             next_move.player === JGOFNumericPlayerColor.WHITE
                 ? cur_win_rate - next_win_rate
                 : next_win_rate - cur_win_rate;
