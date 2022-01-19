@@ -22,24 +22,18 @@ module.exports = {
     "rules": {
         // Recommended rules with errors
         // TODO: Fix these and re-enable them
-
-        "@typescript-eslint/ban-types": "off", // 35 errors
-        "@typescript-eslint/explicit-module-boundary-types": "off", // 2074 warnings
-        "@typescript-eslint/no-empty-function": "off", // 14 errors
-        "@typescript-eslint/no-empty-interface": "off", // 45 errors
-        "@typescript-eslint/no-explicit-any": "off", // 535 warnings
-        "@typescript-eslint/no-namespace": "off", // 1 error
-        "@typescript-eslint/no-this-alias": "off", // 4 errors
-        "@typescript-eslint/no-unused-vars": "off", // 203 errors
-        "@typescript-eslint/triple-slash-reference": "off", // 1 error
-
-        "no-empty-pattern": "off", // 1 error
-        "no-misleading-character-class": "off", // 2 errors
-        "no-prototype-builtins": "off", // 8 errors
-        "no-self-assign": "off", // 2 errors
-        "no-useless-escape": "off", // 24 errors
-        "prefer-spread": "off", // 7 errors
-
+        "@typescript-eslint/ban-types": "off", // 1 error
+        "@typescript-eslint/no-empty-function": "off", // 2 errors
+        "@typescript-eslint/no-explicit-any": "off", // 131 warnings
+        "@typescript-eslint/no-floating-promises": "off", // 1 error
+        "@typescript-eslint/no-this-alias": "off", // 11 errors
+        "@typescript-eslint/no-unused-vars": "off", // 38 warnings
+        "eqeqeq": "off", // 2 errors
+        "no-case-declarations": "off", // 1 error
+        "no-constant-condition": "off", // 2 errors
+        "no-empty": "off", // 2 errors
+        "no-fallthrough": "off", // 6 errors
+        "no-self-assign": "off", // 1 error
         //==============================================================
 
 
@@ -143,7 +137,7 @@ module.exports = {
     },
     "overrides": [
         {
-            "files": ["*.test.ts", "*.test.tsx"],
+            "files": ["test.tsx"],
             // since test files are not part of tsconfig.json,
             // parserOptions.project must be unset
             "parserOptions": {
