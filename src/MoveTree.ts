@@ -154,7 +154,7 @@ export class MoveTree {
     }
 
     toJson(): MoveTreeJson {
-        let ret: MoveTreeJson = {
+        const ret: MoveTreeJson = {
             x: this.x,
             y: this.y,
         };
@@ -206,8 +206,8 @@ export class MoveTree {
 
         if (json.marks) {
             for (let i = 0; i < json.marks.length; ++i) {
-                let m = json.marks[i];
-                for (let k in m.marks) {
+                const m = json.marks[i];
+                for (const k in m.marks) {
                     (this.getMarks(m.x, m.y) as any)[k] = (m.marks as any)[k];
                 }
             }
@@ -224,8 +224,8 @@ export class MoveTree {
 
         __isobranches_state_hash = {};
 
-        let buildHashes = (node: MoveTree): void => {
-            let hash = node.state.isobranch_hash
+        const buildHashes = (node: MoveTree): void => {
+            const hash = node.state.isobranch_hash
                 ? node.state.isobranch_hash
                 : (node.state.isobranch_hash =
                       node.state.board.map((arr) => arr.join("")).join("") + node.player);
@@ -246,12 +246,12 @@ export class MoveTree {
             }
         };
 
-        let recompute = (node: MoveTree): void => {
+        const recompute = (node: MoveTree): void => {
             node.isobranches = [];
 
             if (node.x !== -1) {
                 /* don't draw iso branches for passes */
-                for (let n of __isobranches_state_hash[node.isobranch_hash as string]) {
+                for (const n of __isobranches_state_hash[node.isobranch_hash as string]) {
                     if (node.id !== n.id) {
                         if (node.isAncestorOf(n) || n.isAncestorOf(node)) {
                             continue;
@@ -356,7 +356,7 @@ export class MoveTree {
                     this.branches[i].y === y &&
                     this.branches[i].player === player
                 ) {
-                    let brs = this.branches[i].branches;
+                    const brs = this.branches[i].branches;
                     for (let j = 0; j < brs.length; ++j) {
                         brs[j].parent = this.trunk_next;
                         this.trunk_next.branches.push(brs[j]);
@@ -492,7 +492,7 @@ export class MoveTree {
         }
         for (let j = 0; j < this.marks.length; ++j) {
             for (let i = 0; i < this.marks[j].length; ++i) {
-                for (let k in this.marks[j][i]) {
+                for (const k in this.marks[j][i]) {
                     // !!k is to prevent compiler warning about unused k, but
                     // this is called a lot so we don't want to do
                     // Object.keys(..).length here
@@ -509,7 +509,7 @@ export class MoveTree {
 
         for (let j = 0; j < this.marks.length; ++j) {
             for (let i = 0; i < this.marks[j].length; ++i) {
-                for (let k in this.marks[j][i]) {
+                for (const k in this.marks[j][i]) {
                     fn(i, j);
                     // !!k is to prevent compiler warning about unused k, but
                     // this is called a lot so we don't want to do
@@ -592,8 +592,9 @@ export class MoveTree {
             if (this.marks) {
                 for (let y = 0; y < this.marks.length; ++y) {
                     for (let x = 0; x < this.marks[0].length; ++x) {
-                        let m = this.marks[y][x];
-                        let pos = "abcdefghijklmnopqrstuvwxyz"[x] + "abcdefghijklmnopqrstuvwxyz"[y];
+                        const m = this.marks[y][x];
+                        const pos =
+                            "abcdefghijklmnopqrstuvwxyz"[x] + "abcdefghijklmnopqrstuvwxyz"[y];
                         if (m.triangle) {
                             ret += "TR[" + pos + "]";
                         }
@@ -629,9 +630,9 @@ export class MoveTree {
             }
             ret += "\n";
 
-            let brct = (this.trunk_next != null ? 1 : 0) + this.branches.length;
-            let A = brct > 1 ? "(" : "";
-            let B = brct > 1 ? ")" : "";
+            const brct = (this.trunk_next != null ? 1 : 0) + this.branches.length;
+            const A = brct > 1 ? "(" : "";
+            const B = brct > 1 ? ")" : "";
 
             if (this.trunk_next) {
                 ret += A + this.trunk_next.toSGF() + B;
@@ -802,7 +803,7 @@ export class MoveTree {
                 next_line_color %= MoveTree.line_colors.length;
             }
 
-            let by = this.branches[i].layout(
+            const by = this.branches[i].layout(
                 x + 1,
                 min_y,
                 layout_hash,
@@ -841,7 +842,7 @@ export class MoveTree {
         return min_y;
     }
     getNodeAtLayoutPosition(layout_x: number, layout_y: number): MoveTree | null {
-        let key = layout_x + "," + layout_y;
+        const key = layout_x + "," + layout_y;
         if (key in this.engine.move_tree_layout_hash) {
             return this.engine.move_tree_layout_hash[key];
         }
@@ -855,7 +856,7 @@ export class MoveTree {
 
         c.recomputeIsobranches();
 
-        let ret: Array<MoveTree> = [];
+        const ret: Array<MoveTree> = [];
         if (this.isobranches) {
             for (let i = 0; i < this.isobranches.length; ++i) {
                 if (this.isobranches[i].trunk_next || this.isobranches[i].branches.length) {
@@ -920,7 +921,7 @@ export class MoveTree {
 
         this.trunk = true;
         if (this.branches.length > 0) {
-            let br = this.branches.shift();
+            const br = this.branches.shift();
             if (br) {
                 this.trunk_next = br;
                 this.trunk_next.hoistFirstBranchToTrunk();
@@ -943,7 +944,7 @@ export class MoveTree {
         try {
             if (typeof message === "object") {
                 if (message.type === "analysis") {
-                    let moves = GoMath.decodeMoves(message.moves, width, height);
+                    const moves = GoMath.decodeMoves(message.moves, width, height);
                     let movestr = "";
                     for (let i = 0; i < moves.length; ++i) {
                         movestr += GoMath.prettyCoords(moves[i].x, moves[i].y, height) + " ";

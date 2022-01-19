@@ -470,12 +470,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.goban_id = ++last_goban_id;
 
         /* Apply defaults */
-        let C: any = {};
-        let default_config = this.defaultConfig();
-        for (let k in default_config) {
+        const C: any = {};
+        const default_config = this.defaultConfig();
+        for (const k in default_config) {
             C[k] = (default_config as any)[k];
         }
-        for (let k in config) {
+        for (const k in config) {
             C[k] = (config as any)[k];
         }
         config = C;
@@ -695,7 +695,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
 
     public static setHooks(hooks: GobanHooks): void {
-        for (let name in hooks) {
+        for (const name in hooks) {
             (GobanCore.hooks as any)[name] = (hooks as any)[name];
         }
     }
@@ -784,12 +784,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         return { white: "Shell", black: "Slate", board: "Kaya" };
     }
     protected connect(server_socket: any): void {
-        let socket = (this.socket = server_socket);
+        const socket = (this.socket = server_socket);
 
         this.disconnectedFromGame = false;
         //this.on_disconnects = [];
 
-        let send_connect_message = () => {
+        const send_connect_message = () => {
             if (this.disconnectedFromGame) {
                 return;
             }
@@ -900,7 +900,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 focus_tracker.reset();
 
                 if (this.last_phase && this.last_phase !== "finished" && obj.phase === "finished") {
-                    let winner = obj.winner;
+                    const winner = obj.winner;
                     let winner_color: "black" | "white" | undefined;
                     if (typeof winner === "number") {
                         winner_color = winner === obj.black_player_id ? "black" : "white";
@@ -1039,7 +1039,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         );
                         return;
                     }
-                    let move = move_obj.move;
+                    const move = move_obj.move;
 
                     if (this.isInPushedAnalysis()) {
                         this.leavePushedAnalysis();
@@ -1074,7 +1074,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.engine.jumpToLastOfficialMove();
 
                     if (this.engine.playerToMove() !== this.player_id) {
-                        let t = this.conditional_tree.getChild(
+                        const t = this.conditional_tree.getChild(
                             GoMath.encodeMove(the_move.x, the_move.y),
                         );
                         t.move = null;
@@ -1096,10 +1096,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         return;
                     }
 
-                    let score_before_move =
+                    const score_before_move =
                         this.engine.computeScore(true)[this.engine.colorToMove()].prisoners;
 
-                    let removed_count: number = 0;
+                    let removed_count = 0;
                     if (the_move.edited) {
                         this.engine.editPlace(the_move.x, the_move.y, the_move.color || 0);
                     } else {
@@ -1177,8 +1177,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if ("strict_seki_mode" in cfg) {
                     this.engine.strict_seki_mode = cfg.strict_seki_mode;
                 } else {
-                    let removed = cfg.removed;
-                    let stones = cfg.stones;
+                    const removed = cfg.removed;
+                    const stones = cfg.stones;
                     let moves: Array<Move>;
                     if (!stones) {
                         moves = [];
@@ -1198,8 +1198,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     return;
                 }
 
-                let player_id = cfg.player_id;
-                let stones = cfg.stones;
+                const player_id = cfg.player_id;
+                const stones = cfg.stones;
 
                 if (player_id === 0) {
                     this.engine.players["white"].accepted_stones = stones;
@@ -1217,7 +1217,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.emit("update");
             });
 
-            let auto_resign_state: { [id: number]: boolean } = {};
+            const auto_resign_state: { [id: number]: boolean } = {};
 
             this._socket_on(prefix + "auto_resign", (obj: any) => {
                 this.emit("auto-resign", {
@@ -1248,7 +1248,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         /*** Review mode ***/
         /*******************/
         let bulk_processing = false;
-        let process_r = (obj: ReviewMessage) => {
+        const process_r = (obj: ReviewMessage) => {
             if (this.disconnectedFromGame) {
                 return;
             }
@@ -1293,14 +1293,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 "om" in obj /* official moves are always alone in these object broadcasts */ ||
                 "undo" in obj /* official moves are always alone in these object broadcasts */
             ) {
-                let curmove = this.engine.cur_move;
-                let follow =
+                const curmove = this.engine.cur_move;
+                const follow =
                     this.engine.cur_review_move == null ||
                     this.engine.cur_review_move.id === curmove.id;
                 let do_redraw = false;
                 if ("f" in obj && typeof obj.m === "string") {
                     /* specifying node */
-                    let t = this.done_loading_review;
+                    const t = this.done_loading_review;
                     this.done_loading_review =
                         false; /* this prevents drawing from being drawn when we do a follow path. */
                     this.engine.followPath(obj.f || 0, obj.m);
@@ -1312,9 +1312,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 if ("om" in obj) {
                     /* Official move [comes from live review of game] */
-                    let t = this.engine.cur_review_move || this.engine.cur_move;
-                    let mv = this.engine.decodeMoves([obj.om] as any)[0];
-                    let follow_om = t.id === this.engine.last_official_move.id;
+                    const t = this.engine.cur_review_move || this.engine.cur_move;
+                    const mv = this.engine.decodeMoves([obj.om] as any)[0];
+                    const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.place(mv.x, mv.y, false, false, true, true, true);
                     this.engine.setLastOfficialMove();
@@ -1334,8 +1334,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 if ("undo" in obj) {
                     /* Official undo move [comes from live review of game] */
-                    let t = this.engine.cur_review_move;
-                    let cur_move_undone =
+                    const t = this.engine.cur_review_move;
+                    const cur_move_undone =
                         this.engine.cur_review_move?.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.showPrevious();
@@ -1366,7 +1366,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
                     if (typeof obj.k !== "undefined") {
                         /* set marks */
-                        let t = this.engine.cur_move;
+                        const t = this.engine.cur_move;
                         this.engine.cur_review_move.clearMarks();
                         this.engine.cur_move = this.engine.cur_review_move;
                         this.setMarks(obj["k"], this.engine.cur_move.id !== t.id);
@@ -1378,7 +1378,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         do_redraw = false;
                     }
                     if ("delete" in obj) {
-                        let t = this.engine.cur_review_move.parent;
+                        const t = this.engine.cur_review_move.parent;
                         this.engine.cur_review_move.remove();
                         this.engine.jumpTo(t);
                         this.engine.setAsCurrentReviewMove();
@@ -1397,7 +1397,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     if (typeof obj.pp !== "undefined") {
                         /* update pen marks */
                         try {
-                            let pts =
+                            const pts =
                                 this.engine.cur_review_move.pen_marks[
                                     this.engine.cur_review_move.pen_marks.length - 1
                                 ].points;
@@ -1532,7 +1532,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 }
             }
         }
-        for (let pair of this.socket_event_bindings) {
+        for (const pair of this.socket_event_bindings) {
             this.socket.off(pair[0], pair[1]);
         }
         this.socket_event_bindings = [];
@@ -1555,7 +1555,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             return;
         }
 
-        let msg: any = {
+        const msg: any = {
             body: msg_body,
         };
 
@@ -1566,7 +1566,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             msg["game_id"] = this.config.game_id;
             msg["move_number"] = this.engine.getCurrentMoveNumber();
         } else {
-            let diff = this.engine.getMoveDiff();
+            const diff = this.engine.getMoveDiff();
             where = "review/chat";
             msg["review_id"] = this.config.review_id;
             msg["from"] = diff.from;
@@ -1596,11 +1596,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         }
 
-        let ii = x / this.square_size;
-        let jj = y / this.square_size;
+        const ii = x / this.square_size;
+        const jj = y / this.square_size;
         let i = Math.floor(ii);
         let j = Math.floor(jj);
-        let border_distance = Math.min(ii - i, jj - j, 1 - (ii - i), 1 - (jj - j));
+        const border_distance = Math.min(ii - i, jj - j, 1 - (ii - i), 1 - (jj - j));
         if (border_distance < 0.1) {
             // have a "dead zone" in between squares to avoid misclicks
             i = -1;
@@ -1627,7 +1627,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
 
     protected putOrClearLabel(x: number, y: number, mode?: "put" | "clear"): boolean {
-        let ret: boolean = false;
+        let ret = false;
         if (mode == null || typeof mode === "undefined") {
             if (this.analyze_subtool === "letters" || this.analyze_subtool === "numbers") {
                 this.label_mark = this.label_character;
@@ -1645,7 +1645,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (mode === "put") {
                 ret = this.toggleMark(x, y, this.label_mark, this.label_mark.length <= 3, true);
             } else {
-                let marks = this.getMarks(x, y);
+                const marks = this.getMarks(x, y);
 
                 for (let i = 0; i < MARK_TYPES.length; ++i) {
                     delete marks[MARK_TYPES[i]];
@@ -1658,7 +1658,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         return ret;
     }
     public setSquareSize(new_ss: number): void {
-        let redraw = this.square_size !== new_ss;
+        const redraw = this.square_size !== new_ss;
         this.square_size = new_ss;
         if (redraw) {
             this.redraw(true);
@@ -1711,7 +1711,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.square_size = 12;
         }
 
-        let ret = {
+        const ret = {
             width:
                 this.square_size *
                 (this.bounded_width + +this.draw_left_labels + +this.draw_right_labels),
@@ -1798,7 +1798,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public load(config: GobanConfig): GoEngine {
         config = repair_config(config);
-        for (let k in config) {
+        for (const k in config) {
             (this.config as any)[k] = (config as any)[k];
         }
         this.clearMessage();
@@ -1853,22 +1853,22 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         let merged_log: GobanChatLog = [];
-        let main_log: GobanChatLog = (config.chat_log || []).map((x) => {
+        const main_log: GobanChatLog = (config.chat_log || []).map((x) => {
             x.channel = "main";
             return x;
         });
-        let spectator_log: GobanChatLog = (config.spectator_log || []).map((x) => {
+        const spectator_log: GobanChatLog = (config.spectator_log || []).map((x) => {
             x.channel = "spectator";
             return x;
         });
-        let malkovich_log: GobanChatLog = (config.malkovich_log || []).map((x) => {
+        const malkovich_log: GobanChatLog = (config.malkovich_log || []).map((x) => {
             x.channel = "malkovich";
             return x;
         });
         merged_log = merged_log.concat(main_log, spectator_log, malkovich_log);
         merged_log.sort((a, b) => a.date - b.date);
 
-        for (let line of merged_log) {
+        for (const line of merged_log) {
             this.emit("chat", line);
         }
 
@@ -1883,13 +1883,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         if (config.rengo_teams) {
-            for (let player of config.rengo_teams.black.concat(config.rengo_teams.white)) {
+            for (const player of config.rengo_teams.black.concat(config.rengo_teams.white)) {
                 config.player_pool[player.id] = player;
             }
         }
 
         /* This must be done last as it will invoke the appropriate .set actions to set the board in it's correct state */
-        let old_engine = this.engine;
+        const old_engine = this.engine;
         this.engine = new GoEngine(config, this);
         this.engine.getState_callback = () => {
             return this.getState();
@@ -1982,10 +1982,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.showing_scores = true;
 
         for (let i = 0; i < 2; ++i) {
-            let color: "black" | "white" = i ? "black" : "white";
-            let moves = this.engine.decodeMoves(score[color].scoring_positions);
+            const color: "black" | "white" = i ? "black" : "white";
+            const moves = this.engine.decodeMoves(score[color].scoring_positions);
             for (let j = 0; j < moves.length; ++j) {
-                let mv = moves[j];
+                const mv = moves[j];
                 if (mv.y < 0 || mv.x < 0) {
                     console.error("Negative scoring position: ", mv);
                     console.error(
@@ -2110,7 +2110,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public showPrevious(dont_update_display?: boolean): void {
         if (this.mode === "conditional") {
             if (this.conditional_path.length >= 2) {
-                let prev_path = this.conditional_path.substr(0, this.conditional_path.length - 2);
+                const prev_path = this.conditional_path.substr(0, this.conditional_path.length - 2);
                 this.jumpToLastOfficialMove();
                 this.followConditionalPath(prev_path);
             }
@@ -2136,7 +2136,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.followConditionalPath(this.current_cmove.move);
                     }
                 } else {
-                    for (let ch in this.current_cmove.children) {
+                    for (const ch in this.current_cmove.children) {
                         this.followConditionalPath(ch);
                         break;
                     }
@@ -2155,14 +2155,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
     }
     public prevSibling(): void {
-        let sibling = this.engine.cur_move.prevSibling();
+        const sibling = this.engine.cur_move.prevSibling();
         if (sibling) {
             this.engine.jumpTo(sibling);
             this.emit("update");
         }
     }
     public nextSibling(): void {
-        let sibling = this.engine.cur_move.nextSibling();
+        const sibling = this.engine.cur_move.nextSibling();
         if (sibling) {
             this.engine.jumpTo(sibling);
             this.emit("update");
@@ -2245,14 +2245,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.emit("update");
     }
     public followConditionalPath(movepath: string) {
-        let moves = this.engine.decodeMoves(movepath);
+        const moves = this.engine.decodeMoves(movepath);
         for (let i = 0; i < moves.length; ++i) {
             this.engine.place(moves[i].x, moves[i].y);
             this.followConditionalSegment(moves[i].x, moves[i].y);
         }
     }
     protected followConditionalSegment(x: number, y: number): void {
-        let mv = encodeMove(x, y);
+        const mv = encodeMove(x, y);
         this.conditional_path += mv;
 
         if (!this.current_cmove) {
@@ -2287,11 +2287,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.currently_my_cmove) {
             this.current_cmove.children = {};
             this.current_cmove.move = null;
-            let cur = this.current_cmove;
-            let parent = cur.parent;
+            const cur = this.current_cmove;
+            const parent = cur.parent;
             this.current_cmove = parent;
             if (parent) {
-                for (let mv in parent.children) {
+                for (const mv in parent.children) {
                     if (parent.children[mv] === cur) {
                         delete parent.children[mv];
                     }
@@ -2315,7 +2315,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.currently_my_cmove = !this.currently_my_cmove;
     }
     public deleteConditionalPath(movepath: string): void {
-        let moves = this.engine.decodeMoves(movepath);
+        const moves = this.engine.decodeMoves(movepath);
         if (moves.length) {
             for (let i = 0; i < moves.length - 1; ++i) {
                 if (i !== moves.length - 2) {
@@ -2494,7 +2494,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
 
     public acceptRemovedStones(): void {
-        let stones = this.engine.getStoneRemovalString();
+        const stones = this.engine.getStoneRemovalString();
         this.engine.players[
             this.engine.playerColor(this.config.player_id) as "black" | "white"
         ].accepted_stones = stones;
@@ -2522,7 +2522,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     protected editSettings(changes: GoEngineConfig): void {
         let need_to_change = false;
-        for (let k in changes) {
+        for (const k in changes) {
             if ((this.engine as any)[k] !== (changes as any)[k]) {
                 need_to_change = true;
                 break;
@@ -2580,7 +2580,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     protected getState(): {} {
         /* This is a callback that gets called by GoEngine.getState to store board state in its state stack */
-        let ret = {};
+        const ret = {};
         return ret;
     }
     public giveReviewControl(player_id: number): void {
@@ -2604,10 +2604,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
 
     public setMarks(marks: { [mark: string]: string }, dont_draw?: boolean): void {
-        for (let key in marks) {
-            let locations = this.engine.decodeMoves(marks[key]);
+        for (const key in marks) {
+            const locations = this.engine.decodeMoves(marks[key]);
             for (let i = 0; i < locations.length; ++i) {
-                let pt = locations[i];
+                const pt = locations[i];
                 this.setMark(pt.x, pt.y, key, dont_draw);
             }
         }
@@ -2625,8 +2625,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         this.colored_circles = GoMath.makeEmptyObjectMatrix<ColoredCircle>(this.width, this.height);
-        for (let circle of circles) {
-            let mv = circle.move;
+        for (const circle of circles) {
+            const mv = circle.move;
             this.colored_circles[mv.y][mv.x] = circle;
         }
         if (!dont_draw) {
@@ -2637,10 +2637,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public setColoredMarks(colored_marks: {
         [key: string]: { move: string; color: string };
     }): void {
-        for (let key in colored_marks) {
-            let locations = this.engine.decodeMoves(colored_marks[key].move);
+        for (const key in colored_marks) {
+            const locations = this.engine.decodeMoves(colored_marks[key].move);
             for (let i = 0; i < locations.length; ++i) {
-                let pt = locations[i];
+                const pt = locations[i];
                 this.setMarkColor(pt.x, pt.y, colored_marks[key].color);
                 this.setMark(pt.x, pt.y, key, false);
             }
@@ -2681,17 +2681,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         color: JGOFNumericPlayerColor,
         isTrunkMove?: boolean,
     ): void {
-        for (let mv of this.engine.decodeMoves(coord)) {
+        for (const mv of this.engine.decodeMoves(coord)) {
             this.engine.editPlace(mv.x, mv.y, color, isTrunkMove);
         }
     }
     public placeByPrettyCoord(coord: string): void {
-        for (let mv of this.engine.decodeMoves(coord)) {
+        for (const mv of this.engine.decodeMoves(coord)) {
             this.engine.place(mv.x, mv.y);
         }
     }
     public setMarkByPrettyCoord(coord: string, mark: number | string, dont_draw?: boolean): void {
-        for (let mv of this.engine.decodeMoves(coord)) {
+        for (const mv of this.engine.decodeMoves(coord)) {
             this.setMark(mv.x, mv.y, mark, dont_draw);
         }
     }
@@ -2755,9 +2755,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (typeof mark === "number") {
             mark = "" + mark;
         }
-        let marks = this.getMarks(x, y);
+        const marks = this.getMarks(x, y);
 
-        let clearMarks = () => {
+        const clearMarks = () => {
             for (let i = 0; i < MARK_TYPES.length; ++i) {
                 delete marks[MARK_TYPES[i]];
             }
@@ -2784,7 +2784,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         return ret;
     }
     protected incrementLabelCharacter(): void {
-        let seq1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        const seq1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         if (parseInt(this.label_character)) {
             this.label_character = "" + (parseInt(this.label_character) + 1);
         } else if (seq1.indexOf(this.label_character) !== -1) {
@@ -2793,12 +2793,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     protected setLabelCharacterFromMarks(set_override?: "numbers" | "letters"): void {
         if (set_override === "letters" || /^[a-zA-Z]$/.test(this.label_character)) {
-            let seq1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            const seq1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             let idx = -1;
 
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
-                    let ch = this.getMarks(x, y).letter;
+                    const ch = this.getMarks(x, y).letter;
                     if (ch) {
                         idx = Math.max(idx, seq1.indexOf(ch));
                     }
@@ -2812,7 +2812,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
-                    let mark_as_number: number = parseInt(this.getMarks(x, y).letter || "");
+                    const mark_as_number: number = parseInt(this.getMarks(x, y).letter || "");
                     if (mark_as_number) {
                         val = Math.max(val, mark_as_number);
                     }
@@ -2862,7 +2862,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public updateScoreEstimation(): void {
         if (this.score_estimate) {
-            let est = this.score_estimate.estimated_hard_score - this.engine.komi;
+            const est = this.score_estimate.estimated_hard_score - this.engine.komi;
             if (GobanCore.hooks.updateScoreEstimation) {
                 GobanCore.hooks.updateScoreEstimation(est > 0 ? "black" : "white", Math.abs(est));
             }
@@ -2890,9 +2890,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.auto_scoring_done = true;
 
         this.message(_("Processing..."), -1);
-        let do_score_estimation = () => {
+        const do_score_estimation = () => {
             //let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
-            let se = new ScoreEstimator(
+            const se = new ScoreEstimator(
                 this,
                 this.engine,
                 AUTOSCORE_TRIALS,
@@ -2902,11 +2902,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             se.when_ready
                 .then(() => {
-                    let current_removed = this.engine.getStoneRemovalString();
-                    let new_removed = se.getProbablyDead();
+                    const current_removed = this.engine.getStoneRemovalString();
+                    const new_removed = se.getProbablyDead();
 
                     this.engine.clearRemoved();
-                    let moves = this.engine.decodeMoves(new_removed);
+                    const moves = this.engine.decodeMoves(new_removed);
                     for (let i = 0; i < moves.length; ++i) {
                         this.engine.setRemoved(moves[i].x, moves[i].y, true);
                     }
@@ -2953,10 +2953,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.setConditionalTree();
 
-        let timeout = setTimeout(() => {
+        const timeout = setTimeout(() => {
             this.message(_("Error submitting move"), -1);
 
-            let second_try_timeout = setTimeout(() => {
+            const second_try_timeout = setTimeout(() => {
                 window.location.reload();
             }, 4000);
             this.socket.send("game/move", mv, () => {
@@ -2985,21 +2985,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.emit("clock", null);
             return;
         }
-        let time_control: JGOFTimeControl = this.config.time_control;
+        const time_control: JGOFTimeControl = this.config.time_control;
 
         this.last_clock = original_clock;
 
-        let current_server_time: number = 0;
+        let current_server_time = 0;
         function update_current_server_time() {
             if (GobanCore.hooks.getClockDrift && GobanCore.hooks.getNetworkLatency) {
-                let server_time_offset =
+                const server_time_offset =
                     GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
                 current_server_time = Date.now() - server_time_offset;
             }
         }
         update_current_server_time();
 
-        let clock: JGOFClock = {
+        const clock: JGOFClock = {
             current_player:
                 original_clock.current_player === original_clock.black_player_id
                     ? "black"
@@ -3041,15 +3041,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             is_current_player: boolean,
             time_elapsed: number,
         ): JGOFPlayerClock => {
-            let ret: JGOFPlayerClock = {
+            const ret: JGOFPlayerClock = {
                 main_time: 0,
             };
 
-            let raw_clock_pause_offset = this.paused_since
+            const raw_clock_pause_offset = this.paused_since
                 ? current_server_time - Math.max(original_clock.last_move, this.paused_since)
                 : 0;
 
-            let tcs: string = "" + time_control.system;
+            const tcs: string = "" + time_control.system;
             switch (time_control.system) {
                 case "simple":
                     ret.main_time = is_current_player
@@ -3100,7 +3100,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         ret.periods_left = original_player_clock.periods || 0;
                         ret.period_time_left = time_control.period_time * 1000;
                         if (overtime_usage > 0) {
-                            let periods_used = Math.floor(
+                            const periods_used = Math.floor(
                                 overtime_usage / (time_control.period_time * 1000),
                             );
                             ret.periods_left -= periods_used;
@@ -3161,7 +3161,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             return ret;
         };
 
-        let last_audio_event: { [player_id: string]: AudioClockEvent } = {
+        const last_audio_event: { [player_id: string]: AudioClockEvent } = {
             black: {
                 countdown_seconds: 0,
                 clock: { main_time: 0 },
@@ -3187,7 +3187,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             update_current_server_time();
 
-            let next_update_time: number = 100;
+            const next_update_time = 100;
 
             if (clock.start_mode) {
                 clock.start_time_left = original_clock.expiration - current_server_time;
@@ -3212,7 +3212,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.last_paused_state === null) {
                 this.last_paused_state = !!clock.pause_state;
             } else {
-                let cur_paused = !!clock.pause_state;
+                const cur_paused = !!clock.pause_state;
                 if (cur_paused !== this.last_paused_state) {
                     this.last_paused_state = cur_paused;
                     if (cur_paused) {
@@ -3248,9 +3248,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 // Move's and clock events are separate, so this just checks to make sure that when we
                 // update, we are updating when the engine and clock agree on whose turn it is.
                 if (this.engine.colorToMove() === clock.current_player) {
-                    let player_clock: JGOFPlayerClock =
+                    const player_clock: JGOFPlayerClock =
                         clock.current_player === "black" ? clock.black_clock : clock.white_clock;
-                    let audio_clock: AudioClockEvent = {
+                    const audio_clock: AudioClockEvent = {
                         countdown_seconds: 0,
                         clock: player_clock,
                         player_id: this.engine.playerToMove().toString(),
@@ -3306,8 +3306,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             );
                     }
 
-                    let cur = audio_clock;
-                    let last = last_audio_event[clock.current_player];
+                    const cur = audio_clock;
+                    const last = last_audio_event[clock.current_player];
                     if (
                         cur.countdown_seconds !== last.countdown_seconds ||
                         cur.player_id !== last.player_id ||
@@ -3341,19 +3341,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 return;
             }
 
-            let diff = this.engine.getMoveDiff();
+            const diff = this.engine.getMoveDiff();
             this.engine.setAsCurrentReviewMove();
 
             let msg: ReviewMessage;
 
             if (!msg_override) {
-                let marks: { [mark: string]: string } = {};
+                const marks: { [mark: string]: string } = {};
                 for (let y = 0; y < this.height; ++y) {
                     for (let x = 0; x < this.width; ++x) {
-                        let pos = this.getMarks(x, y);
+                        const pos = this.getMarks(x, y);
                         for (let i = 0; i < MARK_TYPES.length; ++i) {
                             if (MARK_TYPES[i] in pos && pos[MARK_TYPES[i]]) {
-                                let markkey: keyof MarkInterface =
+                                const markkey: keyof MarkInterface =
                                     MARK_TYPES[i] === "letter"
                                         ? pos.letter || "[ERR]"
                                         : MARK_TYPES[i];
@@ -3376,13 +3376,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     m: diff.moves,
                     k: marks,
                 };
-                let tmp = dup(msg);
+                const tmp = dup(msg);
 
                 if (this.last_review_message.f === msg.f && this.last_review_message.m === msg.m) {
                     delete msg["f"];
                     delete msg["m"];
 
-                    let txt_idx = node_text.indexOf(this.engine.cur_move.text || "");
+                    const txt_idx = node_text.indexOf(this.engine.cur_move.text || "");
                     if (txt_idx === 0) {
                         delete msg["t"];
                         if (node_text !== this.engine.cur_move.text) {
@@ -3419,7 +3419,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public setScoringMode(tf: boolean, prefer_remote: boolean = false): MoveTree {
         this.scoring_mode = tf;
-        let ret = this.engine.cur_move;
+        const ret = this.engine.cur_move;
 
         if (this.scoring_mode) {
             this.message(_("Processing..."), -1);
@@ -3463,19 +3463,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 }
 function uuid(): string {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-        let r = (Math.random() * 16) | 0;
-        let v = c === "x" ? r : (r & 0x3) | 0x8;
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
         return v.toString(16);
     });
 }
 
 function AdHocPauseControl2JGOFPauseState(pause_control: AdHocPauseControl) {
-    let ret: JGOFPauseState = {};
+    const ret: JGOFPauseState = {};
 
-    for (let k in pause_control) {
-        let matches = k.match(/vacation-([0-9]+)/);
+    for (const k in pause_control) {
+        const matches = k.match(/vacation-([0-9]+)/);
         if (matches) {
-            let player_id = matches[1];
+            const player_id = matches[1];
             if (!ret.vacation) {
                 ret.vacation = {};
             }
@@ -3525,7 +3525,7 @@ function repair_config(config: GobanConfig): GobanConfig {
             );
         }
         if (!config.time_control.speed) {
-            let tpm = computeAverageMoveTime(config.time_control);
+            const tpm = computeAverageMoveTime(config.time_control);
             (config.time_control as any).speed =
                 tpm === 0 || tpm > 3600 ? "correspondence" : tpm < 10 ? "blitz" : "live";
             console.log(
@@ -3566,7 +3566,7 @@ class FocusTracker {
             return 0;
         }
 
-        let ret = Math.max.apply(Math.max, this.outOfFocusDurations);
+        const ret = Math.max.apply(Math.max, this.outOfFocusDurations);
 
         if (!this.hasFocus) {
             this.outOfFocusDurations.pop();

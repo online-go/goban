@@ -256,7 +256,7 @@ export function encodeMove(x: number | Move, y?: number): string {
         }
         return GoMath.num2char(x) + GoMath.num2char(y);
     } else {
-        let mv: Move = x as Move;
+        const mv: Move = x as Move;
 
         if (!mv.edited) {
             return GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
@@ -379,13 +379,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
         GoEngine.normalizeConfig(config);
         GoEngine.fillDefaults(config);
 
-        for (let k in config) {
+        for (const k in config) {
             if (k !== "move_tree") {
                 (this as any)[k] = (config as any)[k];
             }
         }
 
-        let self = this;
+        const self = this;
         this.config = config;
         this.dontStoreBoardHistory =
             !!dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
@@ -407,9 +407,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.player_pool = config.player_pool || {};
 
         for (let y = 0; y < this.height; ++y) {
-            let row: Array<JGOFNumericPlayerColor> = [];
-            let mark_row = [];
-            let removal_row: Array<-1 | 0 | 1> = [];
+            const row: Array<JGOFNumericPlayerColor> = [];
+            const mark_row = [];
+            const removal_row: Array<-1 | 0 | 1> = [];
             for (let x = 0; x < this.width; ++x) {
                 row.push(0);
                 mark_row.push(0);
@@ -448,7 +448,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         if (config.rengo && config.rengo_teams) {
-            for (let player of config.rengo_teams.black.concat(config.rengo_teams.white)) {
+            for (const player of config.rengo_teams.black.concat(config.rengo_teams.white)) {
                 this.player_pool[player.id] = player;
             }
         }
@@ -469,16 +469,16 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         if (config.initial_state) {
             this.initial_state = config.initial_state;
-            let black_moves = this.decodeMoves(config.initial_state.black || "");
-            let white_moves = this.decodeMoves(config.initial_state.white || "");
+            const black_moves = this.decodeMoves(config.initial_state.black || "");
+            const white_moves = this.decodeMoves(config.initial_state.white || "");
             for (let i = 0; i < black_moves.length; ++i) {
-                let x = black_moves[i].x;
-                let y = black_moves[i].y;
+                const x = black_moves[i].x;
+                const y = black_moves[i].y;
                 this.initialStatePlace(x, y, 1, true);
             }
             for (let i = 0; i < white_moves.length; ++i) {
-                let x = white_moves[i].x;
-                let y = white_moves[i].y;
+                const x = white_moves[i].x;
+                const y = white_moves[i].y;
                 this.initialStatePlace(x, y, 2, true);
             }
         }
@@ -502,11 +502,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         if (config.moves) {
-            let moves = (this.decoded_moves = this.decodeMoves(config.moves));
+            const moves = (this.decoded_moves = this.decodeMoves(config.moves));
 
             //var have_edited = false;
             for (let i = 0; i < moves.length; ++i) {
-                let mv = moves[i];
+                const mv = moves[i];
                 if (mv.edited) {
                     this.editPlace(mv.x, mv.y, mv.color || 0, true);
                     //have_edited = true;
@@ -561,7 +561,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             //
             // NOTE: Some Go clients (not OGS, at least for now) do include dead stones in their
             // SGFs, which we respect if present and skip using the score estimator.
-            let se = new ScoreEstimator(
+            const se = new ScoreEstimator(
                 this.goban_callback,
                 this,
                 AUTOSCORE_TRIALS,
@@ -579,7 +579,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         function unpackMoveTree(cur: MoveTree, tree: MoveTreeJson): void {
             cur.loadJsonForThisNode(tree);
             if (tree.trunk_next) {
-                let n = tree.trunk_next;
+                const n = tree.trunk_next;
                 self.place(n.x, n.y, false, false, true, true, true);
                 unpackMoveTree(self.cur_move, n);
                 self.jumpTo(cur);
@@ -587,7 +587,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
             if (tree.branches) {
                 for (let i = 0; i < tree.branches.length; ++i) {
-                    let n = tree.branches[i];
+                    const n = tree.branches[i];
                     self.place(n.x, n.y, false, false, true, true, false);
                     unpackMoveTree(self.cur_move, n);
                     self.jumpTo(cur);
@@ -602,7 +602,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return GoMath.decodeMoves(move_obj, this.width, this.height);
     }
     private getState(): GoEngineState {
-        let state: GoEngineState = {
+        const state: GoEngineState = {
             player: this.player,
             board_is_repeating: this.board_is_repeating,
             white_prisoners: this.white_prisoners,
@@ -612,7 +612,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         };
 
         for (let y = 0; y < this.height; ++y) {
-            let row = new Array(this.width);
+            const row = new Array(this.width);
             for (let x = 0; x < this.width; ++x) {
                 row[x] = this.board[y][x];
             }
@@ -631,7 +631,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.setState_callback(state.udata_state);
         }
 
-        let redrawn: { [s: string]: boolean } = {};
+        const redrawn: { [s: string]: boolean } = {};
 
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
@@ -685,8 +685,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         cb?: (x: number, y: number, edited: boolean, color: number) => void,
     ): Array<MoveTree> {
         try {
-            let ret = [];
-            let from = this.move_tree.index(from_turn);
+            const ret = [];
+            const from = this.move_tree.index(from_turn);
             let cur: MoveTree;
             if (from) {
                 cur = from;
@@ -694,12 +694,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 cur = this.last_official_move;
             }
 
-            let _moves = this.decodeMoves(moves);
+            const _moves = this.decodeMoves(moves);
             let i = 0;
 
             while (i < _moves.length) {
-                let mv = _moves[i];
-                let existing: MoveTree | null = cur.lookupMove(
+                const mv = _moves[i];
+                const existing: MoveTree | null = cur.lookupMove(
                     mv.x,
                     mv.y,
                     this.playerByColor(mv.color || 0),
@@ -719,7 +719,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.jumpTo(cur);
 
             for (; i < _moves.length; ++i) {
-                let mv = _moves[i];
+                const mv = _moves[i];
 
                 if (mv.edited) {
                     this.editPlace(mv.x, mv.y, mv.color || 0);
@@ -754,9 +754,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
         try {
             if (this.config.rengo && player_update.rengo_teams) {
                 this.rengo_teams = { black: [], white: [] };
-                for (let colour of ["black", "white"]) {
+                for (const colour of ["black", "white"]) {
                     //console.log("looking at", colour, player_update.rengo_teams[colour]);
-                    for (let id of player_update.rengo_teams[colour as "black" | "white"]) {
+                    for (const id of player_update.rengo_teams[colour as "black" | "white"]) {
                         this.rengo_teams[colour as "black" | "white"].push(this.player_pool[id]);
                     }
                 }
@@ -850,9 +850,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     /** Returns a move string from the given official move number (aka branch point) */
     public getMoveDiff(): { from: number; moves: string } {
-        let branch_point = this.cur_move.getBranchPoint();
+        const branch_point = this.cur_move.getBranchPoint();
         let cur: MoveTree | null = this.cur_move;
-        let moves: Array<Move> = [];
+        const moves: Array<Move> = [];
 
         while (cur && cur.id !== branch_point.id) {
             moves.push({
@@ -882,7 +882,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             console.log("Wont remove trunk node");
             return;
         }
-        let t = this.cur_move.parent;
+        const t = this.cur_move.parent;
         this.cur_move.remove();
         this.cur_move = t ? t : this.move_tree;
         this.jumpTo(t);
@@ -900,8 +900,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
             return false;
         }
 
-        let move_number = this.getMoveNumber();
-        let max_moves_played = 1 + (this.free_handicap_placement ? this.handicap : 1);
+        const move_number = this.getMoveNumber();
+        const max_moves_played = 1 + (this.free_handicap_placement ? this.handicap : 1);
 
         if (move_number < max_moves_played) {
             return true;
@@ -945,7 +945,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         done_array: Array<boolean>,
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {
-        let idx = x + y * this.width;
+        const idx = x + y * this.width;
         if (done_array[idx]) {
             return;
         }
@@ -958,14 +958,14 @@ export class GoEngine extends TypedEventEmitter<Events> {
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {
         if (pt_or_group instanceof Array) {
-            let group = pt_or_group;
-            let done_array = new Array(this.height * this.width);
+            const group = pt_or_group;
+            const done_array = new Array(this.height * this.width);
             for (let i = 0; i < group.length; ++i) {
                 done_array[group[i].x + group[i].y * this.width] = true;
             }
 
             for (let i = 0; i < group.length; ++i) {
-                let pt = group[i];
+                const pt = group[i];
                 if (pt.x - 1 >= 0) {
                     this.foreachNeighbor_checkAndDo(pt.x - 1, pt.y, done_array, fn_of_neighbor_pt);
                 }
@@ -980,7 +980,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 }
             }
         } else {
-            let pt = pt_or_group;
+            const pt = pt_or_group;
             if (pt.x - 1 >= 0) {
                 fn_of_neighbor_pt(pt.x - 1, pt.y);
             }
@@ -997,13 +997,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     /** Returns an array of x/y pairs of all the same color */
     private getGroup(x: number, y: number, clearMarks: boolean): Group {
-        let color = this.board[y][x];
+        const color = this.board[y][x];
         if (clearMarks) {
             this.incrementCurrentMarker();
         }
-        let toCheckX = [x];
-        let toCheckY = [y];
-        let ret = [];
+        const toCheckX = [x];
+        const toCheckY = [y];
+        const ret = [];
         while (toCheckX.length) {
             x = toCheckX.pop() || 0;
             y = toCheckY.pop() || 0;
@@ -1014,7 +1014,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             this.marks[y][x] = __currentMarker;
 
             if (this.board[y][x] === color) {
-                let pt = { x: x, y: y };
+                const pt = { x: x, y: y };
                 ret.push(pt);
                 this.foreachNeighbor(pt, addToCheck);
             }
@@ -1028,10 +1028,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     /** Returns an array of groups connected to the given group */
     private getConnectedGroups(group: Group): Array<Group> {
-        let gr = group;
+        const gr = group;
         this.incrementCurrentMarker();
         this.markGroup(group);
-        let ret: Array<Group> = [];
+        const ret: Array<Group> = [];
         this.foreachNeighbor(group, (x, y) => {
             if (this.board[y][x]) {
                 this.incrementCurrentMarker();
@@ -1039,7 +1039,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 for (let i = 0; i < ret.length; ++i) {
                     this.markGroup(ret[i]);
                 }
-                let g = this.getGroup(x, y, false);
+                const g = this.getGroup(x, y, false);
                 if (g.length) {
                     /* can be zero if the peice has already been marked */
                     ret.push(g);
@@ -1049,11 +1049,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return ret;
     }
     private getConnectedOpenSpace(group: Group): Group {
-        let gr = group;
+        const gr = group;
         this.incrementCurrentMarker();
         this.markGroup(group);
-        let ret: Group = [];
-        let included: { [s: string]: boolean } = {};
+        const ret: Group = [];
+        const included: { [s: string]: boolean } = {};
 
         this.foreachNeighbor(group, (x, y) => {
             if (!this.board[y][x]) {
@@ -1062,7 +1062,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 //for (let i = 0; i < ret.length; ++i) {
                 this.markGroup(ret);
                 //}
-                let g = this.getGroup(x, y, false);
+                const g = this.getGroup(x, y, false);
                 for (let i = 0; i < g.length; ++i) {
                     if (!included[g[i].x + "," + g[i].y]) {
                         ret.push(g[i]);
@@ -1075,7 +1075,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     private countLiberties(group: Group): number {
         let ct = 0;
-        let counter = (x: number, y: number): number => (ct += this.board[y][x] ? 0 : 1);
+        const counter = (x: number, y: number): number => (ct += this.board[y][x] ? 0 : 1);
         for (let i = 0; i < group.length; ++i) {
             this.foreachNeighbor(group[i], counter);
         }
@@ -1083,8 +1083,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     private captureGroup(group: Group): number {
         for (let i = 0; i < group.length; ++i) {
-            let x = group[i].x;
-            let y = group[i].y;
+            const x = group[i].x;
+            const y = group[i].y;
             if (this.board[y][x] === 1) {
                 ++this.white_prisoners;
             }
@@ -1177,8 +1177,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 this.board[y][x] = this.player;
 
                 let suicide_move = false;
-                let player_group = this.getGroup(x, y, true);
-                let opponent_groups = this.getConnectedGroups(player_group);
+                const player_group = this.getGroup(x, y, true);
+                const opponent_groups = this.getConnectedGroups(player_group);
 
                 for (let i = 0; i < opponent_groups.length; ++i) {
                     if (this.countLiberties(opponent_groups[i]) === 0) {
@@ -1203,7 +1203,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 }
 
                 if (checkForKo && !this.allow_ko) {
-                    let current_state = this.getState();
+                    const current_state = this.getState();
                     if (
                         !this.cur_move.edited &&
                         this.boardStatesAreTheSame(current_state, this.cur_move.index(-1).state)
@@ -1244,13 +1244,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 return 0;
             }
 
-            let color = this.player;
+            const color = this.player;
             if (this.handicapMovesLeft() < 2) {
                 this.player = this.opponent();
             }
-            let next_move_number = this.cur_move.move_number + 1;
+            const next_move_number = this.cur_move.move_number + 1;
             //var trunk = this.loading_trunk_moves || (!this.goban_callback || this.goban_callback.mode === "play");
-            let trunk = isTrunkMove ? true : false;
+            const trunk = isTrunkMove ? true : false;
             //console.log("Trunk move: ", trunk, this.goban_callback.mode);
             //this.cur_move = this.cur_move.move(x, y, trunk, false, color, next_move_number, !this.dontStoreBoardHistory ? this.getState() : null);
             this.cur_move = this.cur_move.move(
@@ -1284,10 +1284,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return peices_removed;
     }
     public isBoardRepeating(superko_rule: GoEngineSuperKoAlgorithm): boolean {
-        let MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
-        let current_state = this.getState();
+        const MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
+        const current_state = this.getState();
         //var current_state = this.cur_move.state;
-        let current_player_to_move = this.player;
+        const current_player_to_move = this.player;
         const check_situational = superko_rule === "ssk";
 
         let t: MoveTree | null | undefined = this.cur_move.index(-2);
@@ -1312,7 +1312,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         color: JGOFNumericPlayerColor,
         isTrunkMove?: boolean,
     ): void {
-        let player = this.playerByColor(color);
+        const player = this.playerByColor(color);
 
         if (x >= 0 && y >= 0) {
             this.board[y][x] = player;
@@ -1321,7 +1321,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
         }
 
-        let trunk = isTrunkMove ? true : false;
+        const trunk = isTrunkMove ? true : false;
 
         this.cur_move = this.cur_move.move(
             x,
@@ -1340,7 +1340,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         dont_record_placement?: boolean,
     ): void {
         let moves = null;
-        let p = this.player;
+        const p = this.player;
 
         if (this.move_tree) {
             this.jumpTo(this.move_tree);
@@ -1377,7 +1377,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
             /* Then add if applicable */
             if (color) {
-                let moves = this.decodeMoves(
+                const moves = this.decodeMoves(
                     this.initial_state[color === 1 ? "black" : "white"] || "",
                 );
                 moves.push({ x: x, y: y, color: color });
@@ -1428,22 +1428,22 @@ export class GoEngine extends TypedEventEmitter<Events> {
     public toggleMetaGroupRemoval(x: number, y: number): Array<[-1 | 0 | 1, Group]> {
         try {
             if (x >= 0 && y >= 0) {
-                let removing: -1 | 0 | 1 = !this.removal[y][x] ? 1 : 0;
-                let group = this.getGroup(x, y, true);
+                const removing: -1 | 0 | 1 = !this.removal[y][x] ? 1 : 0;
+                const group = this.getGroup(x, y, true);
                 let removed_stones = this.setGroupForRemoval(x, y, removing)[1];
-                let empty_spaces = [];
+                const empty_spaces = [];
 
-                let group_color = this.board[y][x];
+                const group_color = this.board[y][x];
                 if (group_color === 0) {
                     /* just toggle open area */
                 } else {
                     /* for stones though, toggle the selected stone group any any stone
                      * groups which are adjacent to it through open area */
-                    let already_done: { [str: string]: boolean } = {};
+                    const already_done: { [str: string]: boolean } = {};
 
                     let space = this.getConnectedOpenSpace(group);
                     for (let i = 0; i < space.length; ++i) {
-                        let pt = space[i];
+                        const pt = space[i];
 
                         if (already_done[pt.x + "," + pt.y]) {
                             continue;
@@ -1451,11 +1451,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         already_done[pt.x + "," + pt.y] = true;
 
                         if (this.board[pt.y][pt.x] === 0) {
-                            let far_neighbors = this.getConnectedGroups([space[i]]);
+                            const far_neighbors = this.getConnectedGroups([space[i]]);
                             for (let j = 0; j < far_neighbors.length; ++j) {
-                                let fpt = far_neighbors[j][0];
+                                const fpt = far_neighbors[j][0];
                                 if (this.board[fpt.y][fpt.x] === group_color) {
-                                    let res = this.setGroupForRemoval(fpt.x, fpt.y, removing);
+                                    const res = this.setGroupForRemoval(fpt.x, fpt.y, removing);
                                     removed_stones = removed_stones.concat(res[1]);
                                     space = space.concat(this.getConnectedOpenSpace(res[1]));
                                 }
@@ -1490,12 +1490,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
          */
 
         if (x >= 0 && y >= 0) {
-            let group = this.getGroup(x, y, true);
-            let removing = toggle_set === -1 ? (!this.removal[y][x] ? 1 : 0) : toggle_set;
+            const group = this.getGroup(x, y, true);
+            const removing = toggle_set === -1 ? (!this.removal[y][x] ? 1 : 0) : toggle_set;
 
             for (let i = 0; i < group.length; ++i) {
-                let x = group[i].x;
-                let y = group[i].y;
+                const x = group[i].x;
+                const y = group[i].y;
                 this.setRemoved(x, y, removing);
             }
 
@@ -1526,7 +1526,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     public getStoneRemovalString(): string {
         let ret = "";
-        let arr = [];
+        const arr = [];
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
@@ -1551,7 +1551,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
     /* Returns a details object containing the total score and the breakdown of the
      * scoring details */
     public computeScore(only_prisoners?: boolean): Score {
-        let ret = {
+        const ret = {
             white: {
                 total: 0,
                 stones: 0,
@@ -1596,27 +1596,27 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
         }
 
-        let scored: Array<Array<number>> = [];
+        const scored: Array<Array<number>> = [];
         for (let y = 0; y < this.height; ++y) {
-            let row = [];
+            const row = [];
             for (let x = 0; x < this.width; ++x) {
                 row.push(0);
             }
             scored.push(row);
         }
 
-        let markScored = (group: Group) => {
+        const markScored = (group: Group) => {
             let ct = 0;
             for (let i = 0; i < group.length; ++i) {
-                let x = group[i].x;
-                let y = group[i].y;
+                const x = group[i].x;
+                const y = group[i].y;
 
-                let oldboard = this.cur_move.state.board;
+                const oldboard = this.cur_move.state.board;
 
                 /* XXX: TODO: When we implement stone removal and scoring stuff
                  * into the review mode and analysis mode, this needs to change to
                  appropriately consider removals */
-                let in_review = false;
+                const in_review = false;
                 try {
                     /*
                     if (this.board && this.board.review_id) {
@@ -1634,7 +1634,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         //if (this.phase !== "play") {
         if (!only_prisoners && this.score_territory) {
-            let gm = new GoMath(this, this.cur_move.state.board);
+            const gm = new GoMath(this, this.cur_move.state.board);
             //console.log(gm);
 
             gm.foreachGroup((gr) => {
@@ -1655,7 +1655,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         ret["white"].territory += markScored(gr.points);
                     }
                     for (let i = 0; i < gr.points.length; ++i) {
-                        let pt = gr.points[i];
+                        const pt = gr.points[i];
                         if (this.board[pt.y][pt.x] && !this.removal[pt.y][pt.x]) {
                             /* This can happen as peopel are using the edit tool to force stone position colors */
                             /* This can also happen now that we are doing estimate based scoring */
@@ -1714,7 +1714,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                  * drop down box tallies up to be "correct" for those old games
                  *   - anoek 2015-02-01
                  */
-                let f = parseFloat(this.outcome);
+                const f = parseFloat(this.outcome);
                 if (f - 1 === Math.abs(ret.white.total - ret.black.total)) {
                     ret.white.handicap += 1;
                 }
@@ -1788,7 +1788,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             game_obj.rules = "japanese";
         }
 
-        let defaults: GoEngineConfig = {};
+        const defaults: GoEngineConfig = {};
 
         //defaults.history = [];
         defaults.game_id = 0;
@@ -1823,7 +1823,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         defaults.opponent_plays_first_after_resume = false;
         defaults.strict_seki_mode = game_obj.phase === "finished" ? true : false;
 
-        let rules = game_obj.rules || defaults.rules;
+        const rules = game_obj.rules || defaults.rules;
 
         switch (rules.toLowerCase()) {
             case "chinese":
@@ -1898,7 +1898,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             defaults["komi"] -= Math.floor(defaults["komi"]);
         }
 
-        for (let k in defaults) {
+        for (const k in defaults) {
             if (!(k in game_obj)) {
                 (game_obj as any)[k] = (defaults as any)[k];
             }
@@ -1952,7 +1952,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
 
             if (game_obj.handicap && !game_obj.free_handicap_placement) {
-                let white = "";
+                const white = "";
                 let black = "";
                 let stars;
                 if (game_obj.width === 19) {
@@ -2037,12 +2037,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         if (game_obj.phase === "finished" && game_obj.ogs && game_obj.score) {
-            let ogs = game_obj.ogs;
+            const ogs = game_obj.ogs;
             game_obj.score.white.scoring_positions =
                 (game_obj.rules !== "japanese" ? ogs.white_stones : "") + ogs.white_territory;
             game_obj.score.black.scoring_positions =
                 (game_obj.rules !== "japanese" ? ogs.black_stones : "") + ogs.black_territory;
-            let dead =
+            const dead =
                 ogs.black_seki_eyes +
                 ogs.white_seki_eyes +
                 ogs.black_dead_stones +
@@ -2078,9 +2078,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
          * that should be run which will perform the actual moves. This function is
          * constructed by making a bunch of dyanmic functions and chaining them
          * together.. slick or sick, depending on your PoV..  */
-        let instructions: Array<() => void> = [];
+        const instructions: Array<() => void> = [];
 
-        let self = this;
+        const self = this;
         let pos = 0;
         let line = 1;
 
@@ -2095,7 +2095,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         function collection() {
-            let ret = [];
+            const ret = [];
             while (pos < sgf.length) {
                 ret.push(gametree());
                 inMainBranch = false;
@@ -2123,13 +2123,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 inMainBranch = false;
             }
 
-            let ret = [];
+            const ret = [];
             whitespace();
             if (sgf[pos] !== "(") {
                 throw new Error("Expecting '(' to start a GameTree");
             }
             ++pos;
-            let s = sequence();
+            const s = sequence();
             ret.push(s);
             whitespace();
             while (sgf[pos] === "(") {
@@ -2142,7 +2142,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     //console.log("Stashing jump pos: ", cur.id);
                 });
 
-                let g = gametree();
+                const g = gametree();
                 ret.push(g);
 
                 instructions.push(() => {
@@ -2165,9 +2165,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         function sequence(): Array<Array<Array<string>>> {
             whitespace();
-            let ret: Array<Array<Array<string>>> = [];
+            const ret: Array<Array<Array<string>>> = [];
             while (sgf[pos] === ";") {
-                let n = node();
+                const n = node();
                 ret.push(n);
             }
             if (ret.length === 0) {
@@ -2177,7 +2177,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         function node(): Array<Array<string>> {
-            let ret: Array<Array<string>> = [];
+            const ret: Array<Array<string>> = [];
             if (sgf[pos] !== ";") {
                 throw new Error("Expecting ';' to start a Node");
             }
@@ -2190,7 +2190,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         function property(): Array<string> {
-            let ret: Array<string> = [];
+            const ret: Array<string> = [];
             let ident = "";
             while (/[a-zA-Z]/.test(sgf[pos])) {
                 ident += sgf[pos++];
@@ -2233,7 +2233,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         function parseRank(rank: string): number {
-            let b = parseInt(rank);
+            const b = parseInt(rank);
             if (/[kK]/.test(rank)) {
                 return 30 - b;
             }
@@ -2260,7 +2260,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                                 instructions.push(() => {
                                     if (val === "") {
                                     } else {
-                                        let mv = self.decodeMoves(val)[0];
+                                        const mv = self.decodeMoves(val)[0];
                                         self.editPlace(mv.x, mv.y, ident === "AB" ? 1 : 2);
                                     }
                                 });
@@ -2301,7 +2301,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                                     val = ".."; // make it a pass
                                 }
 
-                                let mv = self.decodeMoves(val)[0];
+                                const mv = self.decodeMoves(val)[0];
                                 if (
                                     (self.player === 1 && ident === "B") ||
                                     (self.player !== 1 && ident === "W")
@@ -2336,12 +2336,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         {
                             instructions.push(() => {
                                 try {
-                                    let s: string = val.substr(0, 2);
-                                    let extra = val.substr(3);
-                                    let mv = self.decodeMoves(s)[0];
+                                    const s: string = val.substr(0, 2);
+                                    const extra = val.substr(3);
+                                    const mv = self.decodeMoves(s)[0];
                                     //console.log(mv);
 
-                                    let marks = self.cur_move.getMarks(mv.x, mv.y);
+                                    const marks = self.cur_move.getMarks(mv.x, mv.y);
                                     switch (ident) {
                                         case "LB":
                                             marks.letter = extra;
@@ -2441,7 +2441,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
                                 if (self.outcome === "") {
                                     let result;
-                                    let match = val.match(/[BW]\+(.*)/);
+                                    const match = val.match(/[BW]\+(.*)/);
                                     if (match === null) {
                                         result = val;
                                     } else {
@@ -2520,7 +2520,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         {
                             instructions.push(() => {
                                 self.territory_included_in_sgf = true;
-                                let black_territory_point = self.decodeMoves(val)[0];
+                                const black_territory_point = self.decodeMoves(val)[0];
                                 if (
                                     self.board[black_territory_point.y][black_territory_point.x] ===
                                     JGOFNumericPlayerColor.WHITE
@@ -2539,7 +2539,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         {
                             instructions.push(() => {
                                 self.territory_included_in_sgf = true;
-                                let white_territory_point = self.decodeMoves(val)[0];
+                                const white_territory_point = self.decodeMoves(val)[0];
                                 if (
                                     self.board[white_territory_point.y][white_territory_point.x] ===
                                     JGOFNumericPlayerColor.BLACK
@@ -2597,7 +2597,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         };
     }
     public estimateScore(trials: number, tolerance: number, prefer_remote: boolean = false): Score {
-        let se = new ScoreEstimator(this.goban_callback, this, trials, tolerance, prefer_remote);
+        const se = new ScoreEstimator(this.goban_callback, this, trials, tolerance, prefer_remote);
         return se.score();
     }
     public getMoveByLocation(x: number, y: number): MoveTree | null {

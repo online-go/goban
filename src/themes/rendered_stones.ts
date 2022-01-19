@@ -46,16 +46,16 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
     r /= 255;
     g /= 255;
     b /= 255;
-    let max = Math.max(r, g, b);
-    let min = Math.min(r, g, b);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
     let h = NaN;
     let s = NaN;
-    let l = (max + min) / 2;
+    const l = (max + min) / 2;
 
     if (max === min) {
         h = s = 0; // achromatic
     } else {
-        let d = max - min;
+        const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
         switch (max) {
             case r:
@@ -112,8 +112,8 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
     if (s === 0) {
         r = g = b = l; // achromatic
     } else {
-        let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        let p = 2 * l - q;
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
         r = hue2rgb(p, q, h + 1 / 3);
         g = hue2rgb(p, q, h);
         b = hue2rgb(p, q, h - 1 / 3);
@@ -141,7 +141,7 @@ function normalized(A: vec3): vec3 {
 function stone_normal(x: number, y: number, radius: number): vec3 {
     let z = Math.sqrt(Math.max(0, radius * radius - x * x - y * y));
 
-    let ret = normalized([x, y, z]);
+    const ret = normalized([x, y, z]);
     z = ret[2];
     ret[2] = z * z * (3 - 2 * z); /* scurve3 */
     //ret[2] = z*z*z*(z*(z*6-15)+10); /* scurve5 */
@@ -159,8 +159,8 @@ function copyAlpha(ctx: CanvasRenderingContext2D, width: number, height: number)
         throw "Invalid width/height given: " + (width + "x" + height);
     }
 
-    let image = ctx.getImageData(0, 0, width, height);
-    let ret = new Array(width * height);
+    const image = ctx.getImageData(0, 0, width, height);
+    const ret = new Array(width * height);
     let idx = 0;
     let i = 0;
     for (let y = 0; y < height; ++y) {
@@ -178,7 +178,7 @@ function pasteAlpha(
     width: number,
     height: number,
 ): void {
-    let image = ctx.getImageData(0, 0, width, height);
+    const image = ctx.getImageData(0, 0, width, height);
     let idx = 0;
     let i = 0;
 
@@ -202,34 +202,34 @@ function applyPhongShading(
     specular_light_distance: number,
     light: vec3,
 ) {
-    let image = ctx.getImageData(0, 0, ss, ss);
+    const image = ctx.getImageData(0, 0, ss, ss);
 
-    let r2 = (radius + 1) * (radius + 1); /* alpha will save us from overrunning the image*/
-    let look: vec3 = [0, 0, 1];
+    const r2 = (radius + 1) * (radius + 1); /* alpha will save us from overrunning the image*/
+    const look: vec3 = [0, 0, 1];
 
     let idx = 0;
     for (let y = -center; y < ss - center; ++y) {
         for (let x = -center; x < ss - center; ++x) {
-            let xxyy = x * x + y * y;
+            const xxyy = x * x + y * y;
             if (xxyy < r2) {
-                let r = image.data[idx];
-                let g = image.data[idx + 1];
-                let b = image.data[idx + 2];
+                const r = image.data[idx];
+                const g = image.data[idx + 1];
+                const b = image.data[idx + 2];
 
-                let N = stone_normal(x, y, radius);
-                let diffuse_intensity = dot(N, light) / diffuse_light_distance;
-                let H = normalized(add(light, look));
-                let specular_intensity =
+                const N = stone_normal(x, y, radius);
+                const diffuse_intensity = dot(N, light) / diffuse_light_distance;
+                const H = normalized(add(light, look));
+                const specular_intensity =
                     Math.pow(dot(N, H), specular_hardness) / specular_light_distance;
 
-                let hsl = rgbToHsl(r, g, b);
+                const hsl = rgbToHsl(r, g, b);
                 hsl[2] = Math.min(
                     1,
                     hsl[2] * (ambient + diffuse_intensity) +
                         diffuse_intensity * 0.5 +
                         specular_intensity,
                 );
-                let rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
+                const rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
 
                 image.data[idx] = rgb[0];
                 image.data[idx + 1] = rgb[1];
@@ -250,7 +250,7 @@ function clearAboveColor(
     g: number,
     b: number,
 ): void {
-    let image = ctx.getImageData(0, 0, width, height);
+    const image = ctx.getImageData(0, 0, width, height);
 
     let idx = 0;
     for (let y = 0; y < height; ++y) {
@@ -269,12 +269,12 @@ function clearAboveColor(
     ctx.putImageData(image, 0, 0);
 }
 function preRenderStone(radius: number, seed: number, options: RenderOptions): StoneTypeArray {
-    let dcsr = deviceCanvasScalingRatio();
+    const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
 
-    let ss = square_size(radius, dcsr !== 1.0);
-    let center = stone_center_in_square(radius, dcsr !== 1.0);
-    let sss = radius * 2.5; /* Shadow square size */
+    const ss = square_size(radius, dcsr !== 1.0);
+    const center = stone_center_in_square(radius, dcsr !== 1.0);
+    const sss = radius * 2.5; /* Shadow square size */
 
     let stone: HTMLCanvasElement;
     let shadow: HTMLCanvasElement;
@@ -317,7 +317,7 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
     shadow_ctx.clearRect(0, 0, sss, sss);
 
     //var fillColor = color === 'white' ? 'rgba(207,205,206,1.0)' : 'rgba(25,25,27,1.0)';
-    let fillColor = options.base_color;
+    const fillColor = options.base_color;
 
     ctx.beginPath();
     ctx.fillStyle = fillColor;
@@ -326,45 +326,45 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
     /* draw clamshell lines */
     if (options.shell_lines) {
         try {
-            let alphas = copyAlpha(ctx, ss, ss);
-            let nlines = 5 + (seed % 5);
+            const alphas = copyAlpha(ctx, ss, ss);
+            const nlines = 5 + (seed % 5);
             let angle = ((seed % 160) + 10) * 0.0174532925; /* -> radians */
             if (seed & 0x100) {
                 angle = -angle;
             }
 
-            let sep = radius / (nlines * 2);
-            let rise = Math.cos(angle);
-            let run = Math.sin(angle);
-            let m = rise / run;
-            let minv = run / rise;
+            const sep = radius / (nlines * 2);
+            const rise = Math.cos(angle);
+            const run = Math.sin(angle);
+            const m = rise / run;
+            const minv = run / rise;
 
             let minv2_1 = minv * minv - 1;
             minv2_1 = Math.abs(minv2_1);
 
             let s = seed;
-            let rstep = Math.round(radius * 0.1);
+            const rstep = Math.round(radius * 0.1);
 
             ctx.save();
 
             let r = -radius;
-            let base_line_width = radius * 0.07;
+            const base_line_width = radius * 0.07;
             for (let i = 0; i < nlines * 4; ++i) {
                 for (let neg = 0; neg < 2; ++neg) {
                     r += sep + (s % rstep);
 
-                    let xp = Math.sqrt((r * r) / minv2_1);
-                    let yp = minv * xp;
-                    let b = (neg ? -1 : 1) * yp - m * xp;
+                    const xp = Math.sqrt((r * r) / minv2_1);
+                    const yp = minv * xp;
+                    const b = (neg ? -1 : 1) * yp - m * xp;
 
-                    let sx = 0;
-                    let ex = radius * 2;
-                    let sy = m * sx + b;
-                    let ey = m * ex + b;
+                    const sx = 0;
+                    const ex = radius * 2;
+                    const sy = m * sx + b;
+                    const ey = m * ex + b;
                     s = (s * 97) >> 3;
 
                     ctx.beginPath();
-                    let clr = "rgba(194,191,198," + (s % 10) / 10.0 + ")";
+                    const clr = "rgba(194,191,198," + (s % 10) / 10.0 + ")";
                     //var clr = 'rgba(185,181,188,' + ((s%10)/10.0) + ')';
                     //ctx.strokeStyle = 'rgba(209,204,208,1.0)';
                     ctx.strokeStyle = clr;
@@ -436,23 +436,23 @@ function placeRenderedStone(
     cy: number,
     radius: number,
 ): void {
-    let dcsr = deviceCanvasScalingRatio();
+    const dcsr = deviceCanvasScalingRatio();
     if (dcsr !== 1.0) {
-        let center = stone_center_in_square(radius * dcsr, true) / dcsr;
-        let ss = square_size(radius * dcsr, true) / dcsr;
+        const center = stone_center_in_square(radius * dcsr, true) / dcsr;
+        const ss = square_size(radius * dcsr, true) / dcsr;
 
-        let sx = cx - center;
-        let sy = cy - center;
+        const sx = cx - center;
+        const sy = cy - center;
 
         if (shadow_ctx) {
             shadow_ctx.drawImage(stone.shadow, sx, sy, radius * 2.5, radius * 2.5);
         }
         ctx.drawImage(stone.stone, sx, sy, ss, ss);
     } else {
-        let center = stone_center_in_square(radius, false);
+        const center = stone_center_in_square(radius, false);
 
-        let sx = cx - center;
-        let sy = cy - center;
+        const sx = cx - center;
+        const sy = cy - center;
 
         if (shadow_ctx) {
             shadow_ctx.drawImage(stone.shadow, sx, sy);

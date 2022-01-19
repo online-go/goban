@@ -40,18 +40,18 @@ export class GoConditionalMove {
     }
 
     encode(): ConditionalMoveResponse {
-        let ret: ConditionalMoveTree = {};
-        for (let ch in this.children) {
+        const ret: ConditionalMoveTree = {};
+        for (const ch in this.children) {
             ret[ch] = this.children[ch].encode();
         }
         return [this.move, ret];
     }
     static decode(data: ConditionalMoveResponse): GoConditionalMove {
-        let move = data[0];
-        let children = data[1];
-        let ret = new GoConditionalMove(move);
-        for (let ch in children) {
-            let child = GoConditionalMove.decode(children[ch]);
+        const move = data[0];
+        const children = data[1];
+        const ret = new GoConditionalMove(move);
+        for (const ch in children) {
+            const child = GoConditionalMove.decode(children[ch]);
             child.parent = ret;
             ret.children[ch] = child;
         }

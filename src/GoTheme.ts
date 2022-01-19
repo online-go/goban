@@ -166,8 +166,8 @@ export class GoTheme {
 
     /* Returns a set of CSS styles (for react) that should be applied to the background layer (ie the board) */
     public getReactStyles(): GoThemeBackgroundReactStyles {
-        let ret: GoThemeBackgroundReactStyles = {};
-        let css: GoThemeBackgroundCSS = this.getBackgroundCSS();
+        const ret: GoThemeBackgroundReactStyles = {};
+        const css: GoThemeBackgroundCSS = this.getBackgroundCSS();
 
         ret.backgroundColor = css["background-color"];
         ret.backgroundImage = css["background-image"];

@@ -17,13 +17,13 @@
 import { _, interpolate } from "./translate";
 import { JGOFTimeControl } from "./JGOF";
 
-let __deviceCanvasScalingRatio: number = 0;
+let __deviceCanvasScalingRatio = 0;
 
 /* Creates a non-blury canvas object. Most systems don't have an issue with
  * this, but HDPI android devices deal with scaling canvases and images in a
  * retarded fashion and require this hack to get around it. */
 export function createDeviceScaledCanvas(width: number, height: number): HTMLCanvasElement {
-    let canvas = document.createElement("canvas");
+    const canvas = document.createElement("canvas");
     canvas.setAttribute("width", `${width}px`);
     canvas.setAttribute("height", `${height}px`);
     return canvas;
@@ -34,13 +34,13 @@ export function resizeDeviceScaledCanvas(
     width: number,
     height: number,
 ): HTMLCanvasElement {
-    let context = canvas.getContext("2d");
+    const context = canvas.getContext("2d");
     if (!context) {
         throw new Error(`Failed to get context for canvas`);
     }
 
-    let devicePixelRatio = window.devicePixelRatio || 1;
-    let backingStoreRatio =
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const backingStoreRatio =
         (context as any).webkitBackingStorePixelRatio ||
         (context as any).mozBackingStorePixelRatio ||
         (context as any).msBackingStorePixelRatio ||
@@ -48,7 +48,7 @@ export function resizeDeviceScaledCanvas(
         (context as any).backingStorePixelRatio ||
         1;
 
-    let ratio = devicePixelRatio / backingStoreRatio;
+    const ratio = devicePixelRatio / backingStoreRatio;
 
     /*
     if (devicePixelRatio !== backingStoreRatio) {
@@ -78,20 +78,20 @@ export function resizeDeviceScaledCanvas(
 
 export function deviceCanvasScalingRatio() {
     if (!__deviceCanvasScalingRatio) {
-        let canvas = document.createElement("canvas");
+        const canvas = document.createElement("canvas");
         canvas.width = 257;
         canvas.height = 257;
-        let context = (canvas as HTMLCanvasElement).getContext("2d");
+        const context = (canvas as HTMLCanvasElement).getContext("2d");
 
-        let devicePixelRatio = window.devicePixelRatio || 1;
-        let backingStoreRatio =
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const backingStoreRatio =
             (context as any).webkitBackingStorePixelRatio ||
             (context as any).mozBackingStorePixelRatio ||
             (context as any).msBackingStorePixelRatio ||
             (context as any).oBackingStorePixelRatio ||
             (context as any).backingStorePixelRatio ||
             1;
-        let ratio = devicePixelRatio / backingStoreRatio;
+        const ratio = devicePixelRatio / backingStoreRatio;
         __deviceCanvasScalingRatio = ratio;
     }
 
@@ -106,7 +106,7 @@ export function getRelativeEventPosition(event: TouchEvent | MouseEvent) {
     let x = -1000;
     let y = -1000;
 
-    let rect = (event.target as HTMLElement).getBoundingClientRect();
+    const rect = (event.target as HTMLElement).getBoundingClientRect();
 
     if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
         if (event.touches && event.touches.length) {
@@ -137,13 +137,13 @@ export function getRandomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
 export function shortDurationString(seconds: number) {
-    let weeks = Math.floor(seconds / (86400 * 7));
+    const weeks = Math.floor(seconds / (86400 * 7));
     seconds -= weeks * 86400 * 7;
-    let days = Math.floor(seconds / 86400);
+    const days = Math.floor(seconds / 86400);
     seconds -= days * 86400;
-    let hours = Math.floor(seconds / 3600);
+    const hours = Math.floor(seconds / 3600);
     seconds -= hours * 3600;
-    let minutes = Math.floor(seconds / 60);
+    const minutes = Math.floor(seconds / 60);
     seconds -= minutes * 60;
     return (
         "" +
@@ -164,7 +164,7 @@ export function dup(obj: any): any {
             }
         } else {
             ret = {};
-            for (let i in obj) {
+            for (const i in obj) {
                 ret[i] = dup(obj[i]);
             }
         }
@@ -193,7 +193,7 @@ export function deepEqual(a: any, b: any) {
                 return false;
             }
         } else {
-            for (let i in a) {
+            for (const i in a) {
                 if (!(i in b)) {
                     return false;
                 }
@@ -201,7 +201,7 @@ export function deepEqual(a: any, b: any) {
                     return false;
                 }
             }
-            for (let i in b) {
+            for (const i in b) {
                 if (!(i in a)) {
                     return false;
                 }
@@ -218,7 +218,7 @@ export function elementOffset(element: HTMLElement): { top: number; left: number
         throw new Error(`No element passed to elementOffset`);
     }
 
-    let rect = element.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
 
     if (!rect) {
         throw new Error(`Element.getBoundingClientRect() returned null`);

@@ -40,8 +40,8 @@ declare const SERVER: boolean;
  * remote scoring enabled.
  */
 
-declare var OGSScoreEstimator: any;
-let OGSScoreEstimator_initialized: boolean = false;
+declare let OGSScoreEstimator: any;
+let OGSScoreEstimator_initialized = false;
 let OGSScoreEstimatorModule: any;
 
 /* This is used on the server side */
@@ -67,8 +67,7 @@ export interface ScoreEstimateResponse {
     win_rate?: number;
 }
 
-let remote_scorer: ((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined =
-    undefined;
+let remote_scorer: ((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined;
 /* This is used on both the client and server side */
 export function set_remote_scorer(
     scorer: (req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>,
@@ -116,7 +115,7 @@ export function init_score_estimator(): Promise<boolean> {
         }
 
         //console.log("Sync script");
-        let script: HTMLScriptElement = document.getElementById(
+        const script: HTMLScriptElement = document.getElementById(
             "ogs_score_estimator_script",
         ) as HTMLScriptElement;
         if (script) {
@@ -195,15 +194,15 @@ class SEGroup {
         }
     }
     foreachNeighboringPoint(fn: (pt: SEPoint) => void) {
-        let self = this;
-        let points = this.points;
-        let done_array = new Array(this.se.height * this.se.width);
+        const self = this;
+        const points = this.points;
+        const done_array = new Array(this.se.height * this.se.width);
         for (let i = 0; i < points.length; ++i) {
             done_array[points[i].x + points[i].y * this.se.width] = true;
         }
 
         function checkAndDo(x: number, y: number): void {
-            let idx = x + y * self.se.width;
+            const idx = x + y * self.se.width;
             if (done_array[idx]) {
                 return;
             }
@@ -213,7 +212,7 @@ class SEGroup {
         }
 
         for (let i = 0; i < points.length; ++i) {
-            let pt = points[i];
+            const pt = points[i];
             if (pt.x - 1 >= 0) {
                 checkAndDo(pt.x - 1, pt.y);
             }
@@ -264,7 +263,7 @@ class SEGroup {
     setRemoved(removed: boolean): void {
         this.removed = removed;
         for (let i = 0; i < this.points.length; ++i) {
-            let pt = this.points[i];
+            const pt = this.points[i];
             this.se.setRemoved(pt.x, pt.y, removed ? 1 : 0);
         }
     }
@@ -371,8 +370,8 @@ export class ScoreEstimator {
     }
 
     private estimateScoreRemote(tolerance: number = 0.25): Promise<void> {
-        let komi = this.engine.komi;
-        let captures_delta = this.engine.score_prisoners
+        const komi = this.engine.komi;
+        const captures_delta = this.engine.score_prisoners
             ? this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners()
             : 0;
 
@@ -381,9 +380,9 @@ export class ScoreEstimator {
                 throw new Error("Remote scoring not setup");
             }
 
-            let board_state: Array<Array<number>> = [];
+            const board_state: Array<Array<number>> = [];
             for (let y = 0; y < this.height; ++y) {
-                let row: Array<number> = [];
+                const row: Array<number> = [];
                 for (let x = 0; x < this.width; ++x) {
                     row.push(this.removal[y][x] ? 0 : this.board[y][x]);
                 }
@@ -442,9 +441,9 @@ export class ScoreEstimator {
          * when the top of this script (where score estimator is first assigned) is
          * executing. (it's loaded async)
          */
-        let nbytes = 4 * this.engine.width * this.engine.height;
-        let ptr = OGSScoreEstimatorModule._malloc(nbytes);
-        let ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, nbytes);
+        const nbytes = 4 * this.engine.width * this.engine.height;
+        const ptr = OGSScoreEstimatorModule._malloc(nbytes);
+        const ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, nbytes);
         let i = 0;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
@@ -455,7 +454,7 @@ export class ScoreEstimator {
                 ++i;
             }
         }
-        let _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", [
+        const _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", [
             "number",
             "number",
             "number",
@@ -463,7 +462,7 @@ export class ScoreEstimator {
             "number",
             "number",
         ]);
-        let estimate = _estimate as (
+        const estimate = _estimate as (
             w: number,
             h: number,
             p: number,
@@ -480,7 +479,7 @@ export class ScoreEstimator {
             tolerance,
         );
         estimated_score -= this.engine.getHandicapPointAdjustmentForWhite();
-        let ownership = GoMath.makeMatrix(this.width, this.height, 0);
+        const ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
@@ -532,7 +531,7 @@ export class ScoreEstimator {
 
     getProbablyDead(): string {
         let ret = "";
-        let arr = [];
+        const arr = [];
 
         if (remote_scorer) {
             for (let y = 0; y < this.height; ++y) {
@@ -582,13 +581,13 @@ export class ScoreEstimator {
             for (let x = 0; x < this.width; ++x) {
                 if (!this.groups[y][x]) {
                     this.incrementCurrentMarker(); /* clear marks */
-                    let color = this.board[y][x];
-                    let g = new SEGroup(this, color, this.currentMarker);
+                    const color = this.board[y][x];
+                    const g = new SEGroup(this, color, this.currentMarker);
                     this.group_list.push(g);
                     stack = [x, y];
                     while (stack.length) {
-                        let yy = stack.pop();
-                        let xx = stack.pop();
+                        const yy = stack.pop();
+                        const xx = stack.pop();
                         if (xx === undefined || yy === undefined) {
                             throw new Error(`Invalid stack state`);
                         }
@@ -654,14 +653,14 @@ export class ScoreEstimator {
         //this.resetGroups();
     }
     toggleMetaGroupRemoval(x: number, y: number): void {
-        let already_done: { [k: string]: boolean } = {};
-        let space_groups: Array<SEGroup> = [];
+        const already_done: { [k: string]: boolean } = {};
+        const space_groups: Array<SEGroup> = [];
         let group_color: JGOFNumericPlayerColor;
 
         try {
             if (x >= 0 && y >= 0) {
-                let removing = !this.removal[y][x];
-                let group = this.getGroup(x, y);
+                const removing = !this.removal[y][x];
+                const group = this.getGroup(x, y);
                 group.setRemoved(removing);
 
                 group_color = this.board[y][x];
@@ -679,7 +678,7 @@ export class ScoreEstimator {
                     });
 
                     while (space_groups.length) {
-                        let cur_space_group = space_groups.pop();
+                        const cur_space_group = space_groups.pop();
                         cur_space_group?.foreachNeighborEnemyGroup((g) => {
                             if (!already_done[g.id]) {
                                 already_done[g.id] = true;
@@ -718,7 +717,7 @@ export class ScoreEstimator {
     }
     getStoneRemovalString(): string {
         let ret = "";
-        let arr = [];
+        const arr = [];
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
@@ -784,7 +783,7 @@ export class ScoreEstimator {
 
         //if (this.phase !== "play") {
         if (this.engine.score_territory) {
-            let gm = new GoMath(this);
+            const gm = new GoMath(this);
             //console.log(gm);
 
             gm.foreachGroup((gr) => {
@@ -845,7 +844,7 @@ export class ScoreEstimator {
         pt_or_group: Intersection | Group,
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {
-        let self = this;
+        const self = this;
         let group: Group;
         let done_array: Array<boolean>;
 
@@ -856,7 +855,7 @@ export class ScoreEstimator {
                 done_array[group[i].x + group[i].y * this.width] = true;
             }
             for (let i = 0; i < group.length; ++i) {
-                let pt = group[i];
+                const pt = group[i];
                 if (pt.x - 1 >= 0) {
                     checkAndDo(pt.x - 1, pt.y);
                 }
@@ -871,7 +870,7 @@ export class ScoreEstimator {
                 }
             }
         } else {
-            let pt = pt_or_group;
+            const pt = pt_or_group;
             if (pt.x - 1 >= 0) {
                 fn_of_neighbor_pt(pt.x - 1, pt.y);
             }
@@ -887,7 +886,7 @@ export class ScoreEstimator {
         }
 
         function checkAndDo(x: number, y: number): void {
-            let idx = x + y * self.width;
+            const idx = x + y * self.width;
             if (done_array[idx]) {
                 return;
             }
