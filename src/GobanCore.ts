@@ -3579,12 +3579,12 @@ class FocusTracker {
         this.hasFocus = true;
         this.outOfFocusDurations.push(Date.now() - this.lastFocus);
         this.lastFocus = Date.now();
-    }
+    };
 
     onBlur = () => {
         this.hasFocus = false;
         this.lastFocus = Date.now();
-    }
+    };
 }
 
 export const focus_tracker = new FocusTracker();
