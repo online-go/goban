@@ -25,9 +25,9 @@ module.exports = {
         "@typescript-eslint/ban-types": "off", // 1 error
         "@typescript-eslint/no-empty-function": "off", // 2 errors
         "@typescript-eslint/no-explicit-any": "off", // 131 warnings
-        "@typescript-eslint/no-floating-promises": "off", // 1 error
         "@typescript-eslint/no-this-alias": "off", // 11 errors
         "@typescript-eslint/no-unused-vars": "off", // 38 warnings
+        "@typescript-eslint/no-empty-interface": "off", // 1 error
         "eqeqeq": "off", // 2 errors
         "no-case-declarations": "off", // 1 error
         "no-constant-condition": "off", // 2 errors

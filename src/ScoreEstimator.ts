@@ -649,7 +649,9 @@ export class ScoreEstimator {
             this.toggleMetaGroupRemoval(i, j);
         }
 
-        this.estimateScore(this.trials, this.tolerance);
+        this.estimateScore(this.trials, this.tolerance).catch(() => {
+            /* empty */
+        });
         //this.resetGroups();
     }
     toggleMetaGroupRemoval(x: number, y: number): void {
