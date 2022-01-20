@@ -26,7 +26,8 @@
         "lint:fix": "eslint --fix src/ --ext=.ts,.tsx",
         "typedoc": "typedoc --mode file --out doc/ --theme minimal --tsconfig tsconfig.json --excludeExternals --externalPattern '**/node_modules/**' --includeDeclarations src/",
         "prettier": "prettier --write \"src/**/*.{ts,tsx}\"",
-        "prettier:check": "prettier --check \"src/**/*.{ts,tsx}\""
+        "prettier:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+        "checks": "npm run lint && npm run prettier:check"
     },
     "repository": {
         "type": "git",
