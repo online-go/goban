@@ -479,6 +479,8 @@ export class ScoreEstimator {
             tolerance,
         );
         estimated_score -= this.engine.getHandicapPointAdjustmentForWhite();
+        let stone_counting_adjustment = 0;
+        let prisoner_adjustment = 0;
         const ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
         for (let y = 0; y < this.height; ++y) {
@@ -486,8 +488,54 @@ export class ScoreEstimator {
                 //ownership[y][x] = ints[i] < 0 ? 2 : ints[i];
                 ownership[y][x] = ints[i];
                 ++i;
+
+                // Fix "ownership" of own stones in Japanese rules.
+                // Board/ownership being 1/1 or 2/-1 means it's the
+                // color's own stone.
+                if (
+                    this.board[y][x] &&
+                    ownership[y][x] &&
+                    !this.engine.score_stones &&
+                    (this.board[y][x] === 1) === (ownership[y][x] === 1)
+                ) {
+                    ownership[y][x] = 0;
+                    if (this.board[y][x] === 1) {
+                        // black stone gives White a point
+                        stone_counting_adjustment += 1;
+                    } else {
+                        // white stone gives Black a point
+                        stone_counting_adjustment -= 1;
+                    }
+                }
+
+                // Add prisoner points in Japanese rules.
+                // Board/ownership being 1/-1 or 2/1 means it's owned
+                // by the opposite color.
+                if (
+                    this.board[y][x] &&
+                    ownership[y][x] &&
+                    this.engine.score_prisoners &&
+                    (this.board[y][x] === 1) === (-ownership[y][x] === 1)
+                ) {
+                    // add points for prisoners in Japanese rules
+                    if (this.board[y][x] === 1) {
+                        // black stone gives White a point
+                        prisoner_adjustment += 1;
+                    } else {
+                        // white stone gives Black a point
+                        prisoner_adjustment -= 1;
+                    }
+                }
             }
         }
+        estimated_score -= stone_counting_adjustment;
+        estimated_score -= prisoner_adjustment;
+        if (this.engine.score_prisoners)
+        {
+            estimated_score += this.engine.getBlackPrisoners();
+            estimated_score -= this.engine.getWhitePrisoners();
+        }
+
         OGSScoreEstimatorModule._free(ptr);
         this.updateEstimate(estimated_score, ownership);
         return Promise.resolve();
