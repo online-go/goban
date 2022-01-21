@@ -45,6 +45,7 @@ import {
     JGOFPauseState,
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
+import { JGOFPlayerSummary } from "goban";
 
 declare let swal: any;
 
@@ -217,6 +218,7 @@ export interface Events {
     chat: any;
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
+    "player-update": never;
     "review.sync-to-current-move": never;
     "review.updated": never;
     "review.load-start": never;
@@ -1151,6 +1153,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     console.error(e);
                 }
             });
+
+            this._socket_on(prefix + "player_update", (player_update: JGOFPlayerSummary): void => {
+                console.log("socket received ", player_update);
+                this.engine.updatePlayers(player_update);
+                this.emit("player-update");
+            });
+
             this._socket_on(
                 prefix + "conditional_moves",
                 (cmoves: {

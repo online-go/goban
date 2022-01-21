@@ -125,6 +125,7 @@ export class GobanCanvas extends GobanCore {
     constructor(config: GobanCanvasConfig, preloaded_data?: AdHocFormat | JGOF) {
         super(config, preloaded_data);
 
+        console.log("Goban canvas v 0.5.73.debug1 ");
         if (config.board_div) {
             this.parent = config["board_div"];
         } else {
