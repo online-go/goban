@@ -478,7 +478,7 @@ export class ScoreEstimator {
             trials,
             tolerance,
         );
-        estimated_score -= this.engine.getHandicapPointAdjustmentForWhite();
+        estimated_score -= this.engine.getHandicapPointAdjustmentForWhite(true);
         const ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
         for (let y = 0; y < this.height; ++y) {

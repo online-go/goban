@@ -2644,9 +2644,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     /* Returns the amount of points that should be given to white for any
      * handicap stones in the game. */
-    public getHandicapPointAdjustmentForWhite(): number {
+    public getHandicapPointAdjustmentForWhite(assume_area_counting: boolean = false): number {
         let ret = 0;
-        if (this.score_handicap) {
+        if (this.score_handicap || (assume_area_counting && !this.score_stones)) {
             if (this.aga_handicap_scoring && this.handicap > 0) {
                 ret = this.handicap - 1;
             } else {
