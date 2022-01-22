@@ -748,7 +748,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
         if (!this.player_pool) {
             throw new Error("updatePlayers called with no player_pool available");
         }
-        console.log("doing player_update", player_update);
 
         this.players.black = this.player_pool[player_update.players.black];
         this.players.white = this.player_pool[player_update.players.white];
@@ -756,16 +755,14 @@ export class GoEngine extends TypedEventEmitter<Events> {
         try {
             if (this.config.rengo && player_update.rengo_teams) {
                 this.rengo_teams = { black: [], white: [] };
-                console.log("reset teams:", this.rengo_teams);
-                console.log("engine", this);
+
                 for (const colour of ["black", "white"]) {
                     //console.log("looking at", colour, player_update.rengo_teams[colour]);
                     for (const id of player_update.rengo_teams[colour as "black" | "white"]) {
                         this.rengo_teams[colour as "black" | "white"].push(this.player_pool[id]);
                     }
                 }
-                console.log("resulting teams:", this.rengo_teams);
-                console.log("engine", this);
+
             }
         } catch (e) {
             console.error(e);

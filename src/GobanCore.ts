@@ -1155,7 +1155,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             });
 
             this._socket_on(prefix + "player_update", (player_update: JGOFPlayerSummary): void => {
-                console.log("socket received ", player_update);
+                this.engine.cur_move.player_update = player_update;
                 this.engine.updatePlayers(player_update);
                 this.emit("player-update");
             });
