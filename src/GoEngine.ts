@@ -762,7 +762,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         this.rengo_teams[colour as "black" | "white"].push(this.player_pool[id]);
                     }
                 }
-
             }
         } catch (e) {
             console.error(e);

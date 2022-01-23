@@ -1155,8 +1155,34 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             });
 
             this._socket_on(prefix + "player_update", (player_update: JGOFPlayerSummary): void => {
-                this.engine.cur_move.player_update = player_update;
-                this.engine.updatePlayers(player_update);
+                try {
+                    let jumptomove = null;
+                    if (
+                        this.engine.cur_move.id !== this.engine.last_official_move.id &&
+                        ((this.engine.cur_move.parent == null &&
+                            this.engine.cur_move.trunk_next != null) ||
+                            this.engine.cur_move.parent?.id !== this.engine.last_official_move.id)
+                    ) {
+                        jumptomove = this.engine.cur_move;
+                    }
+                    this.engine.jumpToLastOfficialMove();
+
+                    this.engine.cur_move.player_update = player_update;
+                    this.engine.updatePlayers(player_update);
+
+                    if (this.mode === "conditional" || this.mode === "play") {
+                        console.log("setting play mode");
+                        this.setMode("play");
+                    } else {
+                        console.warn("unexpected player_update received!");
+                    }
+
+                    if (jumptomove) {
+                        this.engine.jumpTo(jumptomove);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
                 this.emit("player-update");
             });
 
