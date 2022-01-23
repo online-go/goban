@@ -479,6 +479,11 @@ export class ScoreEstimator {
             tolerance,
         );
         estimated_score -= this.engine.getHandicapPointAdjustmentForWhite(true);
+
+        // For Japanese rules we use territory counting.  Don't even
+        // attempt to handle rules with score_stones and not
+        // score_prisoners or vice-versa.
+        const territory_counting = !this.engine.score_stones && this.engine.score_prisoners;
         const ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
         for (let y = 0; y < this.height; ++y) {
@@ -486,8 +491,42 @@ export class ScoreEstimator {
                 //ownership[y][x] = ints[i] < 0 ? 2 : ints[i];
                 ownership[y][x] = ints[i];
                 ++i;
+
+                if (territory_counting && this.board[y][x]) {
+                    // Fix display and count in Japanese rules.
+
+                    // Board/ownership being 1/1 or 2/-1 means it's a
+                    // live stone; clear ownership so the display
+                    // looks like it is using territory scoring.
+                    if (
+                        (this.board[y][x] === 1 && ownership[y][x] === 1) ||
+                        (this.board[y][x] === 2 && ownership[y][x] === -1)
+                    ) {
+                        ownership[y][x] = 0;
+                    }
+
+                    // Any stone on the board means one less point for
+                    // the corresponding player, whether it's a
+                    // prisoner, a live stone that doesn't count as
+                    // territory, or (does this even happen?) a stone
+                    // of unknown status.
+                    if (this.board[y][x] === 1) {
+                        // black stone gives White a point
+                        estimated_score -= 1;
+                    } else {
+                        // white stone gives Black a point
+                        estimated_score += 1;
+                    }
+                }
             }
         }
+
+        // Account for already-captured prisoners in Japanese rules.
+        if (territory_counting) {
+            estimated_score += this.engine.getBlackPrisoners();
+            estimated_score -= this.engine.getWhitePrisoners();
+        }
+
         OGSScoreEstimatorModule._free(ptr);
         this.updateEstimate(estimated_score, ownership);
         return Promise.resolve();
