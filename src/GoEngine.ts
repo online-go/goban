@@ -901,7 +901,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         const move_number = this.getMoveNumber();
-        const max_moves_played = 1 + (this.free_handicap_placement ? this.handicap : 1);
+        // can play up to 6 moves (plus handicap moves) and still cancel the game
+        // so it's not ranked
+        const max_moves_played = 5 + (this.free_handicap_placement ? this.handicap : 1);
 
         if (move_number < max_moves_played) {
             return true;
