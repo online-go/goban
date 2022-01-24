@@ -43,9 +43,9 @@ import {
     JGOFTimeControlSystem,
     JGOFNumericPlayerColor,
     JGOFPauseState,
+    JGOFPlayerSummary,
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
-import { JGOFPlayerSummary } from "goban";
 
 declare let swal: any;
 
@@ -218,7 +218,7 @@ export interface Events {
     chat: any;
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
-    "player-update": never;
+    "player-update": JGOFPlayerSummary;
     "review.sync-to-current-move": never;
     "review.updated": never;
     "review.load-start": never;
@@ -1183,7 +1183,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 } catch (e) {
                     console.error(e);
                 }
-                this.emit("player-update");
+                this.emit("player-update", player_update);
             });
 
             this._socket_on(

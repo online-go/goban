@@ -73,6 +73,10 @@ export interface JGOFPlayerSummary {
         black: number[];
         white: number[];
     };
+    dropped_players?: {
+        black?: number[];
+        white?: number[];
+    };
 }
 
 export interface JGOFMove extends JGOFIntersection {
