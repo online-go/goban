@@ -1171,7 +1171,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.engine.updatePlayers(player_update);
 
                     if (this.mode === "conditional" || this.mode === "play") {
-                        console.log("setting play mode");
                         this.setMode("play");
                     } else {
                         console.warn("unexpected player_update received!");
