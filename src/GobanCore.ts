@@ -43,6 +43,7 @@ import {
     JGOFTimeControlSystem,
     JGOFNumericPlayerColor,
     JGOFPauseState,
+    JGOFPlayerSummary,
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 
@@ -217,6 +218,7 @@ export interface Events {
     chat: any;
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
+    "player-update": JGOFPlayerSummary;
     "review.sync-to-current-move": never;
     "review.updated": never;
     "review.load-start": never;
@@ -1151,6 +1153,38 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     console.error(e);
                 }
             });
+
+            this._socket_on(prefix + "player_update", (player_update: JGOFPlayerSummary): void => {
+                try {
+                    let jumptomove = null;
+                    if (
+                        this.engine.cur_move.id !== this.engine.last_official_move.id &&
+                        ((this.engine.cur_move.parent == null &&
+                            this.engine.cur_move.trunk_next != null) ||
+                            this.engine.cur_move.parent?.id !== this.engine.last_official_move.id)
+                    ) {
+                        jumptomove = this.engine.cur_move;
+                    }
+                    this.engine.jumpToLastOfficialMove();
+
+                    this.engine.cur_move.player_update = player_update;
+                    this.engine.updatePlayers(player_update);
+
+                    if (this.mode === "conditional" || this.mode === "play") {
+                        this.setMode("play");
+                    } else {
+                        console.warn("unexpected player_update received!");
+                    }
+
+                    if (jumptomove) {
+                        this.engine.jumpTo(jumptomove);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+                this.emit("player-update", player_update);
+            });
+
             this._socket_on(
                 prefix + "conditional_moves",
                 (cmoves: {
