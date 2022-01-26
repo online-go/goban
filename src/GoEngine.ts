@@ -112,6 +112,7 @@ export interface GoEngineConfig {
         black: Array<GoEnginePlayerEntry>;
         white: Array<GoEnginePlayerEntry>;
     };
+    rengo_casual_mode?: boolean;
 
     //time_control?:JGOFTimeControl;
     moves?: Array<AdHocPackedMove> | Array<JGOFMove>;
@@ -337,6 +338,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
     rengo_teams?: {
         [colour: string]: Array<GoEnginePlayerEntry>; // TBD index this by PlayerColour
     };
+    rengo_casual_mode: boolean;
 
     private aga_handicap_scoring: boolean = false;
     private allow_ko: boolean = false;
@@ -405,6 +407,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
             white: { username: "white", id: NaN },
         };
         this.player_pool = config.player_pool || {};
+
+        this.rengo_casual_mode = config.rengo_casual_mode || false;
 
         for (let y = 0; y < this.height; ++y) {
             const row: Array<JGOFNumericPlayerColor> = [];
@@ -900,6 +904,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         if ("ladder_id" in this.config && this.config.ladder_id) {
             return false;
+        }
+
+        if (this.rengo && this.rengo_casual_mode) {
+            return false; // casual mode players exit by resigning.
         }
 
         const move_number = this.getMoveNumber();
