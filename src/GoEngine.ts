@@ -1121,6 +1121,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return players.map((p) => p.id).includes(player_id);
     }
 
+    public isActivePlayer(player_id: number): boolean {
+        const players = [this.players.black, this.players.white];
+        return players.map((p) => p.id).includes(player_id);
+    }
+
     public playerToMove(): number {
         return this.player === 1 ? this.players.black.id : this.players.white.id;
     }

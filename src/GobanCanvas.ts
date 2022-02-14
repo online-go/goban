@@ -751,7 +751,7 @@ export class GobanCanvas extends GobanCore {
 
             if (
                 (this.engine.phase === "stone removal" || this.scoring_mode) &&
-                this.isParticipatingPlayer()
+                this.engine.isActivePlayer(this.player_id)
             ) {
                 let arrs: Array<[-1 | 0 | 1, Group]>;
                 if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
