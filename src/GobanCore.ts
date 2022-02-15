@@ -3478,16 +3478,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         return ret;
     }
-    /**
-     * Returns true if the user has signed in and if the signed in user is a participating player in this game
-     * (and not only spectating), that is, if they are either white or black.
-     */
-    public isParticipatingPlayer(): boolean {
-        return (
-            this.engine.players.black.id === this.player_id ||
-            this.engine.players.white.id === this.player_id
-        );
-    }
+
     public getLastReviewMessage(): ReviewMessage {
         return this.last_review_message;
     }

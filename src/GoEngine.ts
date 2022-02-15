@@ -1110,6 +1110,22 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return group.length;
     }
+
+    public isParticipant(player_id: number): boolean {
+        // Note: in theory we get participants from the engine each move, with the intention that we store and use here,
+        // which would be more efficient, but needs careful consideration of timing and any other gotchas
+        const players =
+            this.rengo && this.rengo_teams
+                ? this.rengo_teams.black.concat(this.rengo_teams.white)
+                : [this.players.black, this.players.white];
+        return players.map((p) => p.id).includes(player_id);
+    }
+
+    public isActivePlayer(player_id: number): boolean {
+        const players = [this.players.black, this.players.white];
+        return players.map((p) => p.id).includes(player_id);
+    }
+
     public playerToMove(): number {
         return this.player === 1 ? this.players.black.id : this.players.white.id;
     }
