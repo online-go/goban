@@ -2339,25 +2339,15 @@ export class GobanCanvas extends GobanCore {
     public drawHorizontalCoordinates (ctx: CanvasRenderingContext2D, i: number, j: number): void {
         switch (this.getCoordinateDisplaySystem()) {
             case "A1":
-                for (let c = 0; c < this.width; ++i, ++c) {
-                    const x =
-                        (i -
-                            this.bounds.left -
-                            (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
-                            this.square_size +
-                        this.square_size / 2;
+                for (let c = 0; c < this.bounded_width; ++i, ++c) {
+                    const x = c * this.square_size + this.square_size / 2 + (+this.draw_left_labels)*this.square_size;
                     const y = j * this.square_size + this.square_size / 2;
                     this.placeText(ctx, "ABCDEFGHJKLMNOPQRSTUVWXYZ"[c], x, y);
                 }
                 break;
             case "1-1":
-                for (let c = 0; c < this.width; ++i, ++c) {
-                    const x =
-                        (i -
-                            this.bounds.left -
-                            (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
-                            this.square_size +
-                        this.square_size / 2;
+                for (let c = 0; i <= this.bounded_width; ++i, ++c) {
+                    const x = c * this.square_size + this.square_size / 2 + (+this.draw_left_labels)*this.square_size;
                     const y = j * this.square_size + this.square_size / 2;
                     this.placeText(ctx, "" + (c + 1), x, y);
                 }
@@ -2368,15 +2358,10 @@ export class GobanCanvas extends GobanCore {
     public drawVerticalCoordinates (ctx: CanvasRenderingContext2D, i: number, j: number): void {
         switch (this.getCoordinateDisplaySystem()) {
             case "A1":
-                for (let c = 0; c < this.height; ++j, ++c) {
+                for (let c = 0; c < this.bounded_height; ++j, ++c) {
                     const x = i * this.square_size + this.square_size / 2;
-                    const y =
-                        (j -
-                            this.bounds.top -
-                            (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
-                            this.square_size +
-                        this.square_size / 2;
-                    this.placeText(ctx, "" + (this.height - c), x, y);
+                    const y = c * this.square_size + this.square_size / 2 + (+this.draw_top_labels)*this.square_size;
+                    this.placeText(ctx, "" + (this.bounded_height - c), x, y);
                 }
                 break;
             case "1-1":
@@ -2407,14 +2392,9 @@ export class GobanCanvas extends GobanCore {
                     "二十四",
                     "二十五",
                 ];
-                for (let c = 0; c < this.height; ++j, ++c) {
+                for (let c = 0; c < this.bounded_height; ++j, ++c) {
                     const x = i * this.square_size + this.square_size / 2;
-                    const y =
-                        (j -
-                            this.bounds.top -
-                            (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
-                            this.square_size +
-                        this.square_size / 2;
+                    const y = c * this.square_size + this.square_size / 2 + (+this.draw_top_labels)*this.square_size;
                     this.vplaceText(ctx, chinese_japanese_numbers[c], x, y);
                 }
                 break;
