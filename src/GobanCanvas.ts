@@ -2195,6 +2195,14 @@ export class GobanCanvas extends GobanCore {
         let ox = this.draw_left_labels ? s : 0;
         let oy = this.draw_top_labels ? s : 0;
 
+        // accomodate puzzle cropping
+        if (this.bounds.left > 0) {
+            ox = -s * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -s * this.bounds.top;
+        }
+
         ctx.save()
         
         if (this.square_size < 5) {
@@ -2213,19 +2221,22 @@ export class GobanCanvas extends GobanCore {
         } 
         */
 
+        // continue lines off-board during zoom in puzzles
+        // this helps the player see that it's not the edge of the board
+
         // vertical
-       for (let i = 0; i < this.bounded_width; i++) {
+       for (let i = 0; i < this.width; i++) {
             ctx.beginPath()
             ctx.moveTo(Math.floor(i*s+ox + this.metrics.mid), Math.floor(oy + this.metrics.mid))
-            ctx.lineTo(Math.floor(i*s+ox + this.metrics.mid), Math.floor(oy + this.metrics.mid + (this.bounded_height-1)*s))
+            ctx.lineTo(Math.floor(i*s+ox + this.metrics.mid), Math.floor(oy + this.metrics.mid + (this.height-1)*s))
             ctx.stroke()
        }
        
        //horizontal
-        for (let j = 0; j < this.bounded_height; j++) {
+        for (let j = 0; j < this.height; j++) {
             ctx.beginPath()
             ctx.moveTo(Math.floor(ox + this.metrics.mid), Math.floor(j*s+oy + this.metrics.mid))
-            ctx.lineTo(Math.floor(ox + this.metrics.mid + (this.bounded_width-1)*s), Math.floor(j*s+oy + this.metrics.mid))
+            ctx.lineTo(Math.floor(ox + this.metrics.mid + (this.width-1)*s), Math.floor(j*s+oy + this.metrics.mid))
             ctx.stroke()
         }
    
