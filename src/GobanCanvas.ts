@@ -77,6 +77,7 @@ interface DrawingInfo {
     altmarking: string | undefined;
     textColor:  string;
     movetree_contains_this_square: boolean;
+    have_text_to_draw: boolean;
 }
 
 const HOT_PINK = "#ff69b4";
@@ -137,9 +138,9 @@ export class GobanCanvas extends GobanCore {
     private theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
     private theme_board: GoTheme;
-    //private theme_faded_line_color: string = HOT_PINK;
-    //private theme_faded_star_color: string = HOT_PINK;
-    //private theme_faded_text_color:string;
+    private theme_faded_line_color: string = HOT_PINK;
+    private theme_faded_star_color: string = HOT_PINK;
+    private theme_faded_text_color: string = HOT_PINK;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
@@ -1193,69 +1194,6 @@ export class GobanCanvas extends GobanCore {
             }
         }
     }
-
-    public makeclip(ctx:CanvasRenderingContext2D | undefined, i: number,j: number){
-        if (!ctx) return
-        let s = this.square_size
-        let ox = this.draw_left_labels ? s : 0;
-        let oy = this.draw_top_labels ? s : 0;
-        if (this.bounds.left > 0) {
-            ox = -s * this.bounds.left;
-        }
-        if (this.bounds.top > 0) {
-            oy = -s * this.bounds.top;
-        }
-/*
-        const l = i * s + ox;
-        const r = (i + 1) * s + ox;
-        const t = j * s + oy;
-        const b = (j + 1) * s + oy;
-*/
- //       ctx.restore() // massive hack because state is f'd up due to recursive drawSquare() in _drawSquare
-        ctx.save()
-        ctx.beginPath()
-        
-        // extend 1/4 beyond the square
-        ctx.rect(
-            Math.floor(i*s + ox - s/4), 
-            Math.floor(j*s + oy - s/4 ), 
-            Math.floor(s*1.5), 
-            Math.floor(s*1.5))
-        
-        ctx.clip()
-        //ctx.strokeRect(i*this.square_size, j*this.square_size, this.square_size, this.square_size)
-
-    }
-
-    public restoreclip(ctx:CanvasRenderingContext2D | undefined){
-        if (!ctx) return
-        ctx.restore()
-    }
-
-    public cleanRect(i: number,j: number){
-        let s = this.square_size
-        let ox = this.draw_left_labels ? s : 0;
-        let oy = this.draw_top_labels ? s : 0;
-        if (this.bounds.left > 0) {
-            ox = -s * this.bounds.left;
-        }
-        if (this.bounds.top > 0) {
-            oy = -s * this.bounds.top;
-        }
-
-        this.ctx.clearRect(Math.floor(i*s + ox - s/2), 
-            Math.floor(j*s + oy - s/2), 
-            Math.floor(s*2), 
-            Math.floor(s*2)) 
-
-        if (this.shadow_ctx) {
-            this.shadow_ctx.clearRect(Math.floor(i*s + ox - s/2), 
-                Math.floor(j*s + oy - s/2), 
-                Math.floor(s*2), 
-                Math.floor(s*2))          
-        }
-    }
-    
     private getDrawInfo(i: number, j: number, target_ctx: CanvasRenderingContext2D | undefined = undefined): DrawingInfo {
         /* get a structure holding info needed to draw a square  at i,j */
         let d = {} as DrawingInfo;
@@ -1269,6 +1207,29 @@ export class GobanCanvas extends GobanCore {
         if (!d.marks) {
             console.error("No position for ", j, i);
             d.marks = {};
+        }
+
+        d.have_text_to_draw = false;
+        for (const key in d.marks) {
+            if (key.length <= 3) {
+                d.have_text_to_draw = true;
+            }
+        }
+        if (
+            d.marks.circle ||
+            d.marks.triangle ||
+            d.marks.chat_triangle ||
+            d.marks.sub_triangle ||
+            d.marks.cross ||
+            d.marks.square
+        ) {
+            d.have_text_to_draw = true;
+        }
+        if (d.marks.letter && d.marks.letter.length > 0) {
+            d.have_text_to_draw = true;
+        }
+        if (d.marks.subscript && d.marks.subscript.length > 0) {
+            d.have_text_to_draw = true;
         }
 
         d.movetree_contains_this_square = false;
@@ -1309,6 +1270,13 @@ export class GobanCanvas extends GobanCore {
         d.xOffset = this.draw_left_labels ? d.size : 0
         d.yOffset = this.draw_top_labels ? d.size : 0
 
+        if (this.bounds.left > 0) {
+            d.xOffset = -d.size * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            d.yOffset = -d.size * this.bounds.top;
+        }
+
         d.left =    d.xOffset + i * d.size;
         d.right =   d.xOffset + (i + 1) * d.size;
         d.top =     d.yOffset + j * d.size ;
@@ -1323,11 +1291,85 @@ export class GobanCanvas extends GobanCore {
 
     }
 
+
+    public makeSquareClip(ctx:CanvasRenderingContext2D | undefined, i: number,j: number){
+        /*
+        clip around the current square at an enlarged size for shadows, etc.
+        */
+
+        if (!ctx) return
+        
+        // these really should use DrawingInfo instead of recalculating
+        let s = this.square_size
+        let ox = this.draw_left_labels ? s : 0;
+        let oy = this.draw_top_labels ? s : 0;
+        
+        // accomodate puzzle cropping
+        if (this.bounds.left > 0) {
+            ox = -s * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -s * this.bounds.top;
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        
+        // extend 1/4 beyond the square
+        ctx.rect(
+            Math.floor(i*s + ox - s/4), 
+            Math.floor(j*s + oy - s/4 ), 
+            Math.floor(s*1.5), 
+            Math.floor(s*1.5));
+        
+        ctx.clip();
+    }
+
+    public restoreSquareClip(ctx:CanvasRenderingContext2D | undefined){
+        if (!ctx) return
+        ctx.restore()
+    }
+
+    public cleanSquareRect(i: number,j: number){
+        /*
+        erase the entire contents of this square
+        at an enlarged size to accomodate shadows, etc.
+        */
+
+        // these really should use DrawingInfo instead of recalculating
+        let s = this.square_size
+        let ox = this.draw_left_labels ? s : 0;
+        let oy = this.draw_top_labels ? s : 0;
+
+        // accommodate puzzle cropping
+        if (this.bounds.left > 0) {
+            ox = -s * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -s * this.bounds.top;
+        }
+
+        this.ctx.clearRect(Math.floor(i*s + ox - s/2), 
+            Math.floor(j*s + oy - s/2), 
+            Math.floor(s*2), 
+            Math.floor(s*2)) 
+
+        if (this.shadow_ctx) {
+            this.shadow_ctx.clearRect(Math.floor(i*s + ox - s/2), 
+                Math.floor(j*s + oy - s/2), 
+                Math.floor(s*2), 
+                Math.floor(s*2))          
+        }
+    }
+    
+
     public drawSquare(i: number, j: number): void {
         if (i < 0 || j < 0) {
             return;
         }
-
+        
+        // make a detour to the previous move coordinates if it's showing a "last move mark"
+        // and remove it
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
             const m = this.last_move;
             delete this.last_move;
@@ -1335,51 +1377,38 @@ export class GobanCanvas extends GobanCore {
         }
 
         // draw surrounding stones to cover up glitches caused by erase
-        if (true){ // (his.__draw_state[j][i] !== this.drawingHash(i, j)) {
-             // oversized rect clear
+        // FIXME: this really only needs to be done for shadows that extend
+        //        however, expanding the drawing box also alows prettier visualizations and "jostled" stones
+        //        if desired. Also, since there is no separate layer for labels & markings right now,
+        //        everything has to be redrawn from bottom up
 
-             this.makeclip(this.ctx, i,j)
-             this.makeclip(this.shadow_ctx, i,j)            
-             this.cleanRect(i,j)
-            for (let ii = Math.max(i-1,0); ii <= Math.min(i+1, this.bounds.right); ii++){
-                for (let jj= Math.max(j-1,0); jj <= Math.min(j+1, this.bounds.bottom); jj++){
-                    if (ii == i && jj == j) continue
-                    
-                  //  let state = this.__draw_state[jj][ii]
-                   // this.__draw_state[jj][ii] += Math.random().toString()
-                    this.__drawSquare(ii, jj);
-                    //this.__draw_state[jj][ii] = state;
-                }
+             
+        // oversized rect clear. This will be the clip box we draw the surrounding stones into
+        this.makeSquareClip(this.ctx, i,j)
+        this.makeSquareClip(this.shadow_ctx, i,j)            
+        this.cleanSquareRect(i,j)
+
+        for (let ii = Math.max(i-1,0); ii <= Math.min(i+1, this.bounds.right); ii++){
+            for (let jj= Math.max(j-1,0); jj <= Math.min(j+1, this.bounds.bottom); jj++){
+                if (ii == i && jj == j) continue
+                this.__drawSquare(ii, jj);
+
             }
-
-            this.__drawSquare(i, j);
-
-            this.restoreclip(this.ctx)
-            this.restoreclip(this.shadow_ctx)
-
         }
+
+        this.__drawSquare(i, j);
+
+        this.restoreSquareClip(this.ctx)
+        this.restoreSquareClip(this.shadow_ctx)
+
     }
 
     private drawHeatmap(i: number, j: number, d: DrawingInfo): boolean{
-        if (this.heatmap && this.heatmap[j][i] > 0.001) {
-            /*
-            const ctx = this.ctx
-
-            const s = this.square_size
-            const ox = this.draw_left_labels ? s : 0
-            const oy = this.draw_top_labels ? s : 0
-
-            const l = i * s + ox;
-            //const r = (i + 1) * s + ox;
-            const t = j * s + oy;
-            // const b = (j + 1) * s + oy;
-
-            const cx = l + this.metrics.mid;
-            const cy = t + this.metrics.mid; 
-            const r = Math.floor(this.square_size * 0.5) - 0.5;
-
-            */
-
+        /*
+        Draw heatmap visualization for square i,j
+        Return true if visualization was drawn
+        */
+       if (this.heatmap && this.heatmap[j][i] > 0.001) {
             const color = "#00FF00";
             d.ctx.lineCap = "square";
             d.ctx.save();
@@ -1399,40 +1428,17 @@ export class GobanCanvas extends GobanCore {
     }   
 
     private drawSquareHighlights(i: number, j: number, d: DrawingInfo): boolean {
-        /* Draw square highlights if any */
-        /*
-        let pos = this.getMarks(i, j);
-        if (!pos) {
-            console.error("No position for ", j, i);
-            pos = {};
-        }
-
-        let movetree_contains_this_square = false;
-        if (this.engine && this.engine.cur_move.lookupMove(i, j, this.engine.player, false)) {
-            movetree_contains_this_square = true;
-        }
+        /* 
+        Draw square highlights if any 
+        Return true if square highlight was drawn
         */
-        
+
         if (
             d.marks.hint ||
             (this.highlight_movetree_moves && d.movetree_contains_this_square) ||
             d.marks.color
         ) {
-            /*
-            const ctx = this.ctx
-
-            const s = this.square_size
-            const ox = this.draw_left_labels ? s : 0
-            const oy = this.draw_top_labels ? s : 0
-
-            const l = i * s + ox;
-            const r = Math.floor(this.square_size * 0.5) - 0.5;
-            const t = j * s + oy;
-            const b = (j + 1) * s + oy;
-            const cx = l + this.metrics.mid;
-            const cy = t + this.metrics.mid;
-            */
-
+ 
             const color = d.marks.color ? d.marks.color : d.marks.hint ? "#8EFF0A" : "#FF8E0A";
 
             d.ctx.lineCap = "square";
@@ -1453,24 +1459,12 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawColoredStone(i: number, j: number, d: DrawingInfo): boolean {
+        /* 
+        Draw user-colored stones if used & needed 
+        Return true if a stone was drawn
+        */
 
         if (this.colored_circles && this.colored_circles[j][i]) {
-            /*
-            const ctx = this.ctx
-            const circle = this.colored_circles[j][i];
-            const color = circle.color;
-
-            const s = this.square_size
-            const ox = this.draw_left_labels ? s : 0
-            const oy = this.draw_top_labels ? s : 0
-
-            const l = i * s + ox;
-            const r = Math.floor(this.square_size * 0.5) - 0.5;
-            const t = j * s + oy;
-            const b = (j + 1) * s + oy;
-            const cx = l + this.metrics.mid;
-            const cy = t + this.metrics.mid;
-            */
 
             const circle = this.colored_circles[j][i];
             const color = circle.color;
@@ -1510,23 +1504,6 @@ export class GobanCanvas extends GobanCore {
 
     private drawStone(i: number, j: number, d: DrawingInfo) {
         // NOTE: this also draws hover marks like last move marker
-        /*
-        let stone_color = 0;
-        if (this.engine) {
-            stone_color = this.engine.board[j][i];
-        }
-
-        let movetree_contains_this_square = false;
-        if (this.engine && this.engine.cur_move.lookupMove(i, j, this.engine.player, false)) {
-            movetree_contains_this_square = true;
-        }
-
-        let pos = this.getMarks(i, j);
-        if (!pos) {
-            console.error("No position for ", j, i);
-            pos = {};
-        }
-        */
 
         if (
             d.stoneColor /* if there is really a stone here */ ||
@@ -1554,21 +1531,7 @@ export class GobanCanvas extends GobanCore {
             d.marks.black ||
             d.marks.white
         ) {
-            /*
-            const ctx = this.ctx;
-            const s = this.square_size
-            const ox = this.draw_left_labels ? s : 0
-            const oy = this.draw_top_labels ? s : 0
-    
-            const l = i * s + ox;
-            const r = Math.floor(this.square_size * 0.5) - 0.5;
-            const t = j * s + oy;
-            const b = (j + 1) * s + oy;
-            const cx = l + this.metrics.mid;
-            const cy = t + this.metrics.mid;
-            */
 
-            //let color = stone_color ? stone_color : (this.move_selected ? this.engine.otherPlayer() : this.engine.player);
             let transparent = false;
             let stoneAlphaTransparencyValue = 0.6;
             let color;
@@ -1740,26 +1703,10 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawScoring(i: number, j: number, d: DrawingInfo): boolean {
-        /*
-        const ctx = this.ctx;
-        let pos = this.getMarks(i, j);
-        if (!pos) {
-            console.error("No position for ", j, i);
-            pos = {};
-        }
-    
-        const s = this.square_size
-        const ox = this.draw_left_labels ? s : 0
-        const oy = this.draw_top_labels ? s : 0
-    
-        const l = i * s + ox;
-        const r = Math.floor(this.square_size * 0.5) - 0.5;
-        const t = j * s + oy;
-        const b = (j + 1) * s + oy;
-        const cx = l + this.metrics.mid;
-        const cy = t + this.metrics.mid;
+        /* 
+        Draw the Score indicator for this square, if needed.
+        Return true if scoring indicator was drawn 
         */
-
 
         let draw_x = false;
         let transparent_x = false;
@@ -1794,10 +1741,10 @@ export class GobanCanvas extends GobanCore {
                 d.ctx.globalAlpha = 0.6;
             }
             const r = Math.max(1, this.metrics.mid * 0.7);
-            d.ctx.moveTo(d.xCenter - d.radius, d.yCenter - d.radius);
-            d.ctx.lineTo(d.xCenter + d.radius, d.yCenter + d.radius);
-            d.ctx.moveTo(d.xCenter + d.radius, d.yCenter - d.radius);
-            d.ctx.lineTo(d.xCenter - d.radius, d.yCenter + d.radius);
+            d.ctx.moveTo(d.xCenter - r, d.yCenter - d.radius);
+            d.ctx.lineTo(d.xCenter + r, d.yCenter + d.radius);
+            d.ctx.moveTo(d.xCenter + r, d.yCenter - d.radius);
+            d.ctx.lineTo(d.xCenter - r, d.yCenter + d.radius);
             d.ctx.stroke();
             d.ctx.restore();
             did_draw = true;
@@ -1857,7 +1804,7 @@ export class GobanCanvas extends GobanCore {
             d.ctx.lineWidth = Math.ceil(this.square_size * 0.065) - 0.5;
 
             const r = this.square_size * 0.15;
-            d.ctx.rect(d.xCenter - d.radius, d.yCenter - d.radius, d.radius * 2, d.radius * 2);
+            d.ctx.rect(d.xCenter - r, d.yCenter - r, r * 2, r * 2);
             if (color !== "dame") {
                 d.ctx.fill();
             }
@@ -1870,50 +1817,10 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawTextLabels(i: number, j: number, d: DrawingInfo): boolean {
-        /* draw text labels, if any.
-        return true if letter was drawn */
-/*
-        const ctx = this.ctx;
-
-        let pos = this.getMarks(i, j);
-        if (!pos) {
-            console.error("No position for ", j, i);
-            pos = {};
-        }
-
-        let altmarking: string | undefined;
-        if (
-            this.engine &&
-            this.engine.cur_move &&
-            (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" && this.isInPushedAnalysis()))
-        ) {
-            let cur: MoveTree | null = this.engine.cur_move;
-            for (; cur && !cur.trunk; cur = cur.parent) {
-                if (cur.x === i && cur.y === j) {
-                    const move_diff = cur.getMoveNumberDifferenceFromTrunk();
-                    if (move_diff !== cur.move_number) {
-                        if (!cur.edited && this.show_move_numbers) {
-                            altmarking = cur.getMoveNumberDifferenceFromTrunk().toString();
-                        }
-                    }
-                }
-            }
-        }
-
-
-        const s = this.square_size
-        const ox = this.draw_left_labels ? s : 0
-        const oy = this.draw_top_labels ? s : 0
-
-        const l = i * s + ox;
-        const r = Math.floor(this.square_size * 0.5) - 0.5;
-        const t = j * s + oy;
-        const b = (j + 1) * s + oy;
-        const cx = l + this.metrics.mid;
-        const cy = t + this.metrics.mid;
-        const text_color = this.theme_blank_text_color;
-*/
+        /*
+        Draw text labels, if any.
+        return true if letter was drawn 
+        */
 
         let letter_was_drawn = false;
         let letter: string | undefined;
@@ -2045,55 +1952,10 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawSymbols(i: number, j: number, transparent: boolean, d: DrawingInfo): boolean {
-        /* draw symbols if any,
-        return whether a symbol was actually drawn */
-/*
-        const ctx = this.ctx
-        let text_color = this.theme_blank_text_color;
-        const s = this.square_size
-        const ox = this.draw_left_labels ? s : 0
-        const oy = this.draw_top_labels ? s : 0
-
-        const l = i * s + ox;
-        const r = Math.floor(this.square_size * 0.5) - 0.5;
-        const t = j * s + oy;
-        const b = (j + 1) * s + oy;
-        const cx = l + this.metrics.mid;
-        const cy = t + this.metrics.mid;
-
-
-        let stone_color = 0;
-        if (this.engine) {
-            stone_color = this.engine.board[j][i];
-        }
-
-        let pos = this.getMarks(i, j);
-        if (!pos) {
-            console.error("No position for ", j, i);
-            pos = {};
-        }
-
-        let altmarking: string | undefined;
-        if (
-            this.engine &&
-            this.engine.cur_move &&
-            (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" && this.isInPushedAnalysis()))
-        ) {
-            let cur: MoveTree | null = this.engine.cur_move;
-            for (; cur && !cur.trunk; cur = cur.parent) {
-                if (cur.x === i && cur.y === j) {
-                    const move_diff = cur.getMoveNumberDifferenceFromTrunk();
-                    if (move_diff !== cur.move_number) {
-                        if (!cur.edited && this.show_move_numbers) {
-                            altmarking = cur.getMoveNumberDifferenceFromTrunk().toString();
-                        }
-                    }
-                }
-            }
-        }
-*/
-
+        /* 
+        Draw symbols if any,
+        return whether a symbol was actually drawn 
+        */
 
         let symbol_was_drawn = false;
 
@@ -2163,13 +2025,13 @@ export class GobanCanvas extends GobanCore {
             d.ctx.lineWidth = this.square_size * 0.075 * scale;
             let theta = -(Math.PI * 2) / 4;
             const r = this.square_size * 0.3 * scale;
-            d.ctx.moveTo(d.xCenter + r * Math.cos(theta), d.yCenter + d.yOffset + d.radius * Math.sin(theta));
+            d.ctx.moveTo(d.xCenter + r * Math.cos(theta), d.yCenter + oy + r * Math.sin(theta));
             theta += (Math.PI * 2) / 3;
-            d.ctx.lineTo(d.xCenter + r * Math.cos(theta), d.yCenter + d.yOffset + d.radius * Math.sin(theta));
+            d.ctx.lineTo(d.xCenter + r * Math.cos(theta), d.yCenter + oy + r * Math.sin(theta));
             theta += (Math.PI * 2) / 3;
-            d.ctx.lineTo(d.xCenter + r * Math.cos(theta), d.yCenter + d.yOffset + d.radius * Math.sin(theta));
+            d.ctx.lineTo(d.xCenter + r * Math.cos(theta), d.yCenter + oy + r * Math.sin(theta));
             theta += (Math.PI * 2) / 3;
-            d.ctx.lineTo(d.xCenter + r * Math.cos(theta), d.yCenter + d.yOffset + d.radius * Math.sin(theta));
+            d.ctx.lineTo(d.xCenter + r * Math.cos(theta), d.yCenter + oy + r * Math.sin(theta));
             d.ctx.stroke();
             d.ctx.restore();
             symbol_was_drawn = true;
@@ -2183,10 +2045,10 @@ export class GobanCanvas extends GobanCore {
                 d.ctx.globalAlpha = 0.6;
             }
             const r = Math.max(1, this.metrics.mid * 0.35);
-            d.ctx.moveTo(d.xCenter - d.radius, d.yCenter - d.radius);
-            d.ctx.lineTo(d.xCenter + d.radius, d.yCenter + d.radius);
-            d.ctx.moveTo(d.xCenter + d.radius, d.yCenter - d.radius);
-            d.ctx.lineTo(d.xCenter - d.radius, d.yCenter + d.radius);
+            d.ctx.moveTo(d.xCenter - r, d.yCenter - r);
+            d.ctx.lineTo(d.xCenter + r, d.yCenter + r);
+            d.ctx.moveTo(d.xCenter + r, d.yCenter - r);
+            d.ctx.lineTo(d.xCenter - r, d.yCenter + r);
             d.ctx.strokeStyle = symbol_color;
             d.ctx.stroke();
             d.ctx.restore();
@@ -2202,11 +2064,11 @@ export class GobanCanvas extends GobanCore {
                 d.ctx.globalAlpha = 0.6;
             }
             const r = Math.max(1, this.metrics.mid * 0.4);
-            d.ctx.moveTo(d.xCenter - d.radius, d.yCenter - d.radius);
-            d.ctx.lineTo(d.xCenter + d.radius, d.yCenter - d.radius);
-            d.ctx.lineTo(d.xCenter + d.radius, d.yCenter + d.radius);
-            d.ctx.lineTo(d.xCenter - d.radius, d.yCenter + d.radius);
-            d.ctx.lineTo(d.xCenter - d.radius, d.yCenter - d.radius);
+            d.ctx.moveTo(d.xCenter - r, d.yCenter - r);
+            d.ctx.lineTo(d.xCenter + r, d.yCenter - r);
+            d.ctx.lineTo(d.xCenter + r, d.yCenter + r);
+            d.ctx.lineTo(d.xCenter - r, d.yCenter + r);
+            d.ctx.lineTo(d.xCenter - r, d.yCenter - r);
             d.ctx.strokeStyle = symbol_color;
             d.ctx.stroke();
             d.ctx.restore();
@@ -2216,33 +2078,14 @@ export class GobanCanvas extends GobanCore {
 }
 
     private drawLastMove(i: number, j: number, d: DrawingInfo): boolean {
-        /* mark the latest move, and return whether or not
-        the mark was made */
+        /*
+        Mark the latest move, and return whether or not
+        the mark was made 
+        */
 
         let drawn = false;
 
-        if (this.engine && this.engine.cur_move) {
-            const ctx = this.ctx;
-
-            const s = this.square_size
-            const ox = this.draw_left_labels ? s : 0
-            const oy = this.draw_top_labels ? s : 0
-    
-            const l = i * s + ox;
-            const r = Math.floor(this.square_size * 0.5) - 0.5;
-            const t = j * s + oy;
-            const b = (j + 1) * s + oy;
-            const cx = l + this.metrics.mid;
-            const cy = t + this.metrics.mid;
-
-
-
-            let stone_color = 0;
-            if (this.engine) {
-                stone_color = this.engine.board[j][i];
-            }
-            
-            
+        if (this.engine && this.engine.cur_move) {            
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
@@ -2253,24 +2096,24 @@ export class GobanCanvas extends GobanCore {
 
                 if (i >= 0 && j >= 0) {
                     const color =
-                        stone_color === 1
+                        d.stoneColor === 1
                             ? this.theme_black_text_color
                             : this.theme_white_text_color;
 
                     if (this.submit_move) {
-                        ctx.lineCap = "square";
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.lineWidth = this.square_size * 0.075;
+                        d.ctx.lineCap = "square";
+                        d.ctx.save();
+                        d.ctx.beginPath();
+                        d.ctx.lineWidth = this.square_size * 0.075;
                         //ctx.globalAlpha = 0.6;
                         const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
-                        ctx.moveTo(cx - r, cy);
-                        ctx.lineTo(cx + r, cy);
-                        ctx.moveTo(cx, cy - r);
-                        ctx.lineTo(cx, cy + r);
-                        ctx.strokeStyle = color;
-                        ctx.stroke();
-                        ctx.restore();
+                        d.ctx.moveTo(d.xCenter - r, d.yCenter);
+                        d.ctx.lineTo(d.xCenter + r, d.yCenter);
+                        d.ctx.moveTo(d.xCenter, d.yCenter - r);
+                        d.ctx.lineTo(d.xCenter, d.yCenter + r);
+                        d.ctx.strokeStyle = color;
+                        d.ctx.stroke();
+                        d.ctx.restore();
                         drawn = true;
                     } else {
                         if (
@@ -2279,30 +2122,32 @@ export class GobanCanvas extends GobanCore {
                             this.engine.undo_requested === this.engine.cur_move.move_number
                         ) {
                             const letter = "?";
-                            ctx.save();
-                            ctx.fillStyle = color;
-                            const metrics = ctx.measureText(letter);
-                            const xx = cx - metrics.width / 2;
+                            d.ctx.save();
+                            d.ctx.fillStyle = color;
+                            const metrics = d.ctx.measureText(letter);
+                            const xx = d.xCenter - metrics.width / 2;
                             const yy =
-                                cy +
+                                d.yCenter +
                                 (/WebKit|Trident/.test(navigator.userAgent)
                                     ? this.square_size * -0.03
                                     : 1); /* middle centering is different on firefox */
-                            ctx.textBaseline = "middle";
-                            ctx.fillText(letter, xx, yy);
+                            d.ctx.textBaseline = "middle";
+                            d.ctx.fillText(letter, xx, yy);
                             drawn = true;
-                            ctx.restore();
+                            d.ctx.restore();
+                            drawn = true;
                         } else {
-                            ctx.beginPath();
-                            ctx.strokeStyle = color;
-                            ctx.lineWidth = this.square_size * 0.075;
+                            d.ctx.beginPath();
+                            d.ctx.strokeStyle = color;
+                            d.ctx.lineWidth = this.square_size * 0.075;
                             let r = this.square_size * 0.25;
                             if (this.submit_move) {
                                 //ctx.globalAlpha = 0.6;
                                 r = this.square_size * 0.3;
                             }
-                            ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
-                            ctx.stroke();
+                            d.ctx.arc(d.xCenter, d.yCenter, r, 0, 2 * Math.PI, false);
+                            d.ctx.stroke();
+                            drawn = true;
                         }
                     }
                 }
@@ -2312,24 +2157,12 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawScoreEstimate(i: number, j: number, d: DrawingInfo): boolean {
-        if (this.scoring_mode && this.score_estimate) {
-/*
-            const ctx = this.ctx;
-            const se = this.score_estimate;
-            const est = se.heat[j][i];
+        /*
+        Draw the score estimation for this square
+        and return true if it was in fact drawn
+        */
 
-            const s = this.square_size
-            const ox = this.draw_left_labels ? s : 0
-            const oy = this.draw_top_labels ? s : 0
-    
-            const l = i * s + ox;
-            const r = Math.floor(this.square_size * 0.5) - 0.5;
-            const t = j * s + oy;
-            const b = (j + 1) * s + oy;
-            const cx = l + this.metrics.mid;
-            const cy = t + this.metrics.mid;
-*/
-            
+        if (this.scoring_mode && this.score_estimate) {
             const est = this.score_estimate.heat[j][i];
 
             d.ctx.beginPath();
@@ -2354,7 +2187,10 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawGrid(ctx: CanvasRenderingContext2D): void {
-        /* draw the board's grid into the cxt provided, which should be its own layer */
+        /* 
+        Draw the board's grid into the cxt provided, which should be its own layer 
+        */
+
         let s = this.square_size
         let ox = this.draw_left_labels ? s : 0;
         let oy = this.draw_top_labels ? s : 0;
@@ -2370,6 +2206,7 @@ export class GobanCanvas extends GobanCore {
         ctx.strokeStyle = this.theme_line_color;
         ctx.fillStyle = this.theme_star_color;
 
+        // FIXME: line/star fading needs to move into __drawSquare()
         /*
         if (have_text_to_draw) {
             ctx.strokeStyle = this.theme_faded_line_color;
@@ -2440,11 +2277,17 @@ export class GobanCanvas extends GobanCore {
         }
 
         for (let p of points) {
+            // accomodate puzzle cropping:
+            if (p[0] > this.bounded_width) continue
+            if (p[1] > this.bounded_height) continue
+
             let cx = p[0]*s +ox  + this.metrics.mid;
             let cy = p[1]*s + oy + this.metrics.mid;
 
             ctx.beginPath();
             ctx.fillStyle = this.theme_star_color;
+
+            // FIXME: line/star fading needs to be done in __drawSquare()
             /*
             if (have_text_to_draw) {
                 ctx.fillStyle = this.theme_faded_star_color;
@@ -2639,82 +2482,9 @@ export class GobanCanvas extends GobanCore {
         if (i < 0 || j < 0) {
             return;
         }
-        const s = this.square_size;
-        let ox = this.draw_left_labels ? s : 0;
-        let oy = this.draw_top_labels ? s : 0;
-        if (this.bounds.left > 0) {
-            ox = -s * this.bounds.left;
-        }
-        if (this.bounds.top > 0) {
-            oy = -s * this.bounds.top;
-        }
 
-        let cx: number;
-        let cy: number;
         let draw_last_move = !this.dont_draw_last_move;
 
-        let stone_color = 0;
-        if (this.engine) {
-            stone_color = this.engine.board[j][i];
-        }
-
-        /* Figure out marks for this spot */
-        let pos = this.getMarks(i, j);
-        if (!pos) {
-            console.error("No position for ", j, i);
-            pos = {};
-        }
-        let altmarking: string | undefined;
-        if (
-            this.engine &&
-            this.engine.cur_move &&
-            (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" && this.isInPushedAnalysis()))
-        ) {
-            let cur: MoveTree | null = this.engine.cur_move;
-            for (; cur && !cur.trunk; cur = cur.parent) {
-                if (cur.x === i && cur.y === j) {
-                    const move_diff = cur.getMoveNumberDifferenceFromTrunk();
-                    if (move_diff !== cur.move_number) {
-                        if (!cur.edited && this.show_move_numbers) {
-                            altmarking = cur.getMoveNumberDifferenceFromTrunk().toString();
-                        }
-                    }
-                }
-            }
-        }
-
-        let movetree_contains_this_square = false;
-        if (this.engine && this.engine.cur_move.lookupMove(i, j, this.engine.player, false)) {
-            movetree_contains_this_square = true;
-        }
-
-        let text_color = this.theme_blank_text_color;
-
-        /*
-        let have_text_to_draw = false;
-        for (const key in pos) {
-            if (key.length <= 3) {
-                have_text_to_draw = true;
-            }
-        }
-        if (
-            pos.circle ||
-            pos.triangle ||
-            pos.chat_triangle ||
-            pos.sub_triangle ||
-            pos.cross ||
-            pos.square
-        ) {
-            have_text_to_draw = true;
-        }
-        if (pos.letter && pos.letter.length > 0) {
-            have_text_to_draw = true;
-        }
-        if (pos.subscript && pos.subscript.length > 0) {
-            have_text_to_draw = true;
-        }
-*/
         let d = this.getDrawInfo(i,j)
         let drawn = false
 
@@ -2731,42 +2501,11 @@ export class GobanCanvas extends GobanCore {
             drawn = this.drawSymbols(i,j, false, d);
         }
         
-        if (!drawn) 
+        if (!drawn && draw_last_move) 
             this.drawLastMove(i,j, d);
 
         this.drawScoreEstimate(i,j, d);
 
-
-        /* various comment junk from refactored  stuff */
-
-        /* Colored stones */
-
-
-        /* Draw stones & hovers */
-
-        /* Draw delete X's */
- 
-        /* Draw letters and numbers */
-       
-
-        /* draw special symbols */
-       
-
-        /* Clear last move */
-/*
-        if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
-            const m = this.last_move;
-            delete this.last_move;
-            this.drawSquare(m.x, m.y);
-        }
-*/
-        /* Draw last move */
-
-        /* Score Estimation */
-
-
-
-       // this.__draw_state[j][i] = this.drawingHash(i, j);
     }
 
     private drawingHash(i: number, j: number): string {
@@ -3118,7 +2857,7 @@ export class GobanCanvas extends GobanCore {
         if (this.no_display) {
             return;
         }
-
+        console.log(this)
         const metrics = (this.metrics = this.computeMetrics());
         if (
             force_clear ||
@@ -3251,9 +2990,6 @@ export class GobanCanvas extends GobanCore {
                 }
             }
 
-
-
-
         this.drawPenMarks(this.pen_marks);
         this.move_tree_redraw();
     }
@@ -3383,9 +3119,12 @@ export class GobanCanvas extends GobanCore {
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];
         this.theme_black_stones = __theme_cache.black[themes.black][this.theme_stone_radius];
         this.theme_line_color = this.theme_board.getLineColor();
-        //this.theme_faded_line_color = this.theme_board.getFadedLineColor();
-        //this.theme_star_color = this.theme_board.getStarColor();
-        //this.theme_faded_star_color = this.theme_board.getFadedStarColor();
+        
+        // FIXME: lines/stars should be faded in __drawSquare on demand
+
+        this.theme_faded_line_color = this.theme_board.getFadedLineColor();
+        this.theme_star_color = this.theme_board.getStarColor();
+        this.theme_faded_star_color = this.theme_board.getFadedStarColor();
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
