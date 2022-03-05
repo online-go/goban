@@ -40,11 +40,14 @@ import init_board_plain from "./themes/board_plain";
 import init_board_woods from "./themes/board_woods";
 import init_disc from "./themes/disc";
 import init_rendered from "./themes/rendered_stones";
+//import init_anime from "./themes/anime";
+import init_json_theme from "./themes/JSONTheme";
 
 init_board_plain(GoThemes);
 init_board_woods(GoThemes);
 init_disc(GoThemes);
 init_rendered(GoThemes);
+init_json_theme(GoThemes);
 
 function theme_sort(a: GoTheme, b: GoTheme) {
     return a.sort() - b.sort();

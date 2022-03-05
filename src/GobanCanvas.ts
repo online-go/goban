@@ -31,6 +31,8 @@ import { GoMath, Group } from "./GoMath";
 import { MarkInterface, MoveTree } from "./MoveTree";
 import { GoTheme } from "./GoTheme";
 import { GoThemes } from "./GoThemes";
+import { JSONTheme } from "./themes/JSONTheme";
+
 import { MoveTreePenMarks } from "./MoveTree";
 import { createDeviceScaledCanvas, resizeDeviceScaledCanvas } from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
@@ -2848,7 +2850,8 @@ export class GobanCanvas extends GobanCore {
         if (this.no_display) {
             return;
         }
-        console.log(this)
+        // console.log(this) // helpful when debugging
+        
         const metrics = (this.metrics = this.computeMetrics());
         if (
             force_clear ||
@@ -3035,6 +3038,58 @@ export class GobanCanvas extends GobanCore {
             delete this.message_timeout;
         }
     }
+
+    protected loadExampleJSONTheme(t: JSONTheme){
+        // an example until I figure out how to integrate JSONThemes in OGS
+        let json = `{
+            "name": "BadukBroadcast",
+            "backgroundImage": "https://github.com/upsided/Upsided-Sabaki-Themes/raw/main/baduktv/goban_texture_smooth.png",
+            "whiteStones": [
+                "https://dl.dropboxusercontent.com/s/l9sglf5m9fdrktq/white1_raw.png?dl=1",
+                "https://dl.dropboxusercontent.com/s/bxmlts3ag4h0zgm/white2_raw.png?dl=1",
+                "https://dl.dropboxusercontent.com/s/wag83qram5caqpb/white3_raw.png?dl=1"
+            ],
+            "blackStones": [
+                "https://dl.dropboxusercontent.com/s/0viuf2iw33m5i1b/black2_raw.png?dl=1",
+                "https://dl.dropboxusercontent.com/s/0viuf2iw33m5i1b/black2_raw.png?dl=1"
+            ],
+            "whiteShadows": [
+                "https://dl.dropboxusercontent.com/s/s079o0tm7ddmzr7/black_shade.png?dl=1"
+            ],
+            "blackShadows": [
+                "https://dl.dropboxusercontent.com/s/s079o0tm7ddmzr7/black_shade.png?dl=1"
+            ],
+            "whiteSizes": [[0.9,0.9]],
+            "blackSizes": [[0.9,0.9]],
+            "whiteShadowSizes": [1.1],
+            "blackShadowSizes": [1.1]        
+        }`
+
+        json = `{
+            "name": "hikaru",
+            "backgroundImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/hikaru/board.svg",
+            "whiteStones": [
+                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_white_stone_raw.svg"
+            ],
+            "blackStones": [
+                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_black_stone_raw.svg"
+            ],
+            "whiteShadows": [
+                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_stone_shadow.svg"
+            ],
+            "blackShadows": [
+                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_stone_shadow.svg"
+            ],
+            "blackShadowOffsets": [[0.02, 0.1]],
+            "whiteShadowOffsets": [[0.02, 0.1]],
+            "blackShadowSizes": [1.1],
+            "whiteShadowSizes": [1.1]
+        }
+        `     
+        
+        t.loadFromText(json)
+    }
+
     protected setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
             return;
@@ -3044,6 +3099,14 @@ export class GobanCanvas extends GobanCore {
         this.theme_board = new GoThemes["board"][themes.board]();
         this.theme_white = new GoThemes["white"][themes.white](this.theme_board);
         this.theme_black = new GoThemes["black"][themes.black](this.theme_board);
+
+        /* FIXME: this test theme is here for now until there's some rational interface for it */
+        for (let t of [this.theme_board, this.theme_white, this.theme_black]){
+            //@ts-ignore
+            if (t.isJSONTheme) {
+                this.loadExampleJSONTheme(t as JSONTheme)
+            }
+        }
 
         if (!this.metrics) {
             this.metrics = this.computeMetrics();
