@@ -54,7 +54,7 @@ export class JSONThemeStyle {
     "starColor"?: string = "#000000";
     "fadedStarColor"?: string = "#888888";
     "blankTextColor"?: string = "#000000";  // color for text on empty intersections
-    "labelColor"?: string = "#000000" // dunno? seems to be covered by TextColor
+    "labelColor"?: string = "#000000" // for coordinates
 
     "priority": number = 100; // number used for sorting on screen, greater == later, 100 is typical
 
@@ -250,7 +250,7 @@ export class JSONTheme extends GoTheme {
                 let img = this.whiteShadowImages[rando % this.whiteShadowImages.length]
                 let box = this.calcBox(this.themeStyle.whiteShadowOffsets, this.themeStyle.whiteShadowSizes, rando);
                      
-                ctx.drawImage(img, cx + radius * box[0], cy + radius * box[1],  radius * (box[2]-box[0]), radius * (box[3]-box[1]))
+                shadow_ctx.drawImage(img, cx + radius * box[0], cy + radius * box[1],  radius * (box[2]-box[0]), radius * (box[3]-box[1]))
 
             }
 
@@ -265,9 +265,11 @@ export class JSONTheme extends GoTheme {
             ctx.save()
             ctx.fillStyle = this.getWhiteStoneColor();
             ctx.strokeStyle = this.getWhiteTextColor();
+            ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
             ctx.fill();
+            ctx.stroke();
             ctx.restore()
         }
     }
@@ -289,7 +291,7 @@ export class JSONTheme extends GoTheme {
                 let img = this.blackShadowImages[rando % this.blackShadowImages.length]
                 let box = this.calcBox(this.themeStyle.blackShadowOffsets, this.themeStyle.blackShadowSizes, rando);
 
-                ctx.drawImage(img, cx + radius * box[0], cy + radius * box[1], radius * (box[2] - box[0]), radius * (box[3] - box[1]))
+                shadow_ctx.drawImage(img, cx + radius * box[0], cy + radius * box[1], radius * (box[2] - box[0]), radius * (box[3] - box[1]))
 
             }
 
@@ -305,9 +307,11 @@ export class JSONTheme extends GoTheme {
             ctx.save()
             ctx.fillStyle = this.getBlackStoneColor();
             ctx.strokeStyle = this.getBlackTextColor();
+            ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
             ctx.fill();
+            // ctx.stroke(); // black stones don't need a stroke if they're dark (and they prob will be)
             ctx.restore()
         }
 
@@ -316,13 +320,7 @@ export class JSONTheme extends GoTheme {
     /* Should return true if you would like the shadow layer to be present. False
      * speeds up rendering typically */
     public stoneCastsShadow(radius: number): boolean {
-        return true;
-        /*
-        if (this.themeStyle.useShadow)
-            return this.themeStyle.useShadow;
-        else 
-            return false
-            */
+        return true; // themes will always be given a shadow layer
     }
 
     /* Returns the color that should be used for white stones */
@@ -359,10 +357,17 @@ export class JSONTheme extends GoTheme {
 
     /* Returns a set of CSS styles that should be applied to the background layer (ie the board) */
     public getBackgroundCSS(): GoThemeBackgroundCSS {
-        return {
-            "background-image": `url("${this.themeStyle.backgroundImage}")`,
-            "background-color": "#000",
-            "background-size": "cover"
+        if (this.themeStyle.backgroundImage) {
+            return {
+                "background-image": `url("${this.themeStyle.backgroundImage}")`,
+                "background-color": this.themeStyle.backgroundColor, 
+                "background-size": "cover"
+            };
+        } else {
+            return {
+                "background-color": this.themeStyle.backgroundColor, 
+                "background-image": "",
+            };
         }
     }
 
