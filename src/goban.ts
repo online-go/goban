@@ -31,6 +31,8 @@ export * from "./TypedEventEmitter";
 export * from "./JGOF";
 export * from "./AIReview";
 export * from "./AdHocFormat";
+export * from "./themes/JSONTheme"
+
 export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 
 (window as any)["goban"] = module.exports;

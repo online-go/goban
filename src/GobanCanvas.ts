@@ -31,7 +31,6 @@ import { GoMath, Group } from "./GoMath";
 import { MarkInterface, MoveTree } from "./MoveTree";
 import { GoTheme } from "./GoTheme";
 import { GoThemes } from "./GoThemes";
-import { JSONTheme } from "./themes/JSONTheme";
 
 import { MoveTreePenMarks } from "./MoveTree";
 import { createDeviceScaledCanvas, resizeDeviceScaledCanvas } from "./GoUtil";
@@ -149,6 +148,7 @@ export class GobanCanvas extends GobanCore {
     private theme_white: GoTheme;
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
+    private theme_json: string = ""; // json to use when json theme is selected.
 
     constructor(config: GobanCanvasConfig, preloaded_data?: AdHocFormat | JGOF) {
         super(config, preloaded_data);
@@ -1265,7 +1265,8 @@ export class GobanCanvas extends GobanCore {
         }
         
         d.textColor = this.theme_blank_text_color;
-        d.textColor = d.stoneColor === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+        if (d.stoneColor)
+            d.textColor = d.stoneColor === 1 ? this.theme_black_text_color : this.theme_white_text_color;
 
 
         d.size =    this.square_size
@@ -1317,12 +1318,12 @@ export class GobanCanvas extends GobanCore {
         ctx.save();
         ctx.beginPath();
         
-        // extend 1/4 beyond the square
+        // extend beyond the square, limit should be next intersection point - grid line width
         ctx.rect(
-            Math.floor(i*s + ox - s/4), 
-            Math.floor(j*s + oy - s/4 ), 
-            Math.floor(s*1.5), 
-            Math.floor(s*1.5));
+            Math.floor(i*s + ox - s/2), 
+            Math.floor(j*s + oy - s/2), 
+            Math.floor(s*2), 
+            Math.floor(s*2));
         
         ctx.clip();
     }
@@ -1392,13 +1393,13 @@ export class GobanCanvas extends GobanCore {
 
         for (let ii = Math.max(i-1,0); ii <= Math.min(i+1, this.bounds.right); ii++){
             for (let jj= Math.max(j-1,0); jj <= Math.min(j+1, this.bounds.bottom); jj++){
-                if (ii == i && jj == j) continue
+                // if (ii == i && jj == j) continue
                 this.__drawSquare(ii, jj);
 
             }
         }
 
-        this.__drawSquare(i, j);
+        // this.__drawSquare(i, j);
 
         this.restoreSquareClip(this.ctx)
         this.restoreSquareClip(this.shadow_ctx)
@@ -3038,58 +3039,7 @@ export class GobanCanvas extends GobanCore {
             delete this.message_timeout;
         }
     }
-
-    protected loadExampleJSONTheme(t: JSONTheme){
-        // an example until I figure out how to integrate JSONThemes in OGS
-        let json = `{
-            "name": "BadukBroadcast",
-            "backgroundImage": "https://github.com/upsided/Upsided-Sabaki-Themes/raw/main/baduktv/goban_texture_smooth.png",
-            "whiteStones": [
-                "https://dl.dropboxusercontent.com/s/l9sglf5m9fdrktq/white1_raw.png?dl=1",
-                "https://dl.dropboxusercontent.com/s/bxmlts3ag4h0zgm/white2_raw.png?dl=1",
-                "https://dl.dropboxusercontent.com/s/wag83qram5caqpb/white3_raw.png?dl=1"
-            ],
-            "blackStones": [
-                "https://dl.dropboxusercontent.com/s/0viuf2iw33m5i1b/black2_raw.png?dl=1",
-                "https://dl.dropboxusercontent.com/s/0viuf2iw33m5i1b/black2_raw.png?dl=1"
-            ],
-            "whiteShadows": [
-                "https://dl.dropboxusercontent.com/s/s079o0tm7ddmzr7/black_shade.png?dl=1"
-            ],
-            "blackShadows": [
-                "https://dl.dropboxusercontent.com/s/s079o0tm7ddmzr7/black_shade.png?dl=1"
-            ],
-            "whiteSizes": [[0.9,0.9]],
-            "blackSizes": [[0.9,0.9]],
-            "whiteShadowSizes": [1.1],
-            "blackShadowSizes": [1.1]        
-        }`
-
-        json = `{
-            "name": "hikaru",
-            "backgroundImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/hikaru/board.svg",
-            "whiteStones": [
-                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_white_stone_raw.svg"
-            ],
-            "blackStones": [
-                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_black_stone_raw.svg"
-            ],
-            "whiteShadows": [
-                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_stone_shadow.svg"
-            ],
-            "blackShadows": [
-                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_stone_shadow.svg"
-            ],
-            "blackShadowOffsets": [[0.02, 0.1]],
-            "whiteShadowOffsets": [[0.02, 0.1]],
-            "blackShadowSizes": [1.1],
-            "whiteShadowSizes": [1.1]
-        }
-        `     
-        
-        t.loadFromText(json)
-    }
-
+    
     protected setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
             return;
@@ -3099,14 +3049,6 @@ export class GobanCanvas extends GobanCore {
         this.theme_board = new GoThemes["board"][themes.board]();
         this.theme_white = new GoThemes["white"][themes.white](this.theme_board);
         this.theme_black = new GoThemes["black"][themes.black](this.theme_board);
-
-        /* FIXME: this test theme is here for now until there's some rational interface for it */
-        for (let t of [this.theme_board, this.theme_white, this.theme_black]){
-            //@ts-ignore
-            if (t.isJSONTheme) {
-                this.loadExampleJSONTheme(t as JSONTheme)
-            }
-        }
 
         if (!this.metrics) {
             this.metrics = this.computeMetrics();
