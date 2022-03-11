@@ -148,7 +148,6 @@ export class GobanCanvas extends GobanCore {
     private theme_white: GoTheme;
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
-    private theme_json: string = ""; // json to use when json theme is selected.
 
     constructor(config: GobanCanvasConfig, preloaded_data?: AdHocFormat | JGOF) {
         super(config, preloaded_data);
@@ -167,7 +166,7 @@ export class GobanCanvas extends GobanCore {
         this.title_div = config["title_div"];
 
         this.grid_layer = createDeviceScaledCanvas(10, 10);
-        this.grid_layer.setAttribute("id", "understone-canvas");
+        this.grid_layer.setAttribute("id", "grid-canvas");
         this.grid_layer.className = "StoneLayer";
 
         const under_ctx = this.grid_layer.getContext("2d");
@@ -2232,16 +2231,17 @@ export class GobanCanvas extends GobanCore {
         // continue lines off-board during zoom in puzzles
         // this helps the player see that it's not the edge of the board
 
+        const midlineTweak = -0.5; // draw between-pixels to get crisp lines
         // vertical
         for (let i = 0; i < this.width; i++) {
             ctx.beginPath();
             ctx.moveTo(
-                Math.floor(i * s + ox + this.metrics.mid),
-                Math.floor(oy + this.metrics.mid),
+                Math.floor(i * s + ox + this.metrics.mid + 0.5) + midlineTweak,
+                Math.floor(oy + this.metrics.mid + 0.5),
             );
             ctx.lineTo(
-                Math.floor(i * s + ox + this.metrics.mid),
-                Math.floor(oy + this.metrics.mid + (this.height - 1) * s),
+                Math.floor(i * s + ox + this.metrics.mid + 0.5) + midlineTweak,
+                Math.floor(oy + this.metrics.mid + (this.height - 1) * s + 0.5) + midlineTweak,
             );
             ctx.stroke();
         }
@@ -2251,11 +2251,11 @@ export class GobanCanvas extends GobanCore {
             ctx.beginPath();
             ctx.moveTo(
                 Math.floor(ox + this.metrics.mid),
-                Math.floor(j * s + oy + this.metrics.mid),
+                Math.floor(j * s + oy + this.metrics.mid + 0.5) + midlineTweak,
             );
             ctx.lineTo(
-                Math.floor(ox + this.metrics.mid + (this.width - 1) * s),
-                Math.floor(j * s + oy + this.metrics.mid),
+                Math.floor(ox + this.metrics.mid + (this.width - 1) * s + 0.5) + midlineTweak,
+                Math.floor(j * s + oy + this.metrics.mid + 0.5) + midlineTweak,
             );
             ctx.stroke();
         }
@@ -2317,6 +2317,7 @@ export class GobanCanvas extends GobanCore {
             ];
         }
 
+        const midlineTweak = -0.5
         for (const p of points) {
             // accomodate puzzle cropping:
             if (p[0] > this.bounded_width) {
@@ -2326,8 +2327,8 @@ export class GobanCanvas extends GobanCore {
                 continue;
             }
 
-            const cx = p[0] * s + ox + this.metrics.mid;
-            const cy = p[1] * s + oy + this.metrics.mid;
+            const cx = Math.floor(p[0] * s + ox + this.metrics.mid + 0.5) + midlineTweak;
+            const cy = Math.floor(p[1] * s + oy + this.metrics.mid + 0.5) + midlineTweak;
 
             ctx.beginPath();
             ctx.fillStyle = this.theme_star_color;
@@ -3019,7 +3020,11 @@ export class GobanCanvas extends GobanCore {
                     drawit = true;
                 }
 
-                if (force_clear || (this.engine.cur_move.x === i && this.engine.cur_move.y === j)) {
+                if (
+                    force_clear ||
+                    drawit || // this may have no practical effect
+                    (this.engine.cur_move.x === i && this.engine.cur_move.y === j)
+                ) {
                     // always draw current move due to glitch in marking last move
                     this.drawSquare(i, j);
                     this.previous_marks[j][i] = jm;
