@@ -1,5 +1,3 @@
-// looping through fields in a record is too ridiculous with ts so:
-
 /*
  * Copyright 2012-2020 Online-Go.com
  *
@@ -17,12 +15,12 @@
  */
 
 // import { createContext } from "react";
-import {GoTheme, GoThemeBackgroundReactStyles, GoThemeBackgroundCSS} from "../GoTheme"
+import { GoTheme, GoThemeBackgroundReactStyles, GoThemeBackgroundCSS } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
 //import { deviceCanvasScalingRatio } from "../GoUtil";
 
-/* 
+/*
 This class makes it easy to design a custom OGS theme using
 json and share it on the interent. It also helps artists
 design image-based themes that need no code, by supplying a JSON url
@@ -59,7 +57,7 @@ export class JSONThemeStyle {
 
     "whiteStones": string[] = []; // list of stone image urls to select randomly & draw
     "blackStones": string[] = [];
-    
+
     "shadows": string[] = []; // shadow images to be used unless whiteShadows/blackShadows specified
     "whiteShadows"?: string[] = []; // shadows that match the above stones. Can be a single url.
     "blackShadows"?: string[] = [];
@@ -67,27 +65,27 @@ export class JSONThemeStyle {
     "whiteStoneColor"?: string = "#ffffff"; // perceived color of the stone image, eg #000000
     "blackStoneColor"?: string = "#000000";
 
-    "whiteStoneLineWidth"?: number = 1/20;
+    "whiteStoneLineWidth"?: number = 1 / 20;
     "blackStoneLineWidth"?: number = 0;
     "whiteStoneLineColor"?: string = "#000000";
     "blackStoneLineColor"?: string = "#000000";
 
     "whiteTextColor"?: string = "#000000"; // color to use for labels above white stone
     "blackTextColor"?: string = "#ffffff";
-    
+
     "boardInkColor"?: string = "#000000"; // a general color for markings on the board when specific colors (below) aren't set
-    "boardFadedInkColor"?: string = "#888888" // a general color for markings when faded
+    "boardFadedInkColor"?: string = "#888888"; // a general color for markings when faded
 
     "lineColor"?: string = "";
-    "fadedLineColor"?: string = "";  // line color when board is "faded out"
+    "fadedLineColor"?: string = ""; // line color when board is "faded out"
     "starColor"?: string = "";
     "fadedStarColor"?: string = "";
-    "blankTextColor"?: string = "";  // color for text on empty intersections
+    "blankTextColor"?: string = ""; // color for text on empty intersections
     "coordinateColor"?: string = ""; // for coordinates
 
     // these fields are required for JSONTheme, but
     // are optional for the artist to input
-    "rotations": Array<number> = [0];  // general rotation for shadow & either stone
+    "rotations": Array<number> = [0]; // general rotation for shadow & either stone
     "sizes": Array<[number, number] | number> = [1]; // general scaling for shadows & either stone
     "offsets": Array<[number, number]> = [[0, 0]]; // general offsets for shadows & either stone
 
@@ -95,10 +93,10 @@ export class JSONThemeStyle {
     "stoneOffsets": Array<[number, number]> = [[0, 0]]; // general offset for both stones, added to the below values if provided
     "whiteStoneOffsets": Array<[number, number]> = [[0, 0]];
     "blackStoneOffsets": Array<[number, number]> = [[0, 0]];
-    
+
     "stoneSizes": Array<[number, number] | number> = [1]; // general scale of both stones, multipled to below values if provided
-    "whiteStoneSizes": Array<[number, number] | number> = [1,1]; // allow x/y scaling or just uniform scale
-    "blackStoneSizes": Array<[number, number] | number> = [1,1];
+    "whiteStoneSizes": Array<[number, number] | number> = [1, 1]; // allow x/y scaling or just uniform scale
+    "blackStoneSizes": Array<[number, number] | number> = [1, 1];
 
     "stoneRotations": Array<number> = [0, 0]; // general rotations for both stones, added to below values if provided
     "whiteStoneRotations": Array<number> = [0, 0];
@@ -109,17 +107,15 @@ export class JSONThemeStyle {
     "blackShadowOffsets": Array<[number, number]> = [[0, 0]];
 
     "shadowSizes": Array<[number, number] | number> = [1]; // general shadow scale for both stones, multiplied with below values
-    "whiteShadowSizes": Array<[number, number] | number> = [1,1]; // allow x/y scaling or just uniform scale
-    "blackShadowSizes": Array<[number, number] | number> = [1,1];
-    
+    "whiteShadowSizes": Array<[number, number] | number> = [1, 1]; // allow x/y scaling or just uniform scale
+    "blackShadowSizes": Array<[number, number] | number> = [1, 1];
+
     "shadowRotations": Array<number> = [0]; // general rotations for both stones, added to the below values
     "blackShadowRotations": Array<number> = [0];
     "whiteShadowRotations": Array<number> = [0];
 
     "priority": number = 4; // number used for sorting on screen, greater == later, 100 is typical -- FIXME shouldn't really be user-assignable
-
 }
-
 
 export class JSONTheme extends GoTheme {
     static json: string = "{}"; // globally available in class so that all the parts can see it without a "preference object"
@@ -127,7 +123,7 @@ export class JSONTheme extends GoTheme {
 
     public name: string;
     public styles: { [style_name: string]: string } = {};
-    public themeStyle: JSONThemeStyle = new JSONThemeStyle;
+    public themeStyle: JSONThemeStyle = new JSONThemeStyle();
     public readonly isJSONTheme: boolean = true;
     protected parent?: GoTheme; // An optional parent theme
 
@@ -137,129 +133,123 @@ export class JSONTheme extends GoTheme {
     protected blackShadowImages: CanvasImageSource[] = [];
 
     constructor(parent?: GoTheme) {
-        super()
-        this.name = "JSONTheme" ; //JSONTheme.styles.themeName
-        this.parent = parent
+        super();
+        this.name = "JSONTheme"; //JSONTheme.styles.themeName
+        this.parent = parent;
 
         if (!JSONTheme.styles) {
-            JSONTheme.styles = new JSONThemeStyle;
+            JSONTheme.styles = new JSONThemeStyle();
         }
 
         if (JSONTheme.json && JSONTheme.json.length > 4) {
-            this.loadFromText(JSONTheme.json)
+            this.loadFromText(JSONTheme.json);
+        } else {
+            this.loadFromText(JSONTheme.getDefaultJSON());
         }
-        else {
-            this.loadFromText(JSONTheme.getDefaultJSON())
-        }
-
     }
 
-    public rebuildImages(){
+    public rebuildImages() {
         this.whiteImages = [];
         this.blackImages = [];
         this.whiteShadowImages = [];
         this.blackShadowImages = [];
-        
+
         if (JSONTheme.styles.whiteStones && JSONTheme.styles.whiteStones.length > 0) {
-            for (let src of JSONTheme.styles.whiteStones){
-                let img = new Image();
-                img.src = src
-                this.whiteImages.push(img)
+            for (const src of JSONTheme.styles.whiteStones) {
+                const img = new Image();
+                img.src = src;
+                this.whiteImages.push(img);
             }
         }
 
         if (JSONTheme.styles.blackStones && JSONTheme.styles.blackStones.length > 0) {
-            for (let src of JSONTheme.styles.blackStones){
-                let img = new Image();
-                img.src = src
-                this.blackImages.push(img)
+            for (const src of JSONTheme.styles.blackStones) {
+                const img = new Image();
+                img.src = src;
+                this.blackImages.push(img);
             }
         }
 
         if (JSONTheme.styles.whiteShadows && JSONTheme.styles.whiteShadows.length > 0) {
-            for (let src of JSONTheme.styles.whiteShadows){
-                let img = new Image();
-                img.src = src
-                this.whiteShadowImages.push(img)
+            for (const src of JSONTheme.styles.whiteShadows) {
+                const img = new Image();
+                img.src = src;
+                this.whiteShadowImages.push(img);
             }
         }
 
         if (JSONTheme.styles.blackShadows && JSONTheme.styles.blackShadows.length > 0) {
-            for (let src of JSONTheme.styles.blackShadows){
-                let img = new Image();
-                img.src = src
-                this.blackShadowImages.push(img)
+            for (const src of JSONTheme.styles.blackShadows) {
+                const img = new Image();
+                img.src = src;
+                this.blackShadowImages.push(img);
             }
         }
 
         // created default shadows if needed
-        if (JSONTheme.styles.shadows && JSONTheme.styles.shadows.length > 0 ){
-            if(this.whiteShadowImages.length == 0 ){
-                for (let src of JSONTheme.styles.shadows){
-                    let img = new Image();
-                    img.src = src
-                    this.whiteShadowImages.push(img)
+        if (JSONTheme.styles.shadows && JSONTheme.styles.shadows.length > 0) {
+            if (this.whiteShadowImages.length === 0) {
+                for (const src of JSONTheme.styles.shadows) {
+                    const img = new Image();
+                    img.src = src;
+                    this.whiteShadowImages.push(img);
                 }
             }
-            if(this.blackShadowImages.length == 0 ){
-                for (let src of JSONTheme.styles.shadows){
-                    let img = new Image();
-                    img.src = src
-                    this.blackShadowImages.push(img)
+            if (this.blackShadowImages.length === 0) {
+                for (const src of JSONTheme.styles.shadows) {
+                    const img = new Image();
+                    img.src = src;
+                    this.blackShadowImages.push(img);
                 }
             }
         }
     }
-    
 
-    public loadFromURL(url: string){
+    public loadFromURL(url: string) {}
 
-    }
-
-    protected static loadFromText(text: string): boolean{
+    protected static loadFromText(text: string): boolean {
+        // FIXME this and parseJSON are kinda the same thing
         try {
-            let j = JSON.parse(text)
-            let s = new JSONThemeStyle; // construct default item to check the keys & type values
+            const j = JSON.parse(text);
+            const s = new JSONThemeStyle() as any; // construct default item to check the keys & type values
+            const jt = new JSONThemeStyle() as any;
 
-            JSONTheme.styles = new JSONThemeStyle;
-            for (let k in j) {
-                //@ts-ignore
-                if (j[k] != undefined && typeof s[k] == typeof j[k]) {
-                    //@ts-ignore
-                    JSONTheme.styles[k] = j[k];
+            for (const k in j) {
+                if (s[k] !== undefined && typeof s[k] === typeof j[k]) {
+                    jt[k] = j[k];
                 }
             }
+
+            JSONTheme.styles = jt as JSONThemeStyle;
+
             return true;
-
-        } catch (err){
-            console.log(err); // FIXME: parse error is not severe enough to crash OGS, but should tell user
-            return false;
-        }
-
-    }
-
-    public static parseJSON(): boolean {
-        try {
-            let j = JSON.parse(JSONTheme.json)
-            let s = new JSONThemeStyle; // construct default item to check the keys & type values
-
-            JSONTheme.styles = new JSONThemeStyle;
-            for (let k in j) {
-                //@ts-ignore
-                if (j[k] != undefined && typeof s[k] == typeof j[k]) {
-                    //@ts-ignore
-                    JSONTheme.styles[k] = j[k];
-                }
-            }
-            return true;
-
         } catch (err) {
             console.log(err); // FIXME: parse error is not severe enough to crash OGS, but should tell user
             return false;
         }
-
     }
-    
+
+    public static parseJSON(): boolean {
+        try {
+            const j = JSON.parse(JSONTheme.json);
+            const s = new JSONThemeStyle() as any; // construct default item to check the keys & type values
+            const jt = new JSONThemeStyle() as any;
+
+            for (const k in j) {
+                if (s[k] !== undefined && typeof s[k] === typeof j[k]) {
+                    jt[k] = j[k];
+                }
+            }
+
+            JSONTheme.styles = jt as JSONThemeStyle;
+
+            return true;
+        } catch (err) {
+            console.log(err); // FIXME: parse error is not severe enough to crash OGS, but should tell user
+            return false;
+        }
+    }
+
     public static setJSON(text: string) {
         JSONTheme.json = text;
         JSONTheme.parseJSON();
@@ -267,14 +257,11 @@ export class JSONTheme extends GoTheme {
         //console.log(JSONTheme.styles)
     }
 
-
-    public loadFromText(text: string){
-    
-        if(JSONTheme.loadFromText(text)){
+    public loadFromText(text: string) {
+        if (JSONTheme.loadFromText(text)) {
             this.rebuildImages();
         }
     }
-
 
     get theme_name(): string {
         return "JSONTheme";
@@ -302,52 +289,63 @@ export class JSONTheme extends GoTheme {
         return { white: "stone" };
     }
 
-
-
-    public multiRotate(ctx: CanvasRenderingContext2D, rotations: Array<Array<number>>, rando: number){
+    public multiRotate(
+        ctx: CanvasRenderingContext2D,
+        rotations: Array<Array<number>>,
+        rando: number,
+    ) {
         let tot = 0;
         for (const r of rotations) {
             if (r.length > 0) {
                 tot += r[rando % r.length];
             }
         }
-        ctx.rotate(tot*Math.PI/180.0);
+        ctx.rotate((tot * Math.PI) / 180.0);
     }
 
-    public multiTranslate(ctx: CanvasRenderingContext2D, translations: Array<Array<[number, number]>>, rando: number, inverse: boolean = false) {
+    public multiTranslate(
+        ctx: CanvasRenderingContext2D,
+        translations: Array<Array<[number, number]>>,
+        rando: number,
+        inverse: boolean = false,
+    ) {
         let x = 0;
         let y = 0;
 
         for (const t of translations) {
-            if (t.length > 0){
+            if (t.length > 0) {
                 x += t[rando % t.length][0];
                 y += t[rando % t.length][1];
             }
         }
         if (inverse) {
-            ctx.translate(-x, -y)
+            ctx.translate(-x, -y);
         } else {
-            ctx.translate(x, y)
+            ctx.translate(x, y);
         }
     }
 
-    public multiScale(ctx: CanvasRenderingContext2D, scales: Array<Array<[number, number] | number>>, rando: number) {
+    public multiScale(
+        ctx: CanvasRenderingContext2D,
+        scales: Array<Array<[number, number] | number>>,
+        rando: number,
+    ) {
         for (const s of scales) {
             if (s.length > 0) {
                 if (typeof s[rando % s.length] === "number") {
                     const thescale = s[rando % s.length] as number;
                     ctx.scale(thescale, thescale);
-                }
-                else {
+                } else {
                     const thescale = s[rando % s.length] as [number, number];
-                    if (thescale)
+                    if (thescale) {
                         ctx.scale(thescale[0], thescale[1]);
+                    }
                 }
             }
         }
     }
 
-    public activateMatrixFor(ctx:CanvasRenderingContext2D, kind: string, rando: number) {
+    public activateMatrixFor(ctx: CanvasRenderingContext2D, kind: string, rando: number) {
         const rots = JSONTheme.styles.rotations;
         const offs = JSONTheme.styles.offsets;
         const sizes = JSONTheme.styles.sizes;
@@ -355,107 +353,67 @@ export class JSONTheme extends GoTheme {
         const stoneRots = JSONTheme.styles.stoneRotations;
         const stoneOffs = JSONTheme.styles.stoneOffsets;
         const stoneSizes = JSONTheme.styles.stoneSizes;
-        
+
         const shadRots = JSONTheme.styles.shadowRotations;
         const shadOffs = JSONTheme.styles.shadowOffsets;
         const shadSizes = JSONTheme.styles.shadowSizes;
 
         switch (kind) {
             case "white":
-                this.multiTranslate(ctx, [
-                    offs,
-                    stoneOffs,
-                    JSONTheme.styles.whiteStoneOffsets,
-                    ],
+                this.multiTranslate(
+                    ctx,
+                    [offs, stoneOffs, JSONTheme.styles.whiteStoneOffsets],
                     rando,
-                    false
-                )            
-                this.multiScale(ctx, [
-                    sizes,
-                    stoneSizes,
-                    JSONTheme.styles.whiteStoneSizes
-                    ], 
-                    rando
+                    false,
                 );
-                this.multiRotate(ctx, [
-                    rots,
-                    stoneRots,
-                    JSONTheme.styles.whiteStoneRotations
-                    ], 
-                    rando
+                this.multiScale(ctx, [sizes, stoneSizes, JSONTheme.styles.whiteStoneSizes], rando);
+                this.multiRotate(
+                    ctx,
+                    [rots, stoneRots, JSONTheme.styles.whiteStoneRotations],
+                    rando,
                 );
-            break;
+                break;
             case "black":
-                this.multiTranslate(ctx, [
-                    offs,
-                    stoneOffs,
-                    JSONTheme.styles.blackStoneOffsets,
-                    ],
+                this.multiTranslate(
+                    ctx,
+                    [offs, stoneOffs, JSONTheme.styles.blackStoneOffsets],
                     rando,
-                    false
-                )            
-                this.multiScale(ctx, [
-                    sizes,
-                    stoneSizes,
-                    JSONTheme.styles.blackStoneSizes
-                    ], 
-                    rando
+                    false,
                 );
-                this.multiRotate(ctx, [
-                    rots,
-                    stoneRots,
-                    JSONTheme.styles.blackStoneRotations
-                    ], 
-                    rando
+                this.multiScale(ctx, [sizes, stoneSizes, JSONTheme.styles.blackStoneSizes], rando);
+                this.multiRotate(
+                    ctx,
+                    [rots, stoneRots, JSONTheme.styles.blackStoneRotations],
+                    rando,
                 );
-            break;
+                break;
             case "blackShadow":
-                this.multiTranslate(ctx, [
-                    offs,
-                    shadOffs,
-                    JSONTheme.styles.blackShadowOffsets,
-                    ],
+                this.multiTranslate(
+                    ctx,
+                    [offs, shadOffs, JSONTheme.styles.blackShadowOffsets],
                     rando,
-                    false
-                )            
-                this.multiScale(ctx, [
-                    sizes,
-                    shadSizes,
-                    JSONTheme.styles.blackShadowSizes
-                    ], 
-                    rando
+                    false,
                 );
-                this.multiRotate(ctx, [
-                    rots,
-                    shadRots,
-                    JSONTheme.styles.blackShadowRotations
-                    ], 
-                    rando
+                this.multiScale(ctx, [sizes, shadSizes, JSONTheme.styles.blackShadowSizes], rando);
+                this.multiRotate(
+                    ctx,
+                    [rots, shadRots, JSONTheme.styles.blackShadowRotations],
+                    rando,
                 );
-            break;
+                break;
             case "whiteShadow":
-                this.multiTranslate(ctx, [
-                    offs,
-                    shadOffs,
-                    JSONTheme.styles.whiteShadowOffsets,
-                    ],
+                this.multiTranslate(
+                    ctx,
+                    [offs, shadOffs, JSONTheme.styles.whiteShadowOffsets],
                     rando,
-                    false
-                )            
-                this.multiScale(ctx, [
-                    sizes,
-                    shadSizes,
-                    JSONTheme.styles.whiteShadowSizes
-                    ], 
-                    rando
+                    false,
                 );
-                this.multiRotate(ctx, [
-                    rots,
-                    shadRots,
-                    JSONTheme.styles.whiteShadowRotations
-                    ], 
-                    rando
-                );                                            
+                this.multiScale(ctx, [sizes, shadSizes, JSONTheme.styles.whiteShadowSizes], rando);
+                this.multiRotate(
+                    ctx,
+                    [rots, shadRots, JSONTheme.styles.whiteShadowRotations],
+                    rando,
+                );
         }
     }
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
@@ -468,57 +426,51 @@ export class JSONTheme extends GoTheme {
         radius: number,
     ) {
         // random by position
-        const rando = Math.floor(cx*31 + cy*29);
+        const rando = Math.floor(cx * 31 + cy * 29);
 
-        if (this.whiteImages.length > 0){
+        if (this.whiteImages.length > 0) {
+            if (shadow_ctx && this.whiteShadowImages.length > 0) {
+                const img = this.whiteShadowImages[rando % this.whiteShadowImages.length];
 
+                const t = shadow_ctx.getTransform();
 
-            if (shadow_ctx != undefined && this.whiteShadowImages.length > 0){
-                let img = this.whiteShadowImages[rando % this.whiteShadowImages.length]
-                
-                let t = shadow_ctx.getTransform();
-
-                shadow_ctx.translate(cx,cy);
-                shadow_ctx.scale(radius*2.0, radius*2.0);
+                shadow_ctx.translate(cx, cy);
+                shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 this.activateMatrixFor(shadow_ctx, "whiteShadow", rando);
 
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
-
             }
-            let img = this.whiteImages[rando % this.whiteImages.length]
+            const img = this.whiteImages[rando % this.whiteImages.length];
 
-            let t = ctx.getTransform();
- 
-            ctx.translate(cx,cy);
-            ctx.scale(radius*2.0, radius*2.0);
+            const t = ctx.getTransform();
+
+            ctx.translate(cx, cy);
+            ctx.scale(radius * 2.0, radius * 2.0);
             this.activateMatrixFor(ctx, "white", rando);
 
             ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
-            ctx.setTransform(t)
-        }
-        else {
+            ctx.setTransform(t);
+        } else {
+            if (shadow_ctx && this.whiteShadowImages.length > 0) {
+                const img = this.whiteShadowImages[rando % this.whiteShadowImages.length];
 
-            if (shadow_ctx && this.whiteShadowImages.length > 0){
-                let img = this.whiteShadowImages[rando % this.whiteShadowImages.length]
-                
-                let t = shadow_ctx.getTransform();
+                const t = shadow_ctx.getTransform();
 
-                shadow_ctx.translate(cx,cy);
-                shadow_ctx.scale(radius*2.0, radius*2.0);
+                shadow_ctx.translate(cx, cy);
+                shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 this.activateMatrixFor(shadow_ctx, "whiteShadow", rando);
 
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
-
-            }            
-            let t = ctx.getTransform();
-            ctx.save()
-            ctx.translate(cx,cy);
-            ctx.scale(radius*2, radius*2);
+            }
+            const t = ctx.getTransform();
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(radius * 2, radius * 2);
             this.activateMatrixFor(ctx, "white", rando);
 
             ctx.fillStyle = this.getWhiteStoneColor();
@@ -526,11 +478,12 @@ export class JSONTheme extends GoTheme {
             ctx.lineWidth = this.getWhiteStoneLineWidth();
             ctx.beginPath();
             //ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
-            ctx.arc(0,0, 0.5, 0, 2*Math.PI, true)
+            ctx.arc(0, 0, 0.5, 0, 2 * Math.PI, true);
             ctx.fill();
-            if (this.getWhiteStoneLineWidth() > 0)
+            if (this.getWhiteStoneLineWidth() > 0) {
                 ctx.stroke();
-            ctx.restore()
+            }
+            ctx.restore();
             ctx.setTransform(t);
         }
     }
@@ -544,68 +497,61 @@ export class JSONTheme extends GoTheme {
         radius: number,
     ) {
         // random by position
-        const rando = Math.floor(cx * 31 + cy * 29)
+        const rando = Math.floor(cx * 31 + cy * 29);
 
         if (this.blackImages.length > 0) {
+            if (shadow_ctx && this.blackShadowImages.length > 0) {
+                const img = this.blackShadowImages[rando % this.blackShadowImages.length];
 
-            if (shadow_ctx != undefined && this.blackShadowImages.length > 0) {
-                let img = this.blackShadowImages[rando % this.blackShadowImages.length]
-                
-                let t = shadow_ctx.getTransform();
-                shadow_ctx.translate(cx,cy);
-                shadow_ctx.scale(radius*2.0, radius*2.0);
+                const t = shadow_ctx.getTransform();
+                shadow_ctx.translate(cx, cy);
+                shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 this.activateMatrixFor(shadow_ctx, "blackShadow", rando);
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
-
             }
 
-            let img = this.blackImages[rando % this.blackImages.length]
-            
-            let t = ctx.getTransform();
-            ctx.translate(cx,cy);
-            ctx.scale(radius*2.0, radius*2.0);
+            const img = this.blackImages[rando % this.blackImages.length];
+
+            const t = ctx.getTransform();
+            ctx.translate(cx, cy);
+            ctx.scale(radius * 2.0, radius * 2.0);
             this.activateMatrixFor(ctx, "black", rando);
             ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
             ctx.setTransform(t);
+        } else {
+            if (shadow_ctx && this.blackShadowImages.length > 0) {
+                const img = this.blackShadowImages[rando % this.blackShadowImages.length];
 
-        }
-        else {
-
-
-            if (shadow_ctx != undefined && this.blackShadowImages.length > 0) {
-                let img = this.blackShadowImages[rando % this.blackShadowImages.length]
-                
-                let t = shadow_ctx.getTransform();
-                shadow_ctx.translate(cx,cy);
-                shadow_ctx.scale(radius*2.0, radius*2.0);
+                const t = shadow_ctx.getTransform();
+                shadow_ctx.translate(cx, cy);
+                shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 this.activateMatrixFor(shadow_ctx, "blackShadow", rando);
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
-
             }
-                        let t = ctx.getTransform();
+            const t = ctx.getTransform();
 
-            ctx.save()
-            ctx.translate(cx,cy);
-            ctx.scale(radius*2, radius*2);
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(radius * 2, radius * 2);
             this.activateMatrixFor(ctx, "black", rando);
 
             ctx.fillStyle = this.getBlackStoneColor();
             ctx.strokeStyle = this.getBlackStoneLineColor();
             ctx.lineWidth = this.getBlackStoneLineWidth();
             ctx.beginPath();
-            ctx.arc(0,0, 0.5, 0, 2*Math.PI, true);
+            ctx.arc(0, 0, 0.5, 0, 2 * Math.PI, true);
             ctx.fill();
-            if (this.getBlackStoneLineWidth() > 0)
-                ctx.stroke(); 
+            if (this.getBlackStoneLineWidth() > 0) {
+                ctx.stroke();
+            }
             ctx.restore();
             ctx.setTransform(t);
         }
-
     }
 
     /* Should return true if you would like the shadow layer to be present. False
@@ -616,64 +562,70 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for white stones */
     public getWhiteStoneColor(): string {
-        if (JSONTheme.styles.whiteStoneColor)
+        if (JSONTheme.styles.whiteStoneColor) {
             return JSONTheme.styles.whiteStoneColor;
-        else
-            return "#ffffff"
+        } else {
+            return "#ffffff";
+        }
     }
 
     public getWhiteStoneLineColor(): string {
-        if (JSONTheme.styles.whiteStoneLineColor)
+        if (JSONTheme.styles.whiteStoneLineColor) {
             return JSONTheme.styles.whiteStoneLineColor;
-        else
-            return this.getWhiteTextColor()
+        } else {
+            return this.getWhiteTextColor();
+        }
     }
 
     public getWhiteStoneLineWidth(): number {
-        if (JSONTheme.styles.whiteStoneLineWidth != undefined)
+        if (JSONTheme.styles.whiteStoneLineWidth !== undefined) {
             return JSONTheme.styles.whiteStoneLineWidth;
-        else
-            return 1/20;
+        } else {
+            return 1 / 20;
+        }
     }
 
     /* Returns the color that should be used for black stones */
     public getBlackStoneColor(): string {
-        if (JSONTheme.styles.blackStoneColor) 
+        if (JSONTheme.styles.blackStoneColor) {
             return JSONTheme.styles.blackStoneColor;
-        else
-            return "#000000"
+        } else {
+            return "#000000";
+        }
     }
 
-
     public getBlackStoneLineColor(): string {
-        if (JSONTheme.styles.blackStoneLineColor)
+        if (JSONTheme.styles.blackStoneLineColor) {
             return JSONTheme.styles.blackStoneLineColor;
-        else
-            return "#000000" // black stones are usuallly dark and don't need a line
+        } else {
+            return "#000000";
+        } // black stones are usuallly dark and don't need a line
     }
 
     public getBlackStoneLineWidth(): number {
-        if (JSONTheme.styles.blackStoneLineWidth)
+        if (JSONTheme.styles.blackStoneLineWidth) {
             return JSONTheme.styles.blackStoneLineWidth;
-        else
-            return 0; // black stones are usuallly dark and don't need a line
+        } else {
+            return 0;
+        } // black stones are usuallly dark and don't need a line
     }
-    
-    
+
     /* Returns the color that should be used for text over white stones */
     public getWhiteTextColor(color?: string): string {
-        if (JSONTheme.styles.whiteTextColor)
+        if (JSONTheme.styles.whiteTextColor) {
             return JSONTheme.styles.whiteTextColor;
-        else
-            return "#000000"
+        } else {
+            return "#000000";
+        }
     }
 
     /* Returns the color that should be used for text over black stones */
     public getBlackTextColor(color?: string): string {
-        if (JSONTheme.styles.blackTextColor)
+        if (JSONTheme.styles.blackTextColor) {
             return JSONTheme.styles.blackTextColor;
-        else
-            return "#ffffff"
+        } else {
+            return "#ffffff";
+        }
     }
 
     /* Returns a set of CSS styles that should be applied to the background layer (ie the board) */
@@ -681,12 +633,12 @@ export class JSONTheme extends GoTheme {
         if (JSONTheme.styles.boardImage) {
             return {
                 "background-image": `url("${JSONTheme.styles.boardImage}")`,
-                "background-color": JSONTheme.styles.boardColor, 
-                "background-size": "cover"
+                "background-color": JSONTheme.styles.boardColor,
+                "background-size": "cover",
             };
         } else {
             return {
-                "background-color": JSONTheme.styles.boardColor, 
+                "background-color": JSONTheme.styles.boardColor,
                 "background-image": "",
             };
         }
@@ -705,65 +657,70 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for lines */
     public getLineColor(): string {
-        if (JSONTheme.styles.lineColor)
+        if (JSONTheme.styles.lineColor) {
             return JSONTheme.styles.lineColor;
-        else if (JSONTheme.styles.boardInkColor)
-            return JSONTheme.styles.boardInkColor
-        else
-            return "#000000"
+        } else if (JSONTheme.styles.boardInkColor) {
+            return JSONTheme.styles.boardInkColor;
+        } else {
+            return "#000000";
+        }
     }
 
     /* Returns the color that should be used for lines * when there is text over the square */
     public getFadedLineColor(): string {
-        if (JSONTheme.styles.fadedLineColor)
+        if (JSONTheme.styles.fadedLineColor) {
             return JSONTheme.styles.fadedLineColor;
-        else if (JSONTheme.styles.boardFadedInkColor)
-            return JSONTheme.styles.boardFadedInkColor
-        else
-            return "#888888"
+        } else if (JSONTheme.styles.boardFadedInkColor) {
+            return JSONTheme.styles.boardFadedInkColor;
+        } else {
+            return "#888888";
+        }
     }
 
     /* Returns the color that should be used for star points */
     public getStarColor(): string {
-        if (JSONTheme.styles.starColor) 
+        if (JSONTheme.styles.starColor) {
             return JSONTheme.styles.starColor;
-        else if (JSONTheme.styles.boardInkColor)
-            return JSONTheme.styles.boardInkColor
-        else
-            return "#000000"
+        } else if (JSONTheme.styles.boardInkColor) {
+            return JSONTheme.styles.boardInkColor;
+        } else {
+            return "#000000";
+        }
     }
 
     /* Returns the color that should be used for star points
      * when there is text over the square */
     public getFadedStarColor(): string {
-        if (JSONTheme.styles.fadedStarColor)
+        if (JSONTheme.styles.fadedStarColor) {
             return JSONTheme.styles.fadedStarColor;
-        else if (JSONTheme.styles.boardFadedInkColor)
-            return JSONTheme.styles.boardFadedInkColor
-        else
-            return "#888888"
+        } else if (JSONTheme.styles.boardFadedInkColor) {
+            return JSONTheme.styles.boardFadedInkColor;
+        } else {
+            return "#888888";
+        }
     }
 
     /* Returns the color that text should be over empty intersections */
     public getBlankTextColor(): string {
-        if (JSONTheme.styles.blankTextColor)
+        if (JSONTheme.styles.blankTextColor) {
             return JSONTheme.styles.blankTextColor;
-        else if (JSONTheme.styles.boardInkColor)
+        } else if (JSONTheme.styles.boardInkColor) {
             return JSONTheme.styles.boardInkColor;
-        else
-            return "#000000"
+        } else {
+            return "#000000";
+        }
     }
 
     /** Returns the color that should be used for labels */
     public getLabelTextColor(): string {
-        if (JSONTheme.styles.coordinateColor)
+        if (JSONTheme.styles.coordinateColor) {
             return JSONTheme.styles.coordinateColor;
-        else if (JSONTheme.styles.boardInkColor)
-            return JSONTheme.styles.boardInkColor
-        else
-            return "#000000"
+        } else if (JSONTheme.styles.boardInkColor) {
+            return JSONTheme.styles.boardInkColor;
+        } else {
+            return "#000000";
+        }
     }
-
 
     public static getDefaultJSON(): string {
         // an example until I figure out how to integrate JSONThemes in OGS
@@ -790,8 +747,8 @@ export class JSONTheme extends GoTheme {
             "sizes": [0.9],
             "shadowSizes": [1.1]
         }
-        `
-    
+        `;
+
         json = `
         {
             "name": "just-colors",
@@ -803,8 +760,8 @@ export class JSONTheme extends GoTheme {
             "whiteTextColor": "#2B2825",
             "blankTextColor": "#FAF1E8"
         }
-        `
-        
+        `;
+
         json = ` 
         {
             "name": "shuffled-stones",
@@ -818,8 +775,8 @@ export class JSONTheme extends GoTheme {
             "sizes": [0.98],
             "offsets": [[0.02, 0.01], [0.05, -0.02], [-0.01, 0.05]]
         }        
-        `
-        
+        `;
+
         json = `
         {
             "name": "Happy Stones",
@@ -833,7 +790,7 @@ export class JSONTheme extends GoTheme {
             "sizes": [2],
             "offsets": [[0.45,0.45]]
         }
-        `
+        `;
         json = `
         {
             "name": "hikaru",
@@ -851,11 +808,10 @@ export class JSONTheme extends GoTheme {
             "shadowOffsets": [[0.02, 0.1]],
             "shadowSizes": [1.1]
         }
-        `
+        `;
 
-        return json
+        return json;
     }
-    
 }
 
 export default function (GoThemes: GoThemesInterface) {
@@ -867,7 +823,7 @@ export default function (GoThemes: GoThemesInterface) {
 
 /*
 class BasicImgTheme extends JSONTheme {
-    public themeStyle: JSONThemeStyle = 
+    public themeStyle: JSONThemeStyle =
     {
         "themeName":   "basic image theme",
         "whiteStones": [],

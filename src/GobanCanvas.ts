@@ -62,21 +62,21 @@ interface ViewPortInterface {
 }
 
 interface DrawingInfo {
-    ctx:        CanvasRenderingContext2D;
+    ctx: CanvasRenderingContext2D;
     stoneColor: number;
-    size:       number;
-    left:       number;
-    right:      number;
-    top:        number;
-    bottom:     number;
-    radius:     number;
-    xCenter:    number;
-    yCenter:    number;
-    xOffset:    number;
-    yOffset:    number;
-    marks:      MarkInterface;
+    size: number;
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    radius: number;
+    xCenter: number;
+    yCenter: number;
+    xOffset: number;
+    yOffset: number;
+    marks: MarkInterface;
     altmarking: string | undefined;
-    textColor:  string;
+    textColor: string;
     movetree_contains_this_square: boolean;
     have_text_to_draw: boolean;
 }
@@ -116,7 +116,7 @@ export class GobanCanvas extends GobanCore {
     private last_pen_position?: [number, number];
     protected metrics: GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
 
-    private previous_marks: Array<Array<string>>; 
+    private previous_marks: Array<Array<string>>;
     private previous_board: Array<Array<string>>;
 
     private layer_offset_left: number = 0;
@@ -166,14 +166,14 @@ export class GobanCanvas extends GobanCore {
 
         this.title_div = config["title_div"];
 
-        this.grid_layer = createDeviceScaledCanvas(10,10)
+        this.grid_layer = createDeviceScaledCanvas(10, 10);
         this.grid_layer.setAttribute("id", "understone-canvas");
-        this.grid_layer.className = "StoneLayer"
+        this.grid_layer.className = "StoneLayer";
 
-        const under_ctx = this.grid_layer.getContext("2d")
+        const under_ctx = this.grid_layer.getContext("2d");
 
         if (under_ctx) {
-            this.grid_ctx = under_ctx
+            this.grid_ctx = under_ctx;
         } else {
             throw new Error(`Failed to obtain drawing context for board grid & coordinates`);
         }
@@ -181,7 +181,7 @@ export class GobanCanvas extends GobanCore {
         this.grid_layer.style.left = this.layer_offset_left + "px";
         this.grid_layer.style.top = this.layer_offset_top + "px";
 
-        this.parent.appendChild(this.grid_layer);        
+        this.parent.appendChild(this.grid_layer);
         this.bindPointerBindings(this.grid_layer);
 
         this.board = createDeviceScaledCanvas(10, 10);
@@ -224,11 +224,15 @@ export class GobanCanvas extends GobanCore {
         });
         this.on("destroy", () => watcher.remove());
 
-
         this.engine = this.post_config_constructor();
-        this.previous_marks = GoMath.makeObjectMatrix<string>(this.engine.width, this.engine.height);
-        this.previous_board = GoMath.makeObjectMatrix<string>(this.engine.width, this.engine.height);
-
+        this.previous_marks = GoMath.makeObjectMatrix<string>(
+            this.engine.width,
+            this.engine.height,
+        );
+        this.previous_board = GoMath.makeObjectMatrix<string>(
+            this.engine.width,
+            this.engine.height,
+        );
 
         this.ready_to_draw = true;
         this.redraw(true);
@@ -243,8 +247,8 @@ export class GobanCanvas extends GobanCore {
     public destroy(): void {
         super.destroy();
 
-        if (this.grid_layer && this.board.parentNode){
-            this.board.parentNode.removeChild(this.grid_layer)
+        if (this.grid_layer && this.board.parentNode) {
+            this.board.parentNode.removeChild(this.grid_layer);
         }
         if (this.board && this.board.parentNode) {
             this.board.parentNode.removeChild(this.board);
@@ -260,7 +264,7 @@ export class GobanCanvas extends GobanCore {
         window.removeEventListener("keydown", this.handleShiftKey);
         window.removeEventListener("keyup", this.handleShiftKey);
     }
-   
+
     private detachShadowLayer(): void {
         if (this.shadow_layer) {
             if (this.shadow_layer.parentNode) {
@@ -1196,15 +1200,19 @@ export class GobanCanvas extends GobanCore {
             }
         }
     }
-    private getDrawInfo(i: number, j: number, target_ctx: CanvasRenderingContext2D | undefined = undefined): DrawingInfo {
+    private getDrawInfo(
+        i: number,
+        j: number,
+        target_ctx: CanvasRenderingContext2D | undefined = undefined,
+    ): DrawingInfo {
         /* get a structure holding info needed to draw a square  at i,j */
-        let d = {} as DrawingInfo;
+        const d = {} as DrawingInfo;
 
         d.ctx = this.ctx;
         if (target_ctx) {
             d.ctx = target_ctx;
         }
-        
+
         d.marks = this.getMarks(i, j);
         if (!d.marks) {
             console.error("No position for ", j, i);
@@ -1263,15 +1271,16 @@ export class GobanCanvas extends GobanCore {
                 }
             }
         }
-        
+
         d.textColor = this.theme_blank_text_color;
-        if (d.stoneColor)
-            d.textColor = d.stoneColor === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+        if (d.stoneColor) {
+            d.textColor =
+                d.stoneColor === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+        }
 
-
-        d.size =    this.square_size
-        d.xOffset = this.draw_left_labels ? d.size : 0
-        d.yOffset = this.draw_top_labels ? d.size : 0
+        d.size = this.square_size;
+        d.xOffset = this.draw_left_labels ? d.size : 0;
+        d.yOffset = this.draw_top_labels ? d.size : 0;
 
         if (this.bounds.left > 0) {
             d.xOffset = -d.size * this.bounds.left;
@@ -1280,33 +1289,33 @@ export class GobanCanvas extends GobanCore {
             d.yOffset = -d.size * this.bounds.top;
         }
 
-        d.left =    d.xOffset + i * d.size;
-        d.right =   d.xOffset + (i + 1) * d.size;
-        d.top =     d.yOffset + j * d.size ;
-        d.bottom =  d.yOffset + (j + 1) * d.size;
+        d.left = d.xOffset + i * d.size;
+        d.right = d.xOffset + (i + 1) * d.size;
+        d.top = d.yOffset + j * d.size;
+        d.bottom = d.yOffset + (j + 1) * d.size;
 
         d.xCenter = d.left + this.metrics.mid;
         d.yCenter = d.top + this.metrics.mid;
-        
-        d.radius =  Math.floor(this.square_size * 0.5) - 0.5; // hm, do not understand -0.5
+
+        d.radius = Math.floor(this.square_size * 0.5) - 0.5; // hm, do not understand -0.5
 
         return d;
-
     }
 
-
-    public makeSquareClip(ctx:CanvasRenderingContext2D | undefined, i: number,j: number){
+    public makeSquareClip(ctx: CanvasRenderingContext2D | undefined, i: number, j: number) {
         /*
         clip around the current square at an enlarged size for shadows, etc.
         */
 
-        if (!ctx) return
-        
+        if (!ctx) {
+            return;
+        }
+
         // these really should use DrawingInfo instead of recalculating
-        let s = this.square_size
+        const s = this.square_size;
         let ox = this.draw_left_labels ? s : 0;
         let oy = this.draw_top_labels ? s : 0;
-        
+
         // accomodate puzzle cropping
         if (this.bounds.left > 0) {
             ox = -s * this.bounds.left;
@@ -1317,30 +1326,33 @@ export class GobanCanvas extends GobanCore {
 
         ctx.save();
         ctx.beginPath();
-        
+
         // extend beyond the square, limit should be next intersection point - grid line width
         ctx.rect(
-            Math.floor(i*s + ox - s/2), 
-            Math.floor(j*s + oy - s/2), 
-            Math.floor(s*2), 
-            Math.floor(s*2));
-        
+            Math.floor(i * s + ox - s / 2),
+            Math.floor(j * s + oy - s / 2),
+            Math.floor(s * 2),
+            Math.floor(s * 2),
+        );
+
         ctx.clip();
     }
 
-    public restoreSquareClip(ctx:CanvasRenderingContext2D | undefined){
-        if (!ctx) return
-        ctx.restore()
+    public restoreSquareClip(ctx: CanvasRenderingContext2D | undefined) {
+        if (!ctx) {
+            return;
+        }
+        ctx.restore();
     }
 
-    public cleanSquareRect(i: number,j: number){
+    public cleanSquareRect(i: number, j: number) {
         /*
         erase the entire contents of this square
         at an enlarged size to accomodate shadows, etc.
         */
 
         // these really should use DrawingInfo instead of recalculating
-        let s = this.square_size
+        const s = this.square_size;
         let ox = this.draw_left_labels ? s : 0;
         let oy = this.draw_top_labels ? s : 0;
 
@@ -1352,25 +1364,28 @@ export class GobanCanvas extends GobanCore {
             oy = -s * this.bounds.top;
         }
 
-        this.ctx.clearRect(Math.floor(i*s + ox - s/2), 
-            Math.floor(j*s + oy - s/2), 
-            Math.floor(s*2), 
-            Math.floor(s*2)) 
+        this.ctx.clearRect(
+            Math.floor(i * s + ox - s / 2),
+            Math.floor(j * s + oy - s / 2),
+            Math.floor(s * 2),
+            Math.floor(s * 2),
+        );
 
         if (this.shadow_ctx) {
-            this.shadow_ctx.clearRect(Math.floor(i*s + ox - s/2), 
-                Math.floor(j*s + oy - s/2), 
-                Math.floor(s*2), 
-                Math.floor(s*2))          
+            this.shadow_ctx.clearRect(
+                Math.floor(i * s + ox - s / 2),
+                Math.floor(j * s + oy - s / 2),
+                Math.floor(s * 2),
+                Math.floor(s * 2),
+            );
         }
     }
-    
 
     public drawSquare(i: number, j: number): void {
         if (i < 0 || j < 0) {
             return;
         }
-        
+
         // make a detour to the previous move coordinates if it's showing a "last move mark"
         // and remove it
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
@@ -1385,33 +1400,30 @@ export class GobanCanvas extends GobanCore {
         //        if desired. Also, since there is no separate layer for labels & markings right now,
         //        everything has to be redrawn from bottom up
 
-             
         // oversized rect clear. This will be the clip box we draw the surrounding stones into
-        this.makeSquareClip(this.ctx, i,j)
-        this.makeSquareClip(this.shadow_ctx, i,j)            
-        this.cleanSquareRect(i,j)
+        this.makeSquareClip(this.ctx, i, j);
+        this.makeSquareClip(this.shadow_ctx, i, j);
+        this.cleanSquareRect(i, j);
 
-        for (let ii = Math.max(i-1,0); ii <= Math.min(i+1, this.bounds.right); ii++){
-            for (let jj= Math.max(j-1,0); jj <= Math.min(j+1, this.bounds.bottom); jj++){
+        for (let ii = Math.max(i - 1, 0); ii <= Math.min(i + 1, this.bounds.right); ii++) {
+            for (let jj = Math.max(j - 1, 0); jj <= Math.min(j + 1, this.bounds.bottom); jj++) {
                 // if (ii == i && jj == j) continue
                 this.__drawSquare(ii, jj);
-
             }
         }
 
         // this.__drawSquare(i, j);
 
-        this.restoreSquareClip(this.ctx)
-        this.restoreSquareClip(this.shadow_ctx)
-
+        this.restoreSquareClip(this.ctx);
+        this.restoreSquareClip(this.shadow_ctx);
     }
 
-    private drawHeatmap(i: number, j: number, d: DrawingInfo): boolean{
+    private drawHeatmap(i: number, j: number, d: DrawingInfo): boolean {
         /*
         Draw heatmap visualization for square i,j
         Return true if visualization was drawn
         */
-       if (this.heatmap && this.heatmap[j][i] > 0.001) {
+        if (this.heatmap && this.heatmap[j][i] > 0.001) {
             const color = "#00FF00";
             d.ctx.lineCap = "square";
             d.ctx.save();
@@ -1426,13 +1438,13 @@ export class GobanCanvas extends GobanCore {
             d.ctx.fill();
             d.ctx.restore();
             return true;
-       }
-       return false;
-    }   
+        }
+        return false;
+    }
 
     private drawSquareHighlights(i: number, j: number, d: DrawingInfo): boolean {
-        /* 
-        Draw square highlights if any 
+        /*
+        Draw square highlights if any
         Return true if square highlight was drawn
         */
 
@@ -1441,7 +1453,6 @@ export class GobanCanvas extends GobanCore {
             (this.highlight_movetree_moves && d.movetree_contains_this_square) ||
             d.marks.color
         ) {
- 
             const color = d.marks.color ? d.marks.color : d.marks.hint ? "#8EFF0A" : "#FF8E0A";
 
             d.ctx.lineCap = "square";
@@ -1462,19 +1473,18 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawColoredStone(i: number, j: number, d: DrawingInfo): boolean {
-        /* 
-        Draw user-colored stones if used & needed 
+        /*
+        Draw user-colored stones if used & needed
         Return true if a stone was drawn
         */
 
         if (this.colored_circles && this.colored_circles[j][i]) {
-
             const circle = this.colored_circles[j][i];
             const color = circle.color;
 
             d.ctx.save();
             d.ctx.globalAlpha = 1.0;
-            
+
             //const radius = Math.floor(this.square_size * 0.5) - 0.5;
             let lineWidth = d.radius * (circle.border_width || 0.1);
 
@@ -1534,7 +1544,6 @@ export class GobanCanvas extends GobanCore {
             d.marks.black ||
             d.marks.white
         ) {
-
             let transparent = false;
             let stoneAlphaTransparencyValue = 0.6;
             let color;
@@ -1642,7 +1651,7 @@ export class GobanCanvas extends GobanCore {
                 if (color === 1) {
                     const stone =
                         this.theme_black_stones[
-                        ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_black_stones.length
+                            ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_black_stones.length
                         ];
                     this.theme_black.placeBlackStone(
                         d.ctx,
@@ -1655,7 +1664,7 @@ export class GobanCanvas extends GobanCore {
                 } else {
                     const stone =
                         this.theme_white_stones[
-                        ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_white_stones.length
+                            ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_white_stones.length
                         ];
                     this.theme_white.placeWhiteStone(
                         d.ctx,
@@ -1706,9 +1715,9 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawScoring(i: number, j: number, d: DrawingInfo): boolean {
-        /* 
+        /*
         Draw the Score indicator for this square, if needed.
-        Return true if scoring indicator was drawn 
+        Return true if scoring indicator was drawn
         */
 
         let draw_x = false;
@@ -1773,14 +1782,10 @@ export class GobanCanvas extends GobanCore {
                 this.scoring_mode &&
                 this.score_estimate &&
                 (this.score_estimate.territory[j][i] ||
-                    (this.score_estimate.removal[j][i] &&
-                        this.score_estimate.board[j][i] === 0))
+                    (this.score_estimate.removal[j][i] && this.score_estimate.board[j][i] === 0))
             ) {
                 color = this.score_estimate.territory[j][i] === 1 ? "black" : "white";
-                if (
-                    this.score_estimate.board[j][i] === 0 &&
-                    this.score_estimate.removal[j][i]
-                ) {
+                if (this.score_estimate.board[j][i] === 0 && this.score_estimate.removal[j][i]) {
                     color = "dame";
                 }
             }
@@ -1822,7 +1827,7 @@ export class GobanCanvas extends GobanCore {
     private drawTextLabels(i: number, j: number, d: DrawingInfo): boolean {
         /*
         Draw text labels, if any.
-        return true if letter was drawn 
+        return true if letter was drawn
         */
 
         let letter_was_drawn = false;
@@ -1955,9 +1960,9 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawSymbols(i: number, j: number, transparent: boolean, d: DrawingInfo): boolean {
-        /* 
+        /*
         Draw symbols if any,
-        return whether a symbol was actually drawn 
+        return whether a symbol was actually drawn
         */
 
         let symbol_was_drawn = false;
@@ -2077,18 +2082,18 @@ export class GobanCanvas extends GobanCore {
             d.ctx.restore();
             symbol_was_drawn = true;
         }
-    return symbol_was_drawn
-}
+        return symbol_was_drawn;
+    }
 
     private drawLastMove(i: number, j: number, d: DrawingInfo): boolean {
         /*
         Mark the latest move, and return whether or not
-        the mark was made 
+        the mark was made
         */
 
         let drawn = false;
 
-        if (this.engine && this.engine.cur_move) {            
+        if (this.engine && this.engine.cur_move) {
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
@@ -2190,11 +2195,11 @@ export class GobanCanvas extends GobanCore {
     }
 
     private drawGrid(ctx: CanvasRenderingContext2D): void {
-        /* 
-        Draw the board's grid into the cxt provided, which should be its own layer 
+        /*
+        Draw the board's grid into the cxt provided, which should be its own layer
         */
 
-        let s = this.square_size
+        const s = this.square_size;
         let ox = this.draw_left_labels ? s : 0;
         let oy = this.draw_top_labels ? s : 0;
 
@@ -2206,14 +2211,14 @@ export class GobanCanvas extends GobanCore {
             oy = -s * this.bounds.top;
         }
 
-        ctx.save()
-        
+        ctx.save();
+
         if (this.square_size < 5) {
             ctx.lineWidth = 0.2;
         } else {
             ctx.lineWidth = 1;
         }
-        
+
         ctx.strokeStyle = this.theme_line_color;
         ctx.fillStyle = this.theme_star_color;
 
@@ -2221,38 +2226,50 @@ export class GobanCanvas extends GobanCore {
         /*
         if (have_text_to_draw) {
             ctx.strokeStyle = this.theme_faded_line_color;
-        } 
+        }
         */
 
         // continue lines off-board during zoom in puzzles
         // this helps the player see that it's not the edge of the board
 
         // vertical
-       for (let i = 0; i < this.width; i++) {
-            ctx.beginPath()
-            ctx.moveTo(Math.floor(i*s+ox + this.metrics.mid), Math.floor(oy + this.metrics.mid))
-            ctx.lineTo(Math.floor(i*s+ox + this.metrics.mid), Math.floor(oy + this.metrics.mid + (this.height-1)*s))
-            ctx.stroke()
-       }
-       
-       //horizontal
-        for (let j = 0; j < this.height; j++) {
-            ctx.beginPath()
-            ctx.moveTo(Math.floor(ox + this.metrics.mid), Math.floor(j*s+oy + this.metrics.mid))
-            ctx.lineTo(Math.floor(ox + this.metrics.mid + (this.width-1)*s), Math.floor(j*s+oy + this.metrics.mid))
-            ctx.stroke()
+        for (let i = 0; i < this.width; i++) {
+            ctx.beginPath();
+            ctx.moveTo(
+                Math.floor(i * s + ox + this.metrics.mid),
+                Math.floor(oy + this.metrics.mid),
+            );
+            ctx.lineTo(
+                Math.floor(i * s + ox + this.metrics.mid),
+                Math.floor(oy + this.metrics.mid + (this.height - 1) * s),
+            );
+            ctx.stroke();
         }
-   
-        ctx.restore()
+
+        //horizontal
+        for (let j = 0; j < this.height; j++) {
+            ctx.beginPath();
+            ctx.moveTo(
+                Math.floor(ox + this.metrics.mid),
+                Math.floor(j * s + oy + this.metrics.mid),
+            );
+            ctx.lineTo(
+                Math.floor(ox + this.metrics.mid + (this.width - 1) * s),
+                Math.floor(j * s + oy + this.metrics.mid),
+            );
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 
     private drawStars(ctx: CanvasRenderingContext2D): void {
         /* draw the board's stars into the cxt provided, which should be the grid layer */
-        let s = this.square_size
-        let ox = this.draw_left_labels ? s : 0;
-        let oy = this.draw_top_labels ? s : 0;
+        const s = this.square_size;
+        const ox = this.draw_left_labels ? s : 0;
+        const oy = this.draw_top_labels ? s : 0;
 
-        ctx.save()
+        ctx.save();
         ctx.fillStyle = this.theme_star_color;
 
         /* Draw star points */
@@ -2264,39 +2281,53 @@ export class GobanCanvas extends GobanCore {
         }
         //let draw_star_point = false;
 
-        let points:any = []
+        let points: any = [];
 
-        if (this.width == 19 && this.height == 19) {
+        if (this.width === 19 && this.height === 19) {
             points = [
-                [3,3], [3,9], [3,15],
-                [9,3], [9,9], [9,15],
-                [15,3], [15,9], [15,15]
-            ]
+                [3, 3],
+                [3, 9],
+                [3, 15],
+                [9, 3],
+                [9, 9],
+                [9, 15],
+                [15, 3],
+                [15, 9],
+                [15, 15],
+            ];
         }
 
-        if (this.width == 13 && this.height == 13){
+        if (this.width === 13 && this.height === 13) {
             points = [
-                [3,3], [3,9],
-                [6,6],
-                [9, 3], [9,9]
-            ]
+                [3, 3],
+                [3, 9],
+                [6, 6],
+                [9, 3],
+                [9, 9],
+            ];
         }
 
-        if (this.width == 9 && this.height == 9) {
+        if (this.width === 9 && this.height === 9) {
             points = [
-                [2,2], [2,6],
-                [4,4],
-                [6,2], [6,6]
-            ]
+                [2, 2],
+                [2, 6],
+                [4, 4],
+                [6, 2],
+                [6, 6],
+            ];
         }
 
-        for (let p of points) {
+        for (const p of points) {
             // accomodate puzzle cropping:
-            if (p[0] > this.bounded_width) continue
-            if (p[1] > this.bounded_height) continue
+            if (p[0] > this.bounded_width) {
+                continue;
+            }
+            if (p[1] > this.bounded_height) {
+                continue;
+            }
 
-            let cx = p[0]*s +ox  + this.metrics.mid;
-            let cy = p[1]*s + oy + this.metrics.mid;
+            const cx = p[0] * s + ox + this.metrics.mid;
+            const cy = p[1] * s + oy + this.metrics.mid;
 
             ctx.beginPath();
             ctx.fillStyle = this.theme_star_color;
@@ -2307,7 +2338,7 @@ export class GobanCanvas extends GobanCore {
                 ctx.fillStyle = this.theme_faded_star_color;
             }
             */
-        ctx.arc(
+            ctx.arc(
                 cx,
                 cy,
                 star_radius,
@@ -2315,22 +2346,21 @@ export class GobanCanvas extends GobanCore {
                 2 * Math.PI,
                 false,
             ); /* 0.001 to workaround fucked up chrome 27 bug */
-            ctx.fill();            
+            ctx.fill();
         }
-        
-        ctx.restore()
+
+        ctx.restore();
     }
 
-
-    public placeText (ctx: CanvasRenderingContext2D, ch: string, x: number, y: number): void {
+    public placeText(ctx: CanvasRenderingContext2D, ch: string, x: number, y: number): void {
         /* places centered (horizontally & veritcally) text at x,y */
         const metrics = ctx.measureText(ch);
         const xx = x - metrics.width / 2;
         const yy = y;
         ctx.fillText(ch, xx, yy);
-    };
+    }
 
-    public vplaceText (ctx: CanvasRenderingContext2D, ch: string, x: number, y: number): void {
+    public vplaceText(ctx: CanvasRenderingContext2D, ch: string, x: number, y: number): void {
         /* places centered (horizontally & veritcally) text at x,y, with text going down vertically. */
         for (let i = 0; i < ch.length; ++i) {
             const metrics = this.ctx.measureText(ch[i]);
@@ -2348,33 +2378,42 @@ export class GobanCanvas extends GobanCore {
 
             ctx.fillText(ch[i], xx, yy);
         }
-    };
+    }
 
-    public drawHorizontalCoordinates (ctx: CanvasRenderingContext2D, i: number, j: number): void {
+    public drawHorizontalCoordinates(ctx: CanvasRenderingContext2D, i: number, j: number): void {
         switch (this.getCoordinateDisplaySystem()) {
             case "A1":
                 for (let c = 0; c < this.bounded_width; ++i, ++c) {
-                    const x = c * this.square_size + this.square_size / 2 + (+this.draw_left_labels)*this.square_size;
+                    const x =
+                        c * this.square_size +
+                        this.square_size / 2 +
+                        +this.draw_left_labels * this.square_size;
                     const y = j * this.square_size + this.square_size / 2;
                     this.placeText(ctx, "ABCDEFGHJKLMNOPQRSTUVWXYZ"[c], x, y);
                 }
                 break;
             case "1-1":
                 for (let c = 0; i <= this.bounded_width; ++i, ++c) {
-                    const x = c * this.square_size + this.square_size / 2 + (+this.draw_left_labels)*this.square_size;
+                    const x =
+                        c * this.square_size +
+                        this.square_size / 2 +
+                        +this.draw_left_labels * this.square_size;
                     const y = j * this.square_size + this.square_size / 2;
                     this.placeText(ctx, "" + (c + 1), x, y);
                 }
                 break;
         }
-    };
+    }
 
-    public drawVerticalCoordinates (ctx: CanvasRenderingContext2D, i: number, j: number): void {
+    public drawVerticalCoordinates(ctx: CanvasRenderingContext2D, i: number, j: number): void {
         switch (this.getCoordinateDisplaySystem()) {
             case "A1":
                 for (let c = 0; c < this.bounded_height; ++j, ++c) {
                     const x = i * this.square_size + this.square_size / 2;
-                    const y = c * this.square_size + this.square_size / 2 + (+this.draw_top_labels)*this.square_size;
+                    const y =
+                        c * this.square_size +
+                        this.square_size / 2 +
+                        +this.draw_top_labels * this.square_size;
                     this.placeText(ctx, "" + (this.bounded_height - c), x, y);
                 }
                 break;
@@ -2408,12 +2447,15 @@ export class GobanCanvas extends GobanCore {
                 ];
                 for (let c = 0; c < this.bounded_height; ++j, ++c) {
                     const x = i * this.square_size + this.square_size / 2;
-                    const y = c * this.square_size + this.square_size / 2 + (+this.draw_top_labels)*this.square_size;
+                    const y =
+                        c * this.square_size +
+                        this.square_size / 2 +
+                        +this.draw_top_labels * this.square_size;
                     this.vplaceText(ctx, chinese_japanese_numbers[c], x, y);
                 }
                 break;
         }
-    };
+    }
 
     private drawCoordinates(ctx: CanvasRenderingContext2D): void {
         /* draw the board's coordinates into the cxt provided, which should be the grid layer */
@@ -2437,29 +2479,32 @@ export class GobanCanvas extends GobanCore {
             this.drawHorizontalCoordinates(ctx, this.draw_left_labels ? 1 : 0, 0);
         }
         if (this.draw_bottom_labels && this.bounds.bottom === this.height - 1) {
-            this.drawHorizontalCoordinates(ctx, 
+            this.drawHorizontalCoordinates(
+                ctx,
                 this.draw_left_labels ? 1 : 0,
                 +this.draw_top_labels + this.bounded_height,
             );
         }
-        
+
         if (this.draw_left_labels && this.bounds.left === 0) {
             this.drawVerticalCoordinates(ctx, 0, this.draw_top_labels ? 1 : 0);
         }
         if (this.draw_right_labels && this.bounds.right === this.width - 1) {
-            this.drawVerticalCoordinates(ctx, +this.draw_left_labels + this.bounded_width, +this.draw_top_labels);
+            this.drawVerticalCoordinates(
+                ctx,
+                +this.draw_left_labels + this.bounded_width,
+                +this.draw_top_labels,
+            );
         }
 
         ctx.restore();
-
     }
 
     private drawGridLayer(ctx: CanvasRenderingContext2D): void {
-        
-        ctx.clearRect(0,0, this.grid_layer.width, this.grid_layer.height)
-        this.drawGrid(ctx)
-        this.drawStars(ctx)
-        this.drawCoordinates(ctx)
+        ctx.clearRect(0, 0, this.grid_layer.width, this.grid_layer.height);
+        this.drawGrid(ctx);
+        this.drawStars(ctx);
+        this.drawCoordinates(ctx);
     }
 
     private __drawSquare(i: number, j: number): void {
@@ -2477,29 +2522,29 @@ export class GobanCanvas extends GobanCore {
             return;
         }
 
-        let draw_last_move = !this.dont_draw_last_move;
+        const draw_last_move = !this.dont_draw_last_move;
 
-        let d = this.getDrawInfo(i,j)
-        let drawn = false
+        const d = this.getDrawInfo(i, j);
+        let drawn = false;
 
         this.drawHeatmap(i, j, d);
         this.drawSquareHighlights(i, j, d);
-        
+
         this.drawColoredStone(i, j, d);
-        this.drawStone(i,j, d);        
-        this.drawScoring(i,j, d);        
-        
-        if (this.drawTextLabels(i,j, d)) {
-            drawn = this.drawSymbols(i,j, true, d); // request transparent draw
+        this.drawStone(i, j, d);
+        this.drawScoring(i, j, d);
+
+        if (this.drawTextLabels(i, j, d)) {
+            drawn = this.drawSymbols(i, j, true, d); // request transparent draw
         } else {
-            drawn = this.drawSymbols(i,j, false, d);
+            drawn = this.drawSymbols(i, j, false, d);
         }
-        
-        if (!drawn && draw_last_move) 
-            this.drawLastMove(i,j, d);
 
-        this.drawScoreEstimate(i,j, d);
+        if (!drawn && draw_last_move) {
+            this.drawLastMove(i, j, d);
+        }
 
+        this.drawScoreEstimate(i, j, d);
     }
 
     private drawingHash(i: number, j: number): string {
@@ -2852,7 +2897,7 @@ export class GobanCanvas extends GobanCore {
             return;
         }
         // console.log(this) // helpful when debugging
-        
+
         const metrics = (this.metrics = this.computeMetrics());
         if (
             force_clear ||
@@ -2875,14 +2920,12 @@ export class GobanCanvas extends GobanCore {
                 resizeDeviceScaledCanvas(this.grid_layer, metrics.width, metrics.height);
                 this.grid_layer.style.left = this.layer_offset_left + "px";
                 this.grid_layer.style.top = this.layer_offset_top + "px";
-                const under_ctx = this.grid_layer.getContext("2d")
+                const under_ctx = this.grid_layer.getContext("2d");
                 if (under_ctx) {
                     this.grid_ctx = under_ctx;
-                }else {
+                } else {
                     throw new Error(`Failed to obtain drawing context for understone layer`);
                 }
-
-
 
                 if (this.pen_layer) {
                     if (this.pen_marks.length) {
@@ -2933,7 +2976,6 @@ export class GobanCanvas extends GobanCore {
         }
         const ctx = this.ctx;
 
-                
         if (force_clear || !this.__borders_initialized) {
             this.__borders_initialized = true;
             /*
@@ -2943,47 +2985,48 @@ export class GobanCanvas extends GobanCore {
             */
             /* Draw markings on the board */
             this.drawGridLayer(this.grid_ctx);
-
         }
 
-            /* Draw squares */
-            if (
-                !this.__draw_state ||
-                force_clear ||
-                this.__draw_state.length !== this.height ||
-                this.__draw_state[0].length !== this.width
-            ) {
-                this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
-            }
+        /* Draw squares */
+        if (
+            !this.__draw_state ||
+            force_clear ||
+            this.__draw_state.length !== this.height ||
+            this.__draw_state[0].length !== this.width
+        ) {
+            this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
+        }
 
-            /* Set font for text overlay */
-            {
-                const text_size = Math.round(this.square_size * 0.45);
-                ctx.font = "bold " + text_size + "px " + GOBAN_FONT;
-            }
+        /* Set font for text overlay */
+        {
+            const text_size = Math.round(this.square_size * 0.45);
+            ctx.font = "bold " + text_size + "px " + GOBAN_FONT;
+        }
 
-            for (let j = this.bounds.top; j <= this.bounds.bottom; ++j) {
-                for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
-                    let drawit = false
+        for (let j = this.bounds.top; j <= this.bounds.bottom; ++j) {
+            for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
+                let drawit = false;
 
-                    // this state change check is here because full redraw() is
-                    // called from basically everywhere when a limited update would do
-                    let jm = JSON.stringify(this.engine.cur_move.getMarks(i,j))
-                    let jb = JSON.stringify(this.engine.board[j][i])
+                // this state change check is here because full redraw() is
+                // called from basically everywhere when a limited update would do
+                const jm = JSON.stringify(this.engine.cur_move.getMarks(i, j));
+                const jb = JSON.stringify(this.engine.board[j][i]);
 
-                    if (this.previous_marks[j][i] != jm) drawit = true
-                    if (this.previous_board[j][i] != jb) drawit = true                    
-                    
-                    if (drawit || force_clear || 
-                        (this.engine.cur_move.x === i &&
-                        this.engine.cur_move.y === j)
-                        ){ // always draw current move due to glitch in marking last move
-                        this.drawSquare(i, j);
-                        this.previous_marks[j][i] = jm
-                        this.previous_board[j][i] = jb
-                    }
+                if (this.previous_marks[j][i] !== jm) {
+                    drawit = true;
+                }
+                if (this.previous_board[j][i] !== jb) {
+                    drawit = true;
+                }
+
+                if (force_clear || (this.engine.cur_move.x === i && this.engine.cur_move.y === j)) {
+                    // always draw current move due to glitch in marking last move
+                    this.drawSquare(i, j);
+                    this.previous_marks[j][i] = jm;
+                    this.previous_board[j][i] = jb;
                 }
             }
+        }
 
         this.drawPenMarks(this.pen_marks);
         this.move_tree_redraw();
@@ -3039,7 +3082,7 @@ export class GobanCanvas extends GobanCore {
             delete this.message_timeout;
         }
     }
-    
+
     protected setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
             return;
@@ -3115,7 +3158,7 @@ export class GobanCanvas extends GobanCore {
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];
         this.theme_black_stones = __theme_cache.black[themes.black][this.theme_stone_radius];
         this.theme_line_color = this.theme_board.getLineColor();
-        
+
         // FIXME: lines/stars should be faded in __drawSquare on demand
 
         this.theme_faded_line_color = this.theme_board.getFadedLineColor();
