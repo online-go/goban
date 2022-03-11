@@ -2317,7 +2317,7 @@ export class GobanCanvas extends GobanCore {
             ];
         }
 
-        const midlineTweak = -0.5
+        const midlineTweak = -0.5;
         for (const p of points) {
             // accomodate puzzle cropping:
             if (p[0] > this.bounded_width) {
