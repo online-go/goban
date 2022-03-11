@@ -66,7 +66,12 @@ export class JSONThemeStyle {
 
     "whiteStoneColor"?: string = "#ffffff"; // perceived color of the stone image, eg #000000
     "blackStoneColor"?: string = "#000000";
-    
+
+    "whiteStoneLineWidth"?: number = 1/20;
+    "blackStoneLineWidth"?: number = 0;
+    "whiteStoneLineColor"?: string = "#000000";
+    "blackStoneLineColor"?: string = "#000000";
+
     "whiteTextColor"?: string = "#000000"; // color to use for labels above white stone
     "blackTextColor"?: string = "#ffffff";
     
@@ -108,8 +113,8 @@ export class JSONThemeStyle {
     "blackShadowSizes": Array<[number, number] | number> = [1,1];
     
     "shadowRotations": Array<number> = [0]; // general rotations for both stones, added to the below values
-    "blackShadowRotations": Array<number> = [0, 0];
-    "whiteShadowRotations": Array<number> = [0, 0];
+    "blackShadowRotations": Array<number> = [0];
+    "whiteShadowRotations": Array<number> = [0];
 
     "priority": number = 4; // number used for sorting on screen, greater == later, 100 is typical -- FIXME shouldn't really be user-assignable
 
@@ -462,10 +467,11 @@ export class JSONTheme extends GoTheme {
         cy: number,
         radius: number,
     ) {
+        // random by position
+        const rando = Math.floor(cx*31 + cy*29);
+
         if (this.whiteImages.length > 0){
 
-            //random by position
-            let rando = Math.floor(cx*31 + cy*29)
 
             if (shadow_ctx != undefined && this.whiteShadowImages.length > 0){
                 let img = this.whiteShadowImages[rando % this.whiteShadowImages.length]
@@ -494,9 +500,21 @@ export class JSONTheme extends GoTheme {
             ctx.setTransform(t)
         }
         else {
-            let rando = Math.floor(cx*31 + cy*29);
 
-            //if (shadow_ctx) do something
+            if (shadow_ctx && this.whiteShadowImages.length > 0){
+                let img = this.whiteShadowImages[rando % this.whiteShadowImages.length]
+                
+                let t = shadow_ctx.getTransform();
+
+                shadow_ctx.translate(cx,cy);
+                shadow_ctx.scale(radius*2.0, radius*2.0);
+                this.activateMatrixFor(shadow_ctx, "whiteShadow", rando);
+
+                shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+
+                shadow_ctx.setTransform(t);
+
+            }            
             let t = ctx.getTransform();
             ctx.save()
             ctx.translate(cx,cy);
@@ -504,13 +522,14 @@ export class JSONTheme extends GoTheme {
             this.activateMatrixFor(ctx, "white", rando);
 
             ctx.fillStyle = this.getWhiteStoneColor();
-            ctx.strokeStyle = this.getWhiteTextColor();
-            ctx.lineWidth = 1/20;
+            ctx.strokeStyle = this.getWhiteStoneLineColor();
+            ctx.lineWidth = this.getWhiteStoneLineWidth();
             ctx.beginPath();
             //ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
             ctx.arc(0,0, 0.5, 0, 2*Math.PI, true)
             ctx.fill();
-            ctx.stroke();
+            if (this.getWhiteStoneLineWidth() > 0)
+                ctx.stroke();
             ctx.restore()
             ctx.setTransform(t);
         }
@@ -524,10 +543,10 @@ export class JSONTheme extends GoTheme {
         cy: number,
         radius: number,
     ) {
-        if (this.blackImages.length > 0) {
+        // random by position
+        const rando = Math.floor(cx * 31 + cy * 29)
 
-            //random by position
-            let rando = Math.floor(cx * 31 + cy * 29)
+        if (this.blackImages.length > 0) {
 
             if (shadow_ctx != undefined && this.blackShadowImages.length > 0) {
                 let img = this.blackShadowImages[rando % this.blackShadowImages.length]
@@ -555,21 +574,34 @@ export class JSONTheme extends GoTheme {
         }
         else {
 
-            //if (shadow_ctx) do something
-            let t = ctx.getTransform();
-            let rando = Math.floor(cx*31 + cy*29);
+
+            if (shadow_ctx != undefined && this.blackShadowImages.length > 0) {
+                let img = this.blackShadowImages[rando % this.blackShadowImages.length]
+                
+                let t = shadow_ctx.getTransform();
+                shadow_ctx.translate(cx,cy);
+                shadow_ctx.scale(radius*2.0, radius*2.0);
+                this.activateMatrixFor(shadow_ctx, "blackShadow", rando);
+                shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+
+                shadow_ctx.setTransform(t);
+
+            }
+                        let t = ctx.getTransform();
+
             ctx.save()
             ctx.translate(cx,cy);
             ctx.scale(radius*2, radius*2);
             this.activateMatrixFor(ctx, "black", rando);
 
             ctx.fillStyle = this.getBlackStoneColor();
-            ctx.strokeStyle = this.getBlackTextColor();
-            ctx.lineWidth = 1/20;
+            ctx.strokeStyle = this.getBlackStoneLineColor();
+            ctx.lineWidth = this.getBlackStoneLineWidth();
             ctx.beginPath();
             ctx.arc(0,0, 0.5, 0, 2*Math.PI, true);
             ctx.fill();
-            // ctx.stroke(); // black stones don't need a stroke if they're dark (and they prob will be)
+            if (this.getBlackStoneLineWidth() > 0)
+                ctx.stroke(); 
             ctx.restore();
             ctx.setTransform(t);
         }
@@ -585,9 +617,23 @@ export class JSONTheme extends GoTheme {
     /* Returns the color that should be used for white stones */
     public getWhiteStoneColor(): string {
         if (JSONTheme.styles.whiteStoneColor)
-            return JSONTheme.styles.whiteStoneColor
+            return JSONTheme.styles.whiteStoneColor;
         else
             return "#ffffff"
+    }
+
+    public getWhiteStoneLineColor(): string {
+        if (JSONTheme.styles.whiteStoneLineColor)
+            return JSONTheme.styles.whiteStoneLineColor;
+        else
+            return this.getWhiteTextColor()
+    }
+
+    public getWhiteStoneLineWidth(): number {
+        if (JSONTheme.styles.whiteStoneLineWidth != undefined)
+            return JSONTheme.styles.whiteStoneLineWidth;
+        else
+            return 1/20;
     }
 
     /* Returns the color that should be used for black stones */
@@ -598,6 +644,22 @@ export class JSONTheme extends GoTheme {
             return "#000000"
     }
 
+
+    public getBlackStoneLineColor(): string {
+        if (JSONTheme.styles.blackStoneLineColor)
+            return JSONTheme.styles.blackStoneLineColor;
+        else
+            return "#000000" // black stones are usuallly dark and don't need a line
+    }
+
+    public getBlackStoneLineWidth(): number {
+        if (JSONTheme.styles.blackStoneLineWidth)
+            return JSONTheme.styles.blackStoneLineWidth;
+        else
+            return 0; // black stones are usuallly dark and don't need a line
+    }
+    
+    
     /* Returns the color that should be used for text over white stones */
     public getWhiteTextColor(color?: string): string {
         if (JSONTheme.styles.whiteTextColor)
