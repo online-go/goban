@@ -115,6 +115,7 @@ export class JSONThemeStyle {
     "whiteShadowRotations": Array<number> = [0];
 
     "priority": number = 4; // number used for sorting on screen, greater == later, 100 is typical -- FIXME shouldn't really be user-assignable
+    "randomSeed": number = 2083; // in case the stones look dorky with built-in seed
 }
 
 export class JSONTheme extends GoTheme {
@@ -131,6 +132,7 @@ export class JSONTheme extends GoTheme {
     protected blackImages: CanvasImageSource[] = [];
     protected whiteShadowImages: CanvasImageSource[] = [];
     protected blackShadowImages: CanvasImageSource[] = [];
+    protected matrices: Array<any> = [];
 
     constructor(parent?: GoTheme) {
         super();
@@ -205,6 +207,65 @@ export class JSONTheme extends GoTheme {
         }
     }
 
+    public rebuildMatrices(seed: number) {
+        this.matrices = JSONTheme.buildMatrices(seed);
+    }
+    protected static buildMatrices(seed: number): Array<any> {
+        // have to use static method because theme changes arent honored due to pre-rendered stone caching
+        // see further below for the activateMatrixFor() routines
+
+        let rando = 31 * seed + 73 * seed; // not sure if i need extra salt but whatevah
+
+        let dummy: HTMLCanvasElement;
+        let ctx;
+        if (typeof document !== "undefined") {
+            dummy = document.createElement("canvas");
+            dummy.setAttribute("width", "256px");
+            dummy.setAttribute("height", "256px");
+            ctx = dummy.getContext("2d");
+
+            if (!ctx) {
+                throw new Error("Error getting stone context 2d");
+            }
+
+            const matrixArray = [];
+            for (let i = 0; i < 15; i++) {
+                // 15 should be enough ?
+                const matrices = {
+                    whiteMatrix: ctx.getTransform(), // just to establish type
+                    blackMatrix: ctx.getTransform(),
+                    whiteShadowMatrix: ctx.getTransform(),
+                    blackShadowMatrix: ctx.getTransform(),
+                    rando: rando,
+                };
+
+                ctx.resetTransform();
+                JSONTheme.activateMatrixFor(ctx, "white", rando);
+                matrices.whiteMatrix = ctx.getTransform();
+
+                ctx.resetTransform();
+                JSONTheme.activateMatrixFor(ctx, "black", rando);
+                matrices.blackMatrix = ctx.getTransform();
+
+                ctx.resetTransform();
+                JSONTheme.activateMatrixFor(ctx, "whiteShadow", rando);
+                matrices.whiteShadowMatrix = ctx.getTransform();
+
+                ctx.resetTransform();
+                JSONTheme.activateMatrixFor(ctx, "blackShadow", rando);
+                matrices.blackShadowMatrix = ctx.getTransform();
+
+                matrixArray.push(matrices);
+                rando = rando + 73 * rando;
+            }
+            return matrixArray;
+        } else {
+            throw new Error(
+                "JSONTheme: Couldn't build a graphics context to calculate stone matrices (sry!) ",
+            );
+        }
+    }
+
     public loadFromURL(url: string) {}
 
     protected static loadFromText(text: string): boolean {
@@ -260,6 +321,7 @@ export class JSONTheme extends GoTheme {
     public loadFromText(text: string) {
         if (JSONTheme.loadFromText(text)) {
             this.rebuildImages();
+            this.rebuildMatrices(JSONTheme.styles.randomSeed);
         }
     }
 
@@ -275,21 +337,34 @@ export class JSONTheme extends GoTheme {
         return JSONTheme.styles;
     }
 
+    public preRenderStone(radius: number, seed: number) {
+        // just build some static seeds so the stones don't wiggle from using position as a seed
+        let rando = seed * 181;
+        const arrayOfSeeds = [];
+
+        for (let i = 0; i < 50; ++i) {
+            arrayOfSeeds.push({ rando: rando });
+            rando = rando * 181 + 29 * rando; // meh, too lazy for rng, it's just stones
+        }
+
+        return arrayOfSeeds; // this.preRenderStone(radius, seed);
+    }
+
     /* Returns an array of black stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeBlackStone method */
     public preRenderBlack(radius: number, seed: number): any {
-        return true; // { black: "stone" };
+        return this.preRenderStone(radius, seed);
     }
 
     /* Returns an array of white stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeWhiteStone method */
     public preRenderWhite(radius: number, seed: number): any {
-        return { white: "stone" };
+        return this.preRenderStone(radius, seed);
     }
 
-    public multiRotate(
+    public static multiRotate(
         ctx: CanvasRenderingContext2D,
         rotations: Array<Array<number>>,
         rando: number,
@@ -302,8 +377,15 @@ export class JSONTheme extends GoTheme {
         }
         ctx.rotate((tot * Math.PI) / 180.0);
     }
+    public multiRotate(
+        ctx: CanvasRenderingContext2D,
+        rotations: Array<Array<number>>,
+        rando: number,
+    ) {
+        JSONTheme.multiRotate(ctx, rotations, rando);
+    }
 
-    public multiTranslate(
+    public static multiTranslate(
         ctx: CanvasRenderingContext2D,
         translations: Array<Array<[number, number]>>,
         rando: number,
@@ -325,7 +407,16 @@ export class JSONTheme extends GoTheme {
         }
     }
 
-    public multiScale(
+    public multiTranslate(
+        ctx: CanvasRenderingContext2D,
+        translations: Array<Array<[number, number]>>,
+        rando: number,
+        inverse: boolean = false,
+    ) {
+        JSONTheme.multiTranslate(ctx, translations, rando, inverse);
+    }
+
+    public static multiScale(
         ctx: CanvasRenderingContext2D,
         scales: Array<Array<[number, number] | number>>,
         rando: number,
@@ -344,8 +435,15 @@ export class JSONTheme extends GoTheme {
             }
         }
     }
+    public multiScale(
+        ctx: CanvasRenderingContext2D,
+        scales: Array<Array<[number, number] | number>>,
+        rando: number,
+    ) {
+        JSONTheme.multiScale(ctx, scales, rando);
+    }
 
-    public activateMatrixFor(ctx: CanvasRenderingContext2D, kind: string, rando: number) {
+    public static activateMatrixFor(ctx: CanvasRenderingContext2D, kind: string, rando: number) {
         const rots = JSONTheme.styles.rotations;
         const offs = JSONTheme.styles.offsets;
         const sizes = JSONTheme.styles.sizes;
@@ -360,62 +458,83 @@ export class JSONTheme extends GoTheme {
 
         switch (kind) {
             case "white":
-                this.multiTranslate(
+                JSONTheme.multiTranslate(
                     ctx,
                     [offs, stoneOffs, JSONTheme.styles.whiteStoneOffsets],
                     rando,
                     false,
                 );
-                this.multiScale(ctx, [sizes, stoneSizes, JSONTheme.styles.whiteStoneSizes], rando);
-                this.multiRotate(
+                JSONTheme.multiScale(
+                    ctx,
+                    [sizes, stoneSizes, JSONTheme.styles.whiteStoneSizes],
+                    rando,
+                );
+                JSONTheme.multiRotate(
                     ctx,
                     [rots, stoneRots, JSONTheme.styles.whiteStoneRotations],
                     rando,
                 );
                 break;
             case "black":
-                this.multiTranslate(
+                JSONTheme.multiTranslate(
                     ctx,
                     [offs, stoneOffs, JSONTheme.styles.blackStoneOffsets],
                     rando,
                     false,
                 );
-                this.multiScale(ctx, [sizes, stoneSizes, JSONTheme.styles.blackStoneSizes], rando);
-                this.multiRotate(
+                JSONTheme.multiScale(
+                    ctx,
+                    [sizes, stoneSizes, JSONTheme.styles.blackStoneSizes],
+                    rando,
+                );
+                JSONTheme.multiRotate(
                     ctx,
                     [rots, stoneRots, JSONTheme.styles.blackStoneRotations],
                     rando,
                 );
                 break;
             case "blackShadow":
-                this.multiTranslate(
+                JSONTheme.multiTranslate(
                     ctx,
                     [offs, shadOffs, JSONTheme.styles.blackShadowOffsets],
                     rando,
                     false,
                 );
-                this.multiScale(ctx, [sizes, shadSizes, JSONTheme.styles.blackShadowSizes], rando);
-                this.multiRotate(
+                JSONTheme.multiScale(
+                    ctx,
+                    [sizes, shadSizes, JSONTheme.styles.blackShadowSizes],
+                    rando,
+                );
+                JSONTheme.multiRotate(
                     ctx,
                     [rots, shadRots, JSONTheme.styles.blackShadowRotations],
                     rando,
                 );
                 break;
             case "whiteShadow":
-                this.multiTranslate(
+                JSONTheme.multiTranslate(
                     ctx,
                     [offs, shadOffs, JSONTheme.styles.whiteShadowOffsets],
                     rando,
                     false,
                 );
-                this.multiScale(ctx, [sizes, shadSizes, JSONTheme.styles.whiteShadowSizes], rando);
-                this.multiRotate(
+                JSONTheme.multiScale(
+                    ctx,
+                    [sizes, shadSizes, JSONTheme.styles.whiteShadowSizes],
+                    rando,
+                );
+                JSONTheme.multiRotate(
                     ctx,
                     [rots, shadRots, JSONTheme.styles.whiteShadowRotations],
                     rando,
                 );
         }
     }
+
+    public activateMatrixFor(ctx: CanvasRenderingContext2D, kind: string, rando: number) {
+        JSONTheme.activateMatrixFor(ctx, kind, rando);
+    }
+
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
     public placeWhiteStone(
         ctx: CanvasRenderingContext2D,
@@ -425,43 +544,46 @@ export class JSONTheme extends GoTheme {
         cy: number,
         radius: number,
     ) {
-        // random by position
-        const rando = Math.floor(cx * 31 + cy * 29);
-
+        // random by position ( jumping-bean stones fixed by using constant seed in prerenderstone())
+        // const rando = Math.floor(cx * 31 + cy * 29);
+        //console.log(JSON.stringify(stone))
         if (this.whiteImages.length > 0) {
             if (shadow_ctx && this.whiteShadowImages.length > 0) {
-                const img = this.whiteShadowImages[rando % this.whiteShadowImages.length];
+                const img = this.whiteShadowImages[stone.rando % this.whiteShadowImages.length];
 
                 const t = shadow_ctx.getTransform();
 
                 shadow_ctx.translate(cx, cy);
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
-                this.activateMatrixFor(shadow_ctx, "whiteShadow", rando);
+                const m = this.matrices[stone.rando % this.matrices.length]["whiteShadowMatrix"];
+                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
 
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
             }
-            const img = this.whiteImages[rando % this.whiteImages.length];
+            const img = this.whiteImages[stone.rando % this.whiteImages.length];
 
             const t = ctx.getTransform();
 
             ctx.translate(cx, cy);
             ctx.scale(radius * 2.0, radius * 2.0);
-            this.activateMatrixFor(ctx, "white", rando);
+            const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
+            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
 
             ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
             ctx.setTransform(t);
         } else {
             if (shadow_ctx && this.whiteShadowImages.length > 0) {
-                const img = this.whiteShadowImages[rando % this.whiteShadowImages.length];
+                const img = this.whiteShadowImages[stone.rando % this.whiteShadowImages.length];
 
                 const t = shadow_ctx.getTransform();
 
                 shadow_ctx.translate(cx, cy);
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
-                this.activateMatrixFor(shadow_ctx, "whiteShadow", rando);
+                const m = this.matrices[stone.rando % this.matrices.length]["whiteShadowMatrix"];
+                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
 
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
@@ -471,7 +593,8 @@ export class JSONTheme extends GoTheme {
             ctx.save();
             ctx.translate(cx, cy);
             ctx.scale(radius * 2, radius * 2);
-            this.activateMatrixFor(ctx, "white", rando);
+            const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
+            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
 
             ctx.fillStyle = this.getWhiteStoneColor();
             ctx.strokeStyle = this.getWhiteStoneLineColor();
@@ -496,39 +619,43 @@ export class JSONTheme extends GoTheme {
         cy: number,
         radius: number,
     ) {
-        // random by position
-        const rando = Math.floor(cx * 31 + cy * 29);
-
         if (this.blackImages.length > 0) {
             if (shadow_ctx && this.blackShadowImages.length > 0) {
-                const img = this.blackShadowImages[rando % this.blackShadowImages.length];
+                const img = this.blackShadowImages[stone.rando % this.blackShadowImages.length];
 
                 const t = shadow_ctx.getTransform();
+
                 shadow_ctx.translate(cx, cy);
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
-                this.activateMatrixFor(shadow_ctx, "blackShadow", rando);
+
+                const m = this.matrices[stone.rando % this.matrices.length]["blackShadowMatrix"];
+                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
             }
 
-            const img = this.blackImages[rando % this.blackImages.length];
+            const img = this.blackImages[stone.rando % this.blackImages.length];
 
             const t = ctx.getTransform();
             ctx.translate(cx, cy);
             ctx.scale(radius * 2.0, radius * 2.0);
-            this.activateMatrixFor(ctx, "black", rando);
+            const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
+            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+
             ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
             ctx.setTransform(t);
         } else {
             if (shadow_ctx && this.blackShadowImages.length > 0) {
-                const img = this.blackShadowImages[rando % this.blackShadowImages.length];
+                const img = this.blackShadowImages[stone.rando % this.blackShadowImages.length];
 
                 const t = shadow_ctx.getTransform();
                 shadow_ctx.translate(cx, cy);
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
-                this.activateMatrixFor(shadow_ctx, "blackShadow", rando);
+                const m = this.matrices[stone.rando % this.matrices.length]["blackShadowMatrix"];
+                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
@@ -538,7 +665,9 @@ export class JSONTheme extends GoTheme {
             ctx.save();
             ctx.translate(cx, cy);
             ctx.scale(radius * 2, radius * 2);
-            this.activateMatrixFor(ctx, "black", rando);
+
+            const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
+            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
 
             ctx.fillStyle = this.getBlackStoneColor();
             ctx.strokeStyle = this.getBlackStoneLineColor();
@@ -768,13 +897,14 @@ export class JSONTheme extends GoTheme {
             "boardColor": "#CBA170",
             "boardInkColor": "#382933",
             "whiteStoneColor": "#FAF1E8",
+            "whiteStoneLineWidth": 0,
             "blackStoneColor": "#2B2825",
             "blackTextColor": "#FAF1E8",
             "whiteTextColor": "#2B2825",
             "blankTextColor": "#FAF1E8",
             "sizes": [0.98],
             "offsets": [[0.02, 0.01], [0.05, -0.02], [-0.01, 0.05]]
-        }        
+        }      
         `;
 
         json = `
