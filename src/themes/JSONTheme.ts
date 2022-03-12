@@ -118,6 +118,17 @@ export class JSONThemeStyle {
     "randomSeed": number = 2083; // in case the stones look dorky with built-in seed
 }
 
+type TransformArity = [number, number, number, number, number, number];
+const IDENTITY_TRANSFORM: TransformArity = [1, 0, 0, 1, 0, 0];
+
+class MatrixStore {
+    whiteMatrix: TransformArity = IDENTITY_TRANSFORM;
+    blackMatrix: TransformArity = IDENTITY_TRANSFORM;
+    whiteShadowMatrix: TransformArity = IDENTITY_TRANSFORM;
+    blackShadowMatrix: TransformArity = IDENTITY_TRANSFORM;
+    rando: number = 42;
+}
+
 export class JSONTheme extends GoTheme {
     static json: string = "{}"; // globally available in class so that all the parts can see it without a "preference object"
     static styles: JSONThemeStyle; // constructed from json
@@ -132,7 +143,7 @@ export class JSONTheme extends GoTheme {
     protected blackImages: CanvasImageSource[] = [];
     protected whiteShadowImages: CanvasImageSource[] = [];
     protected blackShadowImages: CanvasImageSource[] = [];
-    protected matrices: Array<any> = [];
+    protected matrices: Array<MatrixStore> = [];
 
     constructor(parent?: GoTheme) {
         super();
@@ -210,9 +221,13 @@ export class JSONTheme extends GoTheme {
     public rebuildMatrices(seed: number) {
         this.matrices = JSONTheme.buildMatrices(seed);
     }
-    protected static buildMatrices(seed: number): Array<any> {
+    protected static buildMatrices(seed: number): Array<MatrixStore> {
         // have to use static method because theme changes arent honored due to pre-rendered stone caching
         // see further below for the activateMatrixFor() routines
+
+        function transform_the_transform(matrix: any): TransformArity {
+            return [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f];
+        }
 
         let rando = 31 * seed + 73 * seed; // not sure if i need extra salt but whatevah
 
@@ -228,32 +243,29 @@ export class JSONTheme extends GoTheme {
                 throw new Error("Error getting stone context 2d");
             }
 
-            const matrixArray = [];
+            const matrixArray: Array<MatrixStore> = [];
+
             for (let i = 0; i < 15; i++) {
                 // 15 should be enough ?
-                const matrices = {
-                    whiteMatrix: ctx.getTransform(), // just to establish type
-                    blackMatrix: ctx.getTransform(),
-                    whiteShadowMatrix: ctx.getTransform(),
-                    blackShadowMatrix: ctx.getTransform(),
-                    rando: rando,
-                };
+                const matrices = new MatrixStore();
 
                 ctx.resetTransform();
                 JSONTheme.activateMatrixFor(ctx, "white", rando);
-                matrices.whiteMatrix = ctx.getTransform();
+                matrices.whiteMatrix = transform_the_transform(ctx.getTransform());
 
                 ctx.resetTransform();
                 JSONTheme.activateMatrixFor(ctx, "black", rando);
-                matrices.blackMatrix = ctx.getTransform();
+                matrices.blackMatrix = transform_the_transform(ctx.getTransform());
 
                 ctx.resetTransform();
                 JSONTheme.activateMatrixFor(ctx, "whiteShadow", rando);
-                matrices.whiteShadowMatrix = ctx.getTransform();
+                matrices.whiteShadowMatrix = transform_the_transform(ctx.getTransform());
 
                 ctx.resetTransform();
                 JSONTheme.activateMatrixFor(ctx, "blackShadow", rando);
-                matrices.blackShadowMatrix = ctx.getTransform();
+                matrices.blackShadowMatrix = transform_the_transform(ctx.getTransform());
+
+                matrices.rando = rando;
 
                 matrixArray.push(matrices);
                 rando = rando + 73 * rando;
@@ -556,7 +568,7 @@ export class JSONTheme extends GoTheme {
                 shadow_ctx.translate(cx, cy);
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 const m = this.matrices[stone.rando % this.matrices.length]["whiteShadowMatrix"];
-                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+                shadow_ctx.transform(...m);
 
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
@@ -569,7 +581,7 @@ export class JSONTheme extends GoTheme {
             ctx.translate(cx, cy);
             ctx.scale(radius * 2.0, radius * 2.0);
             const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
-            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+            ctx.transform(...m);
 
             ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
@@ -583,7 +595,7 @@ export class JSONTheme extends GoTheme {
                 shadow_ctx.translate(cx, cy);
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 const m = this.matrices[stone.rando % this.matrices.length]["whiteShadowMatrix"];
-                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+                shadow_ctx.transform(...m);
 
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
@@ -594,7 +606,7 @@ export class JSONTheme extends GoTheme {
             ctx.translate(cx, cy);
             ctx.scale(radius * 2, radius * 2);
             const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
-            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+            ctx.transform(...m);
 
             ctx.fillStyle = this.getWhiteStoneColor();
             ctx.strokeStyle = this.getWhiteStoneLineColor();
@@ -629,7 +641,7 @@ export class JSONTheme extends GoTheme {
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
 
                 const m = this.matrices[stone.rando % this.matrices.length]["blackShadowMatrix"];
-                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+                shadow_ctx.transform(...m);
 
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
@@ -642,7 +654,7 @@ export class JSONTheme extends GoTheme {
             ctx.translate(cx, cy);
             ctx.scale(radius * 2.0, radius * 2.0);
             const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
-            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+            ctx.transform(...m);
 
             ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
@@ -655,7 +667,7 @@ export class JSONTheme extends GoTheme {
                 shadow_ctx.translate(cx, cy);
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 const m = this.matrices[stone.rando % this.matrices.length]["blackShadowMatrix"];
-                shadow_ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+                shadow_ctx.transform(...m);
                 shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
@@ -667,7 +679,7 @@ export class JSONTheme extends GoTheme {
             ctx.scale(radius * 2, radius * 2);
 
             const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
-            ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+            ctx.transform(...m);
 
             ctx.fillStyle = this.getBlackStoneColor();
             ctx.strokeStyle = this.getBlackStoneLineColor();
