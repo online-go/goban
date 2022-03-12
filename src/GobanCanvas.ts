@@ -79,6 +79,7 @@ interface DrawingInfo {
     textColor: string;
     movetree_contains_this_square: boolean;
     have_text_to_draw: boolean;
+    draw_last_move: boolean;
 }
 
 const HOT_PINK = "#ff69b4";
@@ -1207,6 +1208,8 @@ export class GobanCanvas extends GobanCore {
         /* get a structure holding info needed to draw a square  at i,j */
         const d = {} as DrawingInfo;
 
+        d.draw_last_move = !this.dont_draw_last_move;
+
         d.ctx = this.ctx;
         if (target_ctx) {
             d.ctx = target_ctx;
@@ -1301,7 +1304,12 @@ export class GobanCanvas extends GobanCore {
         return d;
     }
 
-    public makeSquareClip(ctx: CanvasRenderingContext2D | undefined, i: number, j: number) {
+    public makeSquareClip(
+        ctx: CanvasRenderingContext2D | undefined,
+        i: number,
+        j: number,
+        d: DrawingInfo,
+    ) {
         /*
         clip around the current square at an enlarged size for shadows, etc.
         */
@@ -1310,28 +1318,15 @@ export class GobanCanvas extends GobanCore {
             return;
         }
 
-        // these really should use DrawingInfo instead of recalculating
-        const s = this.square_size;
-        let ox = this.draw_left_labels ? s : 0;
-        let oy = this.draw_top_labels ? s : 0;
-
-        // accomodate puzzle cropping
-        if (this.bounds.left > 0) {
-            ox = -s * this.bounds.left;
-        }
-        if (this.bounds.top > 0) {
-            oy = -s * this.bounds.top;
-        }
-
         ctx.save();
         ctx.beginPath();
 
         // extend beyond the square, limit should be next intersection point - grid line width
         ctx.rect(
-            Math.floor(i * s + ox - s / 2),
-            Math.floor(j * s + oy - s / 2),
-            Math.floor(s * 2),
-            Math.floor(s * 2),
+            Math.floor(i * d.size + d.xOffset - d.size / 2),
+            Math.floor(j * d.size + d.yOffset - d.size / 2),
+            Math.floor(d.size * 2),
+            Math.floor(d.size * 2),
         );
 
         ctx.clip();
@@ -1344,44 +1339,42 @@ export class GobanCanvas extends GobanCore {
         ctx.restore();
     }
 
-    public cleanSquareRect(i: number, j: number) {
+    public cleanSquareRect(i: number, j: number, d: DrawingInfo) {
         /*
         erase the entire contents of this square
         at an enlarged size to accomodate shadows, etc.
         */
 
-        // these really should use DrawingInfo instead of recalculating
-        const s = this.square_size;
-        let ox = this.draw_left_labels ? s : 0;
-        let oy = this.draw_top_labels ? s : 0;
-
-        // accommodate puzzle cropping
-        if (this.bounds.left > 0) {
-            ox = -s * this.bounds.left;
-        }
-        if (this.bounds.top > 0) {
-            oy = -s * this.bounds.top;
-        }
-
         this.ctx.clearRect(
-            Math.floor(i * s + ox - s / 2),
-            Math.floor(j * s + oy - s / 2),
-            Math.floor(s * 2),
-            Math.floor(s * 2),
+            Math.floor(i * d.size + d.xOffset - d.size / 2),
+            Math.floor(j * d.size + d.yOffset - d.size / 2),
+            Math.floor(d.size * 2),
+            Math.floor(d.size * 2),
         );
 
         if (this.shadow_ctx) {
             this.shadow_ctx.clearRect(
-                Math.floor(i * s + ox - s / 2),
-                Math.floor(j * s + oy - s / 2),
-                Math.floor(s * 2),
-                Math.floor(s * 2),
+                Math.floor(i * d.size + d.xOffset - d.size / 2),
+                Math.floor(j * d.size + d.yOffset - d.size / 2),
+                Math.floor(d.size * 2),
+                Math.floor(d.size * 2),
             );
         }
     }
 
     public drawSquare(i: number, j: number): void {
         if (i < 0 || j < 0) {
+            return;
+        }
+
+        if (!this.drawing_enabled) {
+            return;
+        }
+        if (this.no_display) {
+            return;
+        }
+        const ctx = this.ctx;
+        if (!ctx) {
             return;
         }
 
@@ -1400,9 +1393,10 @@ export class GobanCanvas extends GobanCore {
         //        everything has to be redrawn from bottom up
 
         // oversized rect clear. This will be the clip box we draw the surrounding stones into
-        this.makeSquareClip(this.ctx, i, j);
-        this.makeSquareClip(this.shadow_ctx, i, j);
-        this.cleanSquareRect(i, j);
+        const d = this.getDrawInfo(i, j);
+        this.makeSquareClip(this.ctx, i, j, d);
+        this.makeSquareClip(this.shadow_ctx, i, j, d);
+        this.cleanSquareRect(i, j, d);
 
         for (let ii = Math.max(i - 1, 0); ii <= Math.min(i + 1, this.bounds.right); ii++) {
             for (let jj = Math.max(j - 1, 0); jj <= Math.min(j + 1, this.bounds.bottom); jj++) {
@@ -2508,24 +2502,15 @@ export class GobanCanvas extends GobanCore {
         this.drawCoordinates(ctx);
     }
 
-    private __drawSquare(i: number, j: number): void {
-        if (!this.drawing_enabled) {
-            return;
-        }
-        if (this.no_display) {
-            return;
-        }
-        const ctx = this.ctx;
-        if (!ctx) {
-            return;
-        }
+    private __drawSquare(i: number, j: number, d: DrawingInfo | null = null): void {
         if (i < 0 || j < 0) {
             return;
         }
 
-        const draw_last_move = !this.dont_draw_last_move;
+        if (!d) {
+            d = this.getDrawInfo(i, j);
+        }
 
-        const d = this.getDrawInfo(i, j);
         let drawn = false;
 
         this.drawHeatmap(i, j, d);
@@ -2541,7 +2526,7 @@ export class GobanCanvas extends GobanCore {
             drawn = this.drawSymbols(i, j, false, d);
         }
 
-        if (!drawn && draw_last_move) {
+        if (!drawn && d.draw_last_move) {
             this.drawLastMove(i, j, d);
         }
 
