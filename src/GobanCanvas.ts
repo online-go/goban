@@ -22,7 +22,6 @@ import {
     GobanConfig,
     GobanSelectedThemes,
     GobanMetrics,
-    GOBAN_FONT,
     SCORE_ESTIMATION_TRIALS,
     SCORE_ESTIMATION_TOLERANCE,
 } from "./GobanCore";
@@ -1827,6 +1826,8 @@ export class GobanCanvas extends GobanCore {
         let letter: string | undefined;
         let subscript: string | undefined;
         let transparent = false;
+        const font = this.theme_board.getLabelFont();
+
         if (d.marks.letter) {
             letter = d.marks.letter;
         }
@@ -1890,7 +1891,7 @@ export class GobanCanvas extends GobanCore {
             const [, , metrics] = fitText(
                 d.ctx,
                 letter,
-                `bold FONT_SIZEpx ${GOBAN_FONT}`,
+                `bold FONT_SIZEpx ${font}`,
                 this.square_size * 0.4,
                 this.square_size * 0.8 * (subscript ? 0.9 : 1.0),
             );
@@ -1925,7 +1926,7 @@ export class GobanCanvas extends GobanCore {
             const [, , metrics] = fitText(
                 d.ctx,
                 subscript,
-                `bold FONT_SIZEpx ${GOBAN_FONT}`,
+                `bold FONT_SIZEpx ${font}`,
                 this.square_size * 0.4,
                 this.square_size * 0.8 * (letter ? 0.9 : 1.0),
             );
@@ -2456,6 +2457,8 @@ export class GobanCanvas extends GobanCore {
         /* draw the board's coordinates into the cxt provided, which should be the grid layer */
         let text_size = Math.round(this.square_size * 0.5);
         let bold = "bold";
+        const font = this.theme_board.getCoordinateFont();
+
         if (this.getCoordinateDisplaySystem() === "1-1") {
             text_size *= 0.7;
             bold = "";
@@ -2466,7 +2469,7 @@ export class GobanCanvas extends GobanCore {
         }
 
         ctx.save();
-        ctx.font = `${bold} ${text_size}px ${GOBAN_FONT}`;
+        ctx.font = `${bold} ${text_size}px ${font}`;
         ctx.textBaseline = "middle";
         ctx.fillStyle = this.theme_board.getLabelTextColor();
 
@@ -2951,6 +2954,7 @@ export class GobanCanvas extends GobanCore {
                 } else {
                     throw new Error(`Failed to obtain drawing context for board`);
                 }
+                fitTextCaches = new WeakMap();
 
                 this.setThemes(this.getSelectedThemes(), true);
             } catch (e) {
@@ -2986,7 +2990,9 @@ export class GobanCanvas extends GobanCore {
         /* Set font for text overlay */
         {
             const text_size = Math.round(this.square_size * 0.45);
-            ctx.font = "bold " + text_size + "px " + GOBAN_FONT;
+            const font = this.theme_board.getLabelFont();
+
+            ctx.font = "bold " + text_size + "px " + font;
         }
 
         for (let j = this.bounds.top; j <= this.bounds.bottom; ++j) {
@@ -3716,7 +3722,9 @@ export class GobanCanvas extends GobanCore {
     }
 }
 
-const fitTextCache: { [key: string]: [number, string, TextMetrics] } = {};
+//let fitTextCache: { [key: string]: [number, string, TextMetrics] } = {};
+type FitTextCacheType = { [key: string]: [number, string, TextMetrics] };
+let fitTextCaches: WeakMap<CanvasRenderingContext2D, FitTextCacheType> = new WeakMap();
 
 // fontPattern MUST have a FONT_SIZE string in it that will be replaced
 // ctx.font will be set to the appropriate size when this returns.
@@ -3736,6 +3744,12 @@ function fitText(
         );
     }
 
+    let fitTextCache = {} as FitTextCacheType;
+    const tc = fitTextCaches.get(ctx) as FitTextCacheType;
+    if (tc) {
+        fitTextCache = tc;
+    }
+
     const key = `${width} ${fontPattern} ${startingFontSize} ${text}`;
     if (key in fitTextCache) {
         const cached = fitTextCache[key];
@@ -3751,6 +3765,7 @@ function fitText(
         const metrics = ctx.measureText(text);
         if (font_size <= MIN_FONT_SIZE || metrics.width < width) {
             fitTextCache[key] = [font_size, font, metrics];
+            fitTextCaches.set(ctx, fitTextCache);
             return fitTextCache[key];
         }
 

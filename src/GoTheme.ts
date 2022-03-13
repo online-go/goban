@@ -15,6 +15,7 @@
  */
 
 //import * as PIXI from 'pixi.js-legacy';
+import { GOBAN_FONT } from "GobanCore";
 
 export interface GoThemeBackgroundCSS {
     "background-color"?: string;
@@ -204,5 +205,17 @@ export class GoTheme {
     /** Returns the color that should be used for labels */
     public getLabelTextColor(): string {
         return "#000000";
+    }
+
+    public getBoardFont(): string {
+        return GOBAN_FONT;
+    }
+
+    public getLabelFont(): string {
+        return GOBAN_FONT;
+    }
+
+    public getCoordinateFont(): string {
+        return GOBAN_FONT;
     }
 }

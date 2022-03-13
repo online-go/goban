@@ -18,6 +18,7 @@
 import { GoTheme, GoThemeBackgroundReactStyles, GoThemeBackgroundCSS } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
+import { GOBAN_FONT } from "../GobanCore";
 //import { deviceCanvasScalingRatio } from "../GoUtil";
 
 /*
@@ -75,6 +76,9 @@ export class JSONThemeStyle {
 
     "boardInkColor"?: string = "#000000"; // a general color for markings on the board when specific colors (below) aren't set
     "boardFadedInkColor"?: string = "#888888"; // a general color for markings when faded
+    "boardFont"?: string = GOBAN_FONT;
+    "coordinateFont"?: string = ""; //  inherit from boardFont
+    "labelFont"?: string = ""; // inherit from boardFont
 
     "lineColor"?: string = "";
     "fadedLineColor"?: string = ""; // line color when board is "faded out"
@@ -766,6 +770,30 @@ export class JSONTheme extends GoTheme {
             return JSONTheme.styles.blackTextColor;
         } else {
             return "#ffffff";
+        }
+    }
+
+    public getBoardFont(): string {
+        if (JSONTheme.styles.boardFont) {
+            return JSONTheme.styles.boardFont;
+        } else {
+            return GOBAN_FONT;
+        }
+    }
+
+    public getLabelFont(): string {
+        if (JSONTheme.styles.labelFont) {
+            return JSONTheme.styles.labelFont;
+        } else {
+            return this.getBoardFont();
+        }
+    }
+
+    public getCoordinateFont(): string {
+        if (JSONTheme.styles.coordinateFont) {
+            return JSONTheme.styles.coordinateFont;
+        } else {
+            return this.getBoardFont();
         }
     }
 
