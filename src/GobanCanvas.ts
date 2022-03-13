@@ -139,9 +139,6 @@ export class GobanCanvas extends GobanCore {
     private theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
     private theme_board: GoTheme;
-    private theme_faded_line_color: string = HOT_PINK;
-    private theme_faded_star_color: string = HOT_PINK;
-    private theme_faded_text_color: string = HOT_PINK;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
@@ -1884,6 +1881,28 @@ export class GobanCanvas extends GobanCore {
             }
         }
 
+        if (d.stoneColor === 0 && (letter || subscript)) {
+            // empty spaces get faded lines
+            // FIXME: ideally this should copy the board image with reduced opacity,
+            // but that involves some messing with DOM
+            d.ctx.save();
+            d.ctx.fillStyle = HOT_PINK;
+            const savedAlpha = d.ctx.globalAlpha;
+            const css = this.theme_board.getBackgroundCSS();
+            if (css["background-color"]) {
+                d.ctx.shadowColor = css["background-color"];
+                d.ctx.shadowBlur = 30;
+                d.ctx.fillStyle = css["background-color"];
+                d.ctx.globalAlpha = 0.5;
+                d.ctx.beginPath();
+                d.ctx.arc(d.left + d.radius, d.top + d.radius, d.radius / 2, 0, 2 * Math.PI);
+                d.ctx.fill();
+                //d.ctx.fillRect(d.left + d.radius / 2, d.top + d.radius / 2, d.radius, d.radius);
+            }
+            d.ctx.globalAlpha = savedAlpha;
+            d.ctx.restore();
+        }
+
         if (letter) {
             letter_was_drawn = true;
             d.ctx.save();
@@ -3157,9 +3176,7 @@ export class GobanCanvas extends GobanCore {
 
         // FIXME: lines/stars should be faded in __drawSquare on demand
 
-        this.theme_faded_line_color = this.theme_board.getFadedLineColor();
         this.theme_star_color = this.theme_board.getStarColor();
-        this.theme_faded_star_color = this.theme_board.getFadedStarColor();
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
