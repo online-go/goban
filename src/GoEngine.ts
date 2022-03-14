@@ -2529,15 +2529,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     case "PB":
                         if (self.config.players?.black) {
                             self.config.players.black.username = val;
-                        } else {
-                            console.log("SHIT no dice");
                         }
                         break;
 
                     case "WR":
                         if (self.config.players?.white) {
                             self.config.players.white.rank = parseRank(val);
-                            console.log("PARSED wr", val, self.config.players.white.rank);
                         }
                         break;
 
