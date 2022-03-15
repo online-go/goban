@@ -222,12 +222,10 @@ export class JSONTheme extends GoTheme {
         }
     }
 
-    public rebuildMatrices(seed: number) {
-        this.matrices = JSONTheme.buildMatrices(seed);
+    protected rebuildMatrices(seed: number) {
+        this.matrices = this.buildMatrices(seed);
     }
-    protected static buildMatrices(seed: number): Array<MatrixStore> {
-        // have to use static method because theme changes arent honored due to pre-rendered stone caching
-        // see further below for the activateMatrixFor() routines
+    protected buildMatrices(seed: number): Array<MatrixStore> {
 
         function transform_the_transform(matrix: any): TransformArity {
             return [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f];
