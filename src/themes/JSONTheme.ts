@@ -702,7 +702,11 @@ export class JSONTheme extends GoTheme {
     /* Should return true if you would like the shadow layer to be present. False
      * speeds up rendering typically */
     public stoneCastsShadow(radius: number): boolean {
-        return true; // themes will always be given a shadow layer
+        for (let s of [JSONTheme.styles.shadows, JSONTheme.styles.blackShadows, JSONTheme.styles.whiteShadows]) {
+            if (s && s.length > 0)
+                return true;
+        }
+        return false;
     }
 
     /* Returns the color that should be used for white stones */
