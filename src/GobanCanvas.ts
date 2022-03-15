@@ -79,6 +79,9 @@ interface DrawingInfo {
     movetree_contains_this_square: boolean;
     have_text_to_draw: boolean;
     draw_last_move: boolean;
+    i: number; // board coordinates
+    j: number;
+    fullSquareDraw: boolean;
 }
 
 const HOT_PINK = "#ff69b4";
@@ -118,6 +121,7 @@ export class GobanCanvas extends GobanCore {
 
     private previous_marks: Array<Array<string>>;
     private previous_board: Array<Array<string>>;
+    private drawQueue: any = {}; // a associative array of drawInfos indexed by coordinate
 
     private layer_offset_left: number = 0;
     private layer_offset_top: number = 0;
@@ -1203,6 +1207,8 @@ export class GobanCanvas extends GobanCore {
     ): DrawingInfo {
         /* get a structure holding info needed to draw a square  at i,j */
         const d = {} as DrawingInfo;
+        d.i = i;
+        d.j = j;
 
         d.draw_last_move = !this.dont_draw_last_move;
 
@@ -1356,6 +1362,72 @@ export class GobanCanvas extends GobanCore {
                 Math.floor(d.size * 2),
             );
         }
+    }
+
+    public queueDrawSquare(i: number, j: number): void {
+        for (let ii = i - 1; ii <= i + 1; ++ii) {
+            for (let jj = j - 1; jj <= j + 1; ++jj) {
+                if (jj < 0 || ii < 0 || ii >= this.width || jj >= this.height) {
+                    continue;
+                }
+                let d: DrawingInfo;
+                const maybeDraw = this.drawQueue[jj * 30 + ii];
+                if (!maybeDraw) {
+                    d = this.getDrawInfo(ii, jj);
+                } else {
+                    d = maybeDraw;
+                }
+
+                if (ii === i && j === jj) {
+                    d.fullSquareDraw = true;
+                }
+                if (d.fullSquareDraw || d.stoneColor !== 0) {
+                    this.drawQueue[jj * 30 + ii] = d; // 30x30 board seems large enough
+                }
+            }
+        }
+    }
+
+    public drawQueuedSquares() {
+        const contexts = [this.ctx];
+        if (this.shadow_ctx) {
+            contexts.push(this.shadow_ctx);
+        }
+
+        for (const ctx of contexts) {
+            ctx.save();
+            ctx.beginPath();
+            for (const coord in this.drawQueue) {
+                const d = this.drawQueue[coord];
+                if (d.fullSquareDraw) {
+                    // only clip full square draws
+                    // other squares are "support squares" that help cover glitches
+                    // and are clipped by this box
+                    ctx.rect(
+                        Math.floor(d.i * d.size + d.xOffset - d.size / 2),
+                        Math.floor(d.j * d.size + d.yOffset - d.size / 2),
+                        Math.floor(d.size * 2),
+                        Math.floor(d.size * 2),
+                    );
+                }
+            }
+            ctx.clip();
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
+        let squareCount = 0;
+
+        for (const coord in this.drawQueue) {
+            const d = this.drawQueue[coord];
+            //this.cleanSquareRect(d.i, d.j, d);
+            this.__drawSquare(d.i, d.j, d);
+            squareCount++;
+        }
+
+        for (const ctx of contexts) {
+            ctx.restore();
+        }
+
+        this.drawQueue = {};
     }
 
     public drawSquare(i: number, j: number): void {
@@ -3036,13 +3108,20 @@ export class GobanCanvas extends GobanCore {
                     (this.engine.cur_move.x === i && this.engine.cur_move.y === j)
                 ) {
                     // always draw current move due to glitch in marking last move
-                    this.drawSquare(i, j);
+                    this.queueDrawSquare(i, j);
                     this.previous_marks[j][i] = jm;
                     this.previous_board[j][i] = jb;
                 }
             }
         }
+        // have to draw the last move to clear the mark
+        if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
+            const m = this.last_move;
+            delete this.last_move;
+            this.queueDrawSquare(m.x, m.y);
+        }
 
+        this.drawQueuedSquares();
         this.drawPenMarks(this.pen_marks);
         this.move_tree_redraw();
     }

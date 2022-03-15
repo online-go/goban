@@ -226,7 +226,6 @@ export class JSONTheme extends GoTheme {
         this.matrices = this.buildMatrices(seed);
     }
     protected buildMatrices(seed: number): Array<MatrixStore> {
-
         function transform_the_transform(matrix: any): TransformArity {
             return [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f];
         }
