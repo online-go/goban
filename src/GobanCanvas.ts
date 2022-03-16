@@ -1495,7 +1495,7 @@ export class GobanCanvas extends GobanCore {
         this.restoreSquareClip(this.shadow_ctx);
     }
 
-    private fadeTheLines(i: number, j: number, d: drawingInfo): boolean {
+    private fadeTheLines(i: number, j: number, d: DrawingInfo): boolean {
         if (d.hasMarks) {
             // fade the lines
             const stroke = d.ctx.strokeStyle;

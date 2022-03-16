@@ -971,7 +971,9 @@ export class JSONTheme extends GoTheme {
         {
             "name": "hikaru",
             "boardImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/hikaru/board.svg",
-            "boardInkColor": "rgb(76, 47, 0, 0.8)",
+            "boardColor": "#dcc083",
+            "boardInkColor": "rgb(76, 47, 0, 0.8)", "boardColor": "#d2b473",
+            "boardFont": "Helvetica Neue,Helvetica,Arial,Verdana,sans-serif",
             "whiteStones": [
                 "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_white_stone_raw.svg"
             ],
