@@ -82,6 +82,7 @@ interface DrawingInfo {
     i: number; // board coordinates
     j: number;
     fullSquareDraw: boolean;
+    hasMarks: boolean;
 }
 
 const HOT_PINK = "#ff69b4";
@@ -1223,6 +1224,24 @@ export class GobanCanvas extends GobanCore {
             d.marks = {};
         }
 
+        d.hasMarks = false;
+        for (const m in d.marks) {
+            if (d.marks[m]) {
+                d.hasMarks = true;
+                break;
+            }
+        }
+
+        /*
+        // not really needed because these already obscure the lines
+        via heatmap
+        if (this.heatmap && this.heatmap[j][i] > 0.001)
+            d.hasMarks = true;
+
+        if (this.highlight_movetree_moves && d.movetree_contains_this_square)
+            d.hasMarks = true;
+        */
+
         d.have_text_to_draw = false;
         for (const key in d.marks) {
             if (key.length <= 3) {
@@ -1378,7 +1397,7 @@ export class GobanCanvas extends GobanCore {
                     d = maybeDraw;
                 }
 
-                if (ii === i && j === jj) {
+                if (d.hasMarks || (ii === i && j === jj)) {
                     d.fullSquareDraw = true;
                 }
                 if (d.fullSquareDraw || d.stoneColor !== 0) {
@@ -1414,13 +1433,11 @@ export class GobanCanvas extends GobanCore {
             ctx.clip();
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         }
-        let squareCount = 0;
 
         for (const coord in this.drawQueue) {
             const d = this.drawQueue[coord];
             //this.cleanSquareRect(d.i, d.j, d);
             this.__drawSquare(d.i, d.j, d);
-            squareCount++;
         }
 
         for (const ctx of contexts) {
@@ -1477,6 +1494,31 @@ export class GobanCanvas extends GobanCore {
 
         this.restoreSquareClip(this.ctx);
         this.restoreSquareClip(this.shadow_ctx);
+    }
+
+    private fadeTheLines(i: number, j: number, d: drawingInfo): boolean {
+        if (d.hasMarks) {
+            // fade the lines
+            const stroke = d.ctx.strokeStyle;
+            const alpha = d.ctx.globalAlpha;
+
+            const bcss = this.theme_board.getBackgroundCSS();
+            if (bcss && bcss["background-color"]) {
+                d.ctx.strokeStyle = bcss["background-color"];
+            }
+
+            d.ctx.globalAlpha = 0.6;
+            d.ctx.beginPath();
+            d.ctx.moveTo(d.left + d.size / 2, d.top + d.size / 4);
+            d.ctx.lineTo(d.left + d.size / 2, d.bottom - d.size / 4);
+            d.ctx.moveTo(d.left + d.size / 4, d.top + d.size / 2);
+            d.ctx.lineTo(d.right - d.size / 4, d.top + d.size / 2);
+            d.ctx.stroke();
+            d.ctx.strokeStyle = stroke;
+            d.ctx.globalAlpha = alpha;
+            return true;
+        }
+        return false;
     }
 
     private drawHeatmap(i: number, j: number, d: DrawingInfo): boolean {
@@ -1951,28 +1993,6 @@ export class GobanCanvas extends GobanCore {
                     letter = m.getMoveNumberDifferenceFromTrunk().toString();
                 }
             }
-        }
-
-        if (d.stoneColor === 0 && (letter || subscript)) {
-            // empty spaces get faded lines
-            // FIXME: ideally this should copy the board image with reduced opacity,
-            // but that involves some messing with DOM
-            d.ctx.save();
-            d.ctx.fillStyle = HOT_PINK;
-            const savedAlpha = d.ctx.globalAlpha;
-            const css = this.theme_board.getBackgroundCSS();
-            if (css["background-color"]) {
-                d.ctx.shadowColor = css["background-color"];
-                d.ctx.shadowBlur = 30;
-                d.ctx.fillStyle = css["background-color"];
-                d.ctx.globalAlpha = 0.5;
-                d.ctx.beginPath();
-                d.ctx.arc(d.left + d.radius, d.top + d.radius, d.radius / 2, 0, 2 * Math.PI);
-                d.ctx.fill();
-                //d.ctx.fillRect(d.left + d.radius / 2, d.top + d.radius / 2, d.radius, d.radius);
-            }
-            d.ctx.globalAlpha = savedAlpha;
-            d.ctx.restore();
         }
 
         if (letter) {
@@ -2607,6 +2627,7 @@ export class GobanCanvas extends GobanCore {
 
         let drawn = false;
 
+        this.fadeTheLines(i, j, d);
         this.drawHeatmap(i, j, d);
         this.drawSquareHighlights(i, j, d);
 
