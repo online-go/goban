@@ -84,6 +84,7 @@ interface DrawingInfo {
     fullSquareDraw: boolean;
     hasMarks: boolean; // text and the like
     hasHighlights: boolean; // alpha boxes that show heatmap, etc.
+    noShadow: boolean; // skip drawing shadow?
 }
 
 const HOT_PINK = "#ff69b4";
@@ -104,6 +105,7 @@ export class GobanCanvas extends GobanCore {
     private shadow_ctx?: CanvasRenderingContext2D;
     private grid_layer: HTMLCanvasElement; // for the board lines, coordinates, hoshi etc that do not change much
     private grid_ctx: CanvasRenderingContext2D;
+    private lastMoveMarker: HTMLCanvasElement; // could just be an icon, text or something
 
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
@@ -124,6 +126,7 @@ export class GobanCanvas extends GobanCore {
     private previous_marks: Array<Array<string>>;
     private previous_board: Array<Array<string>>;
     private drawQueue: any = {}; // a associative array of drawInfos indexed by coordinate
+    private drawQueueShadows: any = {}; // a associative array of drawInfos indexed by coordinate
 
     private layer_offset_left: number = 0;
     private layer_offset_top: number = 0;
@@ -199,6 +202,14 @@ export class GobanCanvas extends GobanCore {
         this.parent.appendChild(this.board);
         this.bindPointerBindings(this.board);
 
+        this.lastMoveMarker = createDeviceScaledCanvas(10, 10);
+        this.lastMoveMarker.setAttribute("id", "last-move-marker");
+        this.lastMoveMarker.style.display = "none";
+        this.lastMoveMarker.style.position = "absolute";
+        this.lastMoveMarker.style.zIndex = "20"; // not sure why i need 20
+
+        this.parent.appendChild(this.lastMoveMarker);
+
         this.move_tree_container = config.move_tree_container;
 
         this.handleShiftKey = (ev) => {
@@ -252,6 +263,10 @@ export class GobanCanvas extends GobanCore {
         if (this.grid_layer && this.board.parentNode) {
             this.board.parentNode.removeChild(this.grid_layer);
         }
+        if (this.lastMoveMarker && this.board.parentNode) {
+            this.board.parentNode.removeChild(this.lastMoveMarker);
+        }
+
         if (this.board && this.board.parentNode) {
             this.board.parentNode.removeChild(this.board);
         }
@@ -1324,129 +1339,168 @@ export class GobanCanvas extends GobanCore {
         return d;
     }
 
-    public makeSquareClip(
-        ctx: CanvasRenderingContext2D | undefined,
-        i: number,
-        j: number,
-        d: DrawingInfo,
-    ) {
-        /*
-        clip around the current square at an enlarged size for shadows, etc.
-        */
-
-        if (!ctx) {
-            return;
-        }
-
-        ctx.save();
-        ctx.beginPath();
-
-        // extend beyond the square, limit should be next intersection point - grid line width
+    public makeStoneBBRect(ctx: CanvasRenderingContext2D, i: number, j: number, d: DrawingInfo) {
+        // FIXME: should use the maximum bb between selected white/black themes
+        const rect =
+            d.stoneColor === 1
+                ? this.theme_black.getStoneBoundingBox()
+                : this.theme_white.getStoneBoundingBox();
         ctx.rect(
-            Math.floor(i * d.size + d.xOffset - d.size / 2),
-            Math.floor(j * d.size + d.yOffset - d.size / 2),
-            Math.floor(d.size * 2),
-            Math.floor(d.size * 2),
+            Math.floor(i * d.size + d.xOffset + d.size * rect[0]),
+            Math.floor(j * d.size + d.yOffset + d.size * rect[1]),
+            Math.floor(d.size * (rect[2] - rect[0])),
+            Math.floor(d.size * (rect[3] - rect[1])),
         );
-
-        ctx.clip();
     }
 
-    public restoreSquareClip(ctx: CanvasRenderingContext2D | undefined) {
-        if (!ctx) {
-            return;
-        }
-        ctx.restore();
+    public makeShadowBBRect(ctx: CanvasRenderingContext2D, i: number, j: number, d: DrawingInfo) {
+        // execute ctx.rect with the theme's specified bounding box for this intersection
+        // FIXME: should use the maximum bb between selected white/black themes
+        const rect =
+            d.stoneColor === 1
+                ? this.theme_black.getShadowBoundingBox()
+                : this.theme_white.getShadowBoundingBox();
+        ctx.rect(
+            Math.floor(i * d.size + d.xOffset + d.size * rect[0]),
+            Math.floor(j * d.size + d.yOffset + d.size * rect[1]),
+            Math.floor(d.size * (rect[2] - rect[0])),
+            Math.floor(d.size * (rect[3] - rect[1])),
+        );
     }
 
-    public cleanSquareRect(i: number, j: number, d: DrawingInfo) {
-        /*
-        erase the entire contents of this square
-        at an enlarged size to accomodate shadows, etc.
-        */
+    public getIntersectionDrawMask(boundingBox: Array<number>) {
+        // return an array of [dx, dy] locations
+        // of intersections that should be redrawn to accomodate the bounding box rect
+        // around a target draw intersection
+        // FIXME: could be cached when theme changed instead of calling every drawSquare()
+        const drawArray = [];
 
-        this.ctx.clearRect(
-            Math.floor(i * d.size + d.xOffset - d.size / 2),
-            Math.floor(j * d.size + d.yOffset - d.size / 2),
-            Math.floor(d.size * 2),
-            Math.floor(d.size * 2),
-        );
+        const dright = Math.ceil(boundingBox[2] - boundingBox[0] - 1);
+        const dleft = -dright;
+        const dbottom = Math.ceil(boundingBox[3] - boundingBox[1] - 1);
+        const dtop = -dbottom;
 
-        if (this.shadow_ctx) {
-            this.shadow_ctx.clearRect(
-                Math.floor(i * d.size + d.xOffset - d.size / 2),
-                Math.floor(j * d.size + d.yOffset - d.size / 2),
-                Math.floor(d.size * 2),
-                Math.floor(d.size * 2),
-            );
+        for (let j = dtop; j <= dbottom; ++j) {
+            for (let i = dleft; i <= dright; ++i) {
+                drawArray.push([i, j]);
+            }
         }
+        return drawArray;
     }
 
     public queueDrawSquare(i: number, j: number): void {
-        for (let ii = i - 1; ii <= i + 1; ++ii) {
-            for (let jj = j - 1; jj <= j + 1; ++jj) {
-                if (jj < 0 || ii < 0 || ii >= this.width || jj >= this.height) {
-                    continue;
-                }
-                let d: DrawingInfo;
-                const maybeDraw = this.drawQueue[jj * 30 + ii];
-                if (!maybeDraw) {
-                    d = this.getDrawInfo(ii, jj);
-                } else {
-                    d = maybeDraw;
-                }
+        // queue a square for later drawing en mass
+        for (const coord of this.getIntersectionDrawMask(this.theme_white.getStoneBoundingBox())) {
+            const ii = i + coord[0];
+            const jj = j + coord[1];
 
-                if (ii === i && j === jj) {
-                    d.fullSquareDraw = true;
-                }
-                if (d.stoneColor !== 0 || d.fullSquareDraw || d.hasMarks || d.hasHighlights) {
-                    this.drawQueue[jj * 30 + ii] = d; // 30x30 board seems large enough
-                }
+            if (jj < 0 || ii < 0 || ii >= this.width || jj >= this.height) {
+                continue;
+            }
+
+            let d = this.drawQueue[jj * 30 + ii];
+            if (!d) {
+                d = this.getDrawInfo(ii, jj);
+            }
+
+            d.noShadow = true; // shadows treated differently
+            if (ii === i && j === jj) {
+                d.fullSquareDraw = true;
+            }
+
+            if (d.stoneColor !== 0 || d.fullSquareDraw || d.hasMarks || d.hasHighlights) {
+                this.drawQueue[jj * 30 + ii] = d; // 30x30 board seems large enough
+            }
+        }
+
+        for (const coord of this.getIntersectionDrawMask(this.theme_white.getShadowBoundingBox())) {
+            const ii = i + coord[0];
+            const jj = j + coord[1];
+
+            if (jj < 0 || ii < 0 || ii >= this.width || jj >= this.height) {
+                continue;
+            }
+            let d = this.drawQueueShadows[jj * 30 + ii];
+            if (!d) {
+                d = this.getDrawInfo(ii, jj);
+            }
+
+            d.noShadow = false;
+            if (ii === i && j === jj) {
+                d.fullSquareDraw = true;
+            }
+            if (d.stoneColor !== 0 || d.fullSquareDraw || d.hasMarks || d.hasHighlights) {
+                this.drawQueueShadows[jj * 30 + ii] = d; // 30x30 board seems large enough
             }
         }
     }
 
     public drawQueuedSquares() {
-        const contexts = [this.ctx];
+        // draw all queued squares
+        // shadows are on a different layer
+        // so treat them as separate
         if (this.shadow_ctx) {
-            contexts.push(this.shadow_ctx);
-        }
-
-        for (const ctx of contexts) {
-            ctx.save();
-            ctx.beginPath();
-            for (const coord in this.drawQueue) {
-                const d = this.drawQueue[coord];
+            this.shadow_ctx.save();
+            this.shadow_ctx.beginPath();
+            for (const coord in this.drawQueueShadows) {
+                const d = this.drawQueueShadows[coord];
                 if (d.fullSquareDraw) {
-                    // only clip full square draws
-                    // other squares are "support squares" that help cover glitches
-                    // and are clipped by this box
-                    ctx.rect(
-                        Math.floor(d.i * d.size + d.xOffset - d.size / 2),
-                        Math.floor(d.j * d.size + d.yOffset - d.size / 2),
-                        Math.floor(d.size * 2),
-                        Math.floor(d.size * 2),
-                    );
+                    this.makeShadowBBRect(this.shadow_ctx, d.i, d.j, this.drawQueueShadows[coord]);
                 }
             }
-            ctx.clip();
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            this.shadow_ctx.clip();
+            this.shadow_ctx.clearRect(
+                0,
+                0,
+                this.shadow_ctx.canvas.width,
+                this.shadow_ctx.canvas.height,
+            );
         }
 
+        this.ctx.save();
+        this.ctx.beginPath();
+        for (const coord in this.drawQueueShadows) {
+            const d = this.drawQueueShadows[coord];
+            if (d.fullSquareDraw) {
+                this.makeStoneBBRect(this.ctx, d.i, d.j, this.drawQueue[coord]);
+            }
+        }
+        this.ctx.clip();
+        this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+
+        for (const coord in this.drawQueueShadows) {
+            const d = this.drawQueueShadows[coord];
+            this.__drawSquareShadow(d.i, d.j, d);
+            delete this.drawQueueShadows[coord];
+        }
+
+        //let stoneCount = 0;
         for (const coord in this.drawQueue) {
             const d = this.drawQueue[coord];
-            //this.cleanSquareRect(d.i, d.j, d);
             this.__drawSquare(d.i, d.j, d);
+            delete this.drawQueue[coord];
+            //stoneCount++;
         }
 
-        for (const ctx of contexts) {
-            ctx.restore();
+        //console.log("STONE DRAW COUNT", stoneCount);
+        this.ctx.restore();
+
+        if (this.shadow_ctx) {
+            this.shadow_ctx.restore();
         }
 
-        this.drawQueue = {};
+        // Unsure if this needs to be deleted?
+        // seems GobanCore tracks it as a flag or something
+        if (this.last_move && this.engine) {
+            delete this.last_move;
+        }
+
+        this.drawLastMove();
     }
 
     public drawSquare(i: number, j: number): void {
+        // this can be explicitly called for an instant draw
+        // of a square
         if (i < 0 || j < 0) {
             return;
         }
@@ -1462,37 +1516,8 @@ export class GobanCanvas extends GobanCore {
             return;
         }
 
-        // make a detour to the previous move coordinates if it's showing a "last move mark"
-        // and remove it
-        if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
-            const m = this.last_move;
-            delete this.last_move;
-            this.drawSquare(m.x, m.y);
-        }
-
-        // draw surrounding stones to cover up glitches caused by erase
-        // FIXME: this really only needs to be done for shadows that extend
-        //        however, expanding the drawing box also alows prettier visualizations and "jostled" stones
-        //        if desired. Also, since there is no separate layer for labels & markings right now,
-        //        everything has to be redrawn from bottom up
-
-        // oversized rect clear. This will be the clip box we draw the surrounding stones into
-        const d = this.getDrawInfo(i, j);
-        this.makeSquareClip(this.ctx, i, j, d);
-        this.makeSquareClip(this.shadow_ctx, i, j, d);
-        this.cleanSquareRect(i, j, d);
-
-        for (let ii = Math.max(i - 1, 0); ii <= Math.min(i + 1, this.bounds.right); ii++) {
-            for (let jj = Math.max(j - 1, 0); jj <= Math.min(j + 1, this.bounds.bottom); jj++) {
-                // if (ii == i && jj == j) continue
-                this.__drawSquare(ii, jj);
-            }
-        }
-
-        // this.__drawSquare(i, j);
-
-        this.restoreSquareClip(this.ctx);
-        this.restoreSquareClip(this.shadow_ctx);
+        this.queueDrawSquare(i, j);
+        this.drawQueuedSquares();
     }
 
     private fadeTheLines(i: number, j: number, d: DrawingInfo): boolean {
@@ -1750,6 +1775,11 @@ export class GobanCanvas extends GobanCore {
                 if (shadow_ctx === undefined) {
                     shadow_ctx = null;
                 }
+
+                if (d.noShadow) {
+                    shadow_ctx = null;
+                }
+
                 if (color === 1) {
                     const stone =
                         this.theme_black_stones[
@@ -2189,82 +2219,97 @@ export class GobanCanvas extends GobanCore {
         return symbol_was_drawn;
     }
 
-    private drawLastMove(i: number, j: number, d: DrawingInfo): boolean {
-        /*
-        Mark the latest move, and return whether or not
-        the mark was made
-        */
-
+    private drawLastMove() {
         let drawn = false;
-
         if (this.engine && this.engine.cur_move) {
+            const i = this.engine.cur_move.x;
+            const j = this.engine.cur_move.y;
+
             if (
-                this.engine.cur_move.x === i &&
-                this.engine.cur_move.y === j &&
+                i >= 0 && // -1 is used to indicate no last move in engine
+                j >= 0 &&
                 this.engine.board[j][i] &&
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
+                const ctx = this.lastMoveMarker.getContext("2d");
+                if (!ctx) {
+                    console.warn("No context for last move marker");
+                    return false;
+                }
 
-                if (i >= 0 && j >= 0) {
-                    const color =
-                        d.stoneColor === 1
-                            ? this.theme_black_text_color
-                            : this.theme_white_text_color;
+                const d = this.getDrawInfo(i, j);
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                const color =
+                    d.stoneColor === 1 ? this.theme_black_text_color : this.theme_white_text_color;
 
-                    if (this.submit_move) {
-                        d.ctx.lineCap = "square";
-                        d.ctx.save();
-                        d.ctx.beginPath();
-                        d.ctx.lineWidth = this.square_size * 0.075;
-                        //ctx.globalAlpha = 0.6;
-                        const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
-                        d.ctx.moveTo(d.xCenter - r, d.yCenter);
-                        d.ctx.lineTo(d.xCenter + r, d.yCenter);
-                        d.ctx.moveTo(d.xCenter, d.yCenter - r);
-                        d.ctx.lineTo(d.xCenter, d.yCenter + r);
-                        d.ctx.strokeStyle = color;
-                        d.ctx.stroke();
-                        d.ctx.restore();
+                if (this.submit_move) {
+                    ctx.lineCap = "square";
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.lineWidth = this.square_size * 0.075;
+                    //ctx.globalAlpha = 0.6;
+                    const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
+                    ctx.moveTo(d.radius - r, d.radius);
+                    ctx.lineTo(d.radius + r, d.radius);
+                    ctx.moveTo(d.radius, d.radius - r);
+                    ctx.lineTo(d.radius, d.radius + r);
+                    ctx.strokeStyle = color;
+                    ctx.stroke();
+                    ctx.restore();
+                    drawn = true;
+                } else {
+                    if (
+                        this.engine.undo_requested &&
+                        this.visual_undo_request_indicator &&
+                        this.engine.undo_requested === this.engine.cur_move.move_number
+                    ) {
+                        const letter = "?";
+                        ctx.save();
+                        ctx.fillStyle = color;
+                        ctx.font =
+                            "bold " +
+                            Math.floor(ctx.canvas.width / 4) +
+                            "px " +
+                            this.theme_board.getLabelFont();
+                        const metrics = ctx.measureText(letter);
+                        const xx = d.radius - metrics.width / 2;
+                        const yy =
+                            d.radius +
+                            (/WebKit|Trident/.test(navigator.userAgent)
+                                ? this.square_size * -0.03
+                                : 1); /* middle centering is different on firefox */
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(letter, xx, yy);
+                        ctx.restore();
                         drawn = true;
                     } else {
-                        if (
-                            this.engine.undo_requested &&
-                            this.visual_undo_request_indicator &&
-                            this.engine.undo_requested === this.engine.cur_move.move_number
-                        ) {
-                            const letter = "?";
-                            d.ctx.save();
-                            d.ctx.fillStyle = color;
-                            const metrics = d.ctx.measureText(letter);
-                            const xx = d.xCenter - metrics.width / 2;
-                            const yy =
-                                d.yCenter +
-                                (/WebKit|Trident/.test(navigator.userAgent)
-                                    ? this.square_size * -0.03
-                                    : 1); /* middle centering is different on firefox */
-                            d.ctx.textBaseline = "middle";
-                            d.ctx.fillText(letter, xx, yy);
-                            drawn = true;
-                            d.ctx.restore();
-                            drawn = true;
-                        } else {
-                            d.ctx.beginPath();
-                            d.ctx.strokeStyle = color;
-                            d.ctx.lineWidth = this.square_size * 0.075;
-                            let r = this.square_size * 0.25;
-                            if (this.submit_move) {
-                                //ctx.globalAlpha = 0.6;
-                                r = this.square_size * 0.3;
-                            }
-                            d.ctx.arc(d.xCenter, d.yCenter, r, 0, 2 * Math.PI, false);
-                            d.ctx.stroke();
-                            drawn = true;
+                        ctx.beginPath();
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = this.square_size * 0.075;
+                        let r = this.square_size * 0.25;
+                        if (this.submit_move) {
+                            //ctx.globalAlpha = 0.6;
+                            r = this.square_size * 0.3;
                         }
+                        ctx.arc(d.radius, d.radius, r, 0, 2 * Math.PI, false);
+                        ctx.stroke();
+                        drawn = true;
                     }
                 }
+
+                if (drawn) {
+                    this.lastMoveMarker.style.display = "block";
+                    this.lastMoveMarker.style.left = d.left + "px";
+                    this.lastMoveMarker.style.top = d.top + "px";
+                } else {
+                    this.lastMoveMarker.style.display = "none";
+                }
+            } else {
+                this.lastMoveMarker.style.display = "none";
             }
         }
+
         return drawn;
     }
 
@@ -2615,6 +2660,44 @@ export class GobanCanvas extends GobanCore {
         this.drawCoordinates(ctx);
     }
 
+    private __drawSquareShadow(i: number, j: number, d: DrawingInfo | null = null): void {
+        // just for the shadow, if needed
+        if (!this.shadow_ctx) {
+            return;
+        }
+        if (!d || !d.stoneColor) {
+            return;
+        }
+
+        if (d.stoneColor === 1) {
+            const stone =
+                this.theme_black_stones[
+                    ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_black_stones.length
+                ];
+            this.theme_black.placeBlackStone(
+                null, // no stone
+                this.shadow_ctx,
+                stone,
+                d.xCenter,
+                d.yCenter,
+                this.theme_stone_radius,
+            );
+        } else {
+            const stone =
+                this.theme_white_stones[
+                    ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_white_stones.length
+                ];
+            this.theme_white.placeWhiteStone(
+                null, // no stone
+                this.shadow_ctx,
+                stone,
+                d.xCenter,
+                d.yCenter,
+                this.theme_stone_radius,
+            );
+        }
+    }
+
     private __drawSquare(i: number, j: number, d: DrawingInfo | null = null): void {
         if (i < 0 || j < 0) {
             return;
@@ -2640,9 +2723,17 @@ export class GobanCanvas extends GobanCore {
             drawn = this.drawSymbols(i, j, false, d);
         }
 
+        if (drawn) {
+            drawn = drawn; // go away, typescript
+        }
+
+        /*
+        now implemented in drawQueuedSquares()
+
         if (!drawn && d.draw_last_move) {
             this.drawLastMove(i, j, d);
         }
+        */
 
         this.drawScoreEstimate(i, j, d);
     }
@@ -3027,6 +3118,12 @@ export class GobanCanvas extends GobanCore {
                     throw new Error(`Failed to obtain drawing context for understone layer`);
                 }
 
+                resizeDeviceScaledCanvas(this.lastMoveMarker, this.square_size, this.square_size);
+                this.lastMoveMarker.style.left = this.layer_offset_left + "px";
+                this.lastMoveMarker.style.top = this.layer_offset_top + "px";
+                this.lastMoveMarker.style.width = this.square_size + "px";
+                this.lastMoveMarker.style.height = this.square_size + "px";
+
                 if (this.pen_layer) {
                     if (this.pen_marks.length) {
                         resizeDeviceScaledCanvas(this.pen_layer, metrics.width, metrics.height);
@@ -3121,24 +3218,12 @@ export class GobanCanvas extends GobanCore {
                 if (this.previous_board[j][i] !== jb) {
                     drawit = true;
                 }
-
-                if (
-                    force_clear ||
-                    drawit || // this may have no practical effect
-                    (this.engine.cur_move.x === i && this.engine.cur_move.y === j)
-                ) {
-                    // always draw current move due to glitch in marking last move
+                if (force_clear || drawit) {
                     this.queueDrawSquare(i, j);
                     this.previous_marks[j][i] = jm;
                     this.previous_board[j][i] = jb;
                 }
             }
-        }
-        // have to draw the last move to clear the mark
-        if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
-            const m = this.last_move;
-            delete this.last_move;
-            this.queueDrawSquare(m.x, m.y);
         }
 
         this.drawQueuedSquares();
