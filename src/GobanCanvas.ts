@@ -82,7 +82,8 @@ interface DrawingInfo {
     i: number; // board coordinates
     j: number;
     fullSquareDraw: boolean;
-    hasMarks: boolean;
+    hasMarks: boolean; // text and the like
+    hasHighlights: boolean; // alpha boxes that show heatmap, etc.
 }
 
 const HOT_PINK = "#ff69b4";
@@ -1232,15 +1233,13 @@ export class GobanCanvas extends GobanCore {
             }
         }
 
-        /*
-        // not really needed because these already obscure the lines
-        via heatmap
-        if (this.heatmap && this.heatmap[j][i] > 0.001)
-            d.hasMarks = true;
+        if (this.heatmap && this.heatmap[j][i] > 0.001) {
+            d.hasHighlights = true;
+        }
 
-        if (this.highlight_movetree_moves && d.movetree_contains_this_square)
-            d.hasMarks = true;
-        */
+        if (this.highlight_movetree_moves && d.movetree_contains_this_square) {
+            d.hasHighlights = true;
+        }
 
         d.have_text_to_draw = false;
         for (const key in d.marks) {
@@ -1397,10 +1396,10 @@ export class GobanCanvas extends GobanCore {
                     d = maybeDraw;
                 }
 
-                if (d.hasMarks || (ii === i && j === jj)) {
+                if (ii === i && j === jj) {
                     d.fullSquareDraw = true;
                 }
-                if (d.fullSquareDraw || d.stoneColor !== 0) {
+                if (d.stoneColor !== 0 || d.fullSquareDraw || d.hasMarks || d.hasHighlights) {
                     this.drawQueue[jj * 30 + ii] = d; // 30x30 board seems large enough
                 }
             }
