@@ -575,18 +575,21 @@ export class JSONTheme extends GoTheme {
 
                 shadow_ctx.setTransform(t);
             }
-            const img = this.whiteImages[stone.rando % this.whiteImages.length];
 
-            const t = ctx.getTransform();
+            if (ctx) {
+                const img = this.whiteImages[stone.rando % this.whiteImages.length];
 
-            ctx.translate(cx, cy);
-            ctx.scale(radius * 2.0, radius * 2.0);
-            const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
-            ctx.transform(...m);
+                const t = ctx.getTransform();
 
-            ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+                ctx.translate(cx, cy);
+                ctx.scale(radius * 2.0, radius * 2.0);
+                const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
+                ctx.transform(...m);
 
-            ctx.setTransform(t);
+                ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+
+                ctx.setTransform(t);
+            }
         } else {
             if (shadow_ctx && this.whiteShadowImages.length > 0) {
                 const img = this.whiteShadowImages[stone.rando % this.whiteShadowImages.length];
@@ -602,25 +605,27 @@ export class JSONTheme extends GoTheme {
 
                 shadow_ctx.setTransform(t);
             }
-            const t = ctx.getTransform();
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.scale(radius * 2, radius * 2);
-            const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
-            ctx.transform(...m);
+            if (ctx) {
+                const t = ctx.getTransform();
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(radius * 2, radius * 2);
+                const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
+                ctx.transform(...m);
 
-            ctx.fillStyle = this.getWhiteStoneColor();
-            ctx.strokeStyle = this.getWhiteStoneLineColor();
-            ctx.lineWidth = this.getWhiteStoneLineWidth();
-            ctx.beginPath();
-            //ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
-            ctx.arc(0, 0, 0.5, 0, 2 * Math.PI, true);
-            ctx.fill();
-            if (this.getWhiteStoneLineWidth() > 0) {
-                ctx.stroke();
+                ctx.fillStyle = this.getWhiteStoneColor();
+                ctx.strokeStyle = this.getWhiteStoneLineColor();
+                ctx.lineWidth = this.getWhiteStoneLineWidth();
+                ctx.beginPath();
+                //ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
+                ctx.arc(0, 0, 0.5, 0, 2 * Math.PI, true);
+                ctx.fill();
+                if (this.getWhiteStoneLineWidth() > 0) {
+                    ctx.stroke();
+                }
+                ctx.restore();
+                ctx.setTransform(t);
             }
-            ctx.restore();
-            ctx.setTransform(t);
         }
     }
 
@@ -648,18 +653,19 @@ export class JSONTheme extends GoTheme {
 
                 shadow_ctx.setTransform(t);
             }
+            if (ctx) {
+                const img = this.blackImages[stone.rando % this.blackImages.length];
 
-            const img = this.blackImages[stone.rando % this.blackImages.length];
+                const t = ctx.getTransform();
+                ctx.translate(cx, cy);
+                ctx.scale(radius * 2.0, radius * 2.0);
+                const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
+                ctx.transform(...m);
 
-            const t = ctx.getTransform();
-            ctx.translate(cx, cy);
-            ctx.scale(radius * 2.0, radius * 2.0);
-            const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
-            ctx.transform(...m);
+                ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
-            ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
-
-            ctx.setTransform(t);
+                ctx.setTransform(t);
+            }
         } else {
             if (shadow_ctx && this.blackShadowImages.length > 0) {
                 const img = this.blackShadowImages[stone.rando % this.blackShadowImages.length];
@@ -673,32 +679,58 @@ export class JSONTheme extends GoTheme {
 
                 shadow_ctx.setTransform(t);
             }
-            const t = ctx.getTransform();
+            if (ctx) {
+                const t = ctx.getTransform();
 
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.scale(radius * 2, radius * 2);
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(radius * 2, radius * 2);
 
-            const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
-            ctx.transform(...m);
+                const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
+                ctx.transform(...m);
 
-            ctx.fillStyle = this.getBlackStoneColor();
-            ctx.strokeStyle = this.getBlackStoneLineColor();
-            ctx.lineWidth = this.getBlackStoneLineWidth();
-            ctx.beginPath();
-            ctx.arc(0, 0, 0.5, 0, 2 * Math.PI, true);
-            ctx.fill();
-            if (this.getBlackStoneLineWidth() > 0) {
-                ctx.stroke();
+                ctx.fillStyle = this.getBlackStoneColor();
+                ctx.strokeStyle = this.getBlackStoneLineColor();
+                ctx.lineWidth = this.getBlackStoneLineWidth();
+                ctx.beginPath();
+                ctx.arc(0, 0, 0.5, 0, 2 * Math.PI, true);
+                ctx.fill();
+                if (this.getBlackStoneLineWidth() > 0) {
+                    ctx.stroke();
+                }
+                ctx.restore();
+                ctx.setTransform(t);
             }
-            ctx.restore();
-            ctx.setTransform(t);
         }
+    }
+
+    public getStoneBoundingBox() {
+        // return a left,top,right,bottom box describing the maximum needed draw area
+        // for intesection contents
+        // where 1.0 = a single square
+        // FIXME: this should be calculated per theme according to image box sizes
+        return [-1, -1, 2, 2];
+    }
+
+    public getShadowBoundingBox() {
+        // return a left,top,right,bottom box describing the maximum needed draw area
+        // for intesection contents
+        // where 1.0 = a single square
+        // FIXME: this should be calculated per theme according to image box sizes
+        return [-0.5, -0.5, 1.5, 1.5];
+    }
+
+    public getMarkingsBoundingBox() {
+        return [0, 0, 1, 1];
     }
 
     /* Should return true if you would like the shadow layer to be present. False
      * speeds up rendering typically */
     public stoneCastsShadow(radius: number): boolean {
+        if (radius < 10) {
+            return false;
+        }
+
         for (const s of [
             JSONTheme.styles.shadows,
             JSONTheme.styles.blackShadows,

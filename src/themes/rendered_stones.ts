@@ -447,7 +447,9 @@ function placeRenderedStone(
         if (shadow_ctx) {
             shadow_ctx.drawImage(stone.shadow, sx, sy, radius * 2.5, radius * 2.5);
         }
-        ctx.drawImage(stone.stone, sx, sy, ss, ss);
+        if (ctx) {
+            ctx.drawImage(stone.stone, sx, sy, ss, ss);
+        }
     } else {
         const center = stone_center_in_square(radius, false);
 
@@ -457,7 +459,9 @@ function placeRenderedStone(
         if (shadow_ctx) {
             shadow_ctx.drawImage(stone.shadow, sx, sy);
         }
-        ctx.drawImage(stone.stone, sx, sy);
+        if (ctx) {
+            ctx.drawImage(stone.stone, sx, sy);
+        }
     }
 }
 function stoneCastsShadow(radius: number): boolean {

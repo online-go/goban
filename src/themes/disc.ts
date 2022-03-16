@@ -32,6 +32,9 @@ export default function (GoThemes: GoThemesInterface) {
             radius: number,
             color: string,
         ): void {
+            if (!ctx) {
+                return;
+            }
             let lineWidth = radius * 0.1;
             if (lineWidth < 0.3) {
                 lineWidth = 0;

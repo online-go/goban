@@ -62,7 +62,7 @@ export class GoTheme {
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
     public placeWhiteStone(
-        ctx: CanvasRenderingContext2D,
+        ctx: CanvasRenderingContext2D | null,
         shadow_ctx: CanvasRenderingContext2D | null,
         stone: any,
         cx: number,
@@ -70,14 +70,16 @@ export class GoTheme {
         radius: number,
     ) {
         //if (shadow_ctx) do something
-        ctx.fillStyle = this.getWhiteStoneColor();
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
-        ctx.fill();
+        if (ctx) {
+            ctx.fillStyle = this.getWhiteStoneColor();
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
+            ctx.fill();
+        }
     }
 
     public placeBlackStone(
-        ctx: CanvasRenderingContext2D,
+        ctx: CanvasRenderingContext2D | null,
         shadow_ctx: CanvasRenderingContext2D | null,
         stone: any,
         cx: number,
@@ -85,10 +87,12 @@ export class GoTheme {
         radius: number,
     ) {
         //if (shadow_ctx) do something
-        ctx.fillStyle = this.getBlackStoneColor();
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
-        ctx.fill();
+        if (ctx) {
+            ctx.fillStyle = this.getBlackStoneColor();
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
+            ctx.fill();
+        }
     }
 
     /** Returns a PIXI sprite for a white stone of the given radius using the given seed */
@@ -130,6 +134,24 @@ export class GoTheme {
         return PIXI.utils.TextureCache[key];
     }
     */
+
+    public getStoneBoundingBox() {
+        // return a left,top,right,bottom box describing the maximum needed draw area
+        // for intesection contents
+        // where 1.0 = a single square
+        return [0, 0, 1, 1];
+    }
+
+    public getShadowBoundingBox() {
+        // return a left,top,right,bottom box describing the maximum needed draw area
+        // for intesection contents
+        // where 1.0 = a single square
+        return [0.2, 0.2, 1.2, 1.2];
+    }
+
+    public getMarkingsBoundingBox() {
+        return [0, 0, 1, 1];
+    }
 
     /* Should return true if you would like the shadow layer to be present. False
      * speeds up rendering typically */
