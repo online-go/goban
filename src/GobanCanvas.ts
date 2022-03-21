@@ -1375,10 +1375,10 @@ export class GobanCanvas extends GobanCore {
         // FIXME: could be cached when theme changed instead of calling every drawSquare()
         const drawArray = [];
 
-        const dright = Math.ceil(boundingBox[2] - boundingBox[0] - 1);
-        const dleft = -dright;
-        const dbottom = Math.ceil(boundingBox[3] - boundingBox[1] - 1);
-        const dtop = -dbottom;
+        const dleft = Math.floor(boundingBox[0]);
+        const dright = Math.ceil(boundingBox[2]) - 1;
+        const dtop = Math.floor(boundingBox[1]);
+        const dbottom = Math.ceil(boundingBox[3]) - 1;
 
         for (let j = dtop; j <= dbottom; ++j) {
             for (let i = dleft; i <= dright; ++i) {
