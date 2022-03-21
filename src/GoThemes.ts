@@ -25,37 +25,70 @@ export interface GoThemesInterface {
     [_: string]: { [name: string]: typeof GoTheme };
 }
 
-export const GoThemes: GoThemesInterface = {
-    white: {},
-    black: {},
-    board: {},
-};
-export const GoThemesSorted: { [n: string]: Array<GoTheme> } = {
-    white: [],
-    black: [],
-    board: [],
-};
-
 import init_board_plain from "./themes/board_plain";
 import init_board_woods from "./themes/board_woods";
 import init_disc from "./themes/disc";
 import init_rendered from "./themes/rendered_stones";
-//import init_anime from "./themes/anime";
 import init_json_theme from "./themes/JSONTheme";
-
-init_board_plain(GoThemes);
-init_board_woods(GoThemes);
-init_disc(GoThemes);
-init_rendered(GoThemes);
-init_json_theme(GoThemes);
+import { JSONTheme } from "./themes/JSONTheme";
+import { insertJSONTheme } from "./themes/JSONTheme";
 
 function theme_sort(a: GoTheme, b: GoTheme) {
     return a.sort() - b.sort();
 }
 
-for (const k in GoThemes) {
-    GoThemesSorted[k] = Object.keys(GoThemes[k]).map((n) => {
-        return new GoThemes[k][n]();
-    });
-    GoThemesSorted[k].sort(theme_sort);
+export function GetGoThemesSorted(jsonThemes: Array<string> | null = null): {
+    [n: string]: Array<GoTheme>;
+} {
+    const goThemes = GetGoThemes(jsonThemes);
+    const goThemesSorted: { [n: string]: Array<GoTheme> } = {
+        white: [],
+        black: [],
+        board: [],
+    };
+
+    // map() seemed to mess with the scoping of generated classes
+    // so I use for loop
+    for (const k of ["white", "black", "board"]) {
+        for (const theme_name in goThemes[k]) {
+            const b = new goThemes[k][theme_name]();
+            if (!(k in goThemesSorted)) {
+                goThemesSorted[k] = [];
+            }
+            goThemesSorted[k].push(b);
+        }
+        goThemesSorted[k].sort(theme_sort);
+    }
+
+    return goThemesSorted;
 }
+
+export function GetGoThemes(jsonThemes: Array<string> | null = null): GoThemesInterface {
+    // build a list of classes comprised of default themes
+    // and all the jsonThemes passed as json text via 'jsonThemes'
+    const goThemes: GoThemesInterface = {
+        white: {},
+        black: {},
+        board: {},
+    };
+
+    init_board_plain(goThemes);
+    init_board_woods(goThemes);
+    init_disc(goThemes);
+    init_rendered(goThemes);
+    init_json_theme(goThemes);
+
+    // insert some stock themes for now just to populate the list
+    if (!jsonThemes) {
+        jsonThemes = JSONTheme.getStockThemes();
+    }
+    for (const j of jsonThemes) {
+        insertJSONTheme(goThemes, j);
+    }
+    return goThemes;
+}
+
+// this constructs GoTheme & GoThemesSorted module globals which
+// needed here for test board and old OGS
+export const GoThemes = GetGoThemes();
+export const GoThemesSorted = GetGoThemesSorted();

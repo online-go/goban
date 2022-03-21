@@ -30,22 +30,7 @@ Eventually (one hopes) users can supply their own JSON themes & share them
 
 */
 
-/*  A NOTE
-    So, it's complicated.
-    1. A GoTheme is created as one thing (via "class"), but
-    2. GoThemes are then separated by board & stone rendering, and
-    3. GoThemes are never treated like objects, but passed around as classes that components can instantiate
-    4. Every GoTheme (class) must be hardcoded into GoThemes.ts, and is immutable throughout the duration of app run.
-
-    This causes problems, especially with a theme that needs to change on demand (i.e. it's not possible)
-
-    So my solution is to use static variables. This allows mutability without introducing a "preference object" and whatnot.
-
-    Since GoThemes are treated like singleton globals anyway, this works out pretty well.
-
-*/
-
-// static settings for any image-based theme.
+// settings for any image-based theme.
 // these settings should always be dumb-easy for anyone to understand or guess
 // and should be flexible enough so artists do not need to type too many values in
 
@@ -134,9 +119,7 @@ class MatrixStore {
 }
 
 export class JSONTheme extends GoTheme {
-    static json: string = "{}"; // globally available in class so that all the parts can see it without a "preference object"
-    static styles: JSONThemeStyle; // constructed from json
-
+    public json: string = "{}";
     public name: string;
     public styles: { [style_name: string]: string } = {};
     public themeStyle: JSONThemeStyle = new JSONThemeStyle();
@@ -151,15 +134,15 @@ export class JSONTheme extends GoTheme {
 
     constructor(parent?: GoTheme) {
         super();
-        this.name = "JSONTheme"; //JSONTheme.styles.themeName
+        this.name = "JSONTheme"; //this.themeStyle.themeName
         this.parent = parent;
 
-        if (!JSONTheme.styles) {
-            JSONTheme.styles = new JSONThemeStyle();
+        if (!this.themeStyle) {
+            this.themeStyle = new JSONThemeStyle();
         }
 
-        if (JSONTheme.json && JSONTheme.json.length > 4) {
-            this.loadFromText(JSONTheme.json);
+        if (this.json && this.json.length > 4) {
+            this.loadFromText(this.json);
         } else {
             this.loadFromText(JSONTheme.getDefaultJSON());
         }
@@ -171,32 +154,32 @@ export class JSONTheme extends GoTheme {
         this.whiteShadowImages = [];
         this.blackShadowImages = [];
 
-        if (JSONTheme.styles.whiteStones && JSONTheme.styles.whiteStones.length > 0) {
-            for (const src of JSONTheme.styles.whiteStones) {
+        if (this.themeStyle.whiteStones && this.themeStyle.whiteStones.length > 0) {
+            for (const src of this.themeStyle.whiteStones) {
                 const img = new Image();
                 img.src = src;
                 this.whiteImages.push(img);
             }
         }
 
-        if (JSONTheme.styles.blackStones && JSONTheme.styles.blackStones.length > 0) {
-            for (const src of JSONTheme.styles.blackStones) {
+        if (this.themeStyle.blackStones && this.themeStyle.blackStones.length > 0) {
+            for (const src of this.themeStyle.blackStones) {
                 const img = new Image();
                 img.src = src;
                 this.blackImages.push(img);
             }
         }
 
-        if (JSONTheme.styles.whiteShadows && JSONTheme.styles.whiteShadows.length > 0) {
-            for (const src of JSONTheme.styles.whiteShadows) {
+        if (this.themeStyle.whiteShadows && this.themeStyle.whiteShadows.length > 0) {
+            for (const src of this.themeStyle.whiteShadows) {
                 const img = new Image();
                 img.src = src;
                 this.whiteShadowImages.push(img);
             }
         }
 
-        if (JSONTheme.styles.blackShadows && JSONTheme.styles.blackShadows.length > 0) {
-            for (const src of JSONTheme.styles.blackShadows) {
+        if (this.themeStyle.blackShadows && this.themeStyle.blackShadows.length > 0) {
+            for (const src of this.themeStyle.blackShadows) {
                 const img = new Image();
                 img.src = src;
                 this.blackShadowImages.push(img);
@@ -204,16 +187,16 @@ export class JSONTheme extends GoTheme {
         }
 
         // created default shadows if needed
-        if (JSONTheme.styles.shadows && JSONTheme.styles.shadows.length > 0) {
+        if (this.themeStyle.shadows && this.themeStyle.shadows.length > 0) {
             if (this.whiteShadowImages.length === 0) {
-                for (const src of JSONTheme.styles.shadows) {
+                for (const src of this.themeStyle.shadows) {
                     const img = new Image();
                     img.src = src;
                     this.whiteShadowImages.push(img);
                 }
             }
             if (this.blackShadowImages.length === 0) {
-                for (const src of JSONTheme.styles.shadows) {
+                for (const src of this.themeStyle.shadows) {
                     const img = new Image();
                     img.src = src;
                     this.blackShadowImages.push(img);
@@ -251,19 +234,19 @@ export class JSONTheme extends GoTheme {
                 const matrices = new MatrixStore();
 
                 ctx.resetTransform();
-                JSONTheme.activateMatrixFor(ctx, "white", rando);
+                this.activateMatrixFor(ctx, "white", rando);
                 matrices.whiteMatrix = transform_the_transform(ctx.getTransform());
 
                 ctx.resetTransform();
-                JSONTheme.activateMatrixFor(ctx, "black", rando);
+                this.activateMatrixFor(ctx, "black", rando);
                 matrices.blackMatrix = transform_the_transform(ctx.getTransform());
 
                 ctx.resetTransform();
-                JSONTheme.activateMatrixFor(ctx, "whiteShadow", rando);
+                this.activateMatrixFor(ctx, "whiteShadow", rando);
                 matrices.whiteShadowMatrix = transform_the_transform(ctx.getTransform());
 
                 ctx.resetTransform();
-                JSONTheme.activateMatrixFor(ctx, "blackShadow", rando);
+                this.activateMatrixFor(ctx, "blackShadow", rando);
                 matrices.blackShadowMatrix = transform_the_transform(ctx.getTransform());
 
                 matrices.rando = rando;
@@ -281,7 +264,7 @@ export class JSONTheme extends GoTheme {
 
     public loadFromURL(url: string) {}
 
-    protected static loadFromText(text: string): boolean {
+    protected loadFromText(text: string): boolean {
         // FIXME this and parseJSON are kinda the same thing
         try {
             const j = JSON.parse(text);
@@ -294,7 +277,10 @@ export class JSONTheme extends GoTheme {
                 }
             }
 
-            JSONTheme.styles = jt as JSONThemeStyle;
+            this.themeStyle = jt as JSONThemeStyle;
+
+            this.rebuildImages();
+            this.rebuildMatrices(this.themeStyle.randomSeed);
 
             return true;
         } catch (err) {
@@ -303,9 +289,9 @@ export class JSONTheme extends GoTheme {
         }
     }
 
-    public static parseJSON(): boolean {
+    public parseJSON(): boolean {
         try {
-            const j = JSON.parse(JSONTheme.json);
+            const j = JSON.parse(this.json);
             const s = new JSONThemeStyle() as any; // construct default item to check the keys & type values
             const jt = new JSONThemeStyle() as any;
 
@@ -315,7 +301,7 @@ export class JSONTheme extends GoTheme {
                 }
             }
 
-            JSONTheme.styles = jt as JSONThemeStyle;
+            this.themeStyle = jt as JSONThemeStyle;
 
             return true;
         } catch (err) {
@@ -324,30 +310,28 @@ export class JSONTheme extends GoTheme {
         }
     }
 
-    public static setJSON(text: string) {
-        JSONTheme.json = text;
-        JSONTheme.parseJSON();
-        //console.log(JSONTheme.json)
-        //console.log(JSONTheme.styles)
-    }
-
-    public loadFromText(text: string) {
-        if (JSONTheme.loadFromText(text)) {
-            this.rebuildImages();
-            this.rebuildMatrices(JSONTheme.styles.randomSeed);
-        }
+    public setJSON(text: string) {
+        this.json = text;
+        this.parseJSON();
+        //console.log(this.json)
+        //console.log(this.themeStyle)
     }
 
     get theme_name(): string {
-        return "JSONTheme";
-        //return JSONTheme.styles.name;
+        if (this.themeStyle.name) {
+            return this.themeStyle.name;
+        } else {
+            return "JSONTheme";
+        }
+        //return this.themeStyle.name;
     }
+
     public sort(): number {
-        return JSONTheme.styles.priority;
+        return this.themeStyle.priority;
     }
 
     public getStyles(): JSONThemeStyle {
-        return JSONTheme.styles;
+        return this.themeStyle;
     }
 
     public preRenderStone(radius: number, seed: number) {
@@ -377,7 +361,7 @@ export class JSONTheme extends GoTheme {
         return this.preRenderStone(radius, seed);
     }
 
-    public static multiRotate(
+    public multiRotate(
         ctx: CanvasRenderingContext2D,
         rotations: Array<Array<number>>,
         rando: number,
@@ -390,15 +374,8 @@ export class JSONTheme extends GoTheme {
         }
         ctx.rotate((tot * Math.PI) / 180.0);
     }
-    public multiRotate(
-        ctx: CanvasRenderingContext2D,
-        rotations: Array<Array<number>>,
-        rando: number,
-    ) {
-        JSONTheme.multiRotate(ctx, rotations, rando);
-    }
 
-    public static multiTranslate(
+    public multiTranslate(
         ctx: CanvasRenderingContext2D,
         translations: Array<Array<[number, number]>>,
         rando: number,
@@ -420,16 +397,7 @@ export class JSONTheme extends GoTheme {
         }
     }
 
-    public multiTranslate(
-        ctx: CanvasRenderingContext2D,
-        translations: Array<Array<[number, number]>>,
-        rando: number,
-        inverse: boolean = false,
-    ) {
-        JSONTheme.multiTranslate(ctx, translations, rando, inverse);
-    }
-
-    public static multiScale(
+    public multiScale(
         ctx: CanvasRenderingContext2D,
         scales: Array<Array<[number, number] | number>>,
         rando: number,
@@ -448,104 +416,77 @@ export class JSONTheme extends GoTheme {
             }
         }
     }
-    public multiScale(
-        ctx: CanvasRenderingContext2D,
-        scales: Array<Array<[number, number] | number>>,
-        rando: number,
-    ) {
-        JSONTheme.multiScale(ctx, scales, rando);
-    }
 
-    public static activateMatrixFor(ctx: CanvasRenderingContext2D, kind: string, rando: number) {
-        const rots = JSONTheme.styles.rotations;
-        const offs = JSONTheme.styles.offsets;
-        const sizes = JSONTheme.styles.sizes;
+    public activateMatrixFor(ctx: CanvasRenderingContext2D, kind: string, rando: number) {
+        const rots = this.themeStyle.rotations;
+        const offs = this.themeStyle.offsets;
+        const sizes = this.themeStyle.sizes;
 
-        const stoneRots = JSONTheme.styles.stoneRotations;
-        const stoneOffs = JSONTheme.styles.stoneOffsets;
-        const stoneSizes = JSONTheme.styles.stoneSizes;
+        const stoneRots = this.themeStyle.stoneRotations;
+        const stoneOffs = this.themeStyle.stoneOffsets;
+        const stoneSizes = this.themeStyle.stoneSizes;
 
-        const shadRots = JSONTheme.styles.shadowRotations;
-        const shadOffs = JSONTheme.styles.shadowOffsets;
-        const shadSizes = JSONTheme.styles.shadowSizes;
+        const shadRots = this.themeStyle.shadowRotations;
+        const shadOffs = this.themeStyle.shadowOffsets;
+        const shadSizes = this.themeStyle.shadowSizes;
 
         switch (kind) {
             case "white":
-                JSONTheme.multiTranslate(
+                this.multiTranslate(
                     ctx,
-                    [offs, stoneOffs, JSONTheme.styles.whiteStoneOffsets],
+                    [offs, stoneOffs, this.themeStyle.whiteStoneOffsets],
                     rando,
                     false,
                 );
-                JSONTheme.multiScale(
+                this.multiScale(ctx, [sizes, stoneSizes, this.themeStyle.whiteStoneSizes], rando);
+                this.multiRotate(
                     ctx,
-                    [sizes, stoneSizes, JSONTheme.styles.whiteStoneSizes],
-                    rando,
-                );
-                JSONTheme.multiRotate(
-                    ctx,
-                    [rots, stoneRots, JSONTheme.styles.whiteStoneRotations],
+                    [rots, stoneRots, this.themeStyle.whiteStoneRotations],
                     rando,
                 );
                 break;
             case "black":
-                JSONTheme.multiTranslate(
+                this.multiTranslate(
                     ctx,
-                    [offs, stoneOffs, JSONTheme.styles.blackStoneOffsets],
+                    [offs, stoneOffs, this.themeStyle.blackStoneOffsets],
                     rando,
                     false,
                 );
-                JSONTheme.multiScale(
+                this.multiScale(ctx, [sizes, stoneSizes, this.themeStyle.blackStoneSizes], rando);
+                this.multiRotate(
                     ctx,
-                    [sizes, stoneSizes, JSONTheme.styles.blackStoneSizes],
-                    rando,
-                );
-                JSONTheme.multiRotate(
-                    ctx,
-                    [rots, stoneRots, JSONTheme.styles.blackStoneRotations],
+                    [rots, stoneRots, this.themeStyle.blackStoneRotations],
                     rando,
                 );
                 break;
             case "blackShadow":
-                JSONTheme.multiTranslate(
+                this.multiTranslate(
                     ctx,
-                    [offs, shadOffs, JSONTheme.styles.blackShadowOffsets],
+                    [offs, shadOffs, this.themeStyle.blackShadowOffsets],
                     rando,
                     false,
                 );
-                JSONTheme.multiScale(
+                this.multiScale(ctx, [sizes, shadSizes, this.themeStyle.blackShadowSizes], rando);
+                this.multiRotate(
                     ctx,
-                    [sizes, shadSizes, JSONTheme.styles.blackShadowSizes],
-                    rando,
-                );
-                JSONTheme.multiRotate(
-                    ctx,
-                    [rots, shadRots, JSONTheme.styles.blackShadowRotations],
+                    [rots, shadRots, this.themeStyle.blackShadowRotations],
                     rando,
                 );
                 break;
             case "whiteShadow":
-                JSONTheme.multiTranslate(
+                this.multiTranslate(
                     ctx,
-                    [offs, shadOffs, JSONTheme.styles.whiteShadowOffsets],
+                    [offs, shadOffs, this.themeStyle.whiteShadowOffsets],
                     rando,
                     false,
                 );
-                JSONTheme.multiScale(
+                this.multiScale(ctx, [sizes, shadSizes, this.themeStyle.whiteShadowSizes], rando);
+                this.multiRotate(
                     ctx,
-                    [sizes, shadSizes, JSONTheme.styles.whiteShadowSizes],
-                    rando,
-                );
-                JSONTheme.multiRotate(
-                    ctx,
-                    [rots, shadRots, JSONTheme.styles.whiteShadowRotations],
+                    [rots, shadRots, this.themeStyle.whiteShadowRotations],
                     rando,
                 );
         }
-    }
-
-    public activateMatrixFor(ctx: CanvasRenderingContext2D, kind: string, rando: number) {
-        JSONTheme.activateMatrixFor(ctx, kind, rando);
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
@@ -732,9 +673,9 @@ export class JSONTheme extends GoTheme {
         }
 
         for (const s of [
-            JSONTheme.styles.shadows,
-            JSONTheme.styles.blackShadows,
-            JSONTheme.styles.whiteShadows,
+            this.themeStyle.shadows,
+            this.themeStyle.blackShadows,
+            this.themeStyle.whiteShadows,
         ]) {
             if (s && s.length > 0) {
                 return true;
@@ -745,24 +686,24 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for white stones */
     public getWhiteStoneColor(): string {
-        if (JSONTheme.styles.whiteStoneColor) {
-            return JSONTheme.styles.whiteStoneColor;
+        if (this.themeStyle.whiteStoneColor) {
+            return this.themeStyle.whiteStoneColor;
         } else {
             return "#ffffff";
         }
     }
 
     public getWhiteStoneLineColor(): string {
-        if (JSONTheme.styles.whiteStoneLineColor) {
-            return JSONTheme.styles.whiteStoneLineColor;
+        if (this.themeStyle.whiteStoneLineColor) {
+            return this.themeStyle.whiteStoneLineColor;
         } else {
             return this.getWhiteTextColor();
         }
     }
 
     public getWhiteStoneLineWidth(): number {
-        if (JSONTheme.styles.whiteStoneLineWidth !== undefined) {
-            return JSONTheme.styles.whiteStoneLineWidth;
+        if (this.themeStyle.whiteStoneLineWidth !== undefined) {
+            return this.themeStyle.whiteStoneLineWidth;
         } else {
             return 1 / 20;
         }
@@ -770,24 +711,24 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for black stones */
     public getBlackStoneColor(): string {
-        if (JSONTheme.styles.blackStoneColor) {
-            return JSONTheme.styles.blackStoneColor;
+        if (this.themeStyle.blackStoneColor) {
+            return this.themeStyle.blackStoneColor;
         } else {
             return "#000000";
         }
     }
 
     public getBlackStoneLineColor(): string {
-        if (JSONTheme.styles.blackStoneLineColor) {
-            return JSONTheme.styles.blackStoneLineColor;
+        if (this.themeStyle.blackStoneLineColor) {
+            return this.themeStyle.blackStoneLineColor;
         } else {
             return "#000000";
         } // black stones are usuallly dark and don't need a line
     }
 
     public getBlackStoneLineWidth(): number {
-        if (JSONTheme.styles.blackStoneLineWidth) {
-            return JSONTheme.styles.blackStoneLineWidth;
+        if (this.themeStyle.blackStoneLineWidth) {
+            return this.themeStyle.blackStoneLineWidth;
         } else {
             return 0;
         } // black stones are usuallly dark and don't need a line
@@ -795,8 +736,8 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for text over white stones */
     public getWhiteTextColor(color?: string): string {
-        if (JSONTheme.styles.whiteTextColor) {
-            return JSONTheme.styles.whiteTextColor;
+        if (this.themeStyle.whiteTextColor) {
+            return this.themeStyle.whiteTextColor;
         } else {
             return "#000000";
         }
@@ -804,32 +745,32 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for text over black stones */
     public getBlackTextColor(color?: string): string {
-        if (JSONTheme.styles.blackTextColor) {
-            return JSONTheme.styles.blackTextColor;
+        if (this.themeStyle.blackTextColor) {
+            return this.themeStyle.blackTextColor;
         } else {
             return "#ffffff";
         }
     }
 
     public getBoardFont(): string {
-        if (JSONTheme.styles.boardFont) {
-            return JSONTheme.styles.boardFont;
+        if (this.themeStyle.boardFont) {
+            return this.themeStyle.boardFont;
         } else {
             return GOBAN_FONT;
         }
     }
 
     public getLabelFont(): string {
-        if (JSONTheme.styles.labelFont) {
-            return JSONTheme.styles.labelFont;
+        if (this.themeStyle.labelFont) {
+            return this.themeStyle.labelFont;
         } else {
             return this.getBoardFont();
         }
     }
 
     public getCoordinateFont(): string {
-        if (JSONTheme.styles.coordinateFont) {
-            return JSONTheme.styles.coordinateFont;
+        if (this.themeStyle.coordinateFont) {
+            return this.themeStyle.coordinateFont;
         } else {
             return this.getBoardFont();
         }
@@ -837,15 +778,15 @@ export class JSONTheme extends GoTheme {
 
     /* Returns a set of CSS styles that should be applied to the background layer (ie the board) */
     public getBackgroundCSS(): GoThemeBackgroundCSS {
-        if (JSONTheme.styles.boardImage) {
+        if (this.themeStyle.boardImage) {
             return {
-                "background-image": `url("${JSONTheme.styles.boardImage}")`,
-                "background-color": JSONTheme.styles.boardColor,
+                "background-image": `url("${this.themeStyle.boardImage}")`,
+                "background-color": this.themeStyle.boardColor,
                 "background-size": "cover",
             };
         } else {
             return {
-                "background-color": JSONTheme.styles.boardColor,
+                "background-color": this.themeStyle.boardColor,
                 "background-image": "",
             };
         }
@@ -864,10 +805,10 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for lines */
     public getLineColor(): string {
-        if (JSONTheme.styles.lineColor) {
-            return JSONTheme.styles.lineColor;
-        } else if (JSONTheme.styles.boardInkColor) {
-            return JSONTheme.styles.boardInkColor;
+        if (this.themeStyle.lineColor) {
+            return this.themeStyle.lineColor;
+        } else if (this.themeStyle.boardInkColor) {
+            return this.themeStyle.boardInkColor;
         } else {
             return "#000000";
         }
@@ -875,10 +816,10 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for lines * when there is text over the square */
     public getFadedLineColor(): string {
-        if (JSONTheme.styles.fadedLineColor) {
-            return JSONTheme.styles.fadedLineColor;
-        } else if (JSONTheme.styles.boardFadedInkColor) {
-            return JSONTheme.styles.boardFadedInkColor;
+        if (this.themeStyle.fadedLineColor) {
+            return this.themeStyle.fadedLineColor;
+        } else if (this.themeStyle.boardFadedInkColor) {
+            return this.themeStyle.boardFadedInkColor;
         } else {
             return "#888888";
         }
@@ -886,10 +827,10 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that should be used for star points */
     public getStarColor(): string {
-        if (JSONTheme.styles.starColor) {
-            return JSONTheme.styles.starColor;
-        } else if (JSONTheme.styles.boardInkColor) {
-            return JSONTheme.styles.boardInkColor;
+        if (this.themeStyle.starColor) {
+            return this.themeStyle.starColor;
+        } else if (this.themeStyle.boardInkColor) {
+            return this.themeStyle.boardInkColor;
         } else {
             return "#000000";
         }
@@ -898,10 +839,10 @@ export class JSONTheme extends GoTheme {
     /* Returns the color that should be used for star points
      * when there is text over the square */
     public getFadedStarColor(): string {
-        if (JSONTheme.styles.fadedStarColor) {
-            return JSONTheme.styles.fadedStarColor;
-        } else if (JSONTheme.styles.boardFadedInkColor) {
-            return JSONTheme.styles.boardFadedInkColor;
+        if (this.themeStyle.fadedStarColor) {
+            return this.themeStyle.fadedStarColor;
+        } else if (this.themeStyle.boardFadedInkColor) {
+            return this.themeStyle.boardFadedInkColor;
         } else {
             return "#888888";
         }
@@ -909,10 +850,10 @@ export class JSONTheme extends GoTheme {
 
     /* Returns the color that text should be over empty intersections */
     public getBlankTextColor(): string {
-        if (JSONTheme.styles.blankTextColor) {
-            return JSONTheme.styles.blankTextColor;
-        } else if (JSONTheme.styles.boardInkColor) {
-            return JSONTheme.styles.boardInkColor;
+        if (this.themeStyle.blankTextColor) {
+            return this.themeStyle.blankTextColor;
+        } else if (this.themeStyle.boardInkColor) {
+            return this.themeStyle.boardInkColor;
         } else {
             return "#000000";
         }
@@ -920,19 +861,43 @@ export class JSONTheme extends GoTheme {
 
     /** Returns the color that should be used for labels */
     public getLabelTextColor(): string {
-        if (JSONTheme.styles.coordinateColor) {
-            return JSONTheme.styles.coordinateColor;
-        } else if (JSONTheme.styles.boardInkColor) {
-            return JSONTheme.styles.boardInkColor;
+        if (this.themeStyle.coordinateColor) {
+            return this.themeStyle.coordinateColor;
+        } else if (this.themeStyle.boardInkColor) {
+            return this.themeStyle.boardInkColor;
         } else {
             return "#000000";
         }
     }
 
-    public static getDefaultJSON(): string {
-        // an example until I figure out how to integrate JSONThemes in OGS
-        // these examples are guaranteed to parse
-        let json = `
+    public static getStockThemes(): string[] {
+        // these are stock themes used in GetGoThemeLists() in GoThemes.js
+        // currently they use github/dropbox addresses
+        // for testing. Presumably the client will create their own themes
+        // and pass them to insertTheme()
+        const t = [];
+        t.push(`
+        {
+            "name": "hikaru",
+            "boardImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/hikaru/board.svg",
+            "boardColor": "#dcc083",
+            "boardInkColor": "rgb(76, 47, 0, 0.8)", "boardColor": "#d2b473",
+            "boardFont": "Helvetica Neue,Helvetica,Arial,Verdana,sans-serif",
+            "whiteStones": [
+                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_white_stone_raw.svg"
+            ],
+            "blackStones": [
+                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_black_stone_raw.svg"
+            ],
+            "shadows": [
+                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_stone_shadow.svg"
+            ],
+            "shadowOffsets": [[0.02, 0.1]],
+            "shadowSizes": [1.1]
+        }
+        `);
+
+        t.push(`
         {
             "name": "BadukBroadcast",
             "boardImage": "https://github.com/upsided/Upsided-Sabaki-Themes/raw/main/baduktv/goban_texture_smooth.png",
@@ -954,22 +919,9 @@ export class JSONTheme extends GoTheme {
             "sizes": [0.9],
             "shadowSizes": [1.1]
         }
-        `;
+        `);
 
-        json = `
-        {
-            "name": "just-colors",
-            "boardColor": "#CBA170",
-            "boardInkColor": "#382933",
-            "whiteStoneColor": "#FAF1E8",
-            "blackStoneColor": "#2B2825",
-            "blackTextColor": "#FAF1E8",
-            "whiteTextColor": "#2B2825",
-            "blankTextColor": "#FAF1E8"
-        }
-        `;
-
-        json = ` 
+        t.push(` 
         {
             "name": "shuffled-stones",
             "boardColor": "#CBA170",
@@ -982,10 +934,10 @@ export class JSONTheme extends GoTheme {
             "blankTextColor": "#FAF1E8",
             "sizes": [0.98],
             "offsets": [[0.02, 0.01], [0.05, -0.02], [-0.01, 0.05]]
-        }      
-        `;
+        }
+        `);
 
-        json = `
+        t.push(`
         {
             "name": "Happy Stones",
             "boardImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/happy-stones/goban_texture_fancy_orange.png",
@@ -998,46 +950,70 @@ export class JSONTheme extends GoTheme {
             "sizes": [2],
             "offsets": [[0.45,0.45]]
         }
-        `;
-        json = `
-        {
-            "name": "hikaru",
-            "boardImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/hikaru/board.svg",
-            "boardColor": "#dcc083",
-            "boardInkColor": "rgb(76, 47, 0, 0.8)", "boardColor": "#d2b473",
-            "boardFont": "Helvetica Neue,Helvetica,Arial,Verdana,sans-serif",
-            "whiteStones": [
-                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_white_stone_raw.svg"
-            ],
-            "blackStones": [
-                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_black_stone_raw.svg"
-            ],
-            "shadows": [
-                "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_stone_shadow.svg"
-            ],
-            "shadowOffsets": [[0.02, 0.1]],
-            "shadowSizes": [1.1]
-        }
-        `;
+        `);
 
-        return json;
+        return t;
+    }
+
+    public static getDefaultJSON(): string {
+        // an example until I figure out how to integrate JSONThemes in OGS
+        // these examples are guaranteed to parse
+        return JSONTheme.getStockThemes()[0];
+    }
+}
+
+export function makeJSONTheme(jsonText: string, name: string): typeof JSONTheme {
+    // manufacture a custom class for the given json
+    // and return it
+    return class CustomTheme extends JSONTheme {
+        public json: string = jsonText;
+        public name = name;
+        get theme_name(): string {
+            return this.name;
+        }
+
+        constructor(parent?: GoTheme) {
+            super(parent);
+            this.parent = parent;
+
+            if (!this.themeStyle) {
+                this.themeStyle = new JSONThemeStyle();
+            }
+            //console.log(`JSON for ${this.name}: `, this.json);
+
+            if (this.json.length < 2) {
+                // treating "{}" as legit theme... doesn't have name though...
+                this.loadFromText(JSONTheme.getDefaultJSON());
+            } else {
+                this.loadFromText(this.json);
+            }
+        }
+    };
+}
+
+export function insertJSONTheme(goThemes: GoThemesInterface, validJSONText: string) {
+    // create a custom theme class based on validJSONText
+    // and insert the theme class into goThemes
+    const p = JSON.parse(validJSONText); // ok to throw error here because json needs to be valid
+
+    if (!p.name) {
+        p.name = "JSONTheme"; // kinda hacky, name needs to be unique
+    }
+
+    const t = makeJSONTheme(validJSONText, p.name);
+
+    console.log(`adding theme "${p.name}"`);
+
+    // not quite sure how to handle JSONThemes that are
+    // only boards or only stones, so do it hamfisted for now...
+    if (p.name) {
+        const tn = p.name;
+        goThemes["black"][tn] = t;
+        goThemes["white"][tn] = t;
+        goThemes["board"][tn] = t;
     }
 }
 
 export default function (GoThemes: GoThemesInterface) {
-    JSONTheme.setJSON(JSONTheme.getDefaultJSON());
-    GoThemes["black"]["JSONTheme"] = JSONTheme;
-    GoThemes["white"]["JSONTheme"] = JSONTheme;
-    GoThemes["board"]["JSONTheme"] = JSONTheme;
+    insertJSONTheme(GoThemes, JSONTheme.getDefaultJSON());
 }
-
-/*
-class BasicImgTheme extends JSONTheme {
-    public themeStyle: JSONThemeStyle =
-    {
-        "themeName":   "basic image theme",
-        "whiteStones": [],
-        "blackStones": []
-    }
-}
-*/
