@@ -105,6 +105,156 @@ export class JSONThemeStyle {
 
     "priority": number = 4; // number used for sorting on screen, greater == later, 100 is typical -- FIXME shouldn't really be user-assignable
     "randomSeed": number = 2083; // in case the stones look dorky with built-in seed
+
+    // theme designer can expand the bounding box for prettier (but slower) draws
+    "stoneBoundingBox": Array<number> = [];
+    "shadowBoundingBox": Array<number> = [];
+    "markingsBoundingBox": Array<number> = [];
+}
+
+// each context gets exactly one cache per img
+// and cache rebuilds when width changes
+// this saves memory but might slow down funky
+// themes that randomize scaling
+interface CachedBitmap {
+    width: number; // to fit in this width
+    bmp: ImageBitmap; // the bmp, won't work on IE, also fails to render on a Zenith Round
+}
+
+class DeferredImage {
+    // lazy-loaded & prescaled image for a url source + particular rendering context
+    srcImg: HTMLImageElement;
+
+    bmps: WeakMap<CanvasRenderingContext2D, CachedBitmap> = new WeakMap();
+
+    constructor(url: string, cb?: Function) {
+        const img = new Image();
+        //img.onload = () => this.loaded.bind(this, img, cb);
+        img.addEventListener("load", this.loaded.bind(this, img, cb));
+        img.src = url;
+        img.loading = "eager";
+        this.srcImg = img;
+    }
+
+    get stillLoading(): boolean {
+        return !this.srcImg.complete;
+    }
+
+    get failed(): boolean {
+        return !this.stillLoading && this.srcImg.naturalWidth <= 0;
+    }
+
+    drawInto(
+        ctx: CanvasRenderingContext2D,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+    ): boolean {
+        if (!this.srcImg.complete) {
+            // try anyway
+            //ctx.drawImage(this.srcImg, x, y, width, height);
+            return false; // maybe give a callback when ready
+        }
+
+        if (this.failed) {
+            return false;
+        }
+
+        const cached = this.bmps.get(ctx);
+
+        if (cached) {
+            // adapt to current canvas transform
+            const scale = ctx.getTransform()["m11"];
+            if (cached.width === Math.floor(width * scale)) {
+                ctx.drawImage(cached.bmp, x, y, width, height);
+            } else {
+                if (!this.srcImg) {
+                    return false;
+                }
+
+                ctx.drawImage(this.srcImg, x, y, width, height);
+                this.rebuild(width * scale, ctx);
+            }
+        } else {
+            const scale = ctx.getTransform()["m11"]; // adaptive is nice, but could be faster if client explicitly sets width when needed
+            ctx.drawImage(this.srcImg, x, y, width, height);
+            this.rebuild(width * scale, ctx);
+        }
+        return true;
+    }
+
+    drawIntoDeferred(
+        ctx: CanvasRenderingContext2D,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        repeatCnt: number = 0,
+    ) {
+        // The board canvas doesn't  work with deferred rendering;
+        // OGS Theme picker doesn't work without it.
+        // Try to satisfy both until OGS draws theme icons
+        // lazily or Themes can provide their own icon IMG
+
+        if (!ctx || this.failed) {
+            return;
+        }
+
+        if (!this.stillLoading) {
+            this.drawInto(ctx, x, y, width, height);
+        } else if (!this.failed) {
+            if (repeatCnt < 200) {
+                // console.log("Queue a draw  with repeats: ", repeatCnt, this.srcImg.src);
+                setTimeout(
+                    this.drawIntoDeferred.bind(this),
+                    50,
+                    ctx,
+                    x,
+                    y,
+                    width,
+                    height,
+                    repeatCnt + 1,
+                );
+            }
+        }
+    }
+
+    private loaded(img: HTMLImageElement, cb?: Function) {
+        //console.log("IMAGE READY ", this.srcImg.src);
+        if (!img.complete || img.naturalWidth <= 0) {
+            console.warn("IMAGE FAILED TO LOAD:", this.srcImg.src);
+        }
+        if (cb) {
+            cb();
+        }
+    }
+
+    private validImage() {
+        return this.srcImg && this.srcImg.complete && this.srcImg.naturalWidth > 0;
+    }
+
+    private rebuild(width: number, ctx: CanvasRenderingContext2D) {
+        if (this.failed) {
+            // not much to do but shrug. (or render a red box?)
+            return;
+        }
+        // IE doesn't have it but let's not spend neurons accomodating it
+        const ratio = this.srcImg.naturalHeight / this.srcImg.naturalWidth;
+        createImageBitmap(this.srcImg, {
+            resizeWidth: width,
+            resizeHeight: width * ratio,
+            // resizeQuality: "high",
+        })
+            .then((bmp) => {
+                const cached: CachedBitmap = {
+                    width: width,
+                    bmp: bmp,
+                };
+                this.bmps.set(ctx, cached);
+            })
+            .catch((err) => {}); // no biggie, or "failedToLoad"?
+    }
 }
 
 type TransformArity = [number, number, number, number, number, number];
@@ -126,10 +276,10 @@ export class JSONTheme extends GoTheme {
     public readonly isJSONTheme: boolean = true;
     protected parent?: GoTheme; // An optional parent theme
 
-    protected whiteImages: CanvasImageSource[] = [];
-    protected blackImages: CanvasImageSource[] = [];
-    protected whiteShadowImages: CanvasImageSource[] = [];
-    protected blackShadowImages: CanvasImageSource[] = [];
+    protected whiteImages: DeferredImage[] = [];
+    protected blackImages: DeferredImage[] = [];
+    protected whiteShadowImages: DeferredImage[] = [];
+    protected blackShadowImages: DeferredImage[] = [];
     protected matrices: Array<MatrixStore> = [];
 
     constructor(parent?: GoTheme) {
@@ -156,32 +306,28 @@ export class JSONTheme extends GoTheme {
 
         if (this.themeStyle.whiteStones && this.themeStyle.whiteStones.length > 0) {
             for (const src of this.themeStyle.whiteStones) {
-                const img = new Image();
-                img.src = src;
+                const img = new DeferredImage(src);
                 this.whiteImages.push(img);
             }
         }
 
         if (this.themeStyle.blackStones && this.themeStyle.blackStones.length > 0) {
             for (const src of this.themeStyle.blackStones) {
-                const img = new Image();
-                img.src = src;
+                const img = new DeferredImage(src);
                 this.blackImages.push(img);
             }
         }
 
         if (this.themeStyle.whiteShadows && this.themeStyle.whiteShadows.length > 0) {
             for (const src of this.themeStyle.whiteShadows) {
-                const img = new Image();
-                img.src = src;
+                const img = new DeferredImage(src);
                 this.whiteShadowImages.push(img);
             }
         }
 
         if (this.themeStyle.blackShadows && this.themeStyle.blackShadows.length > 0) {
             for (const src of this.themeStyle.blackShadows) {
-                const img = new Image();
-                img.src = src;
+                const img = new DeferredImage(src);
                 this.blackShadowImages.push(img);
             }
         }
@@ -190,15 +336,13 @@ export class JSONTheme extends GoTheme {
         if (this.themeStyle.shadows && this.themeStyle.shadows.length > 0) {
             if (this.whiteShadowImages.length === 0) {
                 for (const src of this.themeStyle.shadows) {
-                    const img = new Image();
-                    img.src = src;
+                    const img = new DeferredImage(src);
                     this.whiteShadowImages.push(img);
                 }
             }
             if (this.blackShadowImages.length === 0) {
                 for (const src of this.themeStyle.shadows) {
-                    const img = new Image();
-                    img.src = src;
+                    const img = new DeferredImage(src);
                     this.blackShadowImages.push(img);
                 }
             }
@@ -512,7 +656,7 @@ export class JSONTheme extends GoTheme {
                 const m = this.matrices[stone.rando % this.matrices.length]["whiteShadowMatrix"];
                 shadow_ctx.transform(...m);
 
-                shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+                img.drawIntoDeferred(shadow_ctx, -0.5, -0.5, 1.0, 1.0);
 
                 shadow_ctx.setTransform(t);
             }
@@ -527,7 +671,7 @@ export class JSONTheme extends GoTheme {
                 const m = this.matrices[stone.rando % this.matrices.length]["whiteMatrix"];
                 ctx.transform(...m);
 
-                ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+                img.drawIntoDeferred(ctx, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 ctx.setTransform(t);
             }
@@ -542,7 +686,7 @@ export class JSONTheme extends GoTheme {
                 const m = this.matrices[stone.rando % this.matrices.length]["whiteShadowMatrix"];
                 shadow_ctx.transform(...m);
 
-                shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+                img.drawIntoDeferred(shadow_ctx, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
             }
@@ -590,7 +734,7 @@ export class JSONTheme extends GoTheme {
                 const m = this.matrices[stone.rando % this.matrices.length]["blackShadowMatrix"];
                 shadow_ctx.transform(...m);
 
-                shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+                img.drawIntoDeferred(shadow_ctx, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
             }
@@ -603,7 +747,7 @@ export class JSONTheme extends GoTheme {
                 const m = this.matrices[stone.rando % this.matrices.length]["blackMatrix"];
                 ctx.transform(...m);
 
-                ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+                img.drawIntoDeferred(ctx, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 ctx.setTransform(t);
             }
@@ -616,7 +760,7 @@ export class JSONTheme extends GoTheme {
                 shadow_ctx.scale(radius * 2.0, radius * 2.0);
                 const m = this.matrices[stone.rando % this.matrices.length]["blackShadowMatrix"];
                 shadow_ctx.transform(...m);
-                shadow_ctx.drawImage(img, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
+                img.drawIntoDeferred(shadow_ctx, -0.5, -0.5, 1.0, 1.0); // unit box centered around cx, cy
 
                 shadow_ctx.setTransform(t);
             }
@@ -650,6 +794,9 @@ export class JSONTheme extends GoTheme {
         // for intesection contents
         // where 1.0 = a single square
         // FIXME: this should be calculated per theme according to image box sizes
+        if (this.themeStyle.stoneBoundingBox && this.themeStyle.stoneBoundingBox.length === 4) {
+            return this.themeStyle.stoneBoundingBox;
+        }
         return [-1, -1, 2, 2];
     }
 
@@ -658,10 +805,19 @@ export class JSONTheme extends GoTheme {
         // for intesection contents
         // where 1.0 = a single square
         // FIXME: this should be calculated per theme according to image box sizes
-        return [-0.5, -0.5, 1.5, 1.5];
+        if (this.themeStyle.shadowBoundingBox && this.themeStyle.shadowBoundingBox.length === 4) {
+            return this.themeStyle.shadowBoundingBox;
+        }
+        return [-0.75, -0.75, 1.25, 1.25];
     }
 
     public getMarkingsBoundingBox() {
+        if (
+            this.themeStyle.markingsBoundingBox &&
+            this.themeStyle.markingsBoundingBox.length === 4
+        ) {
+            return this.themeStyle.markingsBoundingBox;
+        }
         return [0, 0, 1, 1];
     }
 
@@ -893,7 +1049,8 @@ export class JSONTheme extends GoTheme {
                 "https://raw.githubusercontent.com/upsided/Upsided-OGS-Themes/main/ogs-hikaru/hikaru_stone_shadow.svg"
             ],
             "shadowOffsets": [[0.02, 0.1]],
-            "shadowSizes": [1.1]
+            "shadowSizes": [1.1],
+            "stoneBoundingBox": [0,0,1,1]
         }
         `);
 
@@ -948,7 +1105,8 @@ export class JSONTheme extends GoTheme {
                 "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/happy-stones/glass_black.png"
             ],
             "sizes": [2],
-            "offsets": [[0.45,0.45]]
+            "offsets": [[0.45,0.45]],
+            "stoneBoundingBox": [-1.5,-1.5, 2.5, 2.5]
         }
         `);
 
@@ -1002,7 +1160,7 @@ export function insertJSONTheme(goThemes: GoThemesInterface, validJSONText: stri
 
     const t = makeJSONTheme(validJSONText, p.name);
 
-    console.log(`adding theme "${p.name}"`);
+    //console.log(`adding theme "${p.name}"`);
 
     // not quite sure how to handle JSONThemes that are
     // only boards or only stones, so do it hamfisted for now...
