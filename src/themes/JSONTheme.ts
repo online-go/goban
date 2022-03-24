@@ -166,7 +166,7 @@ class DeferredImage {
         if (cached) {
             // adapt to current canvas transform
             const scale = ctx.getTransform()["m11"];
-            if (cached.width === Math.floor(width * scale)) {
+            if (cached.width === Math.ceil(width * scale)) {
                 ctx.drawImage(cached.bmp, x, y, width, height);
             } else {
                 if (!this.srcImg) {
@@ -174,12 +174,12 @@ class DeferredImage {
                 }
 
                 ctx.drawImage(this.srcImg, x, y, width, height);
-                this.rebuild(width * scale, ctx);
+                this.rebuild(Math.ceil(width * scale), ctx);
             }
         } else {
             const scale = ctx.getTransform()["m11"]; // adaptive is nice, but could be faster if client explicitly sets width when needed
             ctx.drawImage(this.srcImg, x, y, width, height);
-            this.rebuild(width * scale, ctx);
+            this.rebuild(Math.ceil(width * scale), ctx);
         }
         return true;
     }
