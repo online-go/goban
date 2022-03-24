@@ -87,6 +87,16 @@ interface DrawingInfo {
     noShadow: boolean; // skip drawing shadow?
 }
 
+// utility
+function maxbox(box1: Array<number>, box2: Array<number>): Array<number> {
+    const b = box1;
+    b[0] = Math.min(box1[0], box2[0]);
+    b[1] = Math.min(box1[1], box2[1]);
+    b[2] = Math.max(box1[2], box2[2]);
+    b[3] = Math.max(box1[3], box2[3]);
+    return b;
+}
+
 const HOT_PINK = "#ff69b4";
 
 export class GobanCanvas extends GobanCore {
@@ -1341,10 +1351,10 @@ export class GobanCanvas extends GobanCore {
 
     public makeStoneBBRect(ctx: CanvasRenderingContext2D, i: number, j: number, d: DrawingInfo) {
         // FIXME: should use the maximum bb between selected white/black themes
-        const rect =
-            d.stoneColor === 1
-                ? this.theme_black.getStoneBoundingBox()
-                : this.theme_white.getStoneBoundingBox();
+        const rect = maxbox(
+            this.theme_black.getStoneBoundingBox(),
+            this.theme_white.getStoneBoundingBox(),
+        );
         ctx.rect(
             Math.floor(i * d.size + d.xOffset + d.size * rect[0]),
             Math.floor(j * d.size + d.yOffset + d.size * rect[1]),
@@ -1356,10 +1366,10 @@ export class GobanCanvas extends GobanCore {
     public makeShadowBBRect(ctx: CanvasRenderingContext2D, i: number, j: number, d: DrawingInfo) {
         // execute ctx.rect with the theme's specified bounding box for this intersection
         // FIXME: should use the maximum bb between selected white/black themes
-        const rect =
-            d.stoneColor === 1
-                ? this.theme_black.getShadowBoundingBox()
-                : this.theme_white.getShadowBoundingBox();
+        const rect = maxbox(
+            this.theme_black.getShadowBoundingBox(),
+            this.theme_white.getShadowBoundingBox(),
+        );
         ctx.rect(
             Math.floor(i * d.size + d.xOffset + d.size * rect[0]),
             Math.floor(j * d.size + d.yOffset + d.size * rect[1]),
@@ -1390,7 +1400,15 @@ export class GobanCanvas extends GobanCore {
 
     public queueDrawSquare(i: number, j: number): void {
         // queue a square for later drawing en mass
-        for (const coord of this.getIntersectionDrawMask(this.theme_white.getStoneBoundingBox())) {
+        // need the maximum box of both white & black themes
+        // because on stone removal we don't know who left
+
+        let bb = maxbox(
+            this.theme_black.getStoneBoundingBox(),
+            this.theme_white.getStoneBoundingBox(),
+        );
+
+        for (const coord of this.getIntersectionDrawMask(bb)) {
             const ii = i + coord[0];
             const jj = j + coord[1];
 
@@ -1413,7 +1431,12 @@ export class GobanCanvas extends GobanCore {
             }
         }
 
-        for (const coord of this.getIntersectionDrawMask(this.theme_white.getShadowBoundingBox())) {
+        bb = maxbox(
+            this.theme_black.getShadowBoundingBox(),
+            this.theme_white.getShadowBoundingBox(),
+        );
+
+        for (const coord of this.getIntersectionDrawMask(bb)) {
             const ii = i + coord[0];
             const jj = j + coord[1];
 
@@ -3864,7 +3887,7 @@ export class GobanCanvas extends GobanCore {
 
         /*
         let isStrong = (a, b):boolean => {
-            return a.trunk_next === null && a.branches.length === 0 && (b.trunk_next != null || b.branches.length !== 0);
+            return a.trunk_next === null && a.branches.length === 0 && (b.trunk_next !== null || b.branches.length !== 0);
         };
         */
 
