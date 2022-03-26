@@ -118,7 +118,7 @@ export class JSONThemeStyle {
 // themes that randomize scaling
 interface CachedBitmap {
     width: number; // to fit in this width
-    bmp: ImageBitmap; // the bmp, won't work on IE, also fails to render on a Zenith Round
+    bmp: HTMLCanvasElement;
 }
 
 class DeferredImage {
@@ -166,20 +166,30 @@ class DeferredImage {
         if (cached) {
             // adapt to current canvas transform
             const scale = ctx.getTransform()["m11"];
-            if (cached.width === Math.ceil(width * scale)) {
+            if (cached.width === width * scale) {
                 ctx.drawImage(cached.bmp, x, y, width, height);
             } else {
                 if (!this.srcImg) {
                     return false;
                 }
 
-                ctx.drawImage(this.srcImg, x, y, width, height);
-                this.rebuild(Math.ceil(width * scale), ctx);
+                this.rebuild(width * scale, ctx);
+                const c = this.bmps.get(ctx);
+                if (c) {
+                    ctx.drawImage(c.bmp, x, y, width, height);
+                } else {
+                    ctx.drawImage(this.srcImg, x, y, width, height);
+                }
             }
         } else {
             const scale = ctx.getTransform()["m11"]; // adaptive is nice, but could be faster if client explicitly sets width when needed
-            ctx.drawImage(this.srcImg, x, y, width, height);
-            this.rebuild(Math.ceil(width * scale), ctx);
+            this.rebuild(width * scale, ctx);
+            const c = this.bmps.get(ctx);
+            if (c) {
+                ctx.drawImage(c.bmp, x, y, width, height);
+            } else {
+                ctx.drawImage(this.srcImg, x, y, width, height);
+            }
         }
         return true;
     }
@@ -234,26 +244,30 @@ class DeferredImage {
         return this.srcImg && this.srcImg.complete && this.srcImg.naturalWidth > 0;
     }
 
-    private rebuild(width: number, ctx: CanvasRenderingContext2D) {
+    public rebuild(width: number, ctx: CanvasRenderingContext2D) {
         if (this.failed) {
             // not much to do but shrug. (or render a red box?)
             return;
         }
-        // IE doesn't have it but let's not spend neurons accomodating it
+
         const ratio = this.srcImg.naturalHeight / this.srcImg.naturalWidth;
-        createImageBitmap(this.srcImg, {
-            resizeWidth: width,
-            resizeHeight: width * ratio,
-            // resizeQuality: "high",
-        })
-            .then((bmp) => {
-                const cached: CachedBitmap = {
-                    width: width,
-                    bmp: bmp,
-                };
-                this.bmps.set(ctx, cached);
-            })
-            .catch((err) => {}); // no biggie, or "failedToLoad"?
+
+        const canvas = document.createElement("canvas");
+        const w = Math.ceil(width);
+        const h = Math.ceil(width * ratio);
+
+        canvas.setAttribute("width", `${w}px`);
+        canvas.setAttribute("height", `${h}px`);
+        const ictx = canvas.getContext("2d");
+        if (ictx) {
+            ictx.drawImage(this.srcImg, 0, 0, w, h);
+
+            const cached: CachedBitmap = {
+                width: width,
+                bmp: canvas,
+            };
+            this.bmps.set(ctx, cached);
+        }
     }
 }
 
