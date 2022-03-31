@@ -103,6 +103,7 @@ export class MoveTree {
     public state: GoEngineState;
     public pen_marks: MoveTreePenMarks = [];
     public player_update: JGOFPlayerSummary | undefined;
+    public played_by: number | undefined;
 
     /* public for use by renderer */
     public active_path_number: number = 0;
