@@ -3132,6 +3132,18 @@ export class GobanCanvas extends GobanCore {
                         this.syncReviewMove();
                         this.redraw();
                     }
+                    if (this.engine.cur_move.played_by) {
+                        // note that getRelativeEventPosition handles various
+                        // nasty looking things to do with Touch etc, so using it here
+                        // gets around that kind of thing, even though in theory it
+                        // might be nicer to sent the client absolute coods, maybe.
+                        const rpos = getRelativeEventPosition(event);
+                        this.emit("played-by-click", {
+                            player_id: this.engine.cur_move.played_by,
+                            x: rpos.x,
+                            y: rpos.y,
+                        });
+                    }
                 }
             } catch (e) {
                 console.error(e);

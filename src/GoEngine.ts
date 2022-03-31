@@ -521,6 +521,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
                             this.cur_move.player_update = mv.player_update;
                             this.updatePlayers(mv.player_update);
                         }
+                        if (mv.played_by) {
+                            this.cur_move.played_by = mv.played_by;
+                        }
                     } catch (e) {
                         if (this.throw_all_errors) {
                             throw e;

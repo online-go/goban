@@ -219,6 +219,11 @@ export interface Events {
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
     "player-update": JGOFPlayerSummary;
+    "played-by-click": {
+        player_id: number;
+        x: number;
+        y: number;
+    };
     "review.sync-to-current-move": never;
     "review.updated": never;
     "review.load-start": never;
@@ -1120,6 +1125,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         //console.log("`move` got player update:", the_move.player_update);
                         this.engine.cur_move.player_update = the_move.player_update;
                         this.engine.updatePlayers(the_move.player_update);
+                    }
+
+                    if (the_move.played_by) {
+                        this.engine.cur_move.played_by = the_move.played_by;
                     }
 
                     this.setLastOfficialMove();
