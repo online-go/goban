@@ -135,6 +135,7 @@ export class GobanCanvas extends GobanCore {
 
     private previous_marks: Array<Array<string>>;
     private previous_board: Array<Array<string>>;
+    private previous_heatmap: Array<Array<string>>;
     private drawQueue: any = {}; // a associative array of drawInfos indexed by coordinate
     private drawQueueShadows: any = {}; // a associative array of drawInfos indexed by coordinate
 
@@ -253,6 +254,10 @@ export class GobanCanvas extends GobanCore {
             this.engine.height,
         );
         this.previous_board = GoMath.makeObjectMatrix<string>(
+            this.engine.width,
+            this.engine.height,
+        );
+        this.previous_heatmap = GoMath.makeObjectMatrix<string>(
             this.engine.width,
             this.engine.height,
         );
@@ -3234,6 +3239,10 @@ export class GobanCanvas extends GobanCore {
                 // called from basically everywhere when a limited update would do
                 const jm = JSON.stringify(this.engine.cur_move.getMarks(i, j));
                 const jb = JSON.stringify(this.engine.board[j][i]);
+                let jh = "";
+                if (this.heatmap) {
+                    jh = JSON.stringify(this.heatmap[j][i]);
+                }
 
                 if (this.previous_marks[j][i] !== jm) {
                     drawit = true;
@@ -3241,10 +3250,16 @@ export class GobanCanvas extends GobanCore {
                 if (this.previous_board[j][i] !== jb) {
                     drawit = true;
                 }
+
+                if (this.previous_heatmap[j][i] !== jh) {
+                    drawit = true;
+                }
+
                 if (force_clear || drawit) {
                     this.queueDrawSquare(i, j);
                     this.previous_marks[j][i] = jm;
                     this.previous_board[j][i] = jb;
+                    this.previous_heatmap[j][i] = jh;
                 }
             }
         }
