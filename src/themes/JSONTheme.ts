@@ -158,6 +158,7 @@ class DeferredImage {
         }
 
         if (this.failed) {
+            console.warn(`ingnoring image that failed to load: ${this.srcImg.src}`);
             return false;
         }
 
@@ -201,31 +202,64 @@ class DeferredImage {
         width: number,
         height: number,
         repeatCnt: number = 0,
+        startTransform: any = null,
     ) {
         // The board canvas doesn't  work with deferred rendering;
         // OGS Theme picker doesn't work without it.
         // Try to satisfy both until OGS draws theme icons
         // lazily or Themes can provide their own icon IMG
+        if (repeatCnt) {
+            console.log(`repeat draw: ${repeatCnt} ${this.srcImg.src}`, ctx);
+        }
 
         if (!ctx || this.failed) {
+            if (this.failed) {
+                console.warn(`Failed to load image ${this.srcImg.src}`);
+            }
+            if (!ctx) {
+                console.warn(`Missing context to draw image ${this.srcImg.src}`);
+            }
             return;
         }
 
         if (!this.stillLoading) {
-            this.drawInto(ctx, x, y, width, height);
-        } else if (!this.failed) {
-            if (repeatCnt < 200) {
-                // console.log("Queue a draw  with repeats: ", repeatCnt, this.srcImg.src);
-                setTimeout(
-                    this.drawIntoDeferred.bind(this),
-                    50,
-                    ctx,
-                    x,
-                    y,
-                    width,
-                    height,
-                    repeatCnt + 1,
-                );
+            if (repeatCnt) {
+                console.log(`Image loaded, will draw: ${this.srcImg.src}`);
+                // transform & other contextual stuff can change between timeout calls,
+                // so:
+                const trans = ctx.getTransform();
+                if (startTransform) {
+                    ctx.setTransform(startTransform);
+                }
+                // ctx.drawImage(this.srcImg, x, y, width, height);
+                this.drawInto(ctx, x, y, width, height);
+                ctx.setTransform(trans);
+            } else {
+                this.drawInto(ctx, x, y, width, height);
+            }
+        } else {
+            if (!this.failed) {
+                if (repeatCnt < 100) {
+                    // console.log("Queue a draw  with repeats: ", repeatCnt, this.srcImg.src);
+                    // keep track of initiating transform
+                    let trans = ctx.getTransform();
+                    if (startTransform) {
+                        trans = startTransform;
+                    }
+                    setTimeout(
+                        this.drawIntoDeferred.bind(this),
+                        100,
+                        ctx,
+                        x,
+                        y,
+                        width,
+                        height,
+                        repeatCnt + 1,
+                        trans,
+                    );
+                }
+            } else {
+                console.warn(`Failed to load image ${this.srcImg.src}`);
             }
         }
     }
@@ -659,6 +693,14 @@ export class JSONTheme extends GoTheme {
         // random by position ( jumping-bean stones fixed by using constant seed in prerenderstone())
         // const rando = Math.floor(cx * 31 + cy * 29);
         //console.log(JSON.stringify(stone))
+
+        // OGS tries to place a stone manually using the same context for shadow & stone
+        // This would work if images are already loaded, but if shadow is loaded after
+        // the stone, it will get drawn on top of the stone & erase it
+        // so if ctx === shadow_ctx, set the shadow_ctx to null
+        if (ctx === shadow_ctx) {
+            shadow_ctx = null;
+        }
         if (this.whiteImages.length > 0) {
             if (shadow_ctx && this.whiteShadowImages.length > 0) {
                 const img = this.whiteShadowImages[stone.rando % this.whiteShadowImages.length];
@@ -736,6 +778,14 @@ export class JSONTheme extends GoTheme {
         cy: number,
         radius: number,
     ) {
+        // OGS tries to place a stone manually using the same context for shadow & stone
+        // This would work if images are already loaded, but if shadow is loaded after
+        // the stone, it will get drawn on top of the stone & erase it
+        // so if ctx === shadow_ctx, set the shadow_ctx to null
+        if (ctx === shadow_ctx) {
+            shadow_ctx = null;
+        }
+
         if (this.blackImages.length > 0) {
             if (shadow_ctx && this.blackShadowImages.length > 0) {
                 const img = this.blackShadowImages[stone.rando % this.blackShadowImages.length];
