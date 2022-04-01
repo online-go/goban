@@ -19,7 +19,16 @@ import { GoTheme, GoThemeBackgroundReactStyles, GoThemeBackgroundCSS } from "../
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
 import { GOBAN_FONT } from "../GobanCore";
+import { GobanCore } from "../GobanCore";
+
 //import { deviceCanvasScalingRatio } from "../GoUtil";
+
+function getCDNReleaseBase() {
+    if (GobanCore.hooks.getCDNReleaseBase) {
+        return GobanCore.hooks.getCDNReleaseBase();
+    }
+    return "";
+}
 
 /*
 This class makes it easy to design a custom OGS theme using
@@ -1096,7 +1105,33 @@ export class JSONTheme extends GoTheme {
         // for testing. Presumably the client will create their own themes
         // and pass them to insertTheme()
         const t = [];
-        t.push(`
+        const USE_RELEASE = false; // use release versions of images (will not work if assets are not copied to online-go project)
+
+        if (USE_RELEASE) {
+            t.push(`
+        {
+            "name": "hikaru",
+            "boardImage": "${getCDNReleaseBase()}/img/hikaru_board.svg",
+            "boardColor": "#dcc083",
+            "boardInkColor": "rgb(76, 47, 0, 0.8)", "boardColor": "#d2b473",
+            "boardFont": "Helvetica Neue,Helvetica,Arial,Verdana,sans-serif",
+            "whiteStones": [
+                "${getCDNReleaseBase()}/img/hikaru_white.svg"
+            ],
+            "blackStones": [
+                "${getCDNReleaseBase()}/img/hikaru_black.svg"
+            ],
+            "shadows": [
+                "${getCDNReleaseBase()}/img/hikaru_shadow.svg"
+            ],
+            "sizes": [0.98],
+            "shadowOffsets": [[0.02, 0.1]],
+            "shadowSizes": [[1.05, 1.1]],
+            "stoneBoundingBox": [0,0,1,1]
+        }
+        `);
+        } else {
+            t.push(`
         {
             "name": "hikaru",
             "boardImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/hikaru/board.svg",
@@ -1117,48 +1152,102 @@ export class JSONTheme extends GoTheme {
             "stoneBoundingBox": [0,0,1,1]
         }
         `);
+        }
 
-        t.push(`
+        if (USE_RELEASE) {
+            t.push(`
         {
             "name": "BadukBroadcast",
-            "boardImage": "https://github.com/upsided/Upsided-Sabaki-Themes/raw/main/baduktv/goban_texture_smooth.png",
+            "boardImage": "${getCDNReleaseBase()}/img/baduktv_board.png",
+            "boardColor": "#cea67b",
+            "boardInkColor": "#634222",
+            "boardFont": "Tahoma,Verdana,sans-serif",
             "whiteStones": [
-                "https://dl.dropboxusercontent.com/s/l9sglf5m9fdrktq/white1_raw.png?dl=1",
-                "https://dl.dropboxusercontent.com/s/bxmlts3ag4h0zgm/white2_raw.png?dl=1",
-                "https://dl.dropboxusercontent.com/s/wag83qram5caqpb/white3_raw.png?dl=1"
+                "${getCDNReleaseBase()}/img/baduktv_white_1.png",
+                "${getCDNReleaseBase()}/img/baduktv_white_2.png",
+                "${getCDNReleaseBase()}/img/baduktv_white_3.png"
             ],
             "blackStones": [
-                "https://dl.dropboxusercontent.com/s/0viuf2iw33m5i1b/black2_raw.png?dl=1",
-                "https://dl.dropboxusercontent.com/s/0viuf2iw33m5i1b/black2_raw.png?dl=1"
+                "${getCDNReleaseBase()}/img/baduktv_black_1.png",
+                "${getCDNReleaseBase()}/img/baduktv_black_2.png",
+                "${getCDNReleaseBase()}/img/baduktv_black_3.png"
             ],
-            "whiteShadows": [
-                "https://dl.dropboxusercontent.com/s/s079o0tm7ddmzr7/black_shade.png?dl=1"
+            "shadows": [
+                "${getCDNReleaseBase()}/img/baduktv_shadow.png"
             ],
-            "blackShadows": [
-                "https://dl.dropboxusercontent.com/s/s079o0tm7ddmzr7/black_shade.png?dl=1"
-            ],
-            "sizes": [0.9],
-            "shadowSizes": [1.1]
+            "sizes": [0.95],
+            "blackStoneSizes": [1.08],
+            "whiteShadowSizes": [2.2],
+            "blackShadowSizes": [2.28],
+            "offsets": [[0.005, 0.001], [0.002, -0.008], [-0.008, 0.0]]
+
         }
         `);
+        } else {
+            t.push(`
+            {
+                "name": "BadukBroadcast",
+                "boardImage": "https://dl.dropboxusercontent.com/s/nbhkek3wbf804d3/baduktv_board.png?dl=1",
+                "boardColor": "#cea67b",
+                "boardInkColor": "#634222",
+                "boardFont": "Tahoma,Verdana,sans-serif",
+                "whiteStones": [
+                    "https://dl.dropboxusercontent.com/s/tcxdcd7cgtqqwkv/baduktv_white_1.png?dl=1",
+                    "https://dl.dropboxusercontent.com/s/6q2c2a8u8xgdnt6/baduktv_white_2.png?dl=1",
+                    "https://dl.dropboxusercontent.com/s/r6vqyjp0vhshzkb/baduktv_white_3.png?dl=1"
+                ],
+                "blackStones": [
+                    "https://dl.dropboxusercontent.com/s/a0r1gjvoz205fl4/baduktv_black_1.png?dl=1",
+                    "https://dl.dropboxusercontent.com/s/0db1iscd0qtpx4u/baduktv_black_2.png?dl=1",
+                    "https://dl.dropboxusercontent.com/s/7lweyxyzoi62s1u/baduktv_black_3.png?dl=1"
+                ],
+                "shadows": [
+                    "https://dl.dropboxusercontent.com/s/w85dqpuox1fw4v1/baduktv_shadow.png?dl=1"
+                ],
+                "sizes": [0.95],
+                "blackStoneSizes": [1.08],
+                "whiteShadowSizes": [2.2],
+                "blackShadowSizes": [2.28],
+                "offsets": [[0.005, 0.001], [0.002, -0.008], [-0.008, 0.0]]
+    
+            }
+        `);
+        }
 
         t.push(` 
         {
-            "name": "shuffled-stones",
-            "boardColor": "#CBA170",
-            "boardInkColor": "#382933",
-            "whiteStoneColor": "#FAF1E8",
+            "name": "kibitz",
+            "boardColor": "#e4bb66",
+            "boardInkColor": "#70601c",
+            "boardFont": "Trebuchet,Helvetica,Arial,Verdana,sans-serif",
+            "whiteStoneColor": "#f2f2f2",
             "whiteStoneLineWidth": 0,
-            "blackStoneColor": "#2B2825",
-            "blackTextColor": "#FAF1E8",
-            "whiteTextColor": "#2B2825",
-            "blankTextColor": "#FAF1E8",
-            "sizes": [0.98],
-            "offsets": [[0.02, 0.01], [0.05, -0.02], [-0.01, 0.05]]
+            "blackStoneColor": "#333333",
+            "blackTextColor": "#ebebeb",
+            "whiteTextColor": "#484848",
+            "sizes": [1.0],
+            "stoneBoundingBox": [0,0,1,1]
         }
         `);
 
-        t.push(`
+        if (USE_RELEASE) {
+            t.push(`
+        {
+            "name": "Happy Stones",
+            "boardImage": "${getCDNReleaseBase()}/img/happy_stones_board.png",
+            "whiteStones": [
+                "${getCDNReleaseBase()}/img/happy_stones_white.png"
+            ],
+            "blackStones": [
+                "${getCDNReleaseBase()}/img/happy_stones_black.png"
+            ],
+            "sizes": [2],
+            "offsets": [[0.41,0.41]],
+            "stoneBoundingBox": [-1.5,-1.5, 2.5, 2.5]
+        }
+        `);
+        } else {
+            t.push(`
         {
             "name": "Happy Stones",
             "boardImage": "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/happy-stones/goban_texture_fancy_orange.png",
@@ -1169,10 +1258,11 @@ export class JSONTheme extends GoTheme {
                 "https://raw.githubusercontent.com/upsided/Upsided-Sabaki-Themes/main/happy-stones/glass_black.png"
             ],
             "sizes": [2],
-            "offsets": [[0.45,0.45]],
+            "offsets": [[0.41,0.41]],
             "stoneBoundingBox": [-1.5,-1.5, 2.5, 2.5]
         }
         `);
+        }
 
         return t;
     }
