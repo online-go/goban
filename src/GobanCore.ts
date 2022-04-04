@@ -468,7 +468,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public static hooks: GobanHooks = {
         getClockDrift: () => 0,
-        getNetworkLatency: () => 0,
     };
 
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
@@ -3034,9 +3033,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         let current_server_time = 0;
         function update_current_server_time() {
-            if (GobanCore.hooks.getClockDrift && GobanCore.hooks.getNetworkLatency) {
-                const server_time_offset =
-                    GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
+            if (GobanCore.hooks.getClockDrift) {
+                const server_time_offset = GobanCore.hooks.getClockDrift();
                 current_server_time = Date.now() - server_time_offset;
             }
         }
