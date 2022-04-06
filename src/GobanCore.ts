@@ -345,6 +345,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public abstract engine: GoEngine;
     public height: number;
     public last_clock?: AdHocClock;
+    public last_emitted_clock?: JGOFClock;
+    public clock_should_be_paused_for_move_submission: boolean = false;
     public mode: GobanModes;
     public previous_mode: string;
     public one_click_submit: boolean;
@@ -365,8 +367,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     private last_paused_state: boolean | null = null;
 
     protected __board_redraw_pen_layer_timer: any = null;
-    protected __clock_timer: any =
-        null; /* number for web, Timeout for node - I don't think we can make them both happy so just 'any' */
+    protected __clock_timer?: ReturnType<typeof setTimeout>;
     protected __draw_state: Array<Array<string>>;
     protected __last_pt: { i: number; j: number; valid: boolean } = { i: -1, j: -1, valid: false };
     protected __update_move_tree: any = null; /* timer */
@@ -474,6 +475,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super();
 
+        this.on("clock", (clock?: JGOFClock | null) => {
+            if (clock) {
+                this.last_emitted_clock = clock;
+            }
+        });
+
         this.goban_id = ++last_goban_id;
 
         /* Apply defaults */
@@ -506,7 +513,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //this.black_name = config["black_name"];
         //this.white_name = config["white_name"];
         //this.move_number = config["move_number"];
-        this.__clock_timer = null;
+        delete this.__clock_timer;
         this.setGameClock(null);
         this.last_stone_sound = -1;
         this.scoring_mode = false;
@@ -959,6 +966,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     return;
                 }
 
+                this.clock_should_be_paused_for_move_submission = false;
                 this.setGameClock(obj);
 
                 this.updateTitleAndStonePlacement();
@@ -1556,6 +1564,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         /* Clear various timeouts that may be running */
+        this.clock_should_be_paused_for_move_submission = false;
         this.setGameClock(null);
         if (this.submitBlinkTimer) {
             clearTimeout(this.submitBlinkTimer);
@@ -2988,7 +2997,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }, 10);
     }
 
-    /** deprecated, remove with socket stuff */
     protected sendMove(mv: MoveCommand): void {
         if (!mv.blur) {
             mv.blur = focus_tracker.getMaxBlurDurationSinceLastReset();
@@ -2997,6 +3005,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.setConditionalTree();
 
         if (this.player_id) {
+            if (this.__clock_timer) {
+                clearTimeout(this.__clock_timer);
+                delete this.__clock_timer;
+                console.log("Removed clock timer");
+                this.clock_should_be_paused_for_move_submission = true;
+            }
+
             const original_clock = this.last_clock;
             if (!original_clock) {
                 throw new Error(`No last_clock when calling sendMove()`);
@@ -3015,17 +3030,20 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
 
             if (color) {
-                const clock_drift = GobanCore.hooks?.getClockDrift ? GobanCore.hooks?.getClockDrift() : 0;
+                const clock_drift = GobanCore.hooks?.getClockDrift
+                    ? GobanCore.hooks?.getClockDrift()
+                    : 0;
                 const current_server_time = Date.now() - clock_drift;
 
                 const elapsed: number = original_clock.paused_since
-                    ? Math.max(original_clock.paused_since, original_clock.last_move) - original_clock.last_move
+                    ? Math.max(original_clock.paused_since, original_clock.last_move) -
+                      original_clock.last_move
                     : current_server_time - original_clock.last_move;
 
                 const clock = this.computeNewPlayerClock(
                     original_clock[`${color}_time`] as any,
                     original_clock.expiration,
-                    this.player_id === original_clock.current_player,
+                    true,
                     elapsed,
                     this.config.time_control as any,
                 );
@@ -3056,7 +3074,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public setGameClock(original_clock: AdHocClock | null): void {
         if (this.__clock_timer) {
             clearTimeout(this.__clock_timer);
-            this.__clock_timer = null;
+            delete this.__clock_timer;
         }
 
         if (!original_clock) {
@@ -3116,7 +3134,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (original_clock.start_mode) {
             clock.start_mode = true;
         }
-
 
         const last_audio_event: { [player_id: string]: AudioClockEvent } = {
             black: {
@@ -3200,7 +3217,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 time_control,
             );
 
-            this.emit("clock", clock);
+            if (this.clock_should_be_paused_for_move_submission && this.last_emitted_clock) {
+                this.emit("clock", this.last_emitted_clock);
+            } else {
+                this.emit("clock", clock);
+            }
 
             // check if we need to update our audio
             if (this.mode === "play" && this.engine.phase === "play") {
@@ -3290,8 +3311,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         do_update();
     }
 
-
-    protected computeNewPlayerClock (
+    protected computeNewPlayerClock(
         original_player_clock: Readonly<AdHocPlayerClock>,
         original_clock_expiration: number,
         is_current_player: boolean,
@@ -3318,11 +3338,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             case "simple":
                 ret.main_time = is_current_player
                     ? Math.max(
-                        0,
-                        original_clock_expiration +
-                        raw_clock_pause_offset -
-                        current_server_time,
-                    )
+                          0,
+                          original_clock_expiration + raw_clock_pause_offset - current_server_time,
+                      )
                     : time_control.per_move * 1000;
                 break;
 
@@ -3333,11 +3351,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             case "absolute":
                 ret.main_time = is_current_player
                     ? Math.max(
-                        0,
-                        original_clock_expiration +
-                        raw_clock_pause_offset -
-                        current_server_time,
-                    )
+                          0,
+                          original_clock_expiration + raw_clock_pause_offset - current_server_time,
+                      )
                     : Math.max(0, original_player_clock.thinking_time * 1000);
                 break;
 
@@ -3351,8 +3367,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (is_current_player) {
                     let overtime_usage = 0;
                     if (original_player_clock.thinking_time > 0) {
-                        ret.main_time =
-                            original_player_clock.thinking_time * 1000 - time_elapsed;
+                        ret.main_time = original_player_clock.thinking_time * 1000 - time_elapsed;
                         if (ret.main_time <= 0) {
                             overtime_usage = -ret.main_time;
                             ret.main_time = 0;
@@ -3391,8 +3406,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (is_current_player) {
                     let overtime_usage = 0;
                     if (original_player_clock.thinking_time > 0) {
-                        ret.main_time =
-                            original_player_clock.thinking_time * 1000 - time_elapsed;
+                        ret.main_time = original_player_clock.thinking_time * 1000 - time_elapsed;
                         if (ret.main_time <= 0) {
                             overtime_usage = -ret.main_time;
                             ret.main_time = 0;
@@ -3424,7 +3438,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         return ret;
     }
-
 
     public syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void {
         if (
