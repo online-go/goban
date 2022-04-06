@@ -206,6 +206,7 @@ interface MoveCommand {
     player_id?: number;
     move: string;
     blur?: number;
+    clock?: JGOFPlayerClock;
 }
 
 export interface Events {
@@ -2995,6 +2996,46 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.setConditionalTree();
 
+        if (this.player_id) {
+            const original_clock = this.last_clock;
+            if (!original_clock) {
+                throw new Error(`No last_clock when calling sendMove()`);
+            }
+            console.log("My player id: ", this.player_id, original_clock);
+            let color: "black" | "white";
+
+            if (this.player_id === original_clock.black_player_id) {
+                console.log("I am black");
+                color = "black";
+            } else if (this.player_id === original_clock.white_player_id) {
+                console.log("I am white");
+                color = "white";
+            } else {
+                throw new Error(`Player id ${this.player_id} not found in clock`);
+            }
+
+            if (color) {
+                const clock_drift = GobanCore.hooks?.getClockDrift ? GobanCore.hooks?.getClockDrift() : 0;
+                const current_server_time = Date.now() - clock_drift;
+
+                const elapsed: number = original_clock.paused_since
+                    ? Math.max(original_clock.paused_since, original_clock.last_move) - original_clock.last_move
+                    : current_server_time - original_clock.last_move;
+
+                const clock = this.computeNewPlayerClock(
+                    original_clock[`${color}_time`] as any,
+                    original_clock.expiration,
+                    this.player_id === original_clock.current_player,
+                    elapsed,
+                    this.config.time_control as any,
+                );
+                console.log("Clock: ", clock);
+                mv.clock = clock;
+            } else {
+                throw new Error(`No color for player_id ${this.player_id}`);
+            }
+        }
+
         const timeout = setTimeout(() => {
             this.message(_("Error submitting move"), -1);
 
@@ -3076,131 +3117,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             clock.start_mode = true;
         }
 
-        const make_player_clock = (
-            original_player_clock: AdHocPlayerClock,
-            original_clock_expiration: number,
-            is_current_player: boolean,
-            time_elapsed: number,
-        ): JGOFPlayerClock => {
-            const ret: JGOFPlayerClock = {
-                main_time: 0,
-            };
-
-            const raw_clock_pause_offset = this.paused_since
-                ? current_server_time - Math.max(original_clock.last_move, this.paused_since)
-                : 0;
-
-            const tcs: string = "" + time_control.system;
-            switch (time_control.system) {
-                case "simple":
-                    ret.main_time = is_current_player
-                        ? Math.max(
-                              0,
-                              original_clock_expiration +
-                                  raw_clock_pause_offset -
-                                  current_server_time,
-                          )
-                        : time_control.per_move * 1000;
-                    break;
-
-                case "none":
-                    ret.main_time = 0;
-                    break;
-
-                case "absolute":
-                    ret.main_time = is_current_player
-                        ? Math.max(
-                              0,
-                              original_clock_expiration +
-                                  raw_clock_pause_offset -
-                                  current_server_time,
-                          )
-                        : Math.max(0, original_player_clock.thinking_time * 1000);
-                    break;
-
-                case "fischer":
-                    ret.main_time = is_current_player
-                        ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
-                        : original_player_clock.thinking_time * 1000;
-                    break;
-
-                case "byoyomi":
-                    if (is_current_player) {
-                        let overtime_usage = 0;
-                        if (original_player_clock.thinking_time > 0) {
-                            ret.main_time =
-                                original_player_clock.thinking_time * 1000 - time_elapsed;
-                            if (ret.main_time <= 0) {
-                                overtime_usage = -ret.main_time;
-                                ret.main_time = 0;
-                            }
-                        } else {
-                            ret.main_time = 0;
-                            overtime_usage = time_elapsed;
-                        }
-                        ret.periods_left = original_player_clock.periods || 0;
-                        ret.period_time_left = time_control.period_time * 1000;
-                        if (overtime_usage > 0) {
-                            const periods_used = Math.floor(
-                                overtime_usage / (time_control.period_time * 1000),
-                            );
-                            ret.periods_left -= periods_used;
-                            ret.period_time_left =
-                                time_control.period_time * 1000 -
-                                (overtime_usage - periods_used * time_control.period_time * 1000);
-
-                            if (ret.periods_left < 0) {
-                                ret.periods_left = 0;
-                            }
-
-                            if (ret.period_time_left < 0) {
-                                ret.period_time_left = 0;
-                            }
-                        }
-                    } else {
-                        ret.main_time = original_player_clock.thinking_time * 1000;
-                        ret.periods_left = original_player_clock.periods;
-                        ret.period_time_left = time_control.period_time * 1000;
-                    }
-                    break;
-
-                case "canadian":
-                    if (is_current_player) {
-                        let overtime_usage = 0;
-                        if (original_player_clock.thinking_time > 0) {
-                            ret.main_time =
-                                original_player_clock.thinking_time * 1000 - time_elapsed;
-                            if (ret.main_time <= 0) {
-                                overtime_usage = -ret.main_time;
-                                ret.main_time = 0;
-                            }
-                        } else {
-                            ret.main_time = 0;
-                            overtime_usage = time_elapsed;
-                        }
-                        ret.moves_left = original_player_clock.moves_left;
-                        ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
-
-                        if (overtime_usage > 0) {
-                            ret.block_time_left -= overtime_usage;
-
-                            if (ret.block_time_left < 0) {
-                                ret.block_time_left = 0;
-                            }
-                        }
-                    } else {
-                        ret.main_time = original_player_clock.thinking_time * 1000;
-                        ret.moves_left = original_player_clock.moves_left;
-                        ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
-                    }
-                    break;
-
-                default:
-                    throw new Error(`Unsupported time control system: ${tcs}`);
-            }
-
-            return ret;
-        };
 
         const last_audio_event: { [player_id: string]: AudioClockEvent } = {
             black: {
@@ -3268,18 +3184,20 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 ? Math.max(clock.paused_since, original_clock.last_move) - original_clock.last_move
                 : current_server_time - original_clock.last_move;
 
-            clock.black_clock = make_player_clock(
+            clock.black_clock = this.computeNewPlayerClock(
                 original_clock.black_time as AdHocPlayerClock,
                 original_clock.expiration,
                 clock.current_player === "black" && !clock.start_mode,
                 elapsed,
+                time_control,
             );
 
-            clock.white_clock = make_player_clock(
+            clock.white_clock = this.computeNewPlayerClock(
                 original_clock.white_time as AdHocPlayerClock,
                 original_clock.expiration,
                 clock.current_player === "white" && !clock.start_mode,
                 elapsed,
+                time_control,
             );
 
             this.emit("clock", clock);
@@ -3371,6 +3289,143 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         do_update();
     }
+
+
+    protected computeNewPlayerClock (
+        original_player_clock: Readonly<AdHocPlayerClock>,
+        original_clock_expiration: number,
+        is_current_player: boolean,
+        time_elapsed: number,
+        time_control: Readonly<JGOFTimeControl>,
+    ): JGOFPlayerClock {
+        const ret: JGOFPlayerClock = {
+            main_time: 0,
+        };
+
+        const clock_drift = GobanCore.hooks?.getClockDrift ? GobanCore.hooks?.getClockDrift() : 0;
+        const current_server_time = Date.now() - clock_drift;
+        const original_clock = this.last_clock;
+        if (!original_clock) {
+            throw new Error(`No last_clock when computing new player clock`);
+        }
+
+        const raw_clock_pause_offset = this.paused_since
+            ? current_server_time - Math.max(original_clock.last_move, this.paused_since)
+            : 0;
+
+        const tcs: string = "" + time_control.system;
+        switch (time_control.system) {
+            case "simple":
+                ret.main_time = is_current_player
+                    ? Math.max(
+                        0,
+                        original_clock_expiration +
+                        raw_clock_pause_offset -
+                        current_server_time,
+                    )
+                    : time_control.per_move * 1000;
+                break;
+
+            case "none":
+                ret.main_time = 0;
+                break;
+
+            case "absolute":
+                ret.main_time = is_current_player
+                    ? Math.max(
+                        0,
+                        original_clock_expiration +
+                        raw_clock_pause_offset -
+                        current_server_time,
+                    )
+                    : Math.max(0, original_player_clock.thinking_time * 1000);
+                break;
+
+            case "fischer":
+                ret.main_time = is_current_player
+                    ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
+                    : original_player_clock.thinking_time * 1000;
+                break;
+
+            case "byoyomi":
+                if (is_current_player) {
+                    let overtime_usage = 0;
+                    if (original_player_clock.thinking_time > 0) {
+                        ret.main_time =
+                            original_player_clock.thinking_time * 1000 - time_elapsed;
+                        if (ret.main_time <= 0) {
+                            overtime_usage = -ret.main_time;
+                            ret.main_time = 0;
+                        }
+                    } else {
+                        ret.main_time = 0;
+                        overtime_usage = time_elapsed;
+                    }
+                    ret.periods_left = original_player_clock.periods || 0;
+                    ret.period_time_left = time_control.period_time * 1000;
+                    if (overtime_usage > 0) {
+                        const periods_used = Math.floor(
+                            overtime_usage / (time_control.period_time * 1000),
+                        );
+                        ret.periods_left -= periods_used;
+                        ret.period_time_left =
+                            time_control.period_time * 1000 -
+                            (overtime_usage - periods_used * time_control.period_time * 1000);
+
+                        if (ret.periods_left < 0) {
+                            ret.periods_left = 0;
+                        }
+
+                        if (ret.period_time_left < 0) {
+                            ret.period_time_left = 0;
+                        }
+                    }
+                } else {
+                    ret.main_time = original_player_clock.thinking_time * 1000;
+                    ret.periods_left = original_player_clock.periods;
+                    ret.period_time_left = time_control.period_time * 1000;
+                }
+                break;
+
+            case "canadian":
+                if (is_current_player) {
+                    let overtime_usage = 0;
+                    if (original_player_clock.thinking_time > 0) {
+                        ret.main_time =
+                            original_player_clock.thinking_time * 1000 - time_elapsed;
+                        if (ret.main_time <= 0) {
+                            overtime_usage = -ret.main_time;
+                            ret.main_time = 0;
+                        }
+                    } else {
+                        ret.main_time = 0;
+                        overtime_usage = time_elapsed;
+                    }
+                    ret.moves_left = original_player_clock.moves_left;
+                    ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
+
+                    if (overtime_usage > 0) {
+                        ret.block_time_left -= overtime_usage;
+
+                        if (ret.block_time_left < 0) {
+                            ret.block_time_left = 0;
+                        }
+                    }
+                } else {
+                    ret.main_time = original_player_clock.thinking_time * 1000;
+                    ret.moves_left = original_player_clock.moves_left;
+                    ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
+                }
+                break;
+
+            default:
+                throw new Error(`Unsupported time control system: ${tcs}`);
+        }
+
+        return ret;
+    }
+
+
     public syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void {
         if (
             this.review_id &&
