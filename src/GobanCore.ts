@@ -3004,6 +3004,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.setConditionalTree();
 
+        // Add `.clock` to the move sent to the server
         if (this.player_id) {
             if (this.__clock_timer) {
                 clearTimeout(this.__clock_timer);
@@ -3054,18 +3055,20 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
         }
 
+        // Send the move. If we aren't getting a response, show a message
+        // indicating such and try reloading after a few more seconds.
+        let reload_timeout: ReturnType<typeof setTimeout>;
         const timeout = setTimeout(() => {
             this.message(_("Error submitting move"), -1);
 
-            const second_try_timeout = setTimeout(() => {
+            reload_timeout = setTimeout(() => {
                 window.location.reload();
-            }, 4000);
-            this.socket.send("game/move", mv, () => {
-                clearTimeout(second_try_timeout);
-                this.clearMessage();
-            });
-        }, 4000);
+            }, 5000);
+        }, 5000);
         this.socket.send("game/move", mv, () => {
+            if (reload_timeout) {
+                clearTimeout(reload_timeout);
+            }
             clearTimeout(timeout);
             this.clearMessage();
         });
