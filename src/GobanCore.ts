@@ -66,6 +66,10 @@ export const MARK_TYPES: Array<keyof MarkInterface> = [
 
 let last_goban_id = 0;
 
+interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
+    timed_out: boolean;
+}
+
 export type GobanModes =
     | "play"
     | "puzzle"
@@ -363,6 +367,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public pause_control?: AdHocPauseControl;
     public paused_since?: number;
+    public sent_timed_out_message: boolean = false;
 
     private last_paused_state: boolean | null = null;
 
@@ -3078,6 +3083,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         });
     }
 
+    public sendTimedOut(): void {
+        // When we think our clock has runout, send a message to the server
+        // letting it know. Otherwise we have to wait for the server grace
+        // period to expire for it to time us out.
+        console.log("Sending timed out");
+
+        this.socket.send("game/timed_out", {
+            auth: this.config.auth,
+            game_id: this.config.game_id,
+            player_id: this.config.player_id,
+        });
+    }
+
     public setGameClock(original_clock: AdHocClock | null): void {
         if (this.__clock_timer) {
             clearTimeout(this.__clock_timer);
@@ -3222,6 +3240,28 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 time_control,
             );
 
+            if (!this.sent_timed_out_message) {
+                if (
+                    clock.current_player === "white" &&
+                    this.player_id === this.engine.config.white_player_id
+                ) {
+                    if ((clock.white_clock as JGOFPlayerClockWithTimedOut).timed_out) {
+                        this.sent_timed_out_message = true;
+                    }
+                }
+                if (
+                    clock.current_player === "black" &&
+                    this.player_id === this.engine.config.black_player_id
+                ) {
+                    if ((clock.black_clock as JGOFPlayerClockWithTimedOut).timed_out) {
+                        this.sent_timed_out_message = true;
+                    }
+                }
+                if (this.sent_timed_out_message) {
+                    this.sendTimedOut();
+                }
+            }
+
             if (this.clock_should_be_paused_for_move_submission && this.last_emitted_clock) {
                 this.emit("clock", this.last_emitted_clock);
             } else {
@@ -3276,13 +3316,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                     audio_clock.countdown_seconds = -1;
                                 }
 
-                                if (audio_clock.countdown_seconds === time_control.period_time) {
+                                /*
+                                if (
+                                    audio_clock.countdown_seconds === time_control.period_time &&
+                                    audio_clock.in_overtime == last_audio_event[clock.current_player].in_overtime
+                                ) {
                                     // When byo-yomi resets, we don't want to play the sound for the
                                     // top of the second mark because it's going to get clipped short
                                     // very soon as time passes and we're going to start playing the
                                     // next second sound.
                                     audio_clock.countdown_seconds = -1;
                                 }
+                                */
                             }
                             break;
 
@@ -3346,9 +3391,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         is_current_player: boolean,
         time_elapsed: number,
         time_control: Readonly<JGOFTimeControl>,
-    ): JGOFPlayerClock {
-        const ret: JGOFPlayerClock = {
+    ): JGOFPlayerClockWithTimedOut {
+        const ret: JGOFPlayerClockWithTimedOut = {
             main_time: 0,
+            timed_out: false,
         };
 
         const original_clock = this.last_clock;
@@ -3362,6 +3408,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 ret.main_time = is_current_player
                     ? Math.max(0, time_control.per_move - time_elapsed / 1000) * 1000
                     : time_control.per_move * 1000;
+                if (ret.main_time <= 0) {
+                    ret.timed_out = true;
+                }
                 break;
 
             case "none":
@@ -3380,12 +3429,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 ret.main_time = is_current_player
                     ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
                     : original_player_clock.thinking_time * 1000;
+                if (ret.main_time <= 0) {
+                    ret.timed_out = true;
+                }
                 break;
 
             case "fischer":
                 ret.main_time = is_current_player
                     ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
                     : original_player_clock.thinking_time * 1000;
+                if (ret.main_time <= 0) {
+                    ret.timed_out = true;
+                }
                 break;
 
             case "byoyomi":
@@ -3425,6 +3480,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     ret.periods_left = original_player_clock.periods;
                     ret.period_time_left = time_control.period_time * 1000;
                 }
+
+                if (
+                    ret.main_time <= 0 &&
+                    (ret.periods_left || 0) === 0
+                ) {
+                    ret.timed_out = true;
+                }
                 break;
 
             case "canadian":
@@ -3454,6 +3516,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     ret.main_time = original_player_clock.thinking_time * 1000;
                     ret.moves_left = original_player_clock.moves_left;
                     ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
+                }
+
+                if (ret.main_time <= 0 && ret.block_time_left <= 0) {
+                    ret.timed_out = true;
                 }
                 break;
 
