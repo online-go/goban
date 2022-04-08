@@ -3030,12 +3030,22 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 const clock_drift = GobanCore.hooks?.getClockDrift
                     ? GobanCore.hooks?.getClockDrift()
                     : 0;
+
                 const current_server_time = Date.now() - clock_drift;
 
-                const elapsed: number = original_clock.paused_since
+                const pause_control = this.pause_control;
+
+                const paused = pause_control
+                    ? isPaused(AdHocPauseControl2JGOFPauseState(pause_control))
+                    : false;
+
+                const elapsed: number = original_clock.start_mode
+                    ? 0
+                    : paused && original_clock.paused_since
                     ? Math.max(original_clock.paused_since, original_clock.last_move) -
                       original_clock.last_move
                     : current_server_time - original_clock.last_move;
+
 
                 const clock = this.computeNewPlayerClock(
                     original_clock[`${color}_time`] as any,
@@ -3044,7 +3054,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     elapsed,
                     this.config.time_control as any,
                 );
-                console.log("Clock: ", clock);
+
                 mv.clock = clock;
             } else {
                 throw new Error(`No color for player_id ${this.player_id}`);
@@ -3584,7 +3594,7 @@ function uuid(): string {
     });
 }
 
-function AdHocPauseControl2JGOFPauseState(pause_control: AdHocPauseControl) {
+function AdHocPauseControl2JGOFPauseState(pause_control: AdHocPauseControl): JGOFPauseState {
     const ret: JGOFPauseState = {};
 
     for (const k in pause_control) {
@@ -3700,6 +3710,13 @@ class FocusTracker {
         this.hasFocus = false;
         this.lastFocus = Date.now();
     };
+}
+
+function isPaused(pause_state: JGOFPauseState): boolean {
+    for (let _key in pause_state) {
+        return true;
+    }
+    return false;
 }
 
 export const focus_tracker = new FocusTracker();
