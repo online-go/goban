@@ -3049,7 +3049,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 const clock = this.computeNewPlayerClock(
                     original_clock[`${color}_time`] as any,
-                    original_clock.expiration,
                     true,
                     elapsed,
                     this.config.time_control as any,
@@ -3212,7 +3211,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             clock.black_clock = this.computeNewPlayerClock(
                 original_clock.black_time as AdHocPlayerClock,
-                original_clock.expiration,
                 clock.current_player === "black" && !clock.start_mode,
                 elapsed,
                 time_control,
@@ -3220,7 +3218,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             clock.white_clock = this.computeNewPlayerClock(
                 original_clock.white_time as AdHocPlayerClock,
-                original_clock.expiration,
                 clock.current_player === "white" && !clock.start_mode,
                 elapsed,
                 time_control,
@@ -3250,6 +3247,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     switch (time_control.system) {
                         case "simple":
+                            if (audio_clock.countdown_seconds === time_control.per_move) {
+                                // When byo-yomi resets, we don't want to play the sound for the
+                                // top of the second mark because it's going to get clipped short
+                                // very soon as time passes and we're going to start playing the
+                                // next second sound.
+                                audio_clock.countdown_seconds = -1;
+                            }
+                            break;
+
                         case "absolute":
                         case "fischer":
                             audio_clock.countdown_seconds = Math.ceil(
@@ -3338,7 +3344,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     protected computeNewPlayerClock(
         original_player_clock: Readonly<AdHocPlayerClock>,
-        original_clock_expiration: number,
         is_current_player: boolean,
         time_elapsed: number,
         time_control: Readonly<JGOFTimeControl>,
@@ -3347,32 +3352,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             main_time: 0,
         };
 
-        const clock_drift = GobanCore.hooks?.getClockDrift ? GobanCore.hooks?.getClockDrift() : 0;
-        const current_server_time = Date.now() - clock_drift;
         const original_clock = this.last_clock;
         if (!original_clock) {
             throw new Error(`No last_clock when computing new player clock`);
         }
 
-        const raw_clock_pause_offset = this.paused_since
-            ? current_server_time - Math.max(original_clock.last_move, this.paused_since)
-            : 0;
-
         const tcs: string = "" + time_control.system;
         switch (time_control.system) {
             case "simple":
-                /*
                 ret.main_time = is_current_player
-                    ? Math.max(
-                          0,
-                          original_clock_expiration + raw_clock_pause_offset - current_server_time,
-                      )
+                    ? Math.max(0, time_control.per_move - (time_elapsed / 1000)) * 1000
                     : time_control.per_move * 1000;
-                */
-
-                ret.main_time = is_current_player
-                    ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
-                    : original_player_clock.thinking_time * 1000;
                 break;
 
             case "none":
