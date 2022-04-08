@@ -3046,7 +3046,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                       original_clock.last_move
                     : current_server_time - original_clock.last_move;
 
-
                 const clock = this.computeNewPlayerClock(
                     original_clock[`${color}_time`] as any,
                     true,
@@ -3361,7 +3360,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         switch (time_control.system) {
             case "simple":
                 ret.main_time = is_current_player
-                    ? Math.max(0, time_control.per_move - (time_elapsed / 1000)) * 1000
+                    ? Math.max(0, time_control.per_move - time_elapsed / 1000) * 1000
                     : time_control.per_move * 1000;
                 break;
 
@@ -3714,7 +3713,7 @@ class FocusTracker {
 }
 
 function isPaused(pause_state: JGOFPauseState): boolean {
-    for (let _key in pause_state) {
+    for (const _key in pause_state) {
         return true;
     }
     return false;
