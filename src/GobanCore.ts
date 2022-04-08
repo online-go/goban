@@ -3264,6 +3264,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 if ((player_clock.periods_left || 0) <= 0) {
                                     audio_clock.countdown_seconds = -1;
                                 }
+
+                                if (audio_clock.countdown_seconds === time_control.period_time) {
+                                    // When byo-yomi resets, we don't want to play the sound for the
+                                    // top of the second mark because it's going to get clipped short
+                                    // very soon as time passes and we're going to start playing the
+                                    // next second sound.
+                                    audio_clock.countdown_seconds = -1;
+                                }
                             }
                             break;
 
@@ -3277,6 +3285,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 audio_clock.countdown_seconds = Math.ceil(
                                     (player_clock.block_time_left || 0) / 1000,
                                 );
+
+                                if (audio_clock.countdown_seconds === time_control.period_time) {
+                                    // When we start a new period, we don't want to play the sound for the
+                                    // top of the second mark because it's going to get clipped short
+                                    // very soon as time passes and we're going to start playing the
+                                    // next second sound.
+                                    audio_clock.countdown_seconds = -1;
+                                }
                             }
                             break;
 
