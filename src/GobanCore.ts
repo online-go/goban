@@ -3481,10 +3481,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     ret.period_time_left = time_control.period_time * 1000;
                 }
 
-                if (
-                    ret.main_time <= 0 &&
-                    (ret.periods_left || 0) === 0
-                ) {
+                if (ret.main_time <= 0 && (ret.periods_left || 0) === 0) {
                     ret.timed_out = true;
                 }
                 break;
