@@ -3361,12 +3361,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         const tcs: string = "" + time_control.system;
         switch (time_control.system) {
             case "simple":
+                /*
                 ret.main_time = is_current_player
                     ? Math.max(
                           0,
                           original_clock_expiration + raw_clock_pause_offset - current_server_time,
                       )
                     : time_control.per_move * 1000;
+                */
+
+                ret.main_time = is_current_player
+                    ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
+                    : original_player_clock.thinking_time * 1000;
                 break;
 
             case "none":
@@ -3374,12 +3380,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 break;
 
             case "absolute":
+                /*
                 ret.main_time = is_current_player
                     ? Math.max(
                           0,
                           original_clock_expiration + raw_clock_pause_offset - current_server_time,
                       )
                     : Math.max(0, original_player_clock.thinking_time * 1000);
+                    */
+                ret.main_time = is_current_player
+                    ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
+                    : original_player_clock.thinking_time * 1000;
                 break;
 
             case "fischer":
