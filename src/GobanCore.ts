@@ -3009,7 +3009,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.__clock_timer) {
                 clearTimeout(this.__clock_timer);
                 delete this.__clock_timer;
-                console.log("Removed clock timer");
                 this.clock_should_be_paused_for_move_submission = true;
             }
 
@@ -3017,14 +3016,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (!original_clock) {
                 throw new Error(`No last_clock when calling sendMove()`);
             }
-            console.log("My player id: ", this.player_id, original_clock);
             let color: "black" | "white";
 
             if (this.player_id === original_clock.black_player_id) {
-                console.log("I am black");
                 color = "black";
             } else if (this.player_id === original_clock.white_player_id) {
-                console.log("I am white");
                 color = "white";
             } else {
                 throw new Error(`Player id ${this.player_id} not found in clock`);
