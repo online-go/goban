@@ -715,8 +715,8 @@ export class GobanCanvas extends GobanCore {
         this.setSubmit(undefined);
         if (this.submitBlinkTimer) {
             clearTimeout(this.submitBlinkTimer);
+            delete this.submitBlinkTimer;
         }
-        this.submitBlinkTimer = null;
 
         const tap_time = Date.now();
         const submit = () => {

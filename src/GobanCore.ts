@@ -213,6 +213,11 @@ interface MoveCommand {
     clock?: JGOFPlayerClock;
 }
 
+export interface JGOFClockWithTransmitting extends JGOFClock {
+    black_move_transmitting: number; // estimated ms left for transmission, or 0 if complete
+    white_move_transmitting: number; // estimated ms left for transmission, or 0 if complete
+}
+
 export interface Events {
     destroy: never;
     update: never;
@@ -259,7 +264,7 @@ export interface Events {
         height: number;
         color: "black" | "white";
     };
-    clock: JGOFClock | null;
+    clock: JGOFClockWithTransmitting | null;
     "audio-game-started": {
         player_id: number; // Player to move
     };
@@ -349,7 +354,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public abstract engine: GoEngine;
     public height: number;
     public last_clock?: AdHocClock;
-    public last_emitted_clock?: JGOFClock;
+    public last_emitted_clock?: JGOFClockWithTransmitting;
     public clock_should_be_paused_for_move_submission: boolean = false;
     public mode: GobanModes;
     public previous_mode: string;
@@ -433,7 +438,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected show_variation_move_numbers: boolean;
     protected square_size: number = 10;
     protected stone_placement_enabled: boolean;
-    protected submitBlinkTimer: any = null; // timer
+    protected submitBlinkTimer?: ReturnType<typeof setTimeout>;
+    protected sendLatencyTimer?: ReturnType<typeof setInterval>;
     //protected syncToCurrentReviewMove;
     //protected waiting_for_game_to_begin;
     //protected white_clock;
@@ -480,7 +486,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super();
 
-        this.on("clock", (clock?: JGOFClock | null) => {
+        this.on("clock", (clock) => {
             if (clock) {
                 this.last_emitted_clock = clock;
             }
@@ -826,6 +832,34 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     socket.send("game/connect", this.game_connection_data);
                 }
             }
+
+            if (!this.sendLatencyTimer) {
+                const sendLatency = () => {
+                    if (!this.interactive) {
+                        return;
+                    }
+                    if (!this.isCurrentUserAPlayer()) {
+                        return;
+                    }
+                    if (!GobanCore.hooks.getNetworkLatency) {
+                        return;
+                    }
+                    const latency = GobanCore.hooks.getNetworkLatency();
+                    if (!latency) {
+                        return;
+                    }
+
+                    //console.log("Sending latency", this.getNetworkLatency());
+                    this.socket.send("game/latency", {
+                        auth: this.config.auth,
+                        game_id: this.config.game_id,
+                        player_id: this.config.player_id,
+                        latency: this.getNetworkLatency(),
+                    });
+                };
+                this.sendLatencyTimer = setInterval(sendLatency, 5000);
+                sendLatency();
+            }
         };
 
         if (socket.connected) {
@@ -966,6 +1000,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             });
             delete this.last_phase;
 
+            this._socket_on(prefix + "latency", (obj: any): void => {
+                if (this.disconnectedFromGame) {
+                    return;
+                }
+
+                if (this.engine) {
+                    if (!this.engine.latencies) {
+                        this.engine.latencies = {};
+                    }
+                    this.engine.latencies[obj.player_id] = obj.latency;
+                }
+            });
             this._socket_on(prefix + "clock", (obj: any): void => {
                 if (this.disconnectedFromGame) {
                     return;
@@ -1567,14 +1613,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.socket) {
             this.disconnect();
         }
+        if (this.sendLatencyTimer) {
+            clearInterval(this.sendLatencyTimer);
+            delete this.sendLatencyTimer;
+        }
 
         /* Clear various timeouts that may be running */
         this.clock_should_be_paused_for_move_submission = false;
         this.setGameClock(null);
         if (this.submitBlinkTimer) {
             clearTimeout(this.submitBlinkTimer);
+            delete this.submitBlinkTimer;
         }
-        this.submitBlinkTimer = null;
     }
     protected disconnect(): void {
         this.emit("destroy");
@@ -3095,6 +3145,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             player_id: this.config.player_id,
         });
     }
+    public isCurrentUserAPlayer(): boolean {
+        return this.player_id in this.engine.player_pool;
+    }
 
     public setGameClock(original_clock: AdHocClock | null): void {
         if (this.__clock_timer) {
@@ -3124,7 +3177,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         update_current_server_time();
 
-        const clock: JGOFClock = {
+        const clock: JGOFClockWithTransmitting = {
             current_player:
                 original_clock.current_player === original_clock.black_player_id
                     ? "black"
@@ -3134,6 +3187,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             paused_since: original_clock.paused_since,
             black_clock: { main_time: 0 },
             white_clock: { main_time: 0 },
+            black_move_transmitting: 0,
+            white_move_transmitting: 0,
         };
 
         if (original_clock.pause) {
@@ -3226,19 +3281,39 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 ? Math.max(clock.paused_since, original_clock.last_move) - original_clock.last_move
                 : current_server_time - original_clock.last_move;
 
+            const black_relative_latency = this.getPlayerRelativeLatency(
+                original_clock.black_player_id,
+            );
+            const white_relative_latency = this.getPlayerRelativeLatency(
+                original_clock.white_player_id,
+            );
+
+            const black_elapsed = Math.max(0, elapsed - black_relative_latency);
+            const white_elapsed = Math.max(0, elapsed - white_relative_latency);
+
             clock.black_clock = this.computeNewPlayerClock(
                 original_clock.black_time as AdHocPlayerClock,
                 clock.current_player === "black" && !clock.start_mode,
-                elapsed,
+                black_elapsed,
                 time_control,
             );
 
             clock.white_clock = this.computeNewPlayerClock(
                 original_clock.white_time as AdHocPlayerClock,
                 clock.current_player === "white" && !clock.start_mode,
-                elapsed,
+                white_elapsed,
                 time_control,
             );
+
+            const wall_clock_elapsed = current_server_time - original_clock.last_move;
+            clock.black_move_transmitting =
+                clock.current_player === "black"
+                    ? Math.max(0, black_relative_latency - wall_clock_elapsed)
+                    : 0;
+            clock.white_move_transmitting =
+                clock.current_player === "white"
+                    ? Math.max(0, white_relative_latency - wall_clock_elapsed)
+                    : 0;
 
             if (!this.sent_timed_out_message) {
                 if (
@@ -3642,6 +3717,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         return ret;
     }
 
+    /* Computes the relative latency between the target player and the current viewer.
+     * For example, if player P has a latency of 500ms and we have a latency of 200ms,
+     * the relative latency will be 300ms. This is used to artifically delay the clock
+     * countdown for that player to minimize the amount of apparent time jumping that can
+     * happen as clocks are synchronized */
+    public getPlayerRelativeLatency(player_id: number): number {
+        if (player_id === this.player_id) {
+            return 0;
+        }
+        //return 2000;
+        // If the other latency is not available for whatever reason, use our own latency as a better-than-0 guess */
+        const other_latency = this.engine?.latencies?.[player_id] || this.getNetworkLatency();
+        //console.log("other latency", other_latency, "relative latency", other_latency - this.getNetworkLatency());
+        return other_latency - this.getNetworkLatency();
+    }
     public getLastReviewMessage(): ReviewMessage {
         return this.last_review_message;
     }
