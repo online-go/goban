@@ -3281,10 +3281,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 ? Math.max(clock.paused_since, original_clock.last_move) - original_clock.last_move
                 : current_server_time - original_clock.last_move;
 
-            let black_relative_latency = this.getPlayerRelativeLatency(
+            const black_relative_latency = this.getPlayerRelativeLatency(
                 original_clock.black_player_id,
             );
-            let white_relative_latency = this.getPlayerRelativeLatency(
+            const white_relative_latency = this.getPlayerRelativeLatency(
                 original_clock.white_player_id,
             );
 
