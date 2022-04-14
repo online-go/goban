@@ -3281,15 +3281,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 ? Math.max(clock.paused_since, original_clock.last_move) - original_clock.last_move
                 : current_server_time - original_clock.last_move;
 
-            const black_relative_latency = this.getPlayerRelativeLatency(
+            let black_relative_latency = this.getPlayerRelativeLatency(
                 original_clock.black_player_id,
             );
-            const white_relative_latency = this.getPlayerRelativeLatency(
+            let white_relative_latency = this.getPlayerRelativeLatency(
                 original_clock.white_player_id,
             );
 
-            const black_elapsed = Math.max(0, elapsed - black_relative_latency);
-            const white_elapsed = Math.max(0, elapsed - white_relative_latency);
+            const black_elapsed = Math.max(0, elapsed - Math.abs(black_relative_latency));
+            const white_elapsed = Math.max(0, elapsed - Math.abs(white_relative_latency));
 
             clock.black_clock = this.computeNewPlayerClock(
                 original_clock.black_time as AdHocPlayerClock,
@@ -3726,10 +3726,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (player_id === this.player_id) {
             return 0;
         }
-        //return 2000;
+
         // If the other latency is not available for whatever reason, use our own latency as a better-than-0 guess */
         const other_latency = this.engine?.latencies?.[player_id] || this.getNetworkLatency();
-        //console.log("other latency", other_latency, "relative latency", other_latency - this.getNetworkLatency());
+
         return other_latency - this.getNetworkLatency();
     }
     public getLastReviewMessage(): ReviewMessage {
