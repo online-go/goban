@@ -226,6 +226,7 @@ export interface Events {
     error: any;
     gamedata: any;
     chat: any;
+    "submitting-move": boolean;
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
     "player-update": JGOFPlayerSummary;
@@ -3052,7 +3053,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }, 10);
     }
 
-    protected sendMove(mv: MoveCommand): void {
+    protected sendMove(mv: MoveCommand, cb?: () => void): void {
         if (!mv.blur) {
             mv.blur = focus_tracker.getMaxBlurDurationSinceLastReset();
             focus_tracker.reset();
@@ -3124,12 +3125,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 window.location.reload();
             }, 5000);
         }, 5000);
+        this.emit("submitting-move", true);
         this.socket.send("game/move", mv, () => {
             if (reload_timeout) {
                 clearTimeout(reload_timeout);
             }
             clearTimeout(timeout);
             this.clearMessage();
+            this.emit("submitting-move", false);
+            if (cb) {
+                cb();
+            }
         });
     }
 
