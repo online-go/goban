@@ -66,6 +66,10 @@ export const MARK_TYPES: Array<keyof MarkInterface> = [
 
 let last_goban_id = 0;
 
+interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
+    timed_out: boolean;
+}
+
 export type GobanModes =
     | "play"
     | "puzzle"
@@ -206,6 +210,12 @@ interface MoveCommand {
     player_id?: number;
     move: string;
     blur?: number;
+    clock?: JGOFPlayerClock;
+}
+
+export interface JGOFClockWithTransmitting extends JGOFClock {
+    black_move_transmitting: number; // estimated ms left for transmission, or 0 if complete
+    white_move_transmitting: number; // estimated ms left for transmission, or 0 if complete
 }
 
 export interface Events {
@@ -216,6 +226,7 @@ export interface Events {
     error: any;
     gamedata: any;
     chat: any;
+    "submitting-move": boolean;
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
     "player-update": JGOFPlayerSummary;
@@ -254,7 +265,7 @@ export interface Events {
         height: number;
         color: "black" | "white";
     };
-    clock: JGOFClock | null;
+    clock: JGOFClockWithTransmitting | null;
     "audio-game-started": {
         player_id: number; // Player to move
     };
@@ -344,6 +355,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public abstract engine: GoEngine;
     public height: number;
     public last_clock?: AdHocClock;
+    public last_emitted_clock?: JGOFClockWithTransmitting;
+    public clock_should_be_paused_for_move_submission: boolean = false;
     public mode: GobanModes;
     public previous_mode: string;
     public one_click_submit: boolean;
@@ -360,12 +373,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public pause_control?: AdHocPauseControl;
     public paused_since?: number;
+    public sent_timed_out_message: boolean = false;
 
     private last_paused_state: boolean | null = null;
 
     protected __board_redraw_pen_layer_timer: any = null;
-    protected __clock_timer: any =
-        null; /* number for web, Timeout for node - I don't think we can make them both happy so just 'any' */
+    protected __clock_timer?: ReturnType<typeof setTimeout>;
     protected __draw_state: Array<Array<string>>;
     protected __last_pt: { i: number; j: number; valid: boolean } = { i: -1, j: -1, valid: false };
     protected __update_move_tree: any = null; /* timer */
@@ -426,7 +439,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected show_variation_move_numbers: boolean;
     protected square_size: number = 10;
     protected stone_placement_enabled: boolean;
-    protected submitBlinkTimer: any = null; // timer
+    protected submitBlinkTimer?: ReturnType<typeof setTimeout>;
+    protected sendLatencyTimer?: ReturnType<typeof setInterval>;
     //protected syncToCurrentReviewMove;
     //protected waiting_for_game_to_begin;
     //protected white_clock;
@@ -468,11 +482,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
     public static hooks: GobanHooks = {
         getClockDrift: () => 0,
-        getNetworkLatency: () => 0,
     };
 
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super();
+
+        this.on("clock", (clock) => {
+            if (clock) {
+                this.last_emitted_clock = clock;
+            }
+        });
 
         this.goban_id = ++last_goban_id;
 
@@ -506,7 +525,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //this.black_name = config["black_name"];
         //this.white_name = config["white_name"];
         //this.move_number = config["move_number"];
-        this.__clock_timer = null;
+        delete this.__clock_timer;
         this.setGameClock(null);
         this.last_stone_sound = -1;
         this.scoring_mode = false;
@@ -814,6 +833,34 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     socket.send("game/connect", this.game_connection_data);
                 }
             }
+
+            if (!this.sendLatencyTimer) {
+                const sendLatency = () => {
+                    if (!this.interactive) {
+                        return;
+                    }
+                    if (!this.isCurrentUserAPlayer()) {
+                        return;
+                    }
+                    if (!GobanCore.hooks.getNetworkLatency) {
+                        return;
+                    }
+                    const latency = GobanCore.hooks.getNetworkLatency();
+                    if (!latency) {
+                        return;
+                    }
+
+                    //console.log("Sending latency", this.getNetworkLatency());
+                    this.socket.send("game/latency", {
+                        auth: this.config.auth,
+                        game_id: this.config.game_id,
+                        player_id: this.config.player_id,
+                        latency: this.getNetworkLatency(),
+                    });
+                };
+                this.sendLatencyTimer = setInterval(sendLatency, 5000);
+                sendLatency();
+            }
         };
 
         if (socket.connected) {
@@ -954,11 +1001,24 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             });
             delete this.last_phase;
 
+            this._socket_on(prefix + "latency", (obj: any): void => {
+                if (this.disconnectedFromGame) {
+                    return;
+                }
+
+                if (this.engine) {
+                    if (!this.engine.latencies) {
+                        this.engine.latencies = {};
+                    }
+                    this.engine.latencies[obj.player_id] = obj.latency;
+                }
+            });
             this._socket_on(prefix + "clock", (obj: any): void => {
                 if (this.disconnectedFromGame) {
                     return;
                 }
 
+                this.clock_should_be_paused_for_move_submission = false;
                 this.setGameClock(obj);
 
                 this.updateTitleAndStonePlacement();
@@ -1554,13 +1614,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.socket) {
             this.disconnect();
         }
+        if (this.sendLatencyTimer) {
+            clearInterval(this.sendLatencyTimer);
+            delete this.sendLatencyTimer;
+        }
 
         /* Clear various timeouts that may be running */
+        this.clock_should_be_paused_for_move_submission = false;
         this.setGameClock(null);
         if (this.submitBlinkTimer) {
             clearTimeout(this.submitBlinkTimer);
+            delete this.submitBlinkTimer;
         }
-        this.submitBlinkTimer = null;
     }
     protected disconnect(): void {
         this.emit("destroy");
@@ -2988,35 +3053,112 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }, 10);
     }
 
-    /** deprecated, remove with socket stuff */
-    protected sendMove(mv: MoveCommand): void {
+    protected sendMove(mv: MoveCommand, cb?: () => void): void {
         if (!mv.blur) {
             mv.blur = focus_tracker.getMaxBlurDurationSinceLastReset();
             focus_tracker.reset();
         }
         this.setConditionalTree();
 
+        // Add `.clock` to the move sent to the server
+        if (this.player_id) {
+            if (this.__clock_timer) {
+                clearTimeout(this.__clock_timer);
+                delete this.__clock_timer;
+                this.clock_should_be_paused_for_move_submission = true;
+            }
+
+            const original_clock = this.last_clock;
+            if (!original_clock) {
+                throw new Error(`No last_clock when calling sendMove()`);
+            }
+            let color: "black" | "white";
+
+            if (this.player_id === original_clock.black_player_id) {
+                color = "black";
+            } else if (this.player_id === original_clock.white_player_id) {
+                color = "white";
+            } else {
+                throw new Error(`Player id ${this.player_id} not found in clock`);
+            }
+
+            if (color) {
+                const clock_drift = GobanCore.hooks?.getClockDrift
+                    ? GobanCore.hooks?.getClockDrift()
+                    : 0;
+
+                const current_server_time = Date.now() - clock_drift;
+
+                const pause_control = this.pause_control;
+
+                const paused = pause_control
+                    ? isPaused(AdHocPauseControl2JGOFPauseState(pause_control))
+                    : false;
+
+                const elapsed: number = original_clock.start_mode
+                    ? 0
+                    : paused && original_clock.paused_since
+                    ? Math.max(original_clock.paused_since, original_clock.last_move) -
+                      original_clock.last_move
+                    : current_server_time - original_clock.last_move;
+
+                const clock = this.computeNewPlayerClock(
+                    original_clock[`${color}_time`] as any,
+                    true,
+                    elapsed,
+                    this.config.time_control as any,
+                );
+
+                mv.clock = clock;
+            } else {
+                throw new Error(`No color for player_id ${this.player_id}`);
+            }
+        }
+
+        // Send the move. If we aren't getting a response, show a message
+        // indicating such and try reloading after a few more seconds.
+        let reload_timeout: ReturnType<typeof setTimeout>;
         const timeout = setTimeout(() => {
             this.message(_("Error submitting move"), -1);
 
-            const second_try_timeout = setTimeout(() => {
+            reload_timeout = setTimeout(() => {
                 window.location.reload();
-            }, 4000);
-            this.socket.send("game/move", mv, () => {
-                clearTimeout(second_try_timeout);
-                this.clearMessage();
-            });
-        }, 4000);
+            }, 5000);
+        }, 5000);
+        this.emit("submitting-move", true);
         this.socket.send("game/move", mv, () => {
+            if (reload_timeout) {
+                clearTimeout(reload_timeout);
+            }
             clearTimeout(timeout);
             this.clearMessage();
+            this.emit("submitting-move", false);
+            if (cb) {
+                cb();
+            }
         });
+    }
+
+    public sendTimedOut(): void {
+        // When we think our clock has runout, send a message to the server
+        // letting it know. Otherwise we have to wait for the server grace
+        // period to expire for it to time us out.
+        console.log("Sending timed out");
+
+        this.socket.send("game/timed_out", {
+            auth: this.config.auth,
+            game_id: this.config.game_id,
+            player_id: this.config.player_id,
+        });
+    }
+    public isCurrentUserAPlayer(): boolean {
+        return this.player_id in this.engine.player_pool;
     }
 
     public setGameClock(original_clock: AdHocClock | null): void {
         if (this.__clock_timer) {
             clearTimeout(this.__clock_timer);
-            this.__clock_timer = null;
+            delete this.__clock_timer;
         }
 
         if (!original_clock) {
@@ -3034,15 +3176,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         let current_server_time = 0;
         function update_current_server_time() {
-            if (GobanCore.hooks.getClockDrift && GobanCore.hooks.getNetworkLatency) {
-                const server_time_offset =
-                    GobanCore.hooks.getClockDrift() - GobanCore.hooks.getNetworkLatency();
+            if (GobanCore.hooks.getClockDrift) {
+                const server_time_offset = GobanCore.hooks.getClockDrift();
                 current_server_time = Date.now() - server_time_offset;
             }
         }
         update_current_server_time();
 
-        const clock: JGOFClock = {
+        const clock: JGOFClockWithTransmitting = {
             current_player:
                 original_clock.current_player === original_clock.black_player_id
                     ? "black"
@@ -3052,6 +3193,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             paused_since: original_clock.paused_since,
             black_clock: { main_time: 0 },
             white_clock: { main_time: 0 },
+            black_move_transmitting: 0,
+            white_move_transmitting: 0,
         };
 
         if (original_clock.pause) {
@@ -3077,132 +3220,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (original_clock.start_mode) {
             clock.start_mode = true;
         }
-
-        const make_player_clock = (
-            original_player_clock: AdHocPlayerClock,
-            original_clock_expiration: number,
-            is_current_player: boolean,
-            time_elapsed: number,
-        ): JGOFPlayerClock => {
-            const ret: JGOFPlayerClock = {
-                main_time: 0,
-            };
-
-            const raw_clock_pause_offset = this.paused_since
-                ? current_server_time - Math.max(original_clock.last_move, this.paused_since)
-                : 0;
-
-            const tcs: string = "" + time_control.system;
-            switch (time_control.system) {
-                case "simple":
-                    ret.main_time = is_current_player
-                        ? Math.max(
-                              0,
-                              original_clock_expiration +
-                                  raw_clock_pause_offset -
-                                  current_server_time,
-                          )
-                        : time_control.per_move * 1000;
-                    break;
-
-                case "none":
-                    ret.main_time = 0;
-                    break;
-
-                case "absolute":
-                    ret.main_time = is_current_player
-                        ? Math.max(
-                              0,
-                              original_clock_expiration +
-                                  raw_clock_pause_offset -
-                                  current_server_time,
-                          )
-                        : Math.max(0, original_player_clock.thinking_time * 1000);
-                    break;
-
-                case "fischer":
-                    ret.main_time = is_current_player
-                        ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
-                        : original_player_clock.thinking_time * 1000;
-                    break;
-
-                case "byoyomi":
-                    if (is_current_player) {
-                        let overtime_usage = 0;
-                        if (original_player_clock.thinking_time > 0) {
-                            ret.main_time =
-                                original_player_clock.thinking_time * 1000 - time_elapsed;
-                            if (ret.main_time <= 0) {
-                                overtime_usage = -ret.main_time;
-                                ret.main_time = 0;
-                            }
-                        } else {
-                            ret.main_time = 0;
-                            overtime_usage = time_elapsed;
-                        }
-                        ret.periods_left = original_player_clock.periods || 0;
-                        ret.period_time_left = time_control.period_time * 1000;
-                        if (overtime_usage > 0) {
-                            const periods_used = Math.floor(
-                                overtime_usage / (time_control.period_time * 1000),
-                            );
-                            ret.periods_left -= periods_used;
-                            ret.period_time_left =
-                                time_control.period_time * 1000 -
-                                (overtime_usage - periods_used * time_control.period_time * 1000);
-
-                            if (ret.periods_left < 0) {
-                                ret.periods_left = 0;
-                            }
-
-                            if (ret.period_time_left < 0) {
-                                ret.period_time_left = 0;
-                            }
-                        }
-                    } else {
-                        ret.main_time = original_player_clock.thinking_time * 1000;
-                        ret.periods_left = original_player_clock.periods;
-                        ret.period_time_left = time_control.period_time * 1000;
-                    }
-                    break;
-
-                case "canadian":
-                    if (is_current_player) {
-                        let overtime_usage = 0;
-                        if (original_player_clock.thinking_time > 0) {
-                            ret.main_time =
-                                original_player_clock.thinking_time * 1000 - time_elapsed;
-                            if (ret.main_time <= 0) {
-                                overtime_usage = -ret.main_time;
-                                ret.main_time = 0;
-                            }
-                        } else {
-                            ret.main_time = 0;
-                            overtime_usage = time_elapsed;
-                        }
-                        ret.moves_left = original_player_clock.moves_left;
-                        ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
-
-                        if (overtime_usage > 0) {
-                            ret.block_time_left -= overtime_usage;
-
-                            if (ret.block_time_left < 0) {
-                                ret.block_time_left = 0;
-                            }
-                        }
-                    } else {
-                        ret.main_time = original_player_clock.thinking_time * 1000;
-                        ret.moves_left = original_player_clock.moves_left;
-                        ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
-                    }
-                    break;
-
-                default:
-                    throw new Error(`Unsupported time control system: ${tcs}`);
-            }
-
-            return ret;
-        };
 
         const last_audio_event: { [player_id: string]: AudioClockEvent } = {
             black: {
@@ -3270,21 +3287,67 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 ? Math.max(clock.paused_since, original_clock.last_move) - original_clock.last_move
                 : current_server_time - original_clock.last_move;
 
-            clock.black_clock = make_player_clock(
+            const black_relative_latency = this.getPlayerRelativeLatency(
+                original_clock.black_player_id,
+            );
+            const white_relative_latency = this.getPlayerRelativeLatency(
+                original_clock.white_player_id,
+            );
+
+            const black_elapsed = Math.max(0, elapsed - Math.abs(black_relative_latency));
+            const white_elapsed = Math.max(0, elapsed - Math.abs(white_relative_latency));
+
+            clock.black_clock = this.computeNewPlayerClock(
                 original_clock.black_time as AdHocPlayerClock,
-                original_clock.expiration,
                 clock.current_player === "black" && !clock.start_mode,
-                elapsed,
+                black_elapsed,
+                time_control,
             );
 
-            clock.white_clock = make_player_clock(
+            clock.white_clock = this.computeNewPlayerClock(
                 original_clock.white_time as AdHocPlayerClock,
-                original_clock.expiration,
                 clock.current_player === "white" && !clock.start_mode,
-                elapsed,
+                white_elapsed,
+                time_control,
             );
 
-            this.emit("clock", clock);
+            const wall_clock_elapsed = current_server_time - original_clock.last_move;
+            clock.black_move_transmitting =
+                clock.current_player === "black"
+                    ? Math.max(0, black_relative_latency - wall_clock_elapsed)
+                    : 0;
+            clock.white_move_transmitting =
+                clock.current_player === "white"
+                    ? Math.max(0, white_relative_latency - wall_clock_elapsed)
+                    : 0;
+
+            if (!this.sent_timed_out_message) {
+                if (
+                    clock.current_player === "white" &&
+                    this.player_id === this.engine.config.white_player_id
+                ) {
+                    if ((clock.white_clock as JGOFPlayerClockWithTimedOut).timed_out) {
+                        this.sent_timed_out_message = true;
+                    }
+                }
+                if (
+                    clock.current_player === "black" &&
+                    this.player_id === this.engine.config.black_player_id
+                ) {
+                    if ((clock.black_clock as JGOFPlayerClockWithTimedOut).timed_out) {
+                        this.sent_timed_out_message = true;
+                    }
+                }
+                if (this.sent_timed_out_message) {
+                    this.sendTimedOut();
+                }
+            }
+
+            if (this.clock_should_be_paused_for_move_submission && this.last_emitted_clock) {
+                this.emit("clock", this.last_emitted_clock);
+            } else {
+                this.emit("clock", clock);
+            }
 
             // check if we need to update our audio
             if (this.mode === "play" && this.engine.phase === "play") {
@@ -3304,6 +3367,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                     switch (time_control.system) {
                         case "simple":
+                            if (audio_clock.countdown_seconds === time_control.per_move) {
+                                // When byo-yomi resets, we don't want to play the sound for the
+                                // top of the second mark because it's going to get clipped short
+                                // very soon as time passes and we're going to start playing the
+                                // next second sound.
+                                audio_clock.countdown_seconds = -1;
+                            }
+                            break;
+
                         case "absolute":
                         case "fischer":
                             audio_clock.countdown_seconds = Math.ceil(
@@ -3324,6 +3396,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 if ((player_clock.periods_left || 0) <= 0) {
                                     audio_clock.countdown_seconds = -1;
                                 }
+
+                                /*
+                                if (
+                                    audio_clock.countdown_seconds === time_control.period_time &&
+                                    audio_clock.in_overtime == last_audio_event[clock.current_player].in_overtime
+                                ) {
+                                    // When byo-yomi resets, we don't want to play the sound for the
+                                    // top of the second mark because it's going to get clipped short
+                                    // very soon as time passes and we're going to start playing the
+                                    // next second sound.
+                                    audio_clock.countdown_seconds = -1;
+                                }
+                                */
                             }
                             break;
 
@@ -3337,6 +3422,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 audio_clock.countdown_seconds = Math.ceil(
                                     (player_clock.block_time_left || 0) / 1000,
                                 );
+
+                                if (audio_clock.countdown_seconds === time_control.period_time) {
+                                    // When we start a new period, we don't want to play the sound for the
+                                    // top of the second mark because it's going to get clipped short
+                                    // very soon as time passes and we're going to start playing the
+                                    // next second sound.
+                                    audio_clock.countdown_seconds = -1;
+                                }
                             }
                             break;
 
@@ -3373,6 +3466,148 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         do_update();
     }
+
+    protected computeNewPlayerClock(
+        original_player_clock: Readonly<AdHocPlayerClock>,
+        is_current_player: boolean,
+        time_elapsed: number,
+        time_control: Readonly<JGOFTimeControl>,
+    ): JGOFPlayerClockWithTimedOut {
+        const ret: JGOFPlayerClockWithTimedOut = {
+            main_time: 0,
+            timed_out: false,
+        };
+
+        const original_clock = this.last_clock;
+        if (!original_clock) {
+            throw new Error(`No last_clock when computing new player clock`);
+        }
+
+        const tcs: string = "" + time_control.system;
+        switch (time_control.system) {
+            case "simple":
+                ret.main_time = is_current_player
+                    ? Math.max(0, time_control.per_move - time_elapsed / 1000) * 1000
+                    : time_control.per_move * 1000;
+                if (ret.main_time <= 0) {
+                    ret.timed_out = true;
+                }
+                break;
+
+            case "none":
+                ret.main_time = 0;
+                break;
+
+            case "absolute":
+                /*
+                ret.main_time = is_current_player
+                    ? Math.max(
+                          0,
+                          original_clock_expiration + raw_clock_pause_offset - current_server_time,
+                      )
+                    : Math.max(0, original_player_clock.thinking_time * 1000);
+                    */
+                ret.main_time = is_current_player
+                    ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
+                    : original_player_clock.thinking_time * 1000;
+                if (ret.main_time <= 0) {
+                    ret.timed_out = true;
+                }
+                break;
+
+            case "fischer":
+                ret.main_time = is_current_player
+                    ? Math.max(0, original_player_clock.thinking_time * 1000 - time_elapsed)
+                    : original_player_clock.thinking_time * 1000;
+                if (ret.main_time <= 0) {
+                    ret.timed_out = true;
+                }
+                break;
+
+            case "byoyomi":
+                if (is_current_player) {
+                    let overtime_usage = 0;
+                    if (original_player_clock.thinking_time > 0) {
+                        ret.main_time = original_player_clock.thinking_time * 1000 - time_elapsed;
+                        if (ret.main_time <= 0) {
+                            overtime_usage = -ret.main_time;
+                            ret.main_time = 0;
+                        }
+                    } else {
+                        ret.main_time = 0;
+                        overtime_usage = time_elapsed;
+                    }
+                    ret.periods_left = original_player_clock.periods || 0;
+                    ret.period_time_left = time_control.period_time * 1000;
+                    if (overtime_usage > 0) {
+                        const periods_used = Math.floor(
+                            overtime_usage / (time_control.period_time * 1000),
+                        );
+                        ret.periods_left -= periods_used;
+                        ret.period_time_left =
+                            time_control.period_time * 1000 -
+                            (overtime_usage - periods_used * time_control.period_time * 1000);
+
+                        if (ret.periods_left < 0) {
+                            ret.periods_left = 0;
+                        }
+
+                        if (ret.period_time_left < 0) {
+                            ret.period_time_left = 0;
+                        }
+                    }
+                } else {
+                    ret.main_time = original_player_clock.thinking_time * 1000;
+                    ret.periods_left = original_player_clock.periods;
+                    ret.period_time_left = time_control.period_time * 1000;
+                }
+
+                if (ret.main_time <= 0 && (ret.periods_left || 0) === 0) {
+                    ret.timed_out = true;
+                }
+                break;
+
+            case "canadian":
+                if (is_current_player) {
+                    let overtime_usage = 0;
+                    if (original_player_clock.thinking_time > 0) {
+                        ret.main_time = original_player_clock.thinking_time * 1000 - time_elapsed;
+                        if (ret.main_time <= 0) {
+                            overtime_usage = -ret.main_time;
+                            ret.main_time = 0;
+                        }
+                    } else {
+                        ret.main_time = 0;
+                        overtime_usage = time_elapsed;
+                    }
+                    ret.moves_left = original_player_clock.moves_left;
+                    ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
+
+                    if (overtime_usage > 0) {
+                        ret.block_time_left -= overtime_usage;
+
+                        if (ret.block_time_left < 0) {
+                            ret.block_time_left = 0;
+                        }
+                    }
+                } else {
+                    ret.main_time = original_player_clock.thinking_time * 1000;
+                    ret.moves_left = original_player_clock.moves_left;
+                    ret.block_time_left = (original_player_clock.block_time || 0) * 1000;
+                }
+
+                if (ret.main_time <= 0 && ret.block_time_left <= 0) {
+                    ret.timed_out = true;
+                }
+                break;
+
+            default:
+                throw new Error(`Unsupported time control system: ${tcs}`);
+        }
+
+        return ret;
+    }
+
     public syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void {
         if (
             this.review_id &&
@@ -3488,6 +3723,21 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         return ret;
     }
 
+    /* Computes the relative latency between the target player and the current viewer.
+     * For example, if player P has a latency of 500ms and we have a latency of 200ms,
+     * the relative latency will be 300ms. This is used to artifically delay the clock
+     * countdown for that player to minimize the amount of apparent time jumping that can
+     * happen as clocks are synchronized */
+    public getPlayerRelativeLatency(player_id: number): number {
+        if (player_id === this.player_id) {
+            return 0;
+        }
+
+        // If the other latency is not available for whatever reason, use our own latency as a better-than-0 guess */
+        const other_latency = this.engine?.latencies?.[player_id] || this.getNetworkLatency();
+
+        return other_latency - this.getNetworkLatency();
+    }
     public getLastReviewMessage(): ReviewMessage {
         return this.last_review_message;
     }
@@ -3503,7 +3753,7 @@ function uuid(): string {
     });
 }
 
-function AdHocPauseControl2JGOFPauseState(pause_control: AdHocPauseControl) {
+function AdHocPauseControl2JGOFPauseState(pause_control: AdHocPauseControl): JGOFPauseState {
     const ret: JGOFPauseState = {};
 
     for (const k in pause_control) {
@@ -3619,6 +3869,13 @@ class FocusTracker {
         this.hasFocus = false;
         this.lastFocus = Date.now();
     };
+}
+
+function isPaused(pause_state: JGOFPauseState): boolean {
+    for (const _key in pause_state) {
+        return true;
+    }
+    return false;
 }
 
 export const focus_tracker = new FocusTracker();
