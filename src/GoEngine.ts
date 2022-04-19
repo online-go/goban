@@ -419,6 +419,18 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.emit("undo_requested", this.undo_requested);
     }
 
+    private _outcome: string = false;
+    public get outcome(): string {
+        return this._outcome;
+    }
+    public set outcome(outcome: string) {
+        if (this._outcome === outcome) {
+            return;
+        }
+        this._outcome = outcome;
+        this.emit("outcome", this.outcome);
+    }
+
 
     private aga_handicap_scoring: boolean = false;
     private allow_ko: boolean = false;
@@ -899,7 +911,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     public jumpTo(node?: MoveTree | null): void {
         if (!node) {
-            throw new Error("Attempted to jump to a null/undefined node");
+            //throw new Error("Attempted to jump to a null/undefined node");
+            return;
         }
         this.move_before_jump = this.cur_move;
         this.cur_move = node;

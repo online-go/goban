@@ -233,6 +233,10 @@ export interface StateUpdateEvents {
     rules: GoEngineRules;
     winner: PlayerColor | undefined;
     undo_requested: number | undefined; // move number of the last undo request
+    paused: boolean;
+    outcome: string;
+    review_owner_id: number | undefined;
+    review_controller_id: number | undefined;
 }
 
 export interface Events extends StateUpdateEvents {
@@ -243,6 +247,7 @@ export interface Events extends StateUpdateEvents {
     error: any;
     gamedata: any;
     chat: any;
+    load: GobanConfig;
     "submitting-move": boolean;
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
@@ -273,6 +278,8 @@ export interface Events extends StateUpdateEvents {
         player_id: number;
     };
     "set-for-removal": { x: number; y: number; removed: boolean };
+    "stone-removal.accepted": never;
+    "conditional-moves.updated": never;
     "puzzle-place": {
         x: number;
         y: number;
@@ -375,8 +382,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public pen_marks: Array<any>;
     public readonly game_id: number | string;
     public readonly review_id: number;
-    public review_controller_id?: number;
-    public review_owner_id?: number;
     public showing_scores: boolean = false;
     //public white_pause_text: string;
     public width: number;
@@ -424,7 +429,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.emit("submit_move", this.submit_move);
     }
 
-    public _analyze_tool: AnalysisTool = "stone";
+    private _analyze_tool: AnalysisTool = "stone";
     public get analyze_tool(): AnalysisTool {
         return this._analyze_tool;
     }
@@ -436,7 +441,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.emit("analyze_tool", this.analyze_tool);
     }
 
-    public _analyze_subtool: AnalysisSubTool = "alternate";
+    private _analyze_subtool: AnalysisSubTool = "alternate";
     public get analyze_subtool(): AnalysisSubTool {
         return this._analyze_subtool;
     }
@@ -448,7 +453,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.emit("analyze_subtool", this.analyze_subtool);
     }
 
-    public _score_estimate: any | null = null;
+    private _score_estimate: any | null = null;
     public get score_estimate(): any | null {
         return this._score_estimate;
     }
@@ -458,6 +463,30 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this._score_estimate = score_estimate;
         this.emit("score_estimate", this.score_estimate);
+    }
+
+    private _review_owner_id?: number;
+    public get review_owner_id(): number | undefined {
+        return this._review_owner_id;
+    }
+    public set review_owner_id(review_owner_id: number | undefined) {
+        if (this._review_owner_id === review_owner_id) {
+            return;
+        }
+        this._review_owner_id = review_owner_id;
+        this.emit("review_owner_id", this.review_owner_id);
+    }
+
+    private _review_controller_id?: number;
+    public get review_controller_id(): number | undefined {
+        return this._review_controller_id;
+    }
+    public set review_controller_id(review_controller_id: number | undefined) {
+        if (this._review_controller_id === review_controller_id) {
+            return;
+        }
+        this._review_controller_id = review_controller_id;
+        this.emit("review_controller_id", this.review_controller_id);
     }
 
     protected __board_redraw_pen_layer_timer: any = null;
@@ -1397,6 +1426,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         "strict_seki_mode" in cfg ? cfg.strict_seki_mode : false;
                 }
                 this.updateTitleAndStonePlacement();
+                this.emit("stone-removal.accepted");
                 this.emit("update");
             });
 
@@ -2150,6 +2180,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             (this as any).autoScore();
         }
 
+        this.emit("load", config);
         return this.engine;
     }
     public set(x: number, y: number, player: JGOFNumericPlayerColor): void {
@@ -2431,6 +2462,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.current_cmove = this.conditional_tree;
 
+        this.emit("conditional-moves.updated");
         this.emit("update");
     }
     public followConditionalPath(movepath: string) {
@@ -2439,6 +2471,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.engine.place(moves[i].x, moves[i].y);
             this.followConditionalSegment(moves[i].x, moves[i].y);
         }
+        this.emit("conditional-moves.updated");
     }
     protected followConditionalSegment(x: number, y: number): void {
         const mv = encodeMove(x, y);
@@ -2465,6 +2498,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         this.currently_my_cmove = !this.currently_my_cmove;
+        this.emit("conditional-moves.updated");
     }
     protected deleteConditionalSegment(x: number, y: number) {
         this.conditional_path += encodeMove(x, y);
@@ -2502,6 +2536,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         this.currently_my_cmove = !this.currently_my_cmove;
+        this.emit("conditional-moves.updated");
     }
     public deleteConditionalPath(movepath: string): void {
         const moves = this.engine.decodeMoves(movepath);
@@ -2514,6 +2549,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
             this.deleteConditionalSegment(moves[moves.length - 1].x, moves[moves.length - 1].y);
         }
+        this.emit("conditional-moves.updated");
     }
     public getCurrentConditionalPath(): string {
         return this.conditional_path;
@@ -2526,6 +2562,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             player_id: this.config.player_id,
             cmoves: this.conditional_tree.encode(),
         });
+        this.emit("conditional-moves.updated");
     }
 
     public setToPreviousMode(dont_jump_to_official_move?: boolean): boolean {
@@ -3357,8 +3394,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (cur_paused !== this.last_paused_state) {
                     this.last_paused_state = cur_paused;
                     if (cur_paused) {
+                        this.emit("paused", cur_paused);
                         this.emit("audio-game-paused");
                     } else {
+                        this.emit("paused", cur_paused);
                         this.emit("audio-game-resumed");
                     }
                 }
