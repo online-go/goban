@@ -282,13 +282,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
     public board: Array<Array<JGOFNumericPlayerColor>>;
-    public cur_move: MoveTree;
     public cur_review_move?: MoveTree;
     public getState_callback?: () => any;
     public handicap: number = NaN;
     public initial_state: GoEngineInitialState = { black: "", white: "" };
     public komi: number = NaN;
-    public last_official_move: MoveTree;
     public move_tree: MoveTree;
     public move_tree_layout_vector: Array<number> =
         []; /* For use by MoveTree layout and rendering */
@@ -297,7 +295,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
     public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
     public readonly name: string = "";
     public outcome: string = "";
-    public phase: GoEnginePhase = "play";
     public player: JGOFNumericPlayerColor;
     public player_pool: { [id: number]: GoEnginePlayerEntry };
     public latencies?: { [player_id: string]: number };
@@ -318,29 +315,110 @@ export class GoEngine extends TypedEventEmitter<Events> {
     public readonly disable_analysis: boolean = false;
     public readonly height: number = 19;
     //public readonly rules:GoEngineRules = 'japanese';
-    public rules: GoEngineRules = "japanese"; // can't be readonly at this point since parseSGF sets it
     public readonly width: number = 19;
     public removal: Array<Array<-1 | 0 | 1>>;
     public setState_callback?: (state: any) => void;
-    public strict_seki_mode: boolean = false;
     public time_control: JGOFTimeControl = {
         system: "none",
         speed: "correspondence",
         pause_on_weekends: true,
     };
-    public undo_requested?: number = NaN;
-    public winner?: "black" | "white";
     public game_id: number = NaN;
     public review_id?: number;
     public decoded_moves: Array<Move> = [];
     public automatic_stone_removal: boolean = false;
     public group_ids?: Array<number>;
-
-    rengo?: boolean;
-    rengo_teams?: {
+    public rengo?: boolean;
+    public rengo_teams?: {
         [colour: string]: Array<GoEnginePlayerEntry>; // TBD index this by PlayerColour
     };
-    rengo_casual_mode: boolean;
+    public rengo_casual_mode: boolean;
+
+    /* Properties that emit change events */
+    private _phase: GoEnginePhase = "play";
+    public get phase(): GoEnginePhase {
+        return this._phase;
+    }
+    public set phase(phase: GoEnginePhase) {
+        if (this._phase === phase) {
+            return;
+        }
+        this._phase = phase;
+        this.emit("phase", this.phase);
+    }
+
+    private _cur_move: MoveTree;
+    public get cur_move(): MoveTree {
+        return this._cur_move;
+    }
+    public set cur_move(cur_move: MoveTree) {
+        if (this._cur_move === cur_move) {
+            return;
+        }
+        this._cur_move = cur_move;
+        this.emit("cur_move", this.cur_move);
+    }
+
+    private _last_official_move: MoveTree;
+    public get last_official_move(): MoveTree {
+        return this._last_official_move;
+    }
+    public set last_official_move(last_official_move: MoveTree) {
+        if (this._last_official_move === last_official_move) {
+            return;
+        }
+        this._last_official_move = last_official_move;
+        this.emit("last_official_move", this.last_official_move);
+    }
+
+    private _strict_seki_mode: boolean = false;
+    public get strict_seki_mode(): boolean {
+        return this._strict_seki_mode;
+    }
+    public set strict_seki_mode(strict_seki_mode: boolean) {
+        if (this._strict_seki_mode === strict_seki_mode) {
+            return;
+        }
+        this._strict_seki_mode = strict_seki_mode;
+        this.emit("strict_seki_mode", this.strict_seki_mode);
+    }
+
+    private _rules: GoEngineRules = "japanese"; // can't be readonly at this point since parseSGF sets it
+    public get rules(): GoEngineRules {
+        return this._rules;
+    }
+    public set rules(rules: GoEngineRules) {
+        if (this._rules === rules) {
+            return;
+        }
+        this._rules = rules;
+        this.emit("rules", this.rules);
+    }
+
+    private _winner?: PlayerColor | undefined;
+    public get winner(): PlayerColor | undefined {
+        return this._winner;
+    }
+    public set winner(winner: PlayerColor | undefined) {
+        if (this._winner === winner) {
+            return;
+        }
+        this._winner = winner;
+        this.emit("winner", this.winner);
+    }
+
+    private _undo_requested?: number; // move number of the last undo request
+    public get undo_requested(): number | undefined {
+        return this._undo_requested;
+    }
+    public set undo_requested(undo_requested: number | undefined) {
+        if (this._undo_requested === undo_requested) {
+            return;
+        }
+        this._undo_requested = undo_requested;
+        this.emit("undo_requested", this.undo_requested);
+    }
+
 
     private aga_handicap_scoring: boolean = false;
     private allow_ko: boolean = false;
@@ -492,8 +570,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         /* Must be after initial state setup */
         this.move_tree = new MoveTree(this, true, -1, -1, false, 0, 0, null, this.getState());
 
-        this.cur_move = this.move_tree;
-        this.last_official_move = this.cur_move;
+        this._cur_move = this.move_tree;
+        this._last_official_move = this.cur_move;
         delete this.move_before_jump;
 
         try {
@@ -2682,6 +2760,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
             } else {
                 ret = this.handicap;
             }
+        }
+        return ret;
+    }
+
+    public parentEventEmitter?: TypedEventEmitter<Events>;
+    emit<K extends Extract<keyof Events, string>>(event: K, arg?: Events[K]): boolean {
+        let ret: boolean = super.emit(event, arg);
+        if (this.parentEventEmitter) {
+            ret ||= this.parentEventEmitter.emit(event, arg);
         }
         return ret;
     }

@@ -99,7 +99,6 @@ export class GobanCanvas extends GobanCore {
     private drawing_enabled: boolean = true;
     private pen_ctx?: CanvasRenderingContext2D;
     private pen_layer?: HTMLCanvasElement;
-    public title: string = "";
     protected title_div?: HTMLElement;
 
     private themes: GobanSelectedThemes = {
@@ -2910,7 +2909,6 @@ export class GobanCanvas extends GobanCore {
         if (this.title_div) {
             this.title_div.innerHTML = title;
         }
-        this.emit("title", title);
     }
     protected watchSelectedThemes(cb: (themes: GobanSelectedThemes) => void): {
         remove: () => any;

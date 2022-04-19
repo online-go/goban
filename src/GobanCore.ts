@@ -20,6 +20,7 @@ import {
     GoEngine,
     GoEngineConfig,
     GoEnginePhase,
+    GoEngineRules,
     encodeMove,
     ReviewMessage,
     PlayerColor,
@@ -218,7 +219,23 @@ export interface JGOFClockWithTransmitting extends JGOFClock {
     white_move_transmitting: number; // estimated ms left for transmission, or 0 if complete
 }
 
-export interface Events {
+export interface StateUpdateEvents {
+    mode: GobanModes;
+    title: string;
+    phase: GoEnginePhase;
+    cur_move: MoveTree;
+    last_official_move: MoveTree;
+    submit_move: (() => void) | undefined;
+    analyze_tool: AnalysisTool;
+    analyze_subtool: AnalysisSubTool;
+    score_estimate: any; // TODO: this is a bit of a mess, GoEngine type is Score, but really we are returning an entire ScoreEstimator object. It might work to change any here to ScoreEstimator and propagate that change throughout.
+    strict_seki_mode: boolean;
+    rules: GoEngineRules;
+    winner: PlayerColor | undefined;
+    undo_requested: number | undefined; // move number of the last undo request
+}
+
+export interface Events extends StateUpdateEvents {
     destroy: never;
     update: never;
     "chat-reset": never;
@@ -239,10 +256,8 @@ export interface Events {
     "review.updated": never;
     "review.load-start": never;
     "review.load-end": never;
-    title: string;
     "puzzle-wrong-answer": never;
     "puzzle-correct-answer": never;
-    "show-submit": boolean;
     state_text: {
         title: string;
         show_moves_made_count?: boolean;
@@ -341,8 +356,6 @@ export interface GobanMetrics {
 
 export abstract class GobanCore extends TypedEventEmitter<Events> {
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
-    public analyze_tool: AnalysisTool;
-    public analyze_subtool: AnalysisSubTool;
     //public black_pause_text: string;
     public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;
@@ -357,7 +370,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public last_clock?: AdHocClock;
     public last_emitted_clock?: JGOFClockWithTransmitting;
     public clock_should_be_paused_for_move_submission: boolean = false;
-    public mode: GobanModes;
     public previous_mode: string;
     public one_click_submit: boolean;
     public pen_marks: Array<any>;
@@ -365,9 +377,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public readonly review_id: number;
     public review_controller_id?: number;
     public review_owner_id?: number;
-    public score_estimate: any;
     public showing_scores: boolean = false;
-    public submit_move?: () => void;
     //public white_pause_text: string;
     public width: number;
 
@@ -376,6 +386,79 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public sent_timed_out_message: boolean = false;
 
     private last_paused_state: boolean | null = null;
+
+    /* Properties that emit change events */
+    private _mode: GobanModes = "play";
+    public get mode(): GobanModes {
+        return this._mode;
+    }
+    public set mode(mode: GobanModes) {
+        if (this._mode === mode) {
+            return;
+        }
+        this._mode = mode;
+        this.emit("mode", this.mode);
+    }
+
+    private _title: string = "play";
+    public get title(): string {
+        return this._title;
+    }
+    public set title(title: string) {
+        if (this._title === title) {
+            return;
+        }
+        this._title = title;
+        this.emit("title", this.title);
+    }
+
+    private _submit_move?: () => void;
+    public get submit_move(): (() => void) | undefined {
+        return this._submit_move;
+    }
+    public set submit_move(submit_move: (() => void) | undefined) {
+        if (this._submit_move === submit_move) {
+            return;
+        }
+        this._submit_move = submit_move;
+        this.emit("submit_move", this.submit_move);
+    }
+
+    public _analyze_tool: AnalysisTool = "stone";
+    public get analyze_tool(): AnalysisTool {
+        return this._analyze_tool;
+    }
+    public set analyze_tool(analyze_tool: AnalysisTool) {
+        if (this._analyze_tool === analyze_tool) {
+            return;
+        }
+        this._analyze_tool = analyze_tool;
+        this.emit("analyze_tool", this.analyze_tool);
+    }
+
+    public _analyze_subtool: AnalysisSubTool = "alternate";
+    public get analyze_subtool(): AnalysisSubTool {
+        return this._analyze_subtool;
+    }
+    public set analyze_subtool(analyze_subtool: AnalysisSubTool) {
+        if (this._analyze_subtool === analyze_subtool) {
+            return;
+        }
+        this._analyze_subtool = analyze_subtool;
+        this.emit("analyze_subtool", this.analyze_subtool);
+    }
+
+    public _score_estimate: any | null = null;
+    public get score_estimate(): any | null {
+        return this._score_estimate;
+    }
+    public set score_estimate(score_estimate: any | null) {
+        if (this._score_estimate === score_estimate) {
+            return;
+        }
+        this._score_estimate = score_estimate;
+        this.emit("score_estimate", this.score_estimate);
+    }
 
     protected __board_redraw_pen_layer_timer: any = null;
     protected __clock_timer?: ReturnType<typeof setTimeout>;
@@ -529,7 +612,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.setGameClock(null);
         this.last_stone_sound = -1;
         this.scoring_mode = false;
-        this.score_estimate = null;
 
         /* TODO: Remove this after 5.0 and after doing a check to see if any of these still exist somehow */
         if ("game_type" in config && config.game_type === "temporary") {
@@ -582,8 +664,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.getPuzzlePlacementSetting = config.getPuzzlePlacementSetting;
         this.mode = config.mode || "play";
         this.previous_mode = this.mode;
-        this.analyze_tool = "stone";
-        this.analyze_subtool = "alternate";
         this.label_character = "A";
         //this.edit_color = null;
         this.stone_placement_enabled = false;
@@ -823,7 +903,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.review_id) {
                 this.connectToReviewSent = true;
                 this.done_loading_review = false;
-                document.title = _("Review");
+                this.setTitle(_("Review"));
                 if (!this.disconnectedFromGame) {
                     socket.send("review/connect", this.review_connection_data);
                 }
@@ -1839,7 +1919,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     protected setSubmit(fn?: () => void): void {
         this.submit_move = fn;
-        this.emit("show-submit", !!fn);
+        this.emit("submit_move", fn);
     }
 
     public markDirty(): void {
@@ -1999,6 +2079,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         /* This must be done last as it will invoke the appropriate .set actions to set the board in it's correct state */
         const old_engine = this.engine;
         this.engine = new GoEngine(config, this);
+        this.engine.parentEventEmitter = this;
         this.engine.getState_callback = () => {
             return this.getState();
         };

@@ -17,7 +17,7 @@
 import { EventEmitter } from "eventemitter3";
 
 export class TypedEventEmitter<T> {
-    private emitter = new EventEmitter();
+    protected emitter = new EventEmitter();
 
     addListener<K extends Extract<keyof T, string>>(event: K, listener: (arg?: T[K]) => any): this {
         this.emitter.addListener(event, listener);
