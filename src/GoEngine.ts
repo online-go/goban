@@ -294,7 +294,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
         {}; /* For use by MoveTree layout and rendering */
     public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
     public readonly name: string = "";
-    public outcome: string = "";
     public player: JGOFNumericPlayerColor;
     public player_pool: { [id: number]: GoEnginePlayerEntry };
     public latencies?: { [player_id: string]: number };
@@ -419,7 +418,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.emit("undo_requested", this.undo_requested);
     }
 
-    private _outcome: string = false;
+    private _outcome: string = "";
     public get outcome(): string {
         return this._outcome;
     }
