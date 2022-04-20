@@ -391,6 +391,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public sent_timed_out_message: boolean = false;
 
     private last_paused_state: boolean | null = null;
+    private last_paused_by_player_state: boolean | null = null;
 
     /* Properties that emit change events */
     private _mode: GobanModes = "play";
@@ -3394,11 +3395,23 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (cur_paused !== this.last_paused_state) {
                     this.last_paused_state = cur_paused;
                     if (cur_paused) {
-                        this.emit("paused", cur_paused);
                         this.emit("audio-game-paused");
                     } else {
-                        this.emit("paused", cur_paused);
                         this.emit("audio-game-resumed");
+                    }
+                }
+            }
+
+            if (this.last_paused_by_player_state === null) {
+                this.last_paused_by_player_state = !!this.pause_control?.paused;
+            } else {
+                const cur_paused = !!!!this.pause_control?.paused;
+                if (cur_paused !== this.last_paused_by_player_state) {
+                    this.last_paused_by_player_state = cur_paused;
+                    if (cur_paused) {
+                        this.emit("paused", cur_paused);
+                    } else {
+                        this.emit("paused", cur_paused);
                     }
                 }
             }
