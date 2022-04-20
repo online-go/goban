@@ -914,10 +914,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
             return;
         }
         this.move_before_jump = this.cur_move;
-        this.cur_move = node;
         if (node.state) {
             this.setState(node.state);
         }
+        this.cur_move = node;
         if (node.player_update) {
             //console.log("Engine jumpTo doing player_update...");
             this.updatePlayers(node.player_update);
@@ -1372,10 +1372,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 this.player = this.opponent();
             }
             const next_move_number = this.cur_move.move_number + 1;
-            //var trunk = this.loading_trunk_moves || (!this.goban_callback || this.goban_callback.mode === "play");
             const trunk = isTrunkMove ? true : false;
-            //console.log("Trunk move: ", trunk, this.goban_callback.mode);
-            //this.cur_move = this.cur_move.move(x, y, trunk, false, color, next_move_number, !this.dontStoreBoardHistory ? this.getState() : null);
             this.cur_move = this.cur_move.move(
                 x,
                 y,
@@ -1387,20 +1384,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
             );
         } catch (e) {
             this.jumpTo(this.cur_move);
-            /*
-               if (e.message) {
-            //console.log(e.message);
-            if (e.stack) {
-            console.log(e.stack);
-            }
-            }
-             */
-            //console.log(e);
-            /*
-               if (e.stack) {
-               console.log(e.stack);
-               }
-             */
             throw e;
         }
 
