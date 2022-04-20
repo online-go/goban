@@ -389,6 +389,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public pause_control?: AdHocPauseControl;
     public paused_since?: number;
     public sent_timed_out_message: boolean = false;
+    public chat_log: GobanChatLog = [];
 
     private last_paused_state: boolean | null = null;
     private last_paused_by_player_state: boolean | null = null;
@@ -1089,6 +1090,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     return;
                 }
                 obj.line.channel = obj.channel;
+                this.chat_log.push(obj.line);
                 this.emit("chat", obj.line);
             });
             this._socket_on(prefix + "reset-chats", (): void => {
@@ -1472,6 +1474,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (!obj.chat.chat_id) {
                     obj.chat.chat_id = obj.chat.player_id + "." + obj.chat.date;
                 }
+                this.chat_log.push(obj.chat as any);
                 this.emit("chat", obj.chat);
             }
 
@@ -1652,8 +1655,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.emit("review.sync-to-current-move");
                     }
                     this.updateTitleAndStonePlacement();
-
-                    this.emit("chat", {
+                    let line = {
                         system: true,
                         chat_id: uuid(),
                         body: interpolate(_("Control passed to %s"), [
@@ -1662,7 +1664,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 : obj.controller?.username || "[missing controller name]",
                         ]),
                         channel: "system",
-                    });
+                    };
+                    //this.chat_log.push(line);
+                    this.emit("chat", line);
                     this.emit("update");
                 }
             }
@@ -2071,7 +2075,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
         }
 
-        let merged_log: GobanChatLog = [];
+        this.chat_log = [];
         const main_log: GobanChatLog = (config.chat_log || []).map((x) => {
             x.channel = "main";
             return x;
@@ -2084,10 +2088,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             x.channel = "malkovich";
             return x;
         });
-        merged_log = merged_log.concat(main_log, spectator_log, malkovich_log);
-        merged_log.sort((a, b) => a.date - b.date);
+        this.chat_log = this.chat_log.concat(main_log, spectator_log, malkovich_log);
+        this.chat_log.sort((a, b) => a.date - b.date);
 
-        for (const line of merged_log) {
+        for (const line of this.chat_log) {
             this.emit("chat", line);
         }
 
