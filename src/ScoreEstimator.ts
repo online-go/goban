@@ -17,7 +17,7 @@
 import { dup } from "./GoUtil";
 import { GoMath, Intersection, Group } from "./GoMath";
 import { GobanCore } from "./GobanCore";
-import { GoEngine, encodeMove, encodeMoves, Score, PlayerScore, GoEngineRules } from "./GoEngine";
+import { GoEngine, encodeMove, encodeMoves, PlayerScore, GoEngineRules } from "./GoEngine";
 import { JGOFNumericPlayerColor } from "./JGOF";
 import { _ } from "./translate";
 
@@ -785,7 +785,7 @@ export class ScoreEstimator {
      * manually mark removed/dame, etc..  it does an official scoring from the
      * remaining territory.
      */
-    score(): Score {
+    score(): ScoreEstimator {
         this.white = {
             total: 0,
             stones: 0,

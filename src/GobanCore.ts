@@ -465,6 +465,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this._score_estimate = score_estimate;
         this.emit("score_estimate", this.score_estimate);
+        this._score_estimate.when_ready.then(() => {
+            this.emit("score_estimate", this.score_estimate);
+        });
     }
 
     private _review_owner_id?: number;
@@ -3100,6 +3103,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.config.onScoreEstimationUpdated) {
                 this.config.onScoreEstimationUpdated(est > 0 ? "black" : "white", Math.abs(est));
             }
+            this.emit("score_estimate", this.score_estimate);
         }
     }
     public autoScore(): void {
