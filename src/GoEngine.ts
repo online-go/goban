@@ -430,7 +430,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.emit("outcome", this.outcome);
     }
 
-
     private aga_handicap_scoring: boolean = false;
     private allow_ko: boolean = false;
     private allow_self_capture: boolean = false;
@@ -2699,7 +2698,11 @@ export class GoEngine extends TypedEventEmitter<Events> {
             }
         };
     }
-    public estimateScore(trials: number, tolerance: number, prefer_remote: boolean = false): ScoreEstimator {
+    public estimateScore(
+        trials: number,
+        tolerance: number,
+        prefer_remote: boolean = false,
+    ): ScoreEstimator {
         const se = new ScoreEstimator(this.goban_callback, this, trials, tolerance, prefer_remote);
         return se.score();
     }
