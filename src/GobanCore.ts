@@ -1658,7 +1658,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.emit("review.sync-to-current-move");
                     }
                     this.updateTitleAndStonePlacement();
-                    let line = {
+                    const line = {
                         system: true,
                         chat_id: uuid(),
                         body: interpolate(_("Control passed to %s"), [
@@ -3413,7 +3413,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.last_paused_by_player_state === null) {
                 this.last_paused_by_player_state = !!this.pause_control?.paused;
             } else {
-                const cur_paused = !!!!this.pause_control?.paused;
+                const cur_paused = !!this.pause_control?.paused;
                 if (cur_paused !== this.last_paused_by_player_state) {
                     this.last_paused_by_player_state = cur_paused;
                     if (cur_paused) {
