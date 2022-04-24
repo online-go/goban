@@ -465,7 +465,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this._score_estimate = score_estimate;
         this.emit("score_estimate", this.score_estimate);
-        this._score_estimate.when_ready.then(() => {
+        this._score_estimate?.when_ready.then(() => {
             this.emit("score_estimate", this.score_estimate);
         });
     }
