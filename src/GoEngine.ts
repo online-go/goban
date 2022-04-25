@@ -868,6 +868,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         // keep deprecated fields up to date
         this.config.black_player_id = player_update.players.black;
         this.config.white_player_id = player_update.players.white;
+
+        this.emit("player-update", player_update);
     }
 
     /** Returns true if there was a previous to show */
@@ -920,7 +922,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
         if (node.player_update) {
             //console.log("Engine jumpTo doing player_update...");
             this.updatePlayers(node.player_update);
-            this.emit("update");
         }
     }
     public jumpToLastOfficialMove(): void {
