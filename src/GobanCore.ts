@@ -279,6 +279,7 @@ export interface Events extends StateUpdateEvents {
     };
     "set-for-removal": { x: number; y: number; removed: boolean };
     "stone-removal.accepted": never;
+    "stone-removal.updated": never;
     "conditional-moves.updated": never;
     "puzzle-place": {
         x: number;
@@ -2204,6 +2205,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.drawSquare(x, y);
         this.emit("set-for-removal", { x, y, removed: !!removed });
+        this.emit("stone-removal.updated");
     }
     public showScores(score: Score): void {
         this.hideScores();
