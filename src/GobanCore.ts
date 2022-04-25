@@ -1195,7 +1195,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     return;
                 }
 
-                delete this.engine.undo_requested;
+                this.engine.undo_requested = undefined;
 
                 this.setMode("play");
                 this.engine.showPrevious();
@@ -1203,7 +1203,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 this.setConditionalTree();
 
-                delete this.engine.undo_requested;
+                this.engine.undo_requested = undefined;
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
                 this.emit("audio-undo-granted");
@@ -1229,7 +1229,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
 
                     /* clear any undo state that may be hanging around */
-                    delete this.engine.undo_requested;
+                    this.engine.undo_requested = undefined;
 
                     const mv = this.engine.decodeMoves(move);
 
