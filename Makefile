@@ -1,4 +1,5 @@
 VERSION=$(shell node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version')
+SLACK_WEBHOOK=$(shell cat ../ogs/.slack-webhook)
 
 all dev: 
 	yarn run dev
@@ -18,7 +19,7 @@ publish push: publish_npm upload_to_cdn notify
 notify:
 	MSG=`git log -1 --pretty="%an - %B" | sed s/\"//g | sed s/\'//g `; \
 	VERSION=`git describe --long`; \
-	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' https://hooks.slack.com/services/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
+	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' $(SLACK_WEBHOOK)
 
 publish_npm: 
 	yarn run build-debug
