@@ -17,7 +17,7 @@ publish push: publish_npm upload_to_cdn notify
 
 
 notify:
-	MSG=`git log -1 --pretty="%an - %B" | sed s/\"//g | sed s/\'//g `; \
+	MSG=`git log -1 --pretty="%B" | sed s/\"//g | sed s/\'//g `; \
 	VERSION=`git describe --long`; \
 	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' $(SLACK_WEBHOOK)
 
