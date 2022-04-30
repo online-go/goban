@@ -12,7 +12,13 @@ doc typedoc:
 clean:
 	rm -Rf lib node
 
-publish push: publish_npm upload_to_cdn
+publish push: publish_npm upload_to_cdn notify
+
+
+notify:
+	MSG=`git log -1 --pretty="%an - %B" | sed s/\"//g | sed s/\'//g `; \
+	VERSION=`git describe --long`; \
+	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' https://hooks.slack.com/services/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
 
 publish_npm: 
 	yarn run build-debug
