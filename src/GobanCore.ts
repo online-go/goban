@@ -643,7 +643,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //this.black_name = config["black_name"];
         //this.white_name = config["white_name"];
         //this.move_number = config["move_number"];
-        delete this.__clock_timer;
         this.setGameClock(null);
         this.last_stone_sound = -1;
         this.scoring_mode = false;
