@@ -3272,13 +3272,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         // When we think our clock has runout, send a message to the server
         // letting it know. Otherwise we have to wait for the server grace
         // period to expire for it to time us out.
-        console.log("Sending timed out");
+        if (this.engine?.phase === "play") {
+            console.log("Sending timed out");
 
-        this.socket.send("game/timed_out", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
-        });
+            this.socket.send("game/timed_out", {
+                auth: this.config.auth,
+                game_id: this.config.game_id,
+                player_id: this.config.player_id,
+            });
+        }
     }
     public isCurrentUserAPlayer(): boolean {
         return this.player_id in this.engine.player_pool;
