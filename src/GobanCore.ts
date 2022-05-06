@@ -3189,58 +3189,62 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.setConditionalTree();
 
         // Add `.clock` to the move sent to the server
-        if (this.player_id) {
-            if (this.__clock_timer) {
-                clearTimeout(this.__clock_timer);
-                delete this.__clock_timer;
-                this.clock_should_be_paused_for_move_submission = true;
+        try {
+            if (this.player_id) {
+                if (this.__clock_timer) {
+                    clearTimeout(this.__clock_timer);
+                    delete this.__clock_timer;
+                    this.clock_should_be_paused_for_move_submission = true;
+                }
+
+                const original_clock = this.last_clock;
+                if (!original_clock) {
+                    throw new Error(`No last_clock when calling sendMove()`);
+                }
+                let color: "black" | "white";
+
+                if (this.player_id === original_clock.black_player_id) {
+                    color = "black";
+                } else if (this.player_id === original_clock.white_player_id) {
+                    color = "white";
+                } else {
+                    throw new Error(`Player id ${this.player_id} not found in clock`);
+                }
+
+                if (color) {
+                    const clock_drift = GobanCore.hooks?.getClockDrift
+                        ? GobanCore.hooks?.getClockDrift()
+                        : 0;
+
+                    const current_server_time = Date.now() - clock_drift;
+
+                    const pause_control = this.pause_control;
+
+                    const paused = pause_control
+                        ? isPaused(AdHocPauseControl2JGOFPauseState(pause_control))
+                        : false;
+
+                    const elapsed: number = original_clock.start_mode
+                        ? 0
+                        : paused && original_clock.paused_since
+                        ? Math.max(original_clock.paused_since, original_clock.last_move) -
+                        original_clock.last_move
+                        : current_server_time - original_clock.last_move;
+
+                    const clock = this.computeNewPlayerClock(
+                        original_clock[`${color}_time`] as any,
+                        true,
+                        elapsed,
+                        this.config.time_control as any,
+                    );
+
+                    mv.clock = clock;
+                } else {
+                    throw new Error(`No color for player_id ${this.player_id}`);
+                }
             }
-
-            const original_clock = this.last_clock;
-            if (!original_clock) {
-                throw new Error(`No last_clock when calling sendMove()`);
-            }
-            let color: "black" | "white";
-
-            if (this.player_id === original_clock.black_player_id) {
-                color = "black";
-            } else if (this.player_id === original_clock.white_player_id) {
-                color = "white";
-            } else {
-                throw new Error(`Player id ${this.player_id} not found in clock`);
-            }
-
-            if (color) {
-                const clock_drift = GobanCore.hooks?.getClockDrift
-                    ? GobanCore.hooks?.getClockDrift()
-                    : 0;
-
-                const current_server_time = Date.now() - clock_drift;
-
-                const pause_control = this.pause_control;
-
-                const paused = pause_control
-                    ? isPaused(AdHocPauseControl2JGOFPauseState(pause_control))
-                    : false;
-
-                const elapsed: number = original_clock.start_mode
-                    ? 0
-                    : paused && original_clock.paused_since
-                    ? Math.max(original_clock.paused_since, original_clock.last_move) -
-                      original_clock.last_move
-                    : current_server_time - original_clock.last_move;
-
-                const clock = this.computeNewPlayerClock(
-                    original_clock[`${color}_time`] as any,
-                    true,
-                    elapsed,
-                    this.config.time_control as any,
-                );
-
-                mv.clock = clock;
-            } else {
-                throw new Error(`No color for player_id ${this.player_id}`);
-            }
+        } catch (e) {
+            console.error(e);
         }
 
         // Send the move. If we aren't getting a response, show a message
