@@ -77,7 +77,11 @@ module.exports = (env, argv) => {
 
             output: {
                 path: __dirname + '/lib',
-                filename: production ? '[name].min.js' : '[name].js'
+                filename: production ? '[name].min.js' : '[name].js',
+                library: {
+                    name: "goban",
+                    type: "umd",
+                },
             },
 
             module: {
