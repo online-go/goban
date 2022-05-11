@@ -3228,7 +3228,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         ? 0
                         : paused && original_clock.paused_since
                         ? Math.max(original_clock.paused_since, original_clock.last_move) -
-                        original_clock.last_move
+                          original_clock.last_move
                         : current_server_time - original_clock.last_move;
 
                     const clock = this.computeNewPlayerClock(
