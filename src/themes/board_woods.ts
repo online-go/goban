@@ -206,4 +206,41 @@ export default function (GoThemes: GoThemesInterface) {
 
     _("Granite"); // ensure translation
     GoThemes["board"]["Granite"] = Granite;
+
+    class Anime extends GoTheme {
+        sort(): number {
+            return 10;
+        }
+        get theme_name(): string {
+            return "Kaya";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
+            return {
+                "background-color": "#DCB35C",
+                "background-image": "url('" + getCDNReleaseBase() + "/img/anime_board.svg')",
+                "background-size": "cover",
+            };
+        }
+        getLineColor(): string {
+            return "#000000";
+        }
+        getFadedLineColor(): string {
+            return "#888888";
+        }
+        getStarColor(): string {
+            return "#000000";
+        }
+        getFadedStarColor(): string {
+            return "#888888";
+        }
+        getBlankTextColor(): string {
+            return "#000000";
+        }
+        getLabelTextColor(): string {
+            return "#444444";
+        }
+    }
+
+    _("Anime"); // ensure translation
+    GoThemes["board"]["Anime"] = Anime;
 }

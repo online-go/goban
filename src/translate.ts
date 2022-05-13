@@ -56,6 +56,7 @@ export interface GobanStrings {
     Shell: string;
     Slate: string;
     "Worn Glass": string;
+    "Anime": string;
 
     "%swk": string /* short time week */;
     "%sd": string /* short time day */;

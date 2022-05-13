@@ -26,6 +26,12 @@ try {
     stored_config = JSON.parse(localStorage.getItem("config") || "{}");
 } catch (e) {}
 
+GobanCore.hooks.getSelectedThemes = () => ({
+    white: "Shell",
+    black: "Slate",
+    board: "Anime",
+});
+
 const base_config: GobanConfig = Object.assign(
     {
         interactive: true,
