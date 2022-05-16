@@ -212,7 +212,7 @@ export default function (GoThemes: GoThemesInterface) {
             return 10;
         }
         get theme_name(): string {
-            return "Kaya";
+            return "Anime";
         }
         getBackgroundCSS(): GoThemeBackgroundCSS {
             return {

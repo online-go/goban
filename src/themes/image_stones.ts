@@ -38,11 +38,10 @@ type StoneType = { stone: HTMLCanvasElement; shadow: HTMLCanvasElement };
 type StoneTypeArray = Array<StoneType>;
 
 function square_size(radius: number, scaled: boolean): number {
-    //return 2 * Math.floor(radius) + (scaled ? 0 : 1);
-    return Math.floor(2 * radius) + (scaled ? 0 : 1);
+    return 2 * Math.floor(radius) + (scaled ? 0 : 1);
 }
 function stone_center_in_square(radius: number, scaled: boolean): number {
-    return radius + (scaled ? 0 : 0.5);
+    return Math.floor(radius) + (scaled ? 0 : 0.5);
 }
 
 function preRenderStone(
@@ -175,7 +174,7 @@ export default function (GoThemes: GoThemesInterface) {
             return 30;
         }
         get theme_name(): string {
-            return "Slate";
+            return "Anime";
         }
 
         preRenderBlack(
@@ -202,7 +201,7 @@ export default function (GoThemes: GoThemesInterface) {
             return 30;
         }
         get theme_name(): string {
-            return "Shell";
+            return "Anime";
         }
 
         preRenderWhite(
