@@ -34,6 +34,7 @@ module.exports = {
         "no-empty": "off", // 2 errors
         "no-fallthrough": "off", // 6 errors
         "no-self-assign": "off", // 1 error
+        "@typescript-eslint/no-var-requires": "off",
         //==============================================================
 
 
