@@ -48,7 +48,7 @@ module.exports = {
                 "ignoreProperties": true
             }
         ],
-        "@typescript-eslint/no-var-requires": "error",
+        //"@typescript-eslint/no-var-requires": "error",
         "@typescript-eslint/prefer-namespace-keyword": "error",
         "@typescript-eslint/semi": "error",
         "@typescript-eslint/type-annotation-spacing": "error",
