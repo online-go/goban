@@ -235,7 +235,7 @@ export interface StateUpdateEvents {
     submit_move: (() => void) | undefined;
     analyze_tool: AnalysisTool;
     analyze_subtool: AnalysisSubTool;
-    score_estimate: any; // TODO: this is a bit of a mess, GoEngine type is Score, but really we are returning an entire ScoreEstimator object. It might work to change any here to ScoreEstimator and propagate that change throughout.
+    score_estimate: ScoreEstimator | null;
     strict_seki_mode: boolean;
     rules: GoEngineRules;
     winner: PlayerColor | undefined;
@@ -463,19 +463,23 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.emit("analyze_subtool", this.analyze_subtool);
     }
 
-    private _score_estimate: any | null = null;
-    public get score_estimate(): any | null {
+    private _score_estimate: ScoreEstimator | null = null;
+    public get score_estimate(): ScoreEstimator | null {
         return this._score_estimate;
     }
-    public set score_estimate(score_estimate: any | null) {
+    public set score_estimate(score_estimate: ScoreEstimator | null) {
         if (this._score_estimate === score_estimate) {
             return;
         }
         this._score_estimate = score_estimate;
         this.emit("score_estimate", this.score_estimate);
-        this._score_estimate?.when_ready.then(() => {
-            this.emit("score_estimate", this.score_estimate);
-        });
+        this._score_estimate?.when_ready
+            .then(() => {
+                this.emit("score_estimate", this.score_estimate);
+            })
+            .catch(() => {
+                return;
+            });
     }
 
     private _review_owner_id?: number;
@@ -3143,7 +3147,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.message(_("Processing..."), -1);
         const do_score_estimation = () => {
-            //let se = new ScoreEstimator(this, this.engine, AUTOSCORE_TRIALS, AUTOSCORE_TOLERANCE);
             const se = new ScoreEstimator(
                 this,
                 this.engine,
