@@ -64,6 +64,13 @@ export const MARK_TYPES: Array<keyof MarkInterface> = [
     "black",
     "white",
 ];
+export type LabelPosition =
+    | "all"
+    | "none"
+    | "top-left"
+    | "top-right"
+    | "bottom-right"
+    | "bottom-left";
 
 let last_goban_id = 0;
 
@@ -1914,6 +1921,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         this.setSquareSize(Math.floor(this.display_width / n_squares));
+    }
+
+    public setCoordinates(label_position: LabelPosition) {
+        this.draw_top_labels = label_position === "all" || label_position.indexOf("top") >= 0;
+        this.draw_left_labels = label_position === "all" || label_position.indexOf("left") >= 0;
+        this.draw_right_labels = label_position === "all" || label_position.indexOf("right") >= 0;
+        this.draw_bottom_labels = label_position === "all" || label_position.indexOf("bottom") >= 0;
+        this.setSquareSizeBasedOnDisplayWidth(Number(this.display_width));
+        this.redraw(true);
     }
 
     public setStrictSekiMode(tf: boolean): void {
