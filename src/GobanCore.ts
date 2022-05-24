@@ -764,29 +764,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.square_size = config.square_size;
         }
         if (config.display_width && this.original_square_size === "auto") {
-            this.display_width = config.display_width;
-            let n_squares = Math.max(
-                this.bounded_width + +this.draw_left_labels + +this.draw_right_labels,
-                this.bounded_height + +this.draw_bottom_labels + +this.draw_top_labels,
-            );
-
-            if (isNaN(this.display_width)) {
-                console.error("Invalid display width. (NaN)");
-                this.display_width = 320;
-            }
-
-            if (isNaN(n_squares)) {
-                console.error("Invalid n_squares: ", n_squares);
-                console.error("bounded_width: ", this.bounded_width);
-                console.error("this.draw_left_labels: ", this.draw_left_labels);
-                console.error("this.draw_right_labels: ", this.draw_right_labels);
-                console.error("bounded_height: ", this.bounded_height);
-                console.error("this.draw_top_labels: ", this.draw_top_labels);
-                console.error("this.draw_bottom_labels: ", this.draw_bottom_labels);
-                n_squares = 19;
-            }
-
-            this.square_size = Math.floor(this.display_width / n_squares);
+            this.setSquareSizeBasedOnDisplayWidth(config.display_width, /* suppress_redraw */ true);
         }
 
         this.__update_move_tree = null;
@@ -1894,14 +1872,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.syncReviewMove();
         return ret;
     }
-    public setSquareSize(new_ss: number): void {
-        const redraw = this.square_size !== new_ss;
+    public setSquareSize(new_ss: number, suppress_redraw = false): void {
+        const redraw = this.square_size !== new_ss && !suppress_redraw;
         this.square_size = new_ss;
         if (redraw) {
             this.redraw(true);
         }
     }
-    public setSquareSizeBasedOnDisplayWidth(display_width: number): void {
+    public setSquareSizeBasedOnDisplayWidth(display_width: number, suppress_redraw = false): void {
         let n_squares = Math.max(
             this.bounded_width + +this.draw_left_labels + +this.draw_right_labels,
             this.bounded_height + +this.draw_bottom_labels + +this.draw_top_labels,
@@ -1924,7 +1902,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             n_squares = 19;
         }
 
-        this.setSquareSize(Math.floor(this.display_width / n_squares));
+        this.setSquareSize(Math.floor(this.display_width / n_squares), suppress_redraw);
     }
 
     public setCoordinates(label_position: LabelPosition) {
@@ -2067,27 +2045,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         if (config.display_width && this.original_square_size === "auto") {
-            this.display_width = config["display_width"];
-            if (isNaN(this.display_width)) {
-                console.error("Invalid display width. (NaN)");
-                this.display_width = 320;
-            }
-            let n_squares = Math.max(
-                this.bounded_width + +this.draw_left_labels + +this.draw_right_labels,
-                this.bounded_height + +this.draw_bottom_labels + +this.draw_top_labels,
+            this.setSquareSizeBasedOnDisplayWidth(
+                config["display_width"],
+                /* suppress_redraw */ true,
             );
-            if (isNaN(n_squares)) {
-                console.error("Invalid n_squares: ", n_squares);
-                console.error("bounded_width: ", this.bounded_width);
-                console.error("this.draw_left_labels: ", this.draw_left_labels);
-                console.error("this.draw_right_labels: ", this.draw_right_labels);
-                console.error("bounded_height: ", this.bounded_height);
-                console.error("this.draw_top_labels: ", this.draw_top_labels);
-                console.error("this.draw_bottom_labels: ", this.draw_bottom_labels);
-                n_squares = 19;
-            }
-
-            this.square_size = Math.floor(this.display_width / n_squares);
         }
 
         if (
