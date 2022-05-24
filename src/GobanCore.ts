@@ -2044,11 +2044,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.bounded_height = this.height;
         }
 
-        if (config.display_width && this.original_square_size === "auto") {
-            this.setSquareSizeBasedOnDisplayWidth(
-                config["display_width"],
-                /* suppress_redraw */ true,
-            );
+        if (config.display_width !== undefined) {
+            this.display_width = config.display_width;
+        }
+        if (this.display_width && this.original_square_size === "auto") {
+            this.setSquareSizeBasedOnDisplayWidth(this.display_width, /* suppress_redraw */ true);
         }
 
         if (
