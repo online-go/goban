@@ -27,8 +27,11 @@ try {
 } catch (e) {}
 
 GobanCore.hooks.getSelectedThemes = () => ({
-    white: "Shell",
-    black: "Slate",
+    //white: "Shell",
+    //black: "Slate",
+    //board: "Kaya",
+    white: "Anime",
+    black: "Anime",
     board: "Anime",
 });
 

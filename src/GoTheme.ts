@@ -48,14 +48,14 @@ export class GoTheme {
     /* Returns an array of black stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeBlackStone method */
-    public preRenderBlack(radius: number, seed: number): any {
+    public preRenderBlack(radius: number, seed: number, deferredRenderCallback: () => void): any {
         return { black: "stone" };
     }
 
     /* Returns an array of white stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeWhiteStone method */
-    public preRenderWhite(radius: number, seed: number): any {
+    public preRenderWhite(radius: number, seed: number, deferredRenderCallback: () => void): any {
         return { white: "stone" };
     }
 

@@ -94,6 +94,10 @@ module.exports = (env, argv) => {
                         options: {
                             configFile: 'tsconfig.json',
                         }
+                    },
+                    {
+                        test: /\.svg$/,
+                        loader: 'svg-inline-loader'
                     }
                 ]
             },

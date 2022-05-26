@@ -2815,22 +2815,28 @@ export class GobanCanvas extends GobanCore {
         if (!(themes.black in __theme_cache.black)) {
             __theme_cache.black[themes.black] = {};
         }
+
+        const deferredRenderCallback = () => {
+            this.redraw(true);
+            this.move_tree_redraw();
+        };
+
         if (!(this.theme_stone_radius in __theme_cache.white[themes.white])) {
             __theme_cache.white[themes.white][this.theme_stone_radius] =
-                this.theme_white.preRenderWhite(this.theme_stone_radius, 23434);
+                this.theme_white.preRenderWhite(this.theme_stone_radius, 23434, deferredRenderCallback);
         }
         if (!(this.theme_stone_radius in __theme_cache.black[themes.black])) {
             __theme_cache.black[themes.black][this.theme_stone_radius] =
-                this.theme_black.preRenderBlack(this.theme_stone_radius, 2081);
+                this.theme_black.preRenderBlack(this.theme_stone_radius, 2081, deferredRenderCallback);
         }
 
         if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
             __theme_cache.white[themes.white][MoveTree.stone_radius] =
-                this.theme_white.preRenderWhite(MoveTree.stone_radius, 23434);
+                this.theme_white.preRenderWhite(MoveTree.stone_radius, 23434, deferredRenderCallback);
         }
         if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
             __theme_cache.black[themes.black][MoveTree.stone_radius] =
-                this.theme_black.preRenderBlack(MoveTree.stone_radius, 2081);
+                this.theme_black.preRenderBlack(MoveTree.stone_radius, 2081, deferredRenderCallback);
         }
 
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];

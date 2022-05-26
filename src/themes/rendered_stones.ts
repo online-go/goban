@@ -242,7 +242,7 @@ function applyPhongShading(
 
     ctx.putImageData(image, 0, 0);
 }
-function clearAboveColor(
+export function clearAboveColor(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
@@ -268,6 +268,30 @@ function clearAboveColor(
 
     ctx.putImageData(image, 0, 0);
 }
+
+export function renderShadow(
+    shadow_ctx: CanvasRenderingContext2D,
+    center: number,
+    radius: number,
+    sss: number,
+    blur: number = 0.15,
+    shadowColor: string = "rgba(60,60,60,0.7)",
+): void {
+    shadow_ctx.beginPath();
+    shadow_ctx.shadowColor = shadowColor;
+    shadow_ctx.shadowBlur = radius * blur;
+    shadow_ctx.shadowOffsetX = radius * 0.2;
+    shadow_ctx.shadowOffsetY = radius * 0.2;
+    shadow_ctx.fillStyle = "rgba(255,255,255,1.0)";
+    /* here we draw the circle a little up and to the left so we don't have any
+     * funky problems when we mask out the shadow and apply it underneath the
+     * stone. (Without this we tend to see some funny artifacts) */
+    //shadow_ctx.arc(radius*0.97, radius*0.97, radius*0.97, 0, 2*Math.PI, false);
+    shadow_ctx.arc(center, center, radius * 0.9, 0, 2 * Math.PI, false);
+    shadow_ctx.fill();
+    clearAboveColor(shadow_ctx, sss, sss, 150, 150, 150);
+}
+
 function preRenderStone(radius: number, seed: number, options: RenderOptions): StoneTypeArray {
     const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
@@ -412,19 +436,7 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
         ctx.stroke();
     }
 
-    shadow_ctx.beginPath();
-    shadow_ctx.shadowColor = "rgba(60,60,60,0.7)";
-    shadow_ctx.shadowBlur = radius * 0.15;
-    shadow_ctx.shadowOffsetX = radius * 0.2;
-    shadow_ctx.shadowOffsetY = radius * 0.2;
-    shadow_ctx.fillStyle = "rgba(255,255,255,1.0)";
-    /* here we draw the circle a little up and to the left so we don't have any
-     * funky problems when we mask out the shadow and apply it underneath the
-     * stone. (Without this we tend to see some funny artifacts) */
-    //shadow_ctx.arc(radius*0.97, radius*0.97, radius*0.97, 0, 2*Math.PI, false);
-    shadow_ctx.arc(center, center, radius * 0.9, 0, 2 * Math.PI, false);
-    shadow_ctx.fill();
-    clearAboveColor(shadow_ctx, sss, sss, 150, 150, 150);
+    renderShadow(shadow_ctx, center, radius, sss);
 
     return [{ stone: stone, shadow: shadow }];
 }
