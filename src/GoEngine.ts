@@ -1206,6 +1206,27 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return group.length;
     }
 
+    public computeLibertyMap(): Array<Array<number>> {
+        const liberties = GoMath.makeMatrix(this.width, this.height, 0);
+        if (!this.board) {
+            return liberties;
+        }
+
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                if (this.board[y][x] && !liberties[y][x]) {
+                    const group = this.getGroup(x, y, true);
+                    const count = this.countLiberties(group);
+                    for (const e of group) {
+                        liberties[e.y][e.x] = count;
+                    }
+                }
+            }
+        }
+
+        return liberties;
+    }
+
     public isParticipant(player_id: number): boolean {
         // Note: in theory we get participants from the engine each move, with the intention that we store and use here,
         // which would be more efficient, but needs careful consideration of timing and any other gotchas
