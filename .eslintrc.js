@@ -34,6 +34,7 @@ module.exports = {
         "no-empty": "off", // 2 errors
         "no-fallthrough": "off", // 6 errors
         "no-self-assign": "off", // 1 error
+        "@typescript-eslint/no-var-requires": "off",
         //==============================================================
 
 
@@ -48,7 +49,7 @@ module.exports = {
                 "ignoreProperties": true
             }
         ],
-        "@typescript-eslint/no-var-requires": "error",
+        //"@typescript-eslint/no-var-requires": "error",
         "@typescript-eslint/prefer-namespace-keyword": "error",
         "@typescript-eslint/semi": "error",
         "@typescript-eslint/type-annotation-spacing": "error",
