@@ -44,9 +44,9 @@ function stone_center_in_square(radius: number, scaled: boolean): number {
     return Math.floor(radius) + (scaled ? 0 : 0.5);
 }
 
-function preRenderStone(
+export function preRenderImageStone(
     radius: number,
-    imagedata: string,
+    urls: string | string[],
     deferredRenderCallback: () => void,
 ): StoneTypeArray {
     const dcsr = deviceCanvasScalingRatio();
@@ -56,51 +56,66 @@ function preRenderStone(
     const sss = Math.round(radius * 2.5); /* Shadow square size */
     const center = stone_center_in_square(radius, dcsr !== 1.0);
 
-    const stone_image = new Image(ss, ss);
-    stone_image.loading = "eager";
-    stone_image.width = ss;
-    stone_image.height = ss;
-
-    stone_image.src = imagedata;
-
-    const stone = document.createElement("canvas");
-    stone.setAttribute("width", ss + "px");
-    stone.setAttribute("height", ss + "px");
-
-    const shadow = document.createElement("canvas");
-    shadow.setAttribute("width", sss + "px");
-    shadow.setAttribute("height", sss + "px");
-
-    const stone_load_promise = new Promise((resolve, reject) => {
-        stone_image.onerror = reject;
-        stone_image.onload = resolve;
-    });
-
-    const shadow_ctx = shadow.getContext("2d");
-    if (!shadow_ctx) {
-        throw new Error("Error getting shadow context 2d");
+    if (typeof urls === "string") {
+        urls = [urls];
     }
-    renderShadow(shadow_ctx, center, radius * 1.05, sss, 0.0, "rgba(60,60,40,0.4)");
 
-    stone_load_promise
-        .then(() => {
-            console.log("Images done loading");
-            const stone_ctx = stone.getContext("2d");
+    const ret: StoneTypeArray = [];
+    const promises: Promise<any>[] = [];
 
-            if (!stone_ctx) {
-                throw new Error("Error getting stone context 2d");
-            }
+    for (const url of urls) {
+        const stone_image = new Image(ss, ss);
+        stone_image.loading = "eager";
+        stone_image.width = ss;
+        stone_image.height = ss;
 
-            stone_ctx.drawImage(stone_image, 0, 0, ss, ss);
+        stone_image.src = url;
 
-            deferredRenderCallback();
-        })
+        const stone = document.createElement("canvas");
+        stone.setAttribute("width", ss + "px");
+        stone.setAttribute("height", ss + "px");
+
+        const shadow = document.createElement("canvas");
+        shadow.setAttribute("width", sss + "px");
+        shadow.setAttribute("height", sss + "px");
+
+        const stone_load_promise = new Promise((resolve, reject) => {
+            stone_image.onerror = reject;
+            stone_image.onload = resolve;
+        });
+        promises.push(stone_load_promise);
+
+        const shadow_ctx = shadow.getContext("2d");
+        if (!shadow_ctx) {
+            throw new Error("Error getting shadow context 2d");
+        }
+        renderShadow(shadow_ctx, center, radius * 1.05, sss, 0.0, "rgba(60,60,40,0.4)");
+
+        stone_load_promise
+            .then(() => {
+                console.log("Images done loading");
+                const stone_ctx = stone.getContext("2d");
+
+                if (!stone_ctx) {
+                    throw new Error("Error getting stone context 2d");
+                }
+
+                stone_ctx.drawImage(stone_image, 0, 0, ss, ss);
+                //deferredRenderCallback();
+            })
+            .catch((err) => console.error(err));
+
+        ret.push({ stone, shadow });
+    }
+
+    Promise.all(promises)
+        .then(deferredRenderCallback)
         .catch((err) => console.error(err));
 
-    return [{ stone, shadow }];
+    return ret;
 }
 
-function placeRenderedStone(
+export function placeRenderedImageStone(
     ctx: CanvasRenderingContext2D,
     shadow_ctx: CanvasRenderingContext2D | null,
     stone: StoneType,
@@ -155,7 +170,7 @@ export default function (GoThemes: GoThemesInterface) {
             cy: number,
             radius: number,
         ): void {
-            placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
+            placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
         placeWhiteStone(
             ctx: CanvasRenderingContext2D,
@@ -165,7 +180,7 @@ export default function (GoThemes: GoThemesInterface) {
             cy: number,
             radius: number,
         ): void {
-            placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
+            placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
     }
 
@@ -182,12 +197,12 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): StoneTypeArray {
-            return preRenderStone(
+            return preRenderImageStone(
                 radius,
                 firefox ? getCDNReleaseBase() + "/img/anime_black.svg" : anime_black_imagedata,
                 deferredRenderCallback,
             );
-            //return preRenderStone(radius, anime_black_imagedata);
+            //return preRenderImageStone(radius, anime_black_imagedata);
         }
         getBlackTextColor(_color: string): string {
             return "#ffffff";
@@ -209,12 +224,12 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): StoneTypeArray {
-            return preRenderStone(
+            return preRenderImageStone(
                 radius,
                 firefox ? getCDNReleaseBase() + "/img/anime_white.svg" : anime_white_imagedata,
                 deferredRenderCallback,
             );
-            //return preRenderStone(radius, anime_white_imagedata);
+            //return preRenderImageStone(radius, anime_white_imagedata);
         }
 
         getWhiteTextColor(_color: string): string {
