@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-//import * as PIXI from 'pixi.js-legacy';
+import { GobanCore } from "./GobanCore";
 
 export interface GoThemeBackgroundCSS {
     "background-color"?: string;
@@ -48,22 +48,30 @@ export class GoTheme {
     /* Returns an array of black stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeBlackStone method */
-    public preRenderBlack(radius: number, seed: number, deferredRenderCallback: () => void): any {
+    public preRenderBlack(
+        _radius: number,
+        _seed: number,
+        _deferredRenderCallback: () => void,
+    ): any {
         return { black: "stone" };
     }
 
     /* Returns an array of white stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeWhiteStone method */
-    public preRenderWhite(radius: number, seed: number, deferredRenderCallback: () => void): any {
+    public preRenderWhite(
+        _radius: number,
+        _seed: number,
+        _deferredRenderCallback: () => void,
+    ): any {
         return { white: "stone" };
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
     public placeWhiteStone(
         ctx: CanvasRenderingContext2D,
-        shadow_ctx: CanvasRenderingContext2D | null,
-        stone: any,
+        _shadow_ctx: CanvasRenderingContext2D | null,
+        _stone: any,
         cx: number,
         cy: number,
         radius: number,
@@ -77,8 +85,8 @@ export class GoTheme {
 
     public placeBlackStone(
         ctx: CanvasRenderingContext2D,
-        shadow_ctx: CanvasRenderingContext2D | null,
-        stone: any,
+        _shadow_ctx: CanvasRenderingContext2D | null,
+        _stone: any,
         cx: number,
         cy: number,
         radius: number,
@@ -90,49 +98,29 @@ export class GoTheme {
         ctx.fill();
     }
 
-    /** Returns a PIXI sprite for a white stone of the given radius using the given seed */
-    /*
-    public whiteStoneTexture(application:PIXI.Application, radius:number, seed:number):PIXI.Texture {
-        let key = `white-disc-${radius}`;
-        if (!(key in PIXI.utils.TextureCache)) {
-            let graphics = new PIXI.Graphics();
-            graphics
-                .lineStyle(1.0, color2number(this.getBlackStoneColor()))
-                .beginFill(color2number(this.getWhiteStoneColor()))
-                .drawCircle(radius/2, radius/2, radius)
-                .endFill();
-            let texture = application.renderer.generateTexture(graphics, PIXI.SCALE_MODES.LINEAR, 1);
-            PIXI.Texture.addToCache(texture, key);
-            graphics.destroy({texture: false, baseTexture:false});
+    /* Resolve which stone graphic we should use. By default we just pick a
+     * random one, if there are multiple images, otherwise whatever was
+     * returned by the pre-render method */
+    public getStone(x: number, y: number, stones: any, _goban: GobanCore): any {
+        if (Array.isArray(stones)) {
+            return stones[((x + 1) * 53 * ((y + 1) * 97)) % stones.length];
         }
-
-        return PIXI.utils.TextureCache[key];
+        return stones;
     }
-    */
 
-    /** Returns a PIXI sprite for a white stone of the given radius using the given seed */
-    /*
-    public blackStoneTexture(application:PIXI.Application, radius:number, seed:number):PIXI.Texture {
-        let key = `black-disc-${radius}`;
-        if (!(key in PIXI.utils.TextureCache)) {
-            let graphics = new PIXI.Graphics();
-            graphics
-                .lineStyle(1.0, color2number(this.getBlackStoneColor()))
-                .beginFill(color2number(this.getBlackStoneColor()))
-                .drawCircle(radius/2, radius/2, radius)
-                .endFill();
-            let texture = application.renderer.generateTexture(graphics, PIXI.SCALE_MODES.LINEAR, 1);
-            PIXI.Texture.addToCache(texture, key);
-            graphics.destroy({texture: false, baseTexture:false});
+    /* Resolve which stone graphic we should use. By default we just pick a
+     * random one, if there are multiple images, otherwise whatever was
+     * returned by the pre-render method */
+    public getStoneHash(x: number, y: number, stones: any, _goban: GobanCore): string {
+        if (Array.isArray(stones)) {
+            return "" + (((x + 1) * 53 * ((y + 1) * 97)) % stones.length);
         }
-
-        return PIXI.utils.TextureCache[key];
+        return "";
     }
-    */
 
     /* Should return true if you would like the shadow layer to be present. False
      * speeds up rendering typically */
-    public stoneCastsShadow(radius: number): boolean {
+    public stoneCastsShadow(_radius: number): boolean {
         return false;
     }
 
@@ -147,12 +135,12 @@ export class GoTheme {
     }
 
     /* Returns the color that should be used for text over white stones */
-    public getWhiteTextColor(color?: string): string {
+    public getWhiteTextColor(_color?: string): string {
         return "#000000";
     }
 
     /* Returns the color that should be used for text over black stones */
-    public getBlackTextColor(color?: string): string {
+    public getBlackTextColor(_color?: string): string {
         return "#ffffff";
     }
 

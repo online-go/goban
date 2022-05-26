@@ -1589,10 +1589,12 @@ export class GobanCanvas extends GobanCore {
                         shadow_ctx = null;
                     }
                     if (color === 1) {
-                        const stone =
-                            this.theme_black_stones[
-                                ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_black_stones.length
-                            ];
+                        const stone = this.theme_black.getStone(
+                            i,
+                            j,
+                            this.theme_black_stones,
+                            this,
+                        );
                         this.theme_black.placeBlackStone(
                             ctx,
                             shadow_ctx,
@@ -1602,10 +1604,12 @@ export class GobanCanvas extends GobanCore {
                             this.theme_stone_radius,
                         );
                     } else {
-                        const stone =
-                            this.theme_white_stones[
-                                ((i + 1) * 53 * ((j + 1) * 97)) % this.theme_white_stones.length
-                            ];
+                        const stone = this.theme_white.getStone(
+                            i,
+                            j,
+                            this.theme_white_stones,
+                            this,
+                        );
                         this.theme_white.placeWhiteStone(
                             ctx,
                             shadow_ctx,
@@ -2241,6 +2245,13 @@ export class GobanCanvas extends GobanCore {
                     transparent = true;
                 } else {
                     color = this.engine.player;
+                }
+
+                if (color === 1) {
+                    ret += this.theme_black.getStoneHash(i, j, this.theme_black_stones, this);
+                }
+                if (color === 2) {
+                    ret += this.theme_white.getStoneHash(i, j, this.theme_white_stones, this);
                 }
 
                 ret += (transparent ? "T" : "") + color + ",";
