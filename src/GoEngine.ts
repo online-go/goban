@@ -2459,7 +2459,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     case "TR":
                     case "CR":
                     case "SQ":
-                    case "XX":
+                    case "XX": // Legacy
+                    case "MA":
                         {
                             instructions.push(() => {
                                 try {
@@ -2482,7 +2483,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
                                         case "SQ":
                                             marks.square = true;
                                             break;
-                                        case "XX":
+                                        case "XX": // Legacy - Old OGS SGF used XX to denote an X
+                                        case "MA":
                                             marks.cross = true;
                                             break;
                                     }

@@ -603,7 +603,7 @@ export class MoveTree {
                             ret += "SQ[" + pos + "]";
                         }
                         if (m.cross) {
-                            ret += "XX[" + pos + "]";
+                            ret += "MA[" + pos + "]";
                         }
                         if (m.circle) {
                             ret += "CR[" + pos + "]";
