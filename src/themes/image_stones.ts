@@ -93,7 +93,6 @@ export function preRenderImageStone(
 
         stone_load_promise
             .then(() => {
-                console.log("Images done loading");
                 const stone_ctx = stone.getContext("2d");
 
                 if (!stone_ctx) {
