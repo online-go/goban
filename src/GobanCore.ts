@@ -240,6 +240,7 @@ export interface StateUpdateEvents {
     rules: GoEngineRules;
     winner: PlayerColor | undefined;
     undo_requested: number | undefined; // move number of the last undo request
+    undo_canceled: undefined;
     paused: boolean;
     outcome: string;
     review_owner_id: number | undefined;
@@ -1168,6 +1169,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.emit("audio-undo-requested");
                 if (this.visual_undo_request_indicator) {
                     this.redraw(true); // need to update the mark on the last move
+                }
+            });
+            this._socket_on(prefix + "undo_canceled", (): void => {
+                if (this.disconnectedFromGame) {
+                    return;
+                }
+
+                this.engine.undo_requested = undefined; // can't call delete here because this is a getter/setter
+                this.emit("update");
+                this.emit("undo_canceled");
+                if (this.visual_undo_request_indicator) {
+                    this.redraw(true);
                 }
             });
             this._socket_on(prefix + "undo_accepted", (): void => {
@@ -2688,6 +2701,14 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public acceptUndo(): void {
         this.socket.send("game/undo/accept", {
+            auth: this.config.auth,
+            game_id: this.config.game_id,
+            player_id: this.config.player_id,
+            move_number: this.engine.getCurrentMoveNumber(),
+        });
+    }
+    public cancelUndo(): void {
+        this.socket.send("game/undo/cancel", {
             auth: this.config.auth,
             game_id: this.config.game_id,
             player_id: this.config.player_id,
