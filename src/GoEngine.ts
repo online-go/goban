@@ -19,7 +19,13 @@ import { MoveTree, MoveTreeJson } from "./MoveTree";
 import { GoMath, Move, Intersection, Group } from "./GoMath";
 import { ScoreEstimator } from "./ScoreEstimator";
 import { GobanCore, Events } from "./GobanCore";
-import { JGOFTimeControl, JGOFNumericPlayerColor, JGOFMove, JGOFPlayerSummary } from "./JGOF";
+import {
+    JGOFTimeControl,
+    JGOFNumericPlayerColor,
+    JGOFMove,
+    JGOFPlayerSummary,
+    JGOFIntersection,
+} from "./JGOF";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
 import { TypedEventEmitter } from "./TypedEventEmitter";
@@ -1182,7 +1188,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
     private countLiberties(group: Group): number {
         let ct = 0;
-        const counter = (x: number, y: number): number => (ct += this.board[y][x] ? 0 : 1);
+        const mat = GoMath.makeMatrix(this.width, this.height, 0);
+        const counter = (x: number, y: number) => {
+            if (this.board[y][x] === 0 && mat[y][x] === 0) {
+                mat[y][x] = 1;
+                ct += 1;
+            }
+        };
         for (let i = 0; i < group.length; ++i) {
             this.foreachNeighbor(group[i], counter);
         }
@@ -1280,6 +1292,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         return 0;
     }
+
+    /** Returns the number of stones removed. If you want the coordinates of
+     * the stones removed, pass in a removed_stones array to append the moves
+     * to. */
     public place(
         x: number,
         y: number,
@@ -1288,6 +1304,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         dontCheckForSuperKo?: boolean,
         dontCheckForSuicide?: boolean,
         isTrunkMove?: boolean,
+        removed_stones?: Array<JGOFIntersection>,
     ): number {
         let peices_removed = 0;
 
@@ -1326,6 +1343,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
                 for (let i = 0; i < opponent_groups.length; ++i) {
                     if (this.countLiberties(opponent_groups[i]) === 0) {
+                        if (removed_stones !== undefined) {
+                            opponent_groups[i].map((x) => removed_stones.push(x));
+                        }
                         peices_removed += this.captureGroup(opponent_groups[i]);
                     }
                 }

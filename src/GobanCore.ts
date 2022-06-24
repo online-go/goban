@@ -286,6 +286,9 @@ export interface Events extends StateUpdateEvents {
         player_id: number;
     };
     "set-for-removal": { x: number; y: number; removed: boolean };
+    "captured-stones": {
+        removed_stones: Array<JGOFIntersection>;
+    };
     "stone-removal.accepted": never;
     "stone-removal.updated": never;
     "conditional-moves.updated": never;
@@ -1284,6 +1287,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.engine.computeScore(true)[this.engine.colorToMove()].prisoners;
 
                     let removed_count = 0;
+                    const removed_stones: Array<JGOFIntersection> = [];
                     if (the_move.edited) {
                         this.engine.editPlace(the_move.x, the_move.y, the_move.color || 0);
                     } else {
@@ -1295,6 +1299,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             false,
                             true,
                             true,
+                            removed_stones,
                         );
                     }
 
@@ -1325,6 +1330,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.emit("audio-capture-stones", {
                             count: removed_count,
                             already_captured: score_before_move,
+                        });
+                        this.emit("captured-stones", {
+                            removed_stones: removed_stones,
                         });
                     }
 
