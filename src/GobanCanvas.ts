@@ -2077,11 +2077,12 @@ export class GobanCanvas extends GobanCore {
                             ctx.beginPath();
                             ctx.strokeStyle = color;
                             ctx.lineWidth = this.square_size * 0.075;
-                            let r = this.square_size * 0.25;
+                            let r = this.square_size * this.last_move_radius;
                             if (this.submit_move) {
                                 //ctx.globalAlpha = 0.6;
                                 r = this.square_size * 0.3;
                             }
+
                             ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
                             ctx.stroke();
                         }
