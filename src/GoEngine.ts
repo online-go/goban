@@ -78,15 +78,6 @@ export interface GoEnginePlayerEntry {
     username: string;
     country?: string;
     rank?: number;
-    ratings?: {
-        [key: string]: {
-            deviation: number;
-            rating: number;
-            volatility: number;
-        };
-    };
-    "icon-url"?: string;
-    ui_class?: string;
 
     /** The accepted stones for the stone removal phase that the player has accepted */
     accepted_stones?: string;
