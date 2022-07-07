@@ -833,7 +833,7 @@ export class GobanCanvas extends GobanCore {
                     }
                 }
                 let removed_count = 0;
-                let removed_stones: Array<JGOFIntersection> = [];
+                const removed_stones: Array<JGOFIntersection> = [];
                 if (puzzle_mode === "play") {
                     /* we get called for each tap, then once for the final double tap so we only want to process this x2 */
                     /* Also, if we just placed a piece and the computer is waiting to place it's piece (autoplaying), then
