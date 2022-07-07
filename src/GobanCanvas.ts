@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { JGOF, JGOFNumericPlayerColor } from "./JGOF";
+import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "./JGOF";
+
 import { AdHocFormat } from "./AdHocFormat";
 
 import {
@@ -831,6 +832,8 @@ export class GobanCanvas extends GobanCore {
                         });
                     }
                 }
+                let removed_count = 0;
+                let removed_stones: Array<JGOFIntersection> = [];
                 if (puzzle_mode === "play") {
                     /* we get called for each tap, then once for the final double tap so we only want to process this x2 */
                     /* Also, if we just placed a piece and the computer is waiting to place it's piece (autoplaying), then
@@ -845,7 +848,16 @@ export class GobanCanvas extends GobanCore {
                             const puzzle_place = (mv_x: number, mv_y: number): void => {
                                 ++calls;
 
-                                this.engine.place(mv_x, mv_y, true, false, true, false, false);
+                                removed_count = this.engine.place(
+                                    mv_x,
+                                    mv_y,
+                                    true,
+                                    false,
+                                    true,
+                                    false,
+                                    false,
+                                    removed_stones,
+                                );
                                 this.emit("puzzle-place", {
                                     x: mv_x,
                                     y: mv_y,
@@ -935,6 +947,15 @@ export class GobanCanvas extends GobanCore {
                     }
                 }
                 this.emit("update");
+                if (removed_count > 0) {
+                    this.emit("audio-capture-stones", {
+                        count: removed_count,
+                        already_captured: 0,
+                    });
+                    this.emit("captured-stones", {
+                        removed_stones: removed_stones,
+                    });
+                }
             } else if (
                 this.engine.phase === "play" ||
                 (this.engine.phase === "finished" && this.mode === "analyze")
