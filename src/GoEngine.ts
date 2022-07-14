@@ -133,7 +133,7 @@ export interface GoEngineConfig {
     free_handicap_placement?: boolean;
     score?: Score;
     outcome?: string;
-    winner?: number; // Player ID of the winner
+    winner?: number | "black" | "white"; // Player ID of the winner
 
     start_time?: number;
     end_time?: number;
@@ -403,16 +403,18 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.emit("rules", this.rules);
     }
 
-    private _winner?: PlayerColor | undefined;
-    public get winner(): PlayerColor | undefined {
+    private _winner?: number | "black" | "white";
+    public get winner(): number | "black" | "white" | undefined {
         return this._winner;
     }
-    public set winner(winner: PlayerColor | undefined) {
+    public set winner(winner: number | "black" | "white" | undefined) {
         if (this._winner === winner) {
             return;
         }
         this._winner = winner;
-        this.emit("winner", this.winner);
+        if (typeof winner === "number") {
+            this.emit("winner", this.winner as number);
+        }
     }
 
     private _undo_requested?: number; // move number of the last undo request
@@ -2584,11 +2586,15 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     case "RE":
                         {
                             instructions.push(() => {
+                                /* TODO: Most of our code assumes this .winner
+                                 * is a number, the player id of who won.
+                                 * Except this code, we need to work our way
+                                 * through what to do here. */
                                 if (val[0].toLowerCase() === "b") {
-                                    self.winner = "black";
+                                    (self as any).winner = "black";
                                 }
                                 if (val[0].toLowerCase() === "w") {
-                                    self.winner = "white";
+                                    (self as any).winner = "white";
                                 }
 
                                 if (self.outcome === "") {

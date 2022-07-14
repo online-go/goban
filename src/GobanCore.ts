@@ -241,7 +241,7 @@ export interface StateUpdateEvents {
     score_estimate: ScoreEstimator | null;
     strict_seki_mode: boolean;
     rules: GoEngineRules;
-    winner: PlayerColor | undefined;
+    winner: number | undefined;
     undo_requested: number | undefined; // move number of the last undo request
     undo_canceled: undefined;
     paused: boolean;
