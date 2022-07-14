@@ -40,6 +40,8 @@ export interface GobanStrings {
     "Stone Removal": string;
     "Stone Removal Phase": string;
     "Enter the label you want to add to the board": string;
+    Error: string;
+    "Self-capture is not allowed": string;
 
     "Black Walnut": string;
     Book: string;

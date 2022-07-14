@@ -47,6 +47,7 @@ import {
     JGOFPlayerSummary,
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
+import { MessageID } from "./messages";
 
 declare let swal: any;
 
@@ -153,6 +154,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     draw_right_labels?: boolean;
     bounds?: GobanBounds;
     dont_draw_last_move?: boolean;
+    dont_show_messages?: boolean;
     last_move_radius?: number;
     one_click_submit?: boolean;
     double_click_submit?: boolean;
@@ -257,6 +259,8 @@ export interface Events extends StateUpdateEvents {
     gamedata: any;
     chat: any;
     load: GobanConfig;
+    "show-message": { formatted: string; message_id: string; parameters?: { [key: string]: any } };
+    "clear-message": never;
     "submitting-move": boolean;
     "chat-remove": { chat_ids: Array<string> };
     "move-made": never;
@@ -604,7 +608,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public abstract disablePen(): void;
     public abstract clearAnalysisDrawing(): void;
     public abstract drawPenMarks(penmarks: MoveTreePenMarks): void;
-    public abstract message(msg: string, timeout?: number): void;
+    public abstract showMessage(
+        msg_id: MessageID,
+        parameters?: { [key: string]: any },
+        timeout?: number,
+    ): void;
     public abstract clearMessage(): void;
     protected abstract setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void;
     public abstract drawSquare(i: number, j: number): void;
@@ -734,7 +742,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 return;
             }
             */
-            this.message(e.message, 5000);
+            if (e instanceof GobanMoveError && e.message_id === "move_is_suicidal") {
+                this.showMessage("self_capture_not_allowed", { error: e }, 5000);
+                return;
+            } else {
+                this.showMessage("error", { error: e }, 5000);
+            }
             if (this.onError) {
                 this.onError(e);
             }
@@ -816,7 +829,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
             if ("server_socket" in config && config["server_socket"]) {
                 if (!preloaded_data) {
-                    this.message(_("Loading..."), -1);
+                    this.showMessage("loading", undefined, -1);
                 }
                 this.connect(config["server_socket"]);
             }
@@ -1044,7 +1057,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 duration = -1;
             }
 
-            this.message(_(msg), duration);
+            this.showMessage("error", { error: { message: _(msg) } }, duration);
             console.error("ERROR: ", msg);
         });
 
@@ -1108,7 +1121,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (this.disconnectedFromGame) {
                     return;
                 }
-                this.message(msg);
+                this.showMessage("server_message", { message: msg });
             });
             delete this.last_phase;
 
@@ -1272,7 +1285,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
 
                     if (this.engine.getMoveNumber() !== move_obj.move_number - 1) {
-                        this.message(_("Synchronization error, reloading"));
+                        this.showMessage("synchronization_error");
                         setTimeout(() => {
                             window.location.href = window.location.href;
                         }, 2500);
@@ -2211,7 +2224,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.emit("set-for-removal", { x, y, removed: !!removed });
         this.emit("stone-removal.updated");
     }
-    public showScores(score: Score): void {
+    public showScores(score: Score, only_show_territory: boolean = false): void {
         this.hideScores();
         this.showing_scores = true;
 
@@ -3138,7 +3151,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         this.auto_scoring_done = true;
 
-        this.message(_("Processing..."), -1);
+        this.showMessage("processing", undefined, -1);
         const do_score_estimation = () => {
             const se = new ScoreEstimator(
                 this,
@@ -3182,7 +3195,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 .catch((err) => {
                     console.error(err);
                     this.clearMessage();
-                    this.message("Auto-scoring error: " + err, -1);
+                    this.showMessage(
+                        "error",
+                        { error: { message: "Auto-scoring error: " + err } },
+                        -1,
+                    );
                 });
         };
 
@@ -3263,7 +3280,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         // indicating such and try reloading after a few more seconds.
         let reload_timeout: ReturnType<typeof setTimeout>;
         const timeout = setTimeout(() => {
-            this.message(_("Error submitting move"), -1);
+            this.showMessage("error_submitting_move", undefined, -1);
 
             reload_timeout = setTimeout(() => {
                 window.location.reload();
@@ -3860,7 +3877,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         const ret = this.engine.cur_move;
 
         if (this.scoring_mode) {
-            this.message(_("Processing..."), -1);
+            this.showMessage("processing", undefined, -1);
             this.setMode("score estimation", true);
             this.clearMessage();
             this.score_estimate = this.engine.estimateScore(

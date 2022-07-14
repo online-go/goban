@@ -36,6 +36,7 @@ import { MoveTreePenMarks } from "./MoveTree";
 import { createDeviceScaledCanvas, resizeDeviceScaledCanvas } from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
+import { formatMessage, MessageID } from "./messages";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -1094,7 +1095,6 @@ export class GobanCanvas extends GobanCore {
             delete this.move_selected;
             // stone already placed is just to be ignored, it's not really an error.
             if (e.message_id !== "stone_already_placed_here") {
-                console.info(e);
                 this.errorHandler(e);
                 this.emit("error");
             }
@@ -2743,36 +2743,49 @@ export class GobanCanvas extends GobanCore {
         this.drawPenMarks(this.pen_marks);
         this.move_tree_redraw();
     }
-    public message(msg: string, timeout: number = 5000): void {
+    public showMessage(
+        message_id: MessageID,
+        parameters?: { [key: string]: any },
+        timeout: number = 5000,
+    ): void {
         this.clearMessage();
 
-        this.message_div = document.createElement("div");
-        this.message_div.className = "GobanMessage";
-        this.message_td = document.createElement("td");
-        const table = document.createElement("table");
-        const tr = document.createElement("tr");
-        tr.appendChild(this.message_td);
-        table.appendChild(tr);
-        this.message_div.appendChild(table);
-        this.message_text = document.createElement("div");
-        this.message_text.innerHTML = msg;
-        this.message_td.appendChild(this.message_text);
-        this.parent.appendChild(this.message_div);
-
-        const message_time = Date.now();
-        this.message_div.addEventListener("click", () => {
-            try {
-                if (Date.now() - message_time < 100) {
-                    return;
-                }
-
-                if (timeout > 0) {
-                    this.clearMessage();
-                }
-            } catch (e) {
-                console.error(e);
-            }
+        const msg = formatMessage(message_id, parameters);
+        this.emit("show-message", {
+            formatted: msg,
+            message_id: message_id,
+            parameters: parameters,
         });
+
+        if (!this.config.dont_show_messages) {
+            this.message_div = document.createElement("div");
+            this.message_div.className = "GobanMessage";
+            this.message_td = document.createElement("td");
+            const table = document.createElement("table");
+            const tr = document.createElement("tr");
+            tr.appendChild(this.message_td);
+            table.appendChild(tr);
+            this.message_div.appendChild(table);
+            this.message_text = document.createElement("div");
+            this.message_text.innerHTML = msg;
+            this.message_td.appendChild(this.message_text);
+            this.parent.appendChild(this.message_div);
+
+            const message_time = Date.now();
+            this.message_div.addEventListener("click", () => {
+                try {
+                    if (Date.now() - message_time < 100) {
+                        return;
+                    }
+
+                    if (timeout > 0) {
+                        this.clearMessage();
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+        }
 
         if (!timeout) {
             timeout = 5000;
@@ -2793,6 +2806,8 @@ export class GobanCanvas extends GobanCore {
             clearTimeout(this.message_timeout);
             delete this.message_timeout;
         }
+
+        this.emit("clear-message");
     }
     protected setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
