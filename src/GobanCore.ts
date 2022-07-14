@@ -2233,6 +2233,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             const moves = this.engine.decodeMoves(score[color].scoring_positions);
             for (let j = 0; j < moves.length; ++j) {
                 const mv = moves[j];
+                if (only_show_territory && this.engine.board[mv.y][mv.x] > 0) {
+                    continue;
+                }
                 if (mv.y < 0 || mv.x < 0) {
                     console.error("Negative scoring position: ", mv);
                     console.error(
