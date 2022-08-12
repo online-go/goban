@@ -2744,11 +2744,13 @@ export class GobanCanvas extends GobanCore {
         this.move_tree_redraw();
     }
     public showMessage(
-        message_id: MessageID,
+        message_id_or_error: MessageID,
         parameters?: { [key: string]: any },
         timeout: number = 5000,
     ): void {
         this.clearMessage();
+
+        const message_id = parameters?.error?.message_id || message_id_or_error;
 
         const msg = formatMessage(message_id, parameters);
         this.emit("show-message", {

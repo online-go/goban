@@ -42,6 +42,7 @@ export interface GobanStrings {
     "Enter the label you want to add to the board": string;
     Error: string;
     "Self-capture is not allowed": string;
+    "The game would be repeating with that move, please play somewhere else first": string;
 
     "Black Walnut": string;
     Book: string;
