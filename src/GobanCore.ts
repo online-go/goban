@@ -156,6 +156,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     dont_draw_last_move?: boolean;
     dont_show_messages?: boolean;
     last_move_radius?: number;
+    circle_radius?: number;
     one_click_submit?: boolean;
     double_click_submit?: boolean;
     variation_stone_transparency?: number;
@@ -538,6 +539,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected done_loading_review: boolean = false;
     protected dont_draw_last_move: boolean;
     protected last_move_radius: number;
+    protected circle_radius: number;
     protected edit_color?: "black" | "white";
     protected errorHandler: (e: Error) => void;
     protected heatmap?: NumberMatrix;
@@ -721,6 +723,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.dont_draw_last_move = !!config.dont_draw_last_move;
         this.last_move_radius = config.last_move_radius || 0.25;
+        this.circle_radius = config.circle_radius || 0.25;
         this.getPuzzlePlacementSetting = config.getPuzzlePlacementSetting;
         this.mode = config.mode || "play";
         this.previous_mode = this.mode;

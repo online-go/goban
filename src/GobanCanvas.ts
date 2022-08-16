@@ -1953,7 +1953,8 @@ export class GobanCanvas extends GobanCore {
                 }
                 ctx.strokeStyle = symbol_color;
                 ctx.lineWidth = this.square_size * 0.075;
-                ctx.arc(cx, cy, this.square_size * 0.25, 0, 2 * Math.PI, false);
+                const r = this.square_size * this.circle_radius;
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
                 ctx.stroke();
                 ctx.restore();
                 draw_last_move = false;
