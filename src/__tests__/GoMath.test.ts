@@ -1,6 +1,48 @@
 import { GoMath, BoardState } from "../GoMath";
 import { JGOFNumericPlayerColor } from "../JGOF";
 
+describe("GoMath constructor", () => {
+    test("basic board state", () => {
+        const THREExTHREE_board: Array<Array<JGOFNumericPlayerColor>> = [
+            [1, 0, 2],
+            [2, 1, 1],
+            [2, 0, 1],
+        ];
+        const THREExTHREE_removal: Array<Array<number>> = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ];
+        const board_state: BoardState = {
+            width: 3,
+            height: 3,
+            board: THREExTHREE_board,
+            removal: THREExTHREE_removal,
+            // Why does the test pass even if I pass in a no-op here?
+            foreachNeighbor: () => {},
+        };
+
+        const gomath_obj = new GoMath(board_state);
+
+        // TODO: examine usage in real code and flesh out expectations to reflect that usage
+        expect(gomath_obj.groups.length).toBe(7);
+        expect(gomath_obj.groups[0]).toBe(undefined); // what does this element represent?
+        expect(gomath_obj.groups[1].points).toEqual([{ x: 0, y: 0 }]);
+        expect(gomath_obj.groups[2].points).toEqual([{ x: 1, y: 0 }]);
+        expect(gomath_obj.groups[3].points).toEqual([{ x: 2, y: 0 }]);
+        expect(gomath_obj.groups[4].points).toEqual([
+            { x: 0, y: 1 },
+            { x: 0, y: 2 },
+        ]);
+        expect(gomath_obj.groups[5].points).toEqual([
+            { x: 1, y: 1 },
+            { x: 2, y: 1 },
+            { x: 2, y: 2 },
+        ]);
+        expect(gomath_obj.groups[6].points).toEqual([{ x: 1, y: 2 }]);
+    });
+});
+
 describe("matrices", () => {
     test("makeMatrix", () => {
         expect(GoMath.makeMatrix(3, 2)).toEqual([
