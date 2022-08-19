@@ -132,7 +132,7 @@ module.exports = {
     },
     "overrides": [
         {
-            "files": ["test.tsx"],
+            "files": ["src/test.tsx", "*/__tests__/*"],
             // since test files are not part of tsconfig.json,
             // parserOptions.project must be unset
             "parserOptions": {
