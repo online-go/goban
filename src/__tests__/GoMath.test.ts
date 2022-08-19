@@ -1,4 +1,87 @@
-import { GoMath } from "../GoMath";
+import { GoMath, BoardState } from "../GoMath";
+import { JGOFNumericPlayerColor } from "../JGOF";
+
+describe("matrices", () => {
+    test("makeMatrix", () => {
+        expect(GoMath.makeMatrix(3, 2)).toEqual([
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        expect(GoMath.makeMatrix(3, 2, 1234)).toEqual([
+            [1234, 1234, 1234],
+            [1234, 1234, 1234],
+        ]);
+        expect(GoMath.makeMatrix(0, 0)).toEqual([]);
+    });
+
+    test("makeStringMatrix", () => {
+        expect(GoMath.makeStringMatrix(3, 2)).toEqual([
+            ["", "", ""],
+            ["", "", ""],
+        ]);
+        expect(GoMath.makeStringMatrix(3, 2, "asdf")).toEqual([
+            ["asdf", "asdf", "asdf"],
+            ["asdf", "asdf", "asdf"],
+        ]);
+        expect(GoMath.makeStringMatrix(0, 0)).toEqual([]);
+    });
+
+    test("makeObjectMatrix", () => {
+        expect(GoMath.makeObjectMatrix(3, 2)).toEqual([
+            [{}, {}, {}],
+            [{}, {}, {}],
+        ]);
+        expect(GoMath.makeObjectMatrix(0, 0)).toEqual([]);
+    });
+
+    test("makeEmptyObjectMatrix", () => {
+        expect(GoMath.makeEmptyObjectMatrix(3, 2)).toEqual([
+            [undefined, undefined, undefined],
+            [undefined, undefined, undefined],
+        ]);
+        expect(GoMath.makeEmptyObjectMatrix(0, 0)).toEqual([]);
+    });
+});
+
+describe("prettyCoords", () => {
+    test("pass", () => {
+        expect(GoMath.prettyCoords(-1, -1, 19)).toBe("pass");
+    });
+
+    test("out of bounds", () => {
+        // I doubt this is actually desired behavior.  Feel free to remove this
+        // test after verifying nothing depends on this behavior.
+        expect(GoMath.prettyCoords(25, 9, 19)).toBe("undefined10");
+        expect(GoMath.prettyCoords(9, 25, 19)).toBe("K-6");
+    });
+
+    test("regular moves", () => {
+        expect(GoMath.prettyCoords(0, 0, 19)).toBe("A19");
+        expect(GoMath.prettyCoords(2, 15, 19)).toBe("C4");
+        expect(GoMath.prettyCoords(9, 9, 19)).toBe("K10");
+    });
+});
+
+describe("decodeGTPCoordinate", () => {
+    test("pass", () => {
+        expect(GoMath.decodeGTPCoordinate("pass", 19, 19)).toEqual({ x: -1, y: -1 });
+        expect(GoMath.decodeGTPCoordinate("..", 19, 19)).toEqual({ x: -1, y: -1 });
+    });
+    test("nonsense", () => {
+        expect(GoMath.decodeGTPCoordinate("&%", 19, 19)).toEqual({ x: -1, y: -1 });
+    });
+    test("regular moves (lowercase)", () => {
+        expect(GoMath.decodeGTPCoordinate("a1", 19, 19)).toEqual({ x: 0, y: 18 });
+        expect(GoMath.decodeGTPCoordinate("c4", 19, 19)).toEqual({ x: 2, y: 15 });
+        expect(GoMath.decodeGTPCoordinate("k10", 19, 19)).toEqual({ x: 9, y: 9 });
+    });
+
+    test("regular moves (lowercase)", () => {
+        expect(GoMath.decodeGTPCoordinate("A1", 19, 19)).toEqual({ x: 0, y: 18 });
+        expect(GoMath.decodeGTPCoordinate("C4", 19, 19)).toEqual({ x: 2, y: 15 });
+        expect(GoMath.decodeGTPCoordinate("K10", 19, 19)).toEqual({ x: 9, y: 9 });
+    });
+});
 
 describe("decodeMoves", () => {
     test("decodes string", () => {
