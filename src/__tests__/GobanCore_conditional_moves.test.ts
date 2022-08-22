@@ -56,5 +56,5 @@ test("call followConditionalPath after moving to root again", () => {
 
     expect(Object.keys(goban.conditional_tree.children)).toEqual(["aa", "cc"]);
     expect(goban.conditional_tree.children["aa"].move).toEqual("bb");
-    expect(goban.conditional_tree.children["aa"].move).toEqual("dd");
+    expect(goban.conditional_tree.children["cc"].move).toEqual("dd");
 });
