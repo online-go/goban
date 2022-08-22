@@ -31,6 +31,7 @@ export * from "./TypedEventEmitter";
 export * from "./JGOF";
 export * from "./AIReview";
 export * from "./AdHocFormat";
+export * from "./TestGoban";
 export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
 export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 

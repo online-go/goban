@@ -1,0 +1,60 @@
+/**
+ * @jest-environment jsdom
+ */
+
+// ^^ jsdom environment is because getLocation() returns window.location.pathname
+// Same about CLIENT.
+//
+// TODO: move this into a setup-jest.ts file
+
+(global as any).CLIENT = true;
+
+import { TestGoban } from "../TestGoban";
+
+test("call FollowConditionalPath", () => {
+    const goban = new TestGoban({ moves: [] });
+    goban.setMode("conditional");
+    goban.followConditionalPath("aabb");
+
+    /*
+     * └──aa bb
+     *    └──cc dd
+     */
+
+    expect(Object.keys(goban.conditional_tree.children)).toEqual(["aa"]);
+    expect(goban.conditional_tree.children["aa"].move).toEqual("bb");
+});
+
+test("call followConditionalPath twice", () => {
+    const goban = new TestGoban({ moves: [] });
+    goban.setMode("conditional");
+    goban.followConditionalPath("aabb");
+    goban.followConditionalPath("ccdd");
+
+    /*
+     * └──aa bb
+     *    └──cc dd
+     */
+
+    expect(Object.keys(goban.conditional_tree.children)).toEqual(["aa"]);
+    expect(goban.conditional_tree.children["aa"].move).toEqual("bb");
+    expect(Object.keys(goban.conditional_tree.children["aa"].children)).toEqual(["cc"]);
+    expect(goban.conditional_tree.children["aa"].children["cc"].move).toEqual("dd");
+});
+
+test("call followConditionalPath after moving to root again", () => {
+    const goban = new TestGoban({ moves: [] });
+    goban.setMode("conditional");
+    goban.followConditionalPath("aabb");
+    goban.jumpToLastOfficialMove();
+    goban.followConditionalPath("ccdd");
+
+    /*
+     * ├──aa bb
+     * └──cc dd
+     */
+
+    expect(Object.keys(goban.conditional_tree.children)).toEqual(["aa", "cc"]);
+    expect(goban.conditional_tree.children["aa"].move).toEqual("bb");
+    expect(goban.conditional_tree.children["cc"].move).toEqual("dd");
+});
