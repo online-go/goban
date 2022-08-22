@@ -2954,7 +2954,27 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public placeByPrettyCoord(coord: string): void {
         for (const mv of this.engine.decodeMoves(coord)) {
-            this.engine.place(mv.x, mv.y);
+            const removed_stones: Array<JGOFIntersection> = [];
+            const removed_count = this.engine.place(
+                mv.x,
+                mv.y,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                removed_stones,
+            );
+
+            if (removed_count > 0) {
+                this.emit("audio-capture-stones", {
+                    count: removed_count,
+                    already_captured: 0,
+                });
+                this.emit("captured-stones", {
+                    removed_stones: removed_stones,
+                });
+            }
         }
     }
     public setMarkByPrettyCoord(coord: string, mark: number | string, dont_draw?: boolean): void {
