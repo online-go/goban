@@ -2959,7 +2959,27 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public placeByPrettyCoord(coord: string): void {
         for (const mv of this.engine.decodeMoves(coord)) {
-            this.engine.place(mv.x, mv.y);
+            const removed_stones: Array<JGOFIntersection> = [];
+            const removed_count = this.engine.place(
+                mv.x,
+                mv.y,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                removed_stones,
+            );
+
+            if (removed_count > 0) {
+                this.emit("audio-capture-stones", {
+                    count: removed_count,
+                    already_captured: 0,
+                });
+                this.emit("captured-stones", {
+                    removed_stones: removed_stones,
+                });
+            }
         }
     }
     public setMarkByPrettyCoord(coord: string, mark: number | string, dont_draw?: boolean): void {
@@ -3221,7 +3241,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }, 10);
     }
 
-    protected sendMove(mv: MoveCommand, cb?: () => void): void {
+    protected sendMove(mv: MoveCommand, cb?: () => void): boolean {
         if (!mv.blur) {
             mv.blur = focus_tracker.getMaxBlurDurationSinceLastReset();
             focus_tracker.reset();
@@ -3278,6 +3298,11 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.config.time_control as any,
                     );
 
+                    if (clock.timed_out) {
+                        this.sendTimedOut();
+                        return false;
+                    }
+
                     mv.clock = clock;
                 } else {
                     throw new Error(`No color for player_id ${this.player_id}`);
@@ -3309,20 +3334,25 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 cb();
             }
         });
+
+        return true;
     }
 
     public sendTimedOut(): void {
         // When we think our clock has runout, send a message to the server
         // letting it know. Otherwise we have to wait for the server grace
         // period to expire for it to time us out.
-        if (this.engine?.phase === "play") {
-            console.log("Sending timed out");
+        if (!this.sent_timed_out_message) {
+            if (this.engine?.phase === "play") {
+                console.log("Sending timed out");
 
-            this.socket.send("game/timed_out", {
-                auth: this.config.auth,
-                game_id: this.config.game_id,
-                player_id: this.config.player_id,
-            });
+                this.sent_timed_out_message = true;
+                this.socket.send("game/timed_out", {
+                    auth: this.config.auth,
+                    game_id: this.config.game_id,
+                    player_id: this.config.player_id,
+                });
+            }
         }
     }
     public isCurrentUserAPlayer(): boolean {
@@ -3509,13 +3539,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     ? Math.max(0, white_relative_latency - wall_clock_elapsed)
                     : 0;
 
-            if (!this.sent_timed_out_message) {
+            if (!this.sent_timed_out_message && !this.clock_should_be_paused_for_move_submission) {
                 if (
                     clock.current_player === "white" &&
                     this.player_id === this.engine.config.white_player_id
                 ) {
                     if ((clock.white_clock as JGOFPlayerClockWithTimedOut).timed_out) {
-                        this.sent_timed_out_message = true;
+                        this.sendTimedOut();
                     }
                 }
                 if (
@@ -3523,11 +3553,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.player_id === this.engine.config.black_player_id
                 ) {
                     if ((clock.black_clock as JGOFPlayerClockWithTimedOut).timed_out) {
-                        this.sent_timed_out_message = true;
+                        this.sendTimedOut();
                     }
-                }
-                if (this.sent_timed_out_message) {
-                    this.sendTimedOut();
                 }
             }
 

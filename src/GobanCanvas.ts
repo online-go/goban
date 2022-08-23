@@ -734,16 +734,20 @@ export class GobanCanvas extends GobanCore {
                     return;
                 }
             }
-            this.playMovementSound();
-            this.sendMove({
+            const sent = this.sendMove({
                 auth: this.config.auth,
                 game_id: this.config.game_id,
                 player_id: this.config.player_id,
                 move: encodeMove(x, y),
             });
-            this.setTitle(_("Submitting..."));
-            this.disableStonePlacement();
-            delete this.move_selected;
+            if (sent) {
+                this.playMovementSound();
+                this.setTitle(_("Submitting..."));
+                this.disableStonePlacement();
+                delete this.move_selected;
+            } else {
+                console.log("Move not sent, not playing movement sound");
+            }
         };
         /* we disable clicking if we've been initialized with the view user,
          * unless the board is a demo board (thus black_player_id is 0).  */

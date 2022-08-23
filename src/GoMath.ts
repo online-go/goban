@@ -163,9 +163,6 @@ export class GoMath {
             fn(this.groups[i]);
         }
     }
-    //private getGroup(x, y) {
-    //    return this.groups[this.group_id_map[y][x]];
-    //};
 
     public static makeMatrix(
         width: number,
