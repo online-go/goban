@@ -2710,7 +2710,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public pass(): void {
         if (this.mode === "conditional") {
             this.followConditionalSegment(-1, -1);
-            return;
         }
 
         this.engine.place(-1, -1);
