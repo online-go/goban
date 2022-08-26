@@ -58,3 +58,30 @@ test("call followConditionalPath after moving to root again", () => {
     expect(goban.conditional_tree.children["aa"].move).toEqual("bb");
     expect(goban.conditional_tree.children["cc"].move).toEqual("dd");
 });
+
+test("handle passes in followConditionalPath", () => {
+    const goban = new TestGoban({ moves: [] });
+    goban.setMode("conditional");
+    goban.followConditionalPath("....");
+
+    /*
+     * └──.. ..
+     */
+
+    expect(Object.keys(goban.conditional_tree.children)).toEqual([".."]);
+    expect(goban.conditional_tree.children[".."].move).toEqual("..");
+});
+
+test("handle pass() while in 'conditional' mode", () => {
+    const goban = new TestGoban({ moves: [] });
+    goban.setMode("conditional");
+    goban.pass();
+    goban.pass();
+
+    /*
+     * └──.. ..
+     */
+
+    expect(Object.keys(goban.conditional_tree.children)).toEqual([".."]);
+    expect(goban.conditional_tree.children[".."].move).toEqual("..");
+});
