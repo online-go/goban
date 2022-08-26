@@ -720,6 +720,9 @@ export class GobanCanvas extends GobanCore {
         }
 
         const tap_time = Date.now();
+        let removed_count = 0;
+        const removed_stones: Array<JGOFIntersection> = [];
+
         const submit = () => {
             const submit_time = Date.now();
             if (!this.one_click_submit && (!this.double_click_submit || !double_tap)) {
@@ -743,6 +746,11 @@ export class GobanCanvas extends GobanCore {
             if (sent) {
                 this.playMovementSound();
                 this.setTitle(_("Submitting..."));
+
+                if (removed_count) {
+                    this.debouncedEmitCapturedStones(removed_stones);
+                }
+
                 this.disableStonePlacement();
                 delete this.move_selected;
             } else {
@@ -837,8 +845,6 @@ export class GobanCanvas extends GobanCore {
                         });
                     }
                 }
-                let removed_count = 0;
-                const removed_stones: Array<JGOFIntersection> = [];
                 if (puzzle_mode === "play") {
                     /* we get called for each tap, then once for the final double tap so we only want to process this x2 */
                     /* Also, if we just placed a piece and the computer is waiting to place it's piece (autoplaying), then
@@ -957,9 +963,7 @@ export class GobanCanvas extends GobanCore {
                         count: removed_count,
                         already_captured: 0,
                     });
-                    this.emit("captured-stones", {
-                        removed_stones: removed_stones,
-                    });
+                    this.debouncedEmitCapturedStones(removed_stones);
                 }
             } else if (
                 this.engine.phase === "play" ||
@@ -1000,7 +1004,16 @@ export class GobanCanvas extends GobanCore {
                             this.analyze_subtool !== "alternate"
                         )
                     ) {
-                        this.engine.place(x, y, true, true);
+                        removed_count = this.engine.place(
+                            x,
+                            y,
+                            true,
+                            true,
+                            undefined,
+                            undefined,
+                            undefined,
+                            removed_stones,
+                        );
 
                         if (this.mode === "analyze") {
                             if (this.engine.handicapMovesLeft() > 0) {

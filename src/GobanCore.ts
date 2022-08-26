@@ -1350,9 +1350,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                             count: removed_count,
                             already_captured: score_before_move,
                         });
-                        this.emit("captured-stones", {
-                            removed_stones: removed_stones,
-                        });
+                        this.debouncedEmitCapturedStones(removed_stones);
                     }
 
                     this.emit("move-made");
@@ -2971,9 +2969,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     count: removed_count,
                     already_captured: 0,
                 });
-                this.emit("captured-stones", {
-                    removed_stones: removed_stones,
-                });
+                this.debouncedEmitCapturedStones(removed_stones);
             }
         }
     }
@@ -3953,6 +3949,52 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public setLastReviewMessage(m: ReviewMessage): void {
         this.last_review_message = m;
+    }
+
+    private last_emitted_captured_stones: Array<JGOFIntersection> = [];
+
+    /* Emits the captured-stones event, only if didn't just  emitted it with
+     * the same removed_stones. That situation happens when the client signals
+     * the removal, and then we get a second followup confirmation from the
+     * server, we need both sources of the event for when the user has two
+     * clients pointed at the same game, but we don't want to emit the event
+     * twice on the device that submitted the move in the first place. */
+    public debouncedEmitCapturedStones(removed_stones: Array<JGOFIntersection>): void {
+        if (removed_stones.length > 0) {
+            const captured_stones = removed_stones
+                .map((o) => ({ x: o.x, y: o.y }))
+                .sort((a, b) => {
+                    if (a.x < b.x) {
+                        return -1;
+                    } else if (a.x > b.x) {
+                        return 1;
+                    } else if (a.y < b.y) {
+                        return -1;
+                    } else if (a.y > b.y) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                });
+
+            let different = captured_stones.length !== this.last_emitted_captured_stones.length;
+            if (!different) {
+                for (let i = 0; i < captured_stones.length; ++i) {
+                    if (
+                        captured_stones[i].x !== this.last_emitted_captured_stones[i].x ||
+                        captured_stones[i].y !== this.last_emitted_captured_stones[i].y
+                    ) {
+                        different = true;
+                        break;
+                    }
+                }
+            }
+
+            if (different) {
+                this.last_emitted_captured_stones = removed_stones;
+                this.emit("captured-stones", { removed_stones });
+            }
+        }
     }
 }
 function uuid(): string {
