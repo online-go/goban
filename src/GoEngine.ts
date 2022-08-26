@@ -1311,7 +1311,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         isTrunkMove?: boolean,
         removed_stones?: Array<JGOFIntersection>,
     ): number {
-        let peices_removed = 0;
+        let pieces_removed = 0;
 
         try {
             if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
@@ -1351,13 +1351,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         if (removed_stones !== undefined) {
                             opponent_groups[i].map((x) => removed_stones.push(x));
                         }
-                        peices_removed += this.captureGroup(opponent_groups[i]);
+                        pieces_removed += this.captureGroup(opponent_groups[i]);
                     }
                 }
-                if (peices_removed === 0) {
+                if (pieces_removed === 0) {
                     if (this.countLiberties(player_group) === 0) {
                         if (this.allow_self_capture || dontCheckForSuicide) {
-                            peices_removed += this.captureGroup(player_group);
+                            pieces_removed += this.captureGroup(player_group);
                             suicide_move = true;
                         } else {
                             this.board[y][x] = 0;
@@ -1433,7 +1433,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             throw e;
         }
 
-        return peices_removed;
+        return pieces_removed;
     }
     public isBoardRepeating(superko_rule: GoEngineSuperKoAlgorithm): boolean {
         const MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
