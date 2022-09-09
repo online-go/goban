@@ -938,7 +938,7 @@ export class MoveTree {
     }
 
     public clearBranchesExceptFor(node: MoveTree): void {
-        this.branches = this.branches.filter(x => x.id === node.id);
+        this.branches = this.branches.filter((x) => x.id === node.id);
     }
 
     static markupSGFChatMessage(
