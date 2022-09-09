@@ -937,6 +937,10 @@ export class MoveTree {
         return this.branches.filter((branch) => this.isBranchWithCorrectAnswer(branch));
     }
 
+    public clearBranchesExceptFor(node: MoveTree): void {
+        this.branches = this.branches.filter(x => x.id === node.id);
+    }
+
     static markupSGFChatMessage(
         message: MoveTreeChatLineBody | string,
         width: number,
