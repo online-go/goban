@@ -1771,6 +1771,19 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             clearTimeout(this.submitBlinkTimer);
             delete this.submitBlinkTimer;
         }
+
+        delete (this as any).isPlayerController;
+        delete (this as any).isPlayerOwner;
+        delete (this as any).isInPushedAnalysis;
+        delete (this as any).leavePushedAnalysis;
+        delete (this as any).onError;
+        delete (this as any).onScoreEstimationUpdated;
+        delete (this as any).getPuzzlePlacementSetting;
+
+        this.engine.removeAllListeners();
+        delete (this as any).engine;
+
+        this.removeAllListeners();
     }
     protected disconnect(): void {
         this.emit("destroy");

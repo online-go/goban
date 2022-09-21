@@ -196,6 +196,9 @@ export class GobanCanvas extends GobanCore {
         if (this.board && this.board.parentNode) {
             this.board.parentNode.removeChild(this.board);
         }
+        delete (this as any).board;
+        delete (this as any).ctx;
+
         this.detachPenCanvas();
         this.detachShadowLayer();
 
@@ -206,6 +209,19 @@ export class GobanCanvas extends GobanCore {
 
         window.removeEventListener("keydown", this.handleShiftKey);
         window.removeEventListener("keyup", this.handleShiftKey);
+
+        this.theme_black_stones = [];
+        this.theme_white_stones = [];
+        delete (this as any).theme_board;
+        delete (this as any).theme_black;
+        delete (this as any).theme_white;
+        delete this.message_div;
+        delete this.message_td;
+        delete this.message_text;
+        delete this.move_tree_container;
+        delete this.move_tree_inner_container;
+        delete this.move_tree_canvas;
+        delete this.title_div;
     }
     private detachShadowLayer(): void {
         if (this.shadow_layer) {
@@ -551,11 +567,15 @@ export class GobanCanvas extends GobanCore {
         document.addEventListener("touchstart", onTouchStart);
         document.addEventListener("touchend", onTouchEnd);
         document.addEventListener("touchmove", onTouchMove);
-        this.on("destroy", () => {
+
+        const cleanup = () => {
             document.removeEventListener("touchstart", onTouchStart);
             document.removeEventListener("touchend", onTouchEnd);
             document.removeEventListener("touchmove", onTouchMove);
-        });
+            this.off("destroy", cleanup);
+        };
+
+        this.on("destroy", cleanup);
     }
     public clearAnalysisDrawing(): void {
         this.pen_marks = [];
@@ -2878,10 +2898,14 @@ export class GobanCanvas extends GobanCore {
         }
 
         if (!(themes.white in __theme_cache.white)) {
-            __theme_cache.white[themes.white] = {};
+            __theme_cache.white[themes.white] = {
+                creation_order: [],
+            };
         }
         if (!(themes.black in __theme_cache.black)) {
-            __theme_cache.black[themes.black] = {};
+            __theme_cache.black[themes.black] = {
+                creation_order: [],
+            };
         }
 
         const deferredRenderCallback = () => {
@@ -2896,6 +2920,7 @@ export class GobanCanvas extends GobanCore {
                     23434,
                     deferredRenderCallback,
                 );
+            __theme_cache.white[themes.white].creation_order.push(this.theme_stone_radius);
         }
         if (!(this.theme_stone_radius in __theme_cache.black[themes.black])) {
             __theme_cache.black[themes.black][this.theme_stone_radius] =
@@ -2904,6 +2929,7 @@ export class GobanCanvas extends GobanCore {
                     2081,
                     deferredRenderCallback,
                 );
+            __theme_cache.black[themes.black].creation_order.push(this.theme_stone_radius);
         }
 
         if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
@@ -2913,6 +2939,7 @@ export class GobanCanvas extends GobanCore {
                     23434,
                     deferredRenderCallback,
                 );
+            __theme_cache.white[themes.white].creation_order.push(MoveTree.stone_radius);
         }
         if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
             __theme_cache.black[themes.black][MoveTree.stone_radius] =
@@ -2921,6 +2948,38 @@ export class GobanCanvas extends GobanCore {
                     2081,
                     deferredRenderCallback,
                 );
+            __theme_cache.black[themes.black].creation_order.push(MoveTree.stone_radius);
+        }
+
+        // We should only need a few sizes, like 6 in most cases, but when we resize a window slowly or
+        // have a bunch of weird sized boards, we'll need more. These are very small and there aren't
+        // any devices that should have a problem with them, except for an artifical limit on iOS devices
+        // which we'll handle below.
+        let max_cache_size = 500;
+        try {
+            /* ipads only allow a very small amount of memory to be allocated to canvases,
+             * so we will be more aggressive about cleaning up the cache on those devices */
+            if (/iP(ad|hone|od).+Version\/[\d\.]+.*Safari/i.test(navigator.userAgent)) {
+                console.log("iOS device detected, reducing cache size");
+                max_cache_size = 12; // mini goban, main boards, 9x9, 13x13, 19x19 should account for 6. We double that for good measure for odd sizes and resizing.
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        if (__theme_cache.black[themes.black].creation_order.length > max_cache_size) {
+            const old_radius = __theme_cache.black[themes.black].creation_order.shift();
+            if (old_radius) {
+                console.log("deleting old radius [black]", old_radius);
+                delete __theme_cache.black[themes.black][old_radius];
+            }
+        }
+        if (__theme_cache.white[themes.white].creation_order.length > max_cache_size) {
+            const old_radius = __theme_cache.white[themes.white].creation_order.shift();
+            if (old_radius) {
+                console.log("deleting old radius [white]", old_radius);
+                delete __theme_cache.white[themes.white][old_radius];
+            }
         }
 
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];
