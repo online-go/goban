@@ -3574,14 +3574,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             if (this.mode === "play" && this.engine.phase === "play") {
                 // Move's and clock events are separate, so this just checks to make sure that when we
                 // update, we are updating when the engine and clock agree on whose turn it is.
-                if (this.engine.colorToMove() === clock.current_player) {
+                const current_color =
+                    this.engine.last_official_move.stoneColor === "black" ? "white" : "black";
+                const current_player = this.engine.players[current_color].id.toString();
+
+                if (current_color === clock.current_player) {
                     const player_clock: JGOFPlayerClock =
                         clock.current_player === "black" ? clock.black_clock : clock.white_clock;
                     const audio_clock: AudioClockEvent = {
                         countdown_seconds: 0,
                         clock: player_clock,
-                        player_id: this.engine.playerToMove().toString(),
-                        color: this.engine.colorToMove(),
+                        player_id: current_player,
+                        color: current_color,
                         time_control_system: time_control.system,
                         in_overtime: false,
                     };
