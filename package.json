@@ -1,6 +1,6 @@
 {
     "name": "goban",
-    "version": "0.5.103",
+    "version": "0.5.104",
     "description": "",
     "main": "lib/goban.js",
     "types": "lib/goban.d.ts",
@@ -65,9 +65,9 @@
         "svg-inline-loader": "0.8.2",
         "thread-loader": "^3.0.4",
         "ts-jest": "^28.0.8",
-        "tslint": "^6.1.3",
         "ts-loader": "^9.3.0",
         "ts-node": "^10.9.1",
+        "tslint": "^6.1.3",
         "typedoc": "^0.22.15",
         "typescript": "^4.7.2",
         "webpack": "^5.72.1",
