@@ -1781,8 +1781,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         delete (this as any).getPuzzlePlacementSetting;
 
         this.engine.removeAllListeners();
-        delete (this as any).engine;
-
         this.removeAllListeners();
     }
     protected disconnect(): void {
