@@ -155,7 +155,15 @@ export default function (GoThemes: GoThemesInterface) {
      * attach them to the dom just fine, but not draw them into a canvas for
      * whatever reason. So, for firefox we have to load the exact same SVG off
      * the network it seems. */
-    const firefox = navigator.userAgent.toLocaleLowerCase().indexOf("firefox") > -1;
+    let firefox = false;
+
+    try {
+        if (typeof navigator !== "undefined") {
+            firefox = navigator?.userAgent?.toLocaleLowerCase()?.indexOf("firefox") > -1;
+        }
+    } catch (e) {
+        // ignore
+    }
 
     class Common extends GoTheme {
         stoneCastsShadow(radius: number): boolean {
