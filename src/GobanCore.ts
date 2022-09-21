@@ -3571,7 +3571,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
 
             // check if we need to update our audio
-            if (this.mode === "play" && this.engine.phase === "play") {
+            if (
+                (this.mode === "play" ||
+                    this.mode === "analyze" ||
+                    this.mode === "conditional" ||
+                    this.mode === "score estimation") &&
+                this.engine.phase === "play"
+            ) {
                 // Move's and clock events are separate, so this just checks to make sure that when we
                 // update, we are updating when the engine and clock agree on whose turn it is.
                 const current_color =
@@ -3686,6 +3692,13 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 } else {
                     // Engine and clock code didn't agreen on whose turn it was, don't emit audio-clock event yet
                 }
+            } else {
+                console.log(
+                    "Not emitting audio clock update bacause mode was ",
+                    this.mode,
+                    " and phase was ",
+                    this.engine.phase,
+                );
             }
 
             if (this.engine.phase !== "finished") {
