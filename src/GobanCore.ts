@@ -3692,13 +3692,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 } else {
                     // Engine and clock code didn't agreen on whose turn it was, don't emit audio-clock event yet
                 }
-            } else {
-                console.log(
-                    "Not emitting audio clock update bacause mode was ",
-                    this.mode,
-                    " and phase was ",
-                    this.engine.phase,
-                );
             }
 
             if (this.engine.phase !== "finished") {
