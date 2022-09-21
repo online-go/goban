@@ -3598,6 +3598,10 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                                 // very soon as time passes and we're going to start playing the
                                 // next second sound.
                                 audio_clock.countdown_seconds = -1;
+                            } else {
+                                audio_clock.countdown_seconds = Math.ceil(
+                                    player_clock.main_time / 1000,
+                                );
                             }
                             break;
 
