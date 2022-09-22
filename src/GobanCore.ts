@@ -1923,7 +1923,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public setSquareSize(new_ss: number, suppress_redraw = false): void {
         const redraw = this.square_size !== new_ss && !suppress_redraw;
-        this.square_size = new_ss;
+        this.square_size = Math.max(new_ss, 1);
         if (redraw) {
             this.redraw(true);
         }

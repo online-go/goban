@@ -1502,7 +1502,7 @@ export class GobanCanvas extends GobanCore {
                 ctx.arc(
                     cx,
                     cy,
-                    radius - lineWidth / 2,
+                    Math.max(0.1, radius - lineWidth / 2),
                     0.001,
                     2 * Math.PI,
                     false,
