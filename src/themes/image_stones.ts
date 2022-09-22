@@ -65,6 +65,7 @@ export function preRenderImageStone(
 
     for (const url of urls) {
         const stone_image = new Image(ss, ss);
+        stone_image.crossOrigin = "anonymous";
         stone_image.loading = "eager";
         stone_image.width = ss;
         stone_image.height = ss;
