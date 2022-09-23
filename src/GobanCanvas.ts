@@ -2959,7 +2959,11 @@ export class GobanCanvas extends GobanCore {
         try {
             /* ipads only allow a very small amount of memory to be allocated to canvases,
              * so we will be more aggressive about cleaning up the cache on those devices */
-            if (/iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent)) {
+            if (
+                /iP(ad|hone|od).+(Version\/[\d.]|OS \d.*like mac os x)+.*Safari/i.test(
+                    navigator.userAgent,
+                )
+            ) {
                 console.log("iOS device detected, reducing cache size");
                 max_cache_size = 12; // mini goban, main boards, 9x9, 13x13, 19x19 should account for 6. We double that for good measure for odd sizes and resizing.
             }
