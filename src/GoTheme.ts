@@ -79,7 +79,7 @@ export class GoTheme {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getWhiteStoneColor();
         ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
+        ctx.arc(cx, cy, Math.max(0.1, radius), 0, 2 * Math.PI, true);
         ctx.fill();
     }
 
@@ -94,7 +94,7 @@ export class GoTheme {
         //if (shadow_ctx) do something
         ctx.fillStyle = this.getBlackStoneColor();
         ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, 2 * Math.PI, true);
+        ctx.arc(cx, cy, Math.max(0.1, radius), 0, 2 * Math.PI, true);
         ctx.fill();
     }
 

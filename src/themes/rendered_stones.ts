@@ -287,7 +287,7 @@ export function renderShadow(
      * funky problems when we mask out the shadow and apply it underneath the
      * stone. (Without this we tend to see some funny artifacts) */
     //shadow_ctx.arc(radius*0.97, radius*0.97, radius*0.97, 0, 2*Math.PI, false);
-    shadow_ctx.arc(center, center, radius * 0.9, 0, 2 * Math.PI, false);
+    shadow_ctx.arc(center, center, Math.max(radius * 0.9, 0.1), 0, 2 * Math.PI, false);
     shadow_ctx.fill();
     clearAboveColor(shadow_ctx, sss, sss, 150, 150, 150);
 }
@@ -295,6 +295,7 @@ export function renderShadow(
 function preRenderStone(radius: number, seed: number, options: RenderOptions): StoneTypeArray {
     const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
+    radius = Math.max(0.1, radius);
 
     const ss = square_size(radius, dcsr !== 1.0);
     const center = stone_center_in_square(radius, dcsr !== 1.0);

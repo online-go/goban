@@ -1704,7 +1704,7 @@ export class GobanCanvas extends GobanCore {
                     ctx.arc(
                         cx,
                         cy,
-                        radius - lineWidth / 2,
+                        Math.max(0.1, radius - lineWidth / 2),
                         0.001,
                         2 * Math.PI,
                         false,
@@ -1990,7 +1990,7 @@ export class GobanCanvas extends GobanCore {
                 }
                 ctx.strokeStyle = symbol_color;
                 ctx.lineWidth = this.square_size * 0.075;
-                const r = this.square_size * this.circle_radius;
+                const r = Math.max(0.1, this.square_size * this.circle_radius);
                 ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
                 ctx.stroke();
                 ctx.restore();
@@ -2142,6 +2142,7 @@ export class GobanCanvas extends GobanCore {
                                 r = this.square_size * 0.3;
                             }
 
+                            r = Math.max(0.1, r);
                             ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
                             ctx.stroke();
                         }
