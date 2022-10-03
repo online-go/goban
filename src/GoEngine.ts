@@ -531,8 +531,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                 typeof window !== "undefined" &&
                 typeof (window as any)["user"] !== "undefined" &&
                 (window as any)["user"] &&
-                ((window as any)["user"].id as number) !== this.players.black.id &&
-                ((window as any)["user"].id as number) !== this.players.white.id
+                !this.isParticipant((window as any)["user"].id)
             ) {
                 this.disable_analysis = false;
                 this.config.disable_analysis = false;
