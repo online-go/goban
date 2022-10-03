@@ -365,6 +365,12 @@ export interface GobanHooks {
     plainBoardLineColor?: () => string;
     plainBoardUrl?: () => string;
 
+    canvasAllocationErrorHandler?: (
+        note: string | null,
+        total_allocations_made: number,
+        error?: Error,
+    ) => void;
+
     addCoordinatesToChatInput?: (coordinates: string) => void;
     updateScoreEstimation?: (
         est_winning_color: "black" | "white",

@@ -17,7 +17,7 @@
 import { GoTheme } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
-import { deviceCanvasScalingRatio } from "../GoUtil";
+import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../GoUtil";
 import { renderShadow } from "./rendered_stones";
 const anime_black_imagedata = makeSvgImageData(require("../../assets/img/anime_black.svg"));
 const anime_white_imagedata = makeSvgImageData(require("../../assets/img/anime_white.svg"));
@@ -72,13 +72,8 @@ export function preRenderImageStone(
 
         stone_image.src = url;
 
-        const stone = document.createElement("canvas");
-        stone.setAttribute("width", ss + "px");
-        stone.setAttribute("height", ss + "px");
-
-        const shadow = document.createElement("canvas");
-        shadow.setAttribute("width", sss + "px");
-        shadow.setAttribute("height", sss + "px");
+        const stone = allocateCanvasOrError(`${ss}px`, `${ss}px`);
+        const shadow = allocateCanvasOrError(`${sss}px`, `${sss}px`);
 
         const stone_load_promise = new Promise((resolve, reject) => {
             stone_image.onerror = reject;

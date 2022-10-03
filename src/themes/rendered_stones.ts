@@ -17,7 +17,7 @@
 import { GoTheme } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
-import { deviceCanvasScalingRatio } from "../GoUtil";
+import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../GoUtil";
 
 type StoneType = { stone: HTMLCanvasElement; shadow: HTMLCanvasElement };
 type StoneTypeArray = Array<StoneType>;
@@ -306,14 +306,8 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
     let ctx;
     let shadow_ctx;
     if (typeof document !== "undefined") {
-        stone = document.createElement("canvas");
-        stone.setAttribute("width", ss + "px");
-        stone.setAttribute("height", ss + "px");
-        shadow = document.createElement("canvas");
-        shadow.setAttribute("width", sss + "px");
-        shadow.setAttribute("height", sss + "px");
-        //stone = createDeviceScaledCanvas(ss, ss);
-        //shadow = createDeviceScaledCanvas(sss, sss);
+        stone = allocateCanvasOrError(`${ss}px`, `${ss}px`);
+        shadow = allocateCanvasOrError(`${sss}px`, `${sss}px`);
         ctx = stone.getContext("2d");
         shadow_ctx = shadow.getContext("2d");
 

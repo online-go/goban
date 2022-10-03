@@ -33,7 +33,11 @@ import { MoveTree } from "./MoveTree";
 import { GoTheme } from "./GoTheme";
 import { GoThemes } from "./GoThemes";
 import { MoveTreePenMarks } from "./MoveTree";
-import { createDeviceScaledCanvas, resizeDeviceScaledCanvas } from "./GoUtil";
+import {
+    createDeviceScaledCanvas,
+    resizeDeviceScaledCanvas,
+    allocateCanvasOrError,
+} from "./GoUtil";
 import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
@@ -3090,7 +3094,7 @@ export class GobanCanvas extends GobanCore {
         if (!this.move_tree_inner_container) {
             do_init = true;
             this.move_tree_inner_container = document.createElement("div");
-            this.move_tree_canvas = document.createElement("canvas");
+            this.move_tree_canvas = allocateCanvasOrError();
             this.move_tree_inner_container.appendChild(this.move_tree_canvas);
             this.move_tree_container.appendChild(this.move_tree_inner_container);
             this.move_tree_bindCanvasEvents(this.move_tree_canvas);

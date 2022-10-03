@@ -16,17 +16,91 @@
 
 import { _, interpolate } from "./translate";
 import { JGOFTimeControl } from "./JGOF";
+import { GobanCore } from "./GobanCore";
 
 let __deviceCanvasScalingRatio = 0;
+let canvases_allocated = 0;
+
+/** On iOS devices they limit the number of canvases we create to a a very low
+ * number and so sometimes we'll exhaust that limit. When this happens, we this
+ * method will detect that and call our GobanCore.canvasAllocationErrorHandler
+ * hook. On OGS we'll reload the page in that hook after logging the error.
+ *
+ * If string dimensions are used we'll use setAttribute, if numbers are used
+ * we'll set the canvas .width and .height parameter. This is for device
+ * scaling considerations when the given dimensions are scaled on HDPI devices.
+ */
+export function allocateCanvasOrError(
+    width?: number | string,
+    height?: number | string,
+): HTMLCanvasElement {
+    let canvas = null;
+    try {
+        canvas = document.createElement("canvas");
+        ++canvases_allocated;
+        //console.debug("Allocated canvas", canvases_allocated, "width", width, "height", height);
+    } catch (e) {
+        validateCanvas(null, e);
+    }
+
+    if (canvas && width && typeof width === "string") {
+        canvas.setAttribute("width", width);
+    } else if (canvas && width && typeof width === "number") {
+        canvas.width = width;
+    }
+
+    if (canvas && height && typeof height === "string") {
+        canvas.setAttribute("height", height);
+    } else if (canvas && height && typeof height === "number") {
+        canvas.height = height;
+    }
+
+    if (!validateCanvas(canvas)) {
+        return null as unknown as HTMLCanvasElement;
+    }
+    return canvas as HTMLCanvasElement;
+}
+
+/**
+ * Validates that a canvas was created successfully and a 2d context can be
+ * allocated for it. If not, we call the , and if not, calls the
+ * GobanCore.canvasAllocationErrorHandler hook.
+ */
+
+export function validateCanvas(canvas: HTMLCanvasElement | null, err?: Error): boolean {
+    let ctx = null;
+    let err_string = null;
+    if (!ctx) {
+        err_string = "Canvas allocation failed";
+    }
+    try {
+        if (!err && ctx) {
+            ctx = canvas?.getContext("2d");
+        }
+    } catch (e) {
+        err = e;
+    }
+
+    if (!err) {
+        if (!ctx) {
+            err_string = "Context allocation error";
+        }
+    }
+
+    if (err) {
+        if (GobanCore.hooks.canvasAllocationErrorHandler) {
+            GobanCore.hooks.canvasAllocationErrorHandler(err_string, canvases_allocated, err);
+        }
+        return false;
+    }
+    return true;
+}
 
 /* Creates a non-blury canvas object. Most systems don't have an issue with
  * this, but HDPI android devices deal with scaling canvases and images in a
  * retarded fashion and require this hack to get around it. */
 export function createDeviceScaledCanvas(width: number, height: number): HTMLCanvasElement {
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("width", `${width}px`);
-    canvas.setAttribute("height", `${height}px`);
-    return canvas;
+    return allocateCanvasOrError(`${width}px`, `${height}px`);
 }
 
 export function resizeDeviceScaledCanvas(
@@ -34,6 +108,8 @@ export function resizeDeviceScaledCanvas(
     width: number,
     height: number,
 ): HTMLCanvasElement {
+    validateCanvas(canvas);
+
     const context = canvas.getContext("2d");
     if (!context) {
         throw new Error(`Failed to get context for canvas`);
@@ -62,6 +138,8 @@ export function resizeDeviceScaledCanvas(
     canvas.style.width = width + "px";
     canvas.style.height = height + "px";
 
+    validateCanvas(canvas);
+
     try {
         // now scale the context to counter the fact that we've manually
         // scaled our canvas element
@@ -73,15 +151,15 @@ export function resizeDeviceScaledCanvas(
         console.warn(e);
     }
 
+    validateCanvas(canvas);
+
     return canvas;
 }
 
 export function deviceCanvasScalingRatio() {
     if (!__deviceCanvasScalingRatio) {
-        const canvas = document.createElement("canvas");
-        canvas.width = 257;
-        canvas.height = 257;
-        const context = (canvas as HTMLCanvasElement).getContext("2d");
+        const canvas = allocateCanvasOrError(257, 257);
+        const context = canvas.getContext("2d");
 
         const devicePixelRatio = window.devicePixelRatio || 1;
         const backingStoreRatio =
