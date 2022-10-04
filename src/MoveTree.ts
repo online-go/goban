@@ -390,6 +390,21 @@ export class MoveTree {
 
         return m;
     }
+    /*
+     * recursively walks the tree in depth-first manner, preorder
+     * - calls the `fn` function first on body
+     * - then on trunk
+     * - then branches
+     */
+    traverse(fn: (node: MoveTree) => void): void {
+        fn(this);
+        if (this.trunk_next) {
+            this.trunk_next.traverse(fn);
+        }
+        for (let i = 0; i < this.branches.length; ++i) {
+            this.branches[i].traverse(fn);
+        }
+    }
     next(dont_follow_hints?: boolean): MoveTree | null {
         if (this.trunk_next) {
             /* always follow a trunk first if it's available */
