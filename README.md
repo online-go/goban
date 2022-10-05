@@ -51,3 +51,23 @@ lrwxrwxrwx 1 root root 11 Oct  4 13:10 node_modules/goban -> ../../goban
 $ make
 ```
 
+
+# Running & Writing tests
+Is easy.
+
+## Deps
+Just install `jest` package (might need `sudo`):
+
+```
+$ npm install --save-dev jest
+```
+
+## Running and writing tests
+Tests live in `src/__tests__` directory, check it out & add Your own!
+To run tests:
+```
+# from root directory
+$ cd goban 
+$ npm test
+```
+
