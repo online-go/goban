@@ -283,7 +283,7 @@ export class GoMath {
                     if (mv instanceof Array && typeof mv[0] === "number") {
                         ret.push(decodeSingleMoveArray(mv as [number, number, number, number]));
                     } else {
-                        console.error("mv: ", mv);
+                        //console.error("mv: ", mv);
                         throw new Error(`Unrecognized move format: ${mv}`);
                     }
                 }
