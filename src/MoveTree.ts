@@ -76,6 +76,7 @@ let __move_tree_id = 0;
 let __isobranches_state_hash: { [hash: string]: Array<MoveTree> } =
     {}; /* used while finding isobranches */
 
+
 /* TODO: If we're on the server side, we shouldn't be doing anything with marks */
 export class MoveTree {
     public static readonly stone_radius = 11;
@@ -569,40 +570,40 @@ export class MoveTree {
         return str;
     }
     toSGF(): string {
-        let ret = "";
+        let ret = [];
 
         try {
-            let txt = "";
+            let txt = [];
             if (this.parent != null) {
-                ret += ";";
+                ret.push(";");
                 if (this.edited) {
-                    ret += "A";
+                    ret.push("A");
                 }
-                ret += this.player === 1 ? "B" : this.player === 2 ? "W" : "E";
+                ret.push(this.player === 1 ? "B" : this.player === 2 ? "W" : "E");
 
-                ret += "[";
+                ret.push("[");
                 if (this.x === -1) {
-                    ret += "";
+                    ret.push("");
                 } else {
-                    ret += "abcdefghijklmnopqrstuvwxyz"[this.x];
-                    ret += "abcdefghijklmnopqrstuvwxyz"[this.y];
+                    ret.push("abcdefghijklmnopqrstuvwxyz"[this.x]);
+                    ret.push("abcdefghijklmnopqrstuvwxyz"[this.y]);
                 }
-                ret += "]";
-                txt = this.text;
+                ret.push("]");
+                txt.push(this.text);
             }
 
             if (this.chatlog && this.chatlog.length) {
-                txt += "\n\n-- chat --\n";
+                txt.push("\n\n");
+                txt.push("-- chat --");
+                txt.push("\n");
                 for (let i = 0; i < this.chatlog.length; ++i) {
-                    txt +=
-                        this.chatlog[i].username +
-                        ": " +
-                        MoveTree.markupSGFChatMessage(
+                    txt.push(MoveTree.fmtUsername(this.chatlog[i].username));
+                    txt.push(MoveTree.markupSGFChatMessage(
                             this.chatlog[i].body,
                             this.engine.width,
                             this.engine.height,
-                        ) +
-                        "\n";
+                        ));
+                    txt.push("\n");
                 }
             }
 
@@ -613,45 +614,49 @@ export class MoveTree {
                         const pos =
                             "abcdefghijklmnopqrstuvwxyz"[x] + "abcdefghijklmnopqrstuvwxyz"[y];
                         if (m.triangle) {
-                            ret += "TR[" + pos + "]";
+                            ret.push("TR[" + pos + "]");
                         }
                         if (m.square) {
-                            ret += "SQ[" + pos + "]";
+                            ret.push("SQ[" + pos + "]");
                         }
                         if (m.cross) {
-                            ret += "MA[" + pos + "]";
+                            ret.push("MA[" + pos + "]");
                         }
                         if (m.circle) {
-                            ret += "CR[" + pos + "]";
+                            ret.push("CR[" + pos + "]");
                         }
                         if (m.letter) {
-                            ret += "LB[" + pos + ":" + escapeSGFText(m.letter) + "]";
+                            ret.push("LB[" + pos + ":" + escapeSGFText(m.letter) + "]");
                         }
                     }
                 }
             }
 
-            if (txt !== "") {
-                ret += "C[" + escapeSGFText(txt) + "]\n";
+            if (txt.length > 0) {
+                ret.push("C[" + escapeSGFText(txt.join('')) + "]\n");
             }
-            ret += "\n";
+            ret.push("\n");
 
             const brct = (this.trunk_next != null ? 1 : 0) + this.branches.length;
             const A = brct > 1 ? "(" : "";
             const B = brct > 1 ? ")" : "";
 
             if (this.trunk_next) {
-                ret += A + this.trunk_next.toSGF() + B;
+                ret.push(A);
+                ret.push(this.trunk_next.toSGF());
+                ret.push(B);
             }
             for (let i = 0; i < this.branches.length; ++i) {
-                ret += A + this.branches[i].toSGF() + B;
+                ret.push(A);
+                ret.push(this.branches[i].toSGF());
+                ret.push(B);
             }
         } catch (e) {
             console.log(e);
             throw e;
         }
 
-        return ret;
+        return ret.join("");
     }
     get stoneColor(): "black" | "white" | "empty" {
         switch (this.player) {
@@ -969,13 +974,18 @@ export class MoveTree {
 
         return `${message}`;
     }
+    static fmtUsername(
+        username: string,
+    ): string {
+        return username ? username + ": " : "";
+    }
     static escapedSGFChat(
         username: string,
         message: MoveTreeChatLineBody | string,
         width: number,
         height: number,
     ): string {
-        var txt = (username ? username + ": " : "") + MoveTree.markupSGFChatMessage(message, width, height);
+        var txt = MoveTree.fmtUsername(username) + MoveTree.markupSGFChatMessage(message, width, height);
         return escapeSGFText(txt);
     }
     static markupSGFChat(
@@ -984,7 +994,7 @@ export class MoveTree {
         width: number,
         height: number,
     ): string {
-        return "C[" + escapedSGFChat(username, message, width, height) + "]\n";
+        return "C[" + MoveTree.escapedSGFChat(username, message, width, height) + "]\n";
     }
     static markupSGFChatWithoutNode(
         username: string,
@@ -992,6 +1002,6 @@ export class MoveTree {
         width: number,
         height: number,
     ): string {
-        return escapedSGFChat(username, message, width, height) + "\n";
+        return MoveTree.escapedSGFChat(username, message, width, height) + "\n";
     }
 }
