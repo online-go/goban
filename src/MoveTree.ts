@@ -19,6 +19,7 @@ import { GoEngine, GoEngineState } from "./GoEngine";
 import { encodeMove } from "./GoEngine";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
+import { escapeSGFText } from "./Misc";
 
 export interface MarkInterface {
     triangle?: boolean;
@@ -624,25 +625,14 @@ export class MoveTree {
                             ret += "CR[" + pos + "]";
                         }
                         if (m.letter) {
-                            ret +=
-                                "LB[" +
-                                pos +
-                                ":" +
-                                m.letter
-                                    .replace(/[\\]/, "\\\\")
-                                    .replace(/\]/g, "\\]")
-                                    .replace(/[[]/g, "\\[") +
-                                "]";
+                            ret += "LB[" + pos + ":" + escapeSGFText(m.letter) + "]";
                         }
                     }
                 }
             }
 
             if (txt !== "") {
-                ret +=
-                    "C[" +
-                    txt.replace(/[\\]/, "\\\\").replace(/\]/g, "\\]").replace(/[[]/g, "\\[") +
-                    "\n]\n";
+                ret += "C[" + escapeSGFText(txt) + "]\n";
             }
             ret += "\n";
 
@@ -979,23 +969,22 @@ export class MoveTree {
 
         return `${message}`;
     }
+    static escapedSGFChat(
+        username: string,
+        message: MoveTreeChatLineBody | string,
+        width: number,
+        height: number,
+    ): string {
+        var txt = (username ? username + ": " : "") + MoveTree.markupSGFChatMessage(message, width, height);
+        return escapeSGFText(txt);
+    }
     static markupSGFChat(
         username: string,
         message: MoveTreeChatLineBody | string,
         width: number,
         height: number,
     ): string {
-        return (
-            "C[" +
-            (
-                (username ? username + ": " : "") +
-                MoveTree.markupSGFChatMessage(message, width, height)
-            )
-                .replace(/[\\]/, "\\\\")
-                .replace(/\]/g, "\\]")
-                .replace(/[[]/g, "\\[") +
-            "\n]\n"
-        );
+        return "C[" + escapedSGFChat(username, message, width, height) + "]\n";
     }
     static markupSGFChatWithoutNode(
         username: string,
@@ -1003,14 +992,6 @@ export class MoveTree {
         width: number,
         height: number,
     ): string {
-        return (
-            (
-                (username ? username + ": " : "") +
-                MoveTree.markupSGFChatMessage(message, width, height)
-            )
-                .replace(/[\\]/, "\\\\")
-                .replace(/\]/g, "\\]")
-                .replace(/[[]/g, "\\[") + "\n"
-        );
+        return escapedSGFChat(username, message, width, height) + "\n";
     }
 }
