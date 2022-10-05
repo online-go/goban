@@ -76,7 +76,6 @@ let __move_tree_id = 0;
 let __isobranches_state_hash: { [hash: string]: Array<MoveTree> } =
     {}; /* used while finding isobranches */
 
-
 /* TODO: If we're on the server side, we shouldn't be doing anything with marks */
 export class MoveTree {
     public static readonly stone_radius = 11;
@@ -598,7 +597,13 @@ export class MoveTree {
                 txt.push("\n");
                 for (let i = 0; i < this.chatlog.length; ++i) {
                     txt.push(MoveTree.fmtUsername(this.chatlog[i].username));
-                    txt.push(MoveTree.markupSGFChatMessage(this.chatlog[i].body, this.engine.width, this.engine.height));
+                    txt.push(
+                        MoveTree.markupSGFChatMessage(
+                            this.chatlog[i].body,
+                            this.engine.width,
+                            this.engine.height,
+                        ),
+                    );
                     txt.push("\n");
                 }
             }
@@ -628,7 +633,7 @@ export class MoveTree {
             }
 
             if (txt.length > 0) {
-                ret.push("C[" + escapeSGFText(txt.join('')) + "]\n");
+                ret.push("C[" + escapeSGFText(txt.join("")) + "]\n");
             }
             ret.push("\n");
 
@@ -979,7 +984,8 @@ export class MoveTree {
         width: number,
         height: number,
     ): string {
-        let txt = MoveTree.fmtUsername(username) + MoveTree.markupSGFChatMessage(message, width, height);
+        const txt =
+            MoveTree.fmtUsername(username) + MoveTree.markupSGFChatMessage(message, width, height);
         return escapeSGFText(txt);
     }
     static markupSGFChat(
