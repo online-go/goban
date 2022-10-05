@@ -1,5 +1,6 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+
 # Current state
 
 *Warning* This code base has been extracted from the online-go.com source code
@@ -8,6 +9,14 @@ some moderinization of the rest of the site. Until v 1.0 is released of this
 library, it is not recommended to make use of it as much overhaul is happening
 to improve usability on sites other than online-go.com.
 
+
+# Before PR
+
+- be sure you are able to replicate / test what you are fixing :-)
+- write tests for your code if possible, see the test section below
+- be ready for CI check on PR:
+	- run tests `npm test`
+	- run prettify `npm prettier`
 
 # Dev setup
 
@@ -70,4 +79,5 @@ To run tests:
 $ cd goban 
 $ npm test
 ```
+
 
