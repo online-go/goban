@@ -585,8 +585,8 @@ export class MoveTree {
                 if (this.x === -1) {
                     ret.push("");
                 } else {
-                    ret.push("abcdefghijklmnopqrstuvwxyz"[this.x]);
-                    ret.push("abcdefghijklmnopqrstuvwxyz"[this.y]);
+                    ret.push(GoMath.coor_num2ch(this.x));
+                    ret.push(GoMath.coor_num2ch(this.y));
                 }
                 ret.push("]");
                 txt.push(this.text);
@@ -611,8 +611,7 @@ export class MoveTree {
                 for (let y = 0; y < this.marks.length; ++y) {
                     for (let x = 0; x < this.marks[0].length; ++x) {
                         const m = this.marks[y][x];
-                        const pos =
-                            "abcdefghijklmnopqrstuvwxyz"[x] + "abcdefghijklmnopqrstuvwxyz"[y];
+                        const pos = GoMath.coor_num2ch(x) + GoMath.coor_num2ch(y);
                         if (m.triangle) {
                             ret.push("TR[" + pos + "]");
                         }

@@ -211,9 +211,29 @@ export class GoMath {
         }
         return ret;
     }
+    public static readonly COOR_SEQ = "abcdefghijklmnopqrstuvwxyz";
+
+    public static coor_ch2num(ch: string): number {
+        return GoMath.COOR_SEQ.indexOf(ch?.toLowerCase());
+    }
+
+    public static coor_num2ch(coor: number): string {
+        return GoMath.COOR_SEQ[coor];
+    }
+
+    public static readonly PRETTY_COOR_SEQ = "abcdefghjklmnopqrstuvwxyz";
+
+    public static pretty_coor_ch2num(ch: string): number {
+        return GoMath.PRETTY_COOR_SEQ.indexOf(ch.toLowerCase());
+    }
+
+    public static pretty_coor_num2ch(coor: number): string {
+        return GoMath.PRETTY_COOR_SEQ[coor];
+    }
+
     public static prettyCoords(x: number, y: number, board_height: number): string {
         if (x >= 0) {
-            return "ABCDEFGHJKLMNOPQRSTUVWXYZ"[x] + ("" + (board_height - y));
+            return GoMath.pretty_coor_num2ch(x)?.toUpperCase() + ("" + (board_height - y));
         }
         return "pass";
     }
@@ -222,7 +242,7 @@ export class GoMath {
             return { x: -1, y: -1 };
         }
         let y = height - parseInt(move.substr(1));
-        const x = "ABCDEFGHJKLMNOPQRSTUVWXYZ".indexOf(move[0].toUpperCase());
+        const x = GoMath.pretty_coor_ch2num(move[0]);
         if (x === -1) {
             y = -1;
         }
@@ -364,19 +384,19 @@ export class GoMath {
         if (ch === ".") {
             return -1;
         }
-        return "abcdefghijklmnopqrstuvwxyz".indexOf(ch);
+        return GoMath.coor_ch2num(ch);
     }
     private static pretty_char2num(ch: string): number {
         if (ch === ".") {
             return -1;
         }
-        return "abcdefghjklmnopqrstuvwxyz".indexOf(ch.toLowerCase());
+        return GoMath.pretty_coor_ch2num(ch);
     }
     public static num2char(num: number): string {
         if (num === -1) {
             return ".";
         }
-        return "abcdefghijklmnopqrstuvwxyz"[num];
+        return GoMath.coor_num2ch(num);
     }
     public static encodeMove(x: number | Move, y?: number): string {
         if (typeof x === "number") {
