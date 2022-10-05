@@ -224,7 +224,7 @@ export class GoMath {
     public static readonly PRETTY_COOR_SEQ = "abcdefghjklmnopqrstuvwxyz";
 
     public static pretty_coor_ch2num(ch: string): number {
-        return GoMath.PRETTY_COOR_SEQ.indexOf(ch.toLowerCase());
+        return GoMath.PRETTY_COOR_SEQ.indexOf(ch?.toLowerCase());
     }
 
     public static pretty_coor_num2ch(coor: number): string {
