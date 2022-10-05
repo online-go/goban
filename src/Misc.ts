@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export function escapeSGFText(txt: string): string{
+export function escapeSGFText(txt: string): string {
     // escape slashes first
     // 'blah\blah' -> 'blah\\blah'
     txt = txt.replace(/\\/g, "\\\\");

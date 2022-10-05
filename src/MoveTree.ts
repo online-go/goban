@@ -570,10 +570,10 @@ export class MoveTree {
         return str;
     }
     toSGF(): string {
-        let ret = [];
+        const ret = [];
 
         try {
-            let txt = [];
+            const txt = [];
             if (this.parent != null) {
                 ret.push(";");
                 if (this.edited) {
@@ -598,11 +598,7 @@ export class MoveTree {
                 txt.push("\n");
                 for (let i = 0; i < this.chatlog.length; ++i) {
                     txt.push(MoveTree.fmtUsername(this.chatlog[i].username));
-                    txt.push(MoveTree.markupSGFChatMessage(
-                            this.chatlog[i].body,
-                            this.engine.width,
-                            this.engine.height,
-                        ));
+                    txt.push(MoveTree.markupSGFChatMessage(this.chatlog[i].body, this.engine.width, this.engine.height));
                     txt.push("\n");
                 }
             }
@@ -973,9 +969,8 @@ export class MoveTree {
 
         return `${message}`;
     }
-    static fmtUsername(
-        username: string,
-    ): string {
+
+    static fmtUsername(username: string): string {
         return username ? username + ": " : "";
     }
     static escapedSGFChat(
@@ -984,7 +979,7 @@ export class MoveTree {
         width: number,
         height: number,
     ): string {
-        var txt = MoveTree.fmtUsername(username) + MoveTree.markupSGFChatMessage(message, width, height);
+        let txt = MoveTree.fmtUsername(username) + MoveTree.markupSGFChatMessage(message, width, height);
         return escapeSGFText(txt);
     }
     static markupSGFChat(
