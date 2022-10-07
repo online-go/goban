@@ -2,52 +2,41 @@
 
 # Current state
 
-*Warning* This code base has been extracted from the online-go.com source code
+_Warning_ This code base has been extracted from the online-go.com source code
 where it was highly integrated and minimally touched for many years even during
 some moderinization of the rest of the site. Until v 1.0 is released of this
 library, it is not recommended to make use of it as much overhaul is happening
 to improve usability on sites other than online-go.com.
 
-
 # Dev setup
 
-## 1. Using local clone of `goban`
+## 1. Building `goban`
 
-If You want to use Your local clone of the `goban` repo in ogs ui, You need to link the repo to `npm`.
-```
-# need to run the command from the ui dir:
-$ cd online-go.com
-$ sudo npm link ../goban
-```
-
-If you wanna unlink later (to go back to the default version), you can run:
-```
-$ sudo npm unlink goban
-```
-
-## 2. Building `goban`
-You need to compile goban: 
+If you have `make` installed you can simply run
 
 ```
-$ cd goban
-
-# dependencies (your mileage may vary based on what you have, or have not installed already)
-$ sudo npm install --global yarn
-$ yarn add webpack-cli --dev
-
-# build the goban module
-$ make
-```
-## 3. Run local copy of `ui` with `goban`
-
-```
-$ cd online-go.com
-
-# check the goban module
-$ ls -l node_modules/goban
-lrwxrwxrwx 1 root root 11 Oct  4 13:10 node_modules/goban -> ../../goban
-
-# run the ui
-$ make
+make
 ```
 
+Or, you can build and run manually using
+
+```
+yarn install
+yarn run dev
+```
+
+(`yarn install` is only necessary the first time you start working on the project,
+or whenever dependencies are updated)
+
+## 2. Using local clone of `goban` while working on online-go.com
+
+From your `goban` directory run
+
+`yarn link`
+
+From the `online-go.com` directory run
+
+`yarn link goban`
+
+Once done done, your online-go.com development environment will use your development
+`goban` code.
