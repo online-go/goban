@@ -568,6 +568,12 @@ export class MoveTree {
         }
         return str;
     }
+	/*
+	 * sgf serialization
+	 *
+	 * this is probably currently unused, as the closed-source backend does
+	 * its own serialization, so only 
+	 */
     toSGF(): string {
         const ret = [];
 
@@ -628,14 +634,15 @@ export class MoveTree {
                         if (m.letter) {
                             // https://www.red-bean.com/sgf/properties.html
                             // LB is composed type of simple text (== no newlines, escaped colon)
-                            ret.push("LB[" + pos + ":" + newline2space(escapeSGFText(m.letter, true)) + "]");
+                            const body = newline2space(escapeSGFText(m.letter, true));
+                            ret.push("LB[" + pos + ":" + body + "]");
                         }
                     }
                 }
             }
             const comment = txt.join("");
             if (comment !== "") {
-                ret.push("C[" + escapeSGFText(comment) + "]\n");
+                ret.push("C[" + escapeSGFText(comment) + "]");
             }
             ret.push("\n");
 
@@ -999,6 +1006,9 @@ export class MoveTree {
     ): string {
         return "C[" + MoveTree.escapedSGFChat(username, message, width, height) + "]\n";
     }
+	/*
+	 * this is used on backend to serialize chat line
+	 */
     static markupSGFChatWithoutNode(
         username: string,
         message: MoveTreeChatLineBody | string,
