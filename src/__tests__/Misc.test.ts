@@ -34,4 +34,3 @@ test("escapeSGFText handles colon iff need be", () => {
 test("newline2space replaces what it should", () => {
     expect(newline2space("hello\nlucky\r\nboy")).toBe("hello lucky  boy");
 });
-
