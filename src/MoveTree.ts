@@ -568,12 +568,6 @@ export class MoveTree {
         }
         return str;
     }
-	/*
-	 * sgf serialization
-	 *
-	 * this is probably currently unused, as the closed-source backend does
-	 * its own serialization, so only 
-	 */
     toSGF(): string {
         const ret = [];
 
@@ -1006,9 +1000,9 @@ export class MoveTree {
     ): string {
         return "C[" + MoveTree.escapedSGFChat(username, message, width, height) + "]\n";
     }
-	/*
-	 * this is used on backend to serialize chat line
-	 */
+    /*
+     * this is used on backend to serialize chat line
+     */
     static markupSGFChatWithoutNode(
         username: string,
         message: MoveTreeChatLineBody | string,
