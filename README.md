@@ -38,5 +38,5 @@ From the `online-go.com` directory run
 
 `yarn link goban`
 
-Once done done, your online-go.com development environment will use your development
+Once done, your online-go.com development environment will use your development
 `goban` code.
