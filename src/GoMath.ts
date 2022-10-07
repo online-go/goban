@@ -221,10 +221,10 @@ export class GoMath {
         return GoMath.COOR_SEQ[coor];
     }
 
-    public static readonly PRETTY_COOR_SEQ = "abcdefghjklmnopqrstuvwxyz";
+    public static readonly PRETTY_COOR_SEQ = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 
     public static pretty_coor_ch2num(ch: string): number {
-        return GoMath.PRETTY_COOR_SEQ.indexOf(ch?.toLowerCase());
+        return GoMath.PRETTY_COOR_SEQ.indexOf(ch?.toUpperCase());
     }
 
     public static pretty_coor_num2ch(coor: number): string {
@@ -233,7 +233,7 @@ export class GoMath {
 
     public static prettyCoords(x: number, y: number, board_height: number): string {
         if (x >= 0) {
-            return GoMath.pretty_coor_num2ch(x)?.toUpperCase() + ("" + (board_height - y));
+            return GoMath.pretty_coor_num2ch(x) + ("" + (board_height - y));
         }
         return "pass";
     }

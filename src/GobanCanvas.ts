@@ -2644,7 +2644,7 @@ export class GobanCanvas extends GobanCore {
                                 this.square_size +
                             this.square_size / 2;
                         const y = j * this.square_size + this.square_size / 2;
-                        place(GoMath.pretty_coor_num2ch(c)?.toUpperCase(), x, y);
+                        place(GoMath.pretty_coor_num2ch(c), x, y);
                     }
                     break;
                 case "1-1":
