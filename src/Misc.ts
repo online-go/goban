@@ -45,11 +45,16 @@ export function escapeSGFText(txt: string, escapeColon: boolean = false): string
     // parsing SGF properties, so the remaining [ are safely treated as text
     //txt = txt.replace(/[/g, "\\[");
 
-    // escape whitespace except newline & carriage return by space
+    // sub whitespace except newline & carriage return by space
     txt = txt.replace(/[^\S\r\n]/g, " ");
 
     if (escapeColon) {
         txt = txt.replace(/:/g, "\\:");
     }
     return txt;
+}
+
+// in SGF simple text, we also need to get rid of the newlines
+export function newline2space(txt: string): string {
+    return txt.replace(/[\r\n]/g, " ");
 }

@@ -1,4 +1,4 @@
-import { escapeSGFText } from "../Misc";
+import { escapeSGFText, newline2space } from "../Misc";
 
 // String.raw`...` is the real string
 // (without js interpreting \, of which we have a ton)
@@ -30,3 +30,8 @@ test("escapeSGFText handles colon iff need be", () => {
     expect(escapeSGFText("AC:AE")).toBe("AC:AE");
     expect(escapeSGFText("AC:AE", true)).toBe(String.raw`AC\:AE`);
 });
+
+test("newline2space replaces what it should", () => {
+    expect(newline2space("hello\nlucky\r\nboy")).toBe("hello lucky  boy");
+});
+

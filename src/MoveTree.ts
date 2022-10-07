@@ -19,7 +19,7 @@ import { GoEngine, GoEngineState } from "./GoEngine";
 import { encodeMove } from "./GoEngine";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
-import { escapeSGFText } from "./Misc";
+import { escapeSGFText, newline2space } from "./Misc";
 
 export interface MarkInterface {
     triangle?: boolean;
@@ -626,7 +626,9 @@ export class MoveTree {
                             ret.push("CR[" + pos + "]");
                         }
                         if (m.letter) {
-                            ret.push("LB[" + pos + ":" + escapeSGFText(m.letter) + "]");
+                            // https://www.red-bean.com/sgf/properties.html
+                            // LB is composed type of simple text (== no newlines, escaped colon)
+                            ret.push("LB[" + pos + ":" + newline2space(escapeSGFText(m.letter, true)) + "]");
                         }
                     }
                 }
