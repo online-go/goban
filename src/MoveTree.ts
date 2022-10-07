@@ -632,7 +632,7 @@ export class MoveTree {
                 }
             }
             const comment = txt.join("");
-            if (comment != "") {
+            if (comment !== "") {
                 ret.push("C[" + escapeSGFText(comment) + "]\n");
             }
             ret.push("\n");
