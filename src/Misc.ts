@@ -14,7 +14,23 @@
  * limitations under the License.
  */
 
-export function escapeSGFText(txt: string): string {
+/*
+ * SPEC: https://www.red-bean.com/sgf/sgf4.html#text
+ *
+ * in sgf (as per spec):
+ * - slash is an escape char
+ * - closing bracket is a special symbol
+ * - whitespaces other than space & newline should be converted to space
+ * - in compose data type, we should also escape ':'
+ *   (but that is only used in special SGFproperties)
+ *
+ * so we gotta:
+ * - escape (double) all slashes in the text (so that they do not have the special meaning)
+ * - escape any closing brackets ] (as it closes e.g. the comment section)
+ * - replace whitespace
+ * - [opt] handle colon
+ */
+export function escapeSGFText(txt: string, escapeColon: boolean = false): string {
     // escape slashes first
     // 'blah\blah' -> 'blah\\blah'
     txt = txt.replace(/\\/g, "\\\\");
@@ -28,5 +44,12 @@ export function escapeSGFText(txt: string): string {
     //   ^ after it finds the first [, it is only looking for the closing bracket
     // parsing SGF properties, so the remaining [ are safely treated as text
     //txt = txt.replace(/[/g, "\\[");
+
+    // escape whitespace except newline & carriage return by space
+    txt = txt.replace(/[^\S\r\n]/g, " ");
+
+    if (escapeColon) {
+        txt = txt.replace(/:/g, "\\:");
+    }
     return txt;
 }
