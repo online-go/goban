@@ -631,9 +631,9 @@ export class MoveTree {
                     }
                 }
             }
-
-            if (txt.length > 0) {
-                ret.push("C[" + escapeSGFText(txt.join("")) + "]\n");
+            const comment = txt.join("");
+            if (comment != "") {
+                ret.push("C[" + escapeSGFText(comment) + "]\n");
             }
             ret.push("\n");
 
@@ -972,6 +972,7 @@ export class MoveTree {
             console.log(e);
         }
 
+        // TODO FIXME: here lives https://github.com/online-go/online-go.com/issues/1518
         return `${message}`;
     }
 
