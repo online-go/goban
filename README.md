@@ -16,7 +16,7 @@ to improve usability on sites other than online-go.com.
 - write tests for your code if possible, see the test section below
 - be ready for CI check on PR:
 	- run tests `npm test`
-	- run prettify `npm prettier`
+	- run prettify `npm run prettier`
 
 # Dev setup
 
@@ -40,9 +40,9 @@ You need to compile goban:
 ```
 $ cd goban
 
-# dependencies (your mileage may vary based on what you have, or have not installed already)
+# dependencies
 $ sudo npm install --global yarn
-$ yarn add webpack-cli --dev
+$ yarn install
 
 # build the goban module
 $ make
