@@ -514,4 +514,168 @@ export class GoMath {
         });
         return GoMath.encodeMoves(moves);
     }
+
+    // This is intended to be an "easy to understand" method of generating a unique id
+    // for a board position.
+
+    // The id is the list of all the positions of the stones.
+
+    // There are in fact 8 possible ways to list the positions (all the rotations and
+    // reflections of the position).   The id is the lowest (alpha-numerically) of these.
+
+    // The "easy to understand" part is that the id can be compared visually to the
+    // board position
+
+    // The downside is that the id string can be moderately long for boards with lots of stones
+
+    public static positionId(
+        position: Array<Array<JGOFNumericPlayerColor>>,
+        height: number,
+        width: number,
+    ): string {
+        // The basic algorithm: list where the stones are, in a long string :)
+        let black_state = "";
+        let white_state = "";
+        for (let row = 0; row < height; row++) {
+            for (let col = 0; col < width; col++) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state += "B" + this.prettyCoords(row, col, height);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state += "W" + this.prettyCoords(row, col, height);
+                }
+            }
+        }
+        let this_way = `${white_state}.${black_state}`;
+        let id = this_way;
+        // console.log("calc, id:", this_way, id);
+
+        // Take care of identical positions that are rotated/reflected: calculate
+        // using the same algorithm for each of the 8 transformations, and chose the
+        // alphanumerically shortest version as the actual id...
+
+        black_state = "";
+        white_state = "";
+        for (let row = height - 1; row >= 0; row--) {
+            for (let col = 0; col < width; col++) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state += "B" + this.prettyCoords(height - row - 1, col, height);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state += "W" + this.prettyCoords(height - row - 1, col, height);
+                }
+            }
+        }
+
+        this_way = `${white_state}.${black_state}`;
+        id = this_way < id ? this_way : id;
+        // console.log("calc, id:", this_way, id);
+
+        black_state = "";
+        white_state = "";
+        for (let row = 0; row < height; row++) {
+            for (let col = width - 1; col >= 0; col--) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state += "B" + this.prettyCoords(row, width - col - 1, height);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state += "W" + this.prettyCoords(row, width - col - 1, height);
+                }
+            }
+        }
+
+        this_way = `${white_state}.${black_state}`;
+        id = this_way < id ? this_way : id;
+        //console.log("calc, id:", this_way, id);
+
+        black_state = "";
+        white_state = "";
+        for (let row = height - 1; row >= 0; row--) {
+            for (let col = width - 1; col >= 0; col--) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state +=
+                        "B" + this.prettyCoords(height - row - 1, width - col - 1, height);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state +=
+                        "W" + this.prettyCoords(height - row - 1, width - col - 1, height);
+                }
+            }
+        }
+
+        this_way = `${white_state}.${black_state}`;
+        id = this_way < id ? this_way : id;
+        // console.log("calc, id:", this_way, id);
+
+        black_state = "";
+        white_state = "";
+        for (let row = 0; row < height; row++) {
+            for (let col = 0; col < width; col++) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state += "B" + this.prettyCoords(col, row, width);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state += "W" + this.prettyCoords(col, row, width);
+                }
+            }
+        }
+        this_way = `${white_state}.${black_state}`;
+        id = this_way < id ? this_way : id;
+        // console.log("calc, id:", this_way, id);
+
+        black_state = "";
+        white_state = "";
+        for (let row = height - 1; row >= 0; row--) {
+            for (let col = 0; col < width; col++) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state += "B" + this.prettyCoords(col, height - row - 1, width);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state += "W" + this.prettyCoords(col, height - row - 1, width);
+                }
+            }
+        }
+
+        this_way = `${white_state}.${black_state}`;
+        id = this_way < id ? this_way : id;
+        // console.log("calc, id:", this_way, id);
+
+        black_state = "";
+        white_state = "";
+        for (let row = 0; row < height; row++) {
+            for (let col = width - 1; col >= 0; col--) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state += "B" + this.prettyCoords(width - col - 1, row, width);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state += "W" + this.prettyCoords(width - col - 1, row, width);
+                }
+            }
+        }
+
+        this_way = `${white_state}.${black_state}`;
+        id = this_way < id ? this_way : id;
+        // console.log("calc, id:", this_way, id);
+
+        black_state = "";
+        white_state = "";
+        for (let row = height - 1; row >= 0; row--) {
+            for (let col = width - 1; col >= 0; col--) {
+                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
+                    black_state +=
+                        "B" + this.prettyCoords(width - col - 1, height - row - 1, width);
+                }
+                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
+                    white_state +=
+                        "W" + this.prettyCoords(width - col - 1, height - row - 1, width);
+                }
+            }
+        }
+
+        this_way = `${white_state}.${black_state}`;
+        id = this_way < id ? this_way : id;
+        //console.log("calc, id:", this_way, id);
+
+        return id;
+    }
 }
