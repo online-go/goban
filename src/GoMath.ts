@@ -569,12 +569,8 @@ export class GoMath {
                     }
                 }
             }
-            const this_id =
-                black_state < white_state
-                    ? `${black_state}:${white_state}`
-                    : `${white_state}:${black_state}`;
 
-            ids.push(this_id);
+            ids.push(`${black_state}.${white_state}`);
         }
 
         return ids.reduce((prev, current) => (current < prev ? current : prev));

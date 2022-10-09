@@ -8,7 +8,7 @@ type Testcase = {
     id: string;
 };
 
-const TEST_BOARDS = [
+const TEST_BOARDS: Array<Testcase> = [
     {
         // easy to understand single stone position
         height: 7,
@@ -22,10 +22,10 @@ const TEST_BOARDS = [
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
+        id: "bc.",
     },
     {
-        // previous position rotated and reflected: should be
+        // previous position rotated: should be
         // the same id as previous
         height: 7,
         width: 7,
@@ -38,7 +38,7 @@ const TEST_BOARDS = [
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
+        id: "bc.",
     },
     {
         // Here follow the other 6 reflection/rotations ( DRY pedants look the other way...)
@@ -53,7 +53,7 @@ const TEST_BOARDS = [
             [0, 0, 1, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
+        id: "bc.",
     },
     {
         height: 7,
@@ -67,7 +67,7 @@ const TEST_BOARDS = [
             [0, 0, 0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
+        id: "bc.",
     },
     {
         height: 7,
@@ -81,7 +81,7 @@ const TEST_BOARDS = [
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
+        id: "bc.",
     },
     {
         height: 7,
@@ -95,7 +95,7 @@ const TEST_BOARDS = [
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
+        id: "bc.",
     },
     {
         height: 7,
@@ -109,7 +109,7 @@ const TEST_BOARDS = [
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
+        id: "bc.",
     },
     {
         height: 7,
@@ -123,22 +123,7 @@ const TEST_BOARDS = [
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         ],
-        id: ":bc",
-    },
-    {
-        // Test colour independence
-        height: 7,
-        width: 7,
-        board: [
-            [0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0],
-            [0, 2, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0],
-        ],
-        id: ":bc",
+        id: "bc.",
     },
     {
         // Test a board with more stones
@@ -153,29 +138,10 @@ const TEST_BOARDS = [
             [0, 0, 0, 1, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 2],
         ],
-        id: "abdgfd:bccfeega",
+        id: "abdgfd.bccfeega",
     },
-    {
-        // Same board, opposite colours
-        height: 7,
-        width: 7,
-        board: [
-            [0, 0, 0, 0, 0, 2, 0],
-            [0, 0, 0, 0, 1, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0],
-            [2, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 2, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1],
-        ],
-        id: "abdgfd:bccfeega",
-    },
-] as Array<Testcase>;
+];
 
-test("Position IDs", () => {
-    TEST_BOARDS.forEach((testcase: Testcase) => {
-        expect(GoMath.positionId(testcase.board, testcase.height, testcase.width)).toEqual(
-            testcase.id,
-        );
-    });
+test.each(TEST_BOARDS)("Position IDs", ({ board, height, width, id }) => {
+    expect(GoMath.positionId(board, height, width)).toEqual(id);
 });
