@@ -539,10 +539,10 @@ export class GoMath {
         for (let row = 0; row < height; row++) {
             for (let col = 0; col < width; col++) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += "B" + this.prettyCoords(row, col, height);
+                    black_state += this.prettyCoords(row, col, height);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += "W" + this.prettyCoords(row, col, height);
+                    white_state += this.prettyCoords(row, col, height);
                 }
             }
         }
@@ -559,10 +559,10 @@ export class GoMath {
         for (let row = height - 1; row >= 0; row--) {
             for (let col = 0; col < width; col++) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += "B" + this.prettyCoords(height - row - 1, col, height);
+                    black_state += this.prettyCoords(height - row - 1, col, height);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += "W" + this.prettyCoords(height - row - 1, col, height);
+                    white_state += this.prettyCoords(height - row - 1, col, height);
                 }
             }
         }
@@ -576,10 +576,10 @@ export class GoMath {
         for (let row = 0; row < height; row++) {
             for (let col = width - 1; col >= 0; col--) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += "B" + this.prettyCoords(row, width - col - 1, height);
+                    black_state += this.prettyCoords(row, width - col - 1, height);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += "W" + this.prettyCoords(row, width - col - 1, height);
+                    white_state += this.prettyCoords(row, width - col - 1, height);
                 }
             }
         }
@@ -593,12 +593,10 @@ export class GoMath {
         for (let row = height - 1; row >= 0; row--) {
             for (let col = width - 1; col >= 0; col--) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state +=
-                        "B" + this.prettyCoords(height - row - 1, width - col - 1, height);
+                    black_state += this.prettyCoords(height - row - 1, width - col - 1, height);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state +=
-                        "W" + this.prettyCoords(height - row - 1, width - col - 1, height);
+                    white_state += this.prettyCoords(height - row - 1, width - col - 1, height);
                 }
             }
         }
@@ -612,10 +610,10 @@ export class GoMath {
         for (let row = 0; row < height; row++) {
             for (let col = 0; col < width; col++) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += "B" + this.prettyCoords(col, row, width);
+                    black_state += this.prettyCoords(col, row, width);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += "W" + this.prettyCoords(col, row, width);
+                    white_state += this.prettyCoords(col, row, width);
                 }
             }
         }
@@ -628,10 +626,10 @@ export class GoMath {
         for (let row = height - 1; row >= 0; row--) {
             for (let col = 0; col < width; col++) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += "B" + this.prettyCoords(col, height - row - 1, width);
+                    black_state += this.prettyCoords(col, height - row - 1, width);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += "W" + this.prettyCoords(col, height - row - 1, width);
+                    white_state += this.prettyCoords(col, height - row - 1, width);
                 }
             }
         }
@@ -645,10 +643,10 @@ export class GoMath {
         for (let row = 0; row < height; row++) {
             for (let col = width - 1; col >= 0; col--) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += "B" + this.prettyCoords(width - col - 1, row, width);
+                    black_state += this.prettyCoords(width - col - 1, row, width);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += "W" + this.prettyCoords(width - col - 1, row, width);
+                    white_state += this.prettyCoords(width - col - 1, row, width);
                 }
             }
         }
@@ -662,12 +660,10 @@ export class GoMath {
         for (let row = height - 1; row >= 0; row--) {
             for (let col = width - 1; col >= 0; col--) {
                 if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state +=
-                        "B" + this.prettyCoords(width - col - 1, height - row - 1, width);
+                    black_state += this.prettyCoords(width - col - 1, height - row - 1, width);
                 }
                 if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state +=
-                        "W" + this.prettyCoords(width - col - 1, height - row - 1, width);
+                    white_state += this.prettyCoords(width - col - 1, height - row - 1, width);
                 }
             }
         }
