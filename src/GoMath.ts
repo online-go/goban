@@ -35,6 +35,8 @@ export interface BoardState {
     ) => void;
 }
 
+type BoardTransform = (x: number, y: number) => { x: number; y: number };
+
 export class GoMath {
     private state: BoardState;
     public group_id_map: Array<Array<number>>;
@@ -518,10 +520,14 @@ export class GoMath {
     // This is intended to be an "easy to understand" method of generating a unique id
     // for a board position.
 
-    // The id is the list of all the positions of the stones.
+    // The "id" is the list of all the positions of the stones, black first then white,
+    // separated by a colon.
 
     // There are in fact 8 possible ways to list the positions (all the rotations and
     // reflections of the position).   The id is the lowest (alpha-numerically) of these.
+
+    // Colour independence for the position is achieved by takeing the lexically lower
+    // of the ids of the position with black and white reversed.
 
     // The "easy to understand" part is that the id can be compared visually to the
     // board position
@@ -533,145 +539,44 @@ export class GoMath {
         height: number,
         width: number,
     ): string {
-        // The basic algorithm: list where the stones are, in a long string :)
-        let black_state = "";
-        let white_state = "";
-        for (let row = 0; row < height; row++) {
-            for (let col = 0; col < width; col++) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(row, col, height);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(row, col, height);
+        // The basic algorithm is to list where each of the stones are, in a long string.
+        // We do this once for each transform, selecting the lowest (lexixally) as we go.
+
+        const tforms: Array<BoardTransform> = [
+            (x, y) => ({ x, y }),
+            (x, y) => ({ x, y: height - y - 1 }),
+            (x, y) => ({ x: y, y: x }),
+            (x, y) => ({ x: y, y: width - x - 1 }),
+            (x, y) => ({ x: height - y - 1, y: x }),
+            (x, y) => ({ x: height - y - 1, y: width - x - 1 }),
+            (x, y) => ({ x: width - x - 1, y }),
+            (x, y) => ({ x: width - x - 1, y: height - y - 1 }),
+        ];
+
+        const ids = [];
+
+        for (const tform of tforms) {
+            let black_state = "";
+            let white_state = "";
+            for (let x = 0; x < width; x++) {
+                for (let y = 0; y < height; y++) {
+                    const c = tform(x, y);
+                    if (position[x][y] === JGOFNumericPlayerColor.BLACK) {
+                        black_state += GoMath.encodeMove(c.x, c.y);
+                    }
+                    if (position[x][y] === JGOFNumericPlayerColor.WHITE) {
+                        white_state += GoMath.encodeMove(c.x, c.y);
+                    }
                 }
             }
-        }
-        let this_way = `${white_state}.${black_state}`;
-        let id = this_way;
-        // console.log("calc, id:", this_way, id);
+            const this_id =
+                black_state < white_state
+                    ? `${black_state}:${white_state}`
+                    : `${white_state}:${black_state}`;
 
-        // Take care of identical positions that are rotated/reflected: calculate
-        // using the same algorithm for each of the 8 transformations, and chose the
-        // alphanumerically shortest version as the actual id...
-
-        black_state = "";
-        white_state = "";
-        for (let row = height - 1; row >= 0; row--) {
-            for (let col = 0; col < width; col++) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(height - row - 1, col, height);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(height - row - 1, col, height);
-                }
-            }
+            ids.push(this_id);
         }
 
-        this_way = `${white_state}.${black_state}`;
-        id = this_way < id ? this_way : id;
-        // console.log("calc, id:", this_way, id);
-
-        black_state = "";
-        white_state = "";
-        for (let row = 0; row < height; row++) {
-            for (let col = width - 1; col >= 0; col--) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(row, width - col - 1, height);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(row, width - col - 1, height);
-                }
-            }
-        }
-
-        this_way = `${white_state}.${black_state}`;
-        id = this_way < id ? this_way : id;
-        //console.log("calc, id:", this_way, id);
-
-        black_state = "";
-        white_state = "";
-        for (let row = height - 1; row >= 0; row--) {
-            for (let col = width - 1; col >= 0; col--) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(height - row - 1, width - col - 1, height);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(height - row - 1, width - col - 1, height);
-                }
-            }
-        }
-
-        this_way = `${white_state}.${black_state}`;
-        id = this_way < id ? this_way : id;
-        // console.log("calc, id:", this_way, id);
-
-        black_state = "";
-        white_state = "";
-        for (let row = 0; row < height; row++) {
-            for (let col = 0; col < width; col++) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(col, row, width);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(col, row, width);
-                }
-            }
-        }
-        this_way = `${white_state}.${black_state}`;
-        id = this_way < id ? this_way : id;
-        // console.log("calc, id:", this_way, id);
-
-        black_state = "";
-        white_state = "";
-        for (let row = height - 1; row >= 0; row--) {
-            for (let col = 0; col < width; col++) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(col, height - row - 1, width);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(col, height - row - 1, width);
-                }
-            }
-        }
-
-        this_way = `${white_state}.${black_state}`;
-        id = this_way < id ? this_way : id;
-        // console.log("calc, id:", this_way, id);
-
-        black_state = "";
-        white_state = "";
-        for (let row = 0; row < height; row++) {
-            for (let col = width - 1; col >= 0; col--) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(width - col - 1, row, width);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(width - col - 1, row, width);
-                }
-            }
-        }
-
-        this_way = `${white_state}.${black_state}`;
-        id = this_way < id ? this_way : id;
-        // console.log("calc, id:", this_way, id);
-
-        black_state = "";
-        white_state = "";
-        for (let row = height - 1; row >= 0; row--) {
-            for (let col = width - 1; col >= 0; col--) {
-                if (position[row][col] === JGOFNumericPlayerColor.BLACK) {
-                    black_state += this.prettyCoords(width - col - 1, height - row - 1, width);
-                }
-                if (position[row][col] === JGOFNumericPlayerColor.WHITE) {
-                    white_state += this.prettyCoords(width - col - 1, height - row - 1, width);
-                }
-            }
-        }
-
-        this_way = `${white_state}.${black_state}`;
-        id = this_way < id ? this_way : id;
-        //console.log("calc, id:", this_way, id);
-
-        return id;
+        return ids.reduce((prev, current) => (current < prev ? current : prev));
     }
 }
