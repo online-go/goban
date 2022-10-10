@@ -19,6 +19,7 @@ import { GoEngine, GoEngineState } from "./GoEngine";
 import { encodeMove } from "./GoEngine";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
+import { escapeSGFText, newline2space } from "./Misc";
 
 export interface MarkInterface {
     triangle?: boolean;
@@ -568,40 +569,42 @@ export class MoveTree {
         return str;
     }
     toSGF(): string {
-        let ret = "";
+        const ret = [];
 
         try {
-            let txt = "";
+            const txt = [];
             if (this.parent != null) {
-                ret += ";";
+                ret.push(";");
                 if (this.edited) {
-                    ret += "A";
+                    ret.push("A");
                 }
-                ret += this.player === 1 ? "B" : this.player === 2 ? "W" : "E";
+                ret.push(this.player === 1 ? "B" : this.player === 2 ? "W" : "E");
 
-                ret += "[";
+                ret.push("[");
                 if (this.x === -1) {
-                    ret += "";
+                    ret.push("");
                 } else {
-                    ret += "abcdefghijklmnopqrstuvwxyz"[this.x];
-                    ret += "abcdefghijklmnopqrstuvwxyz"[this.y];
+                    ret.push(GoMath.coor_num2ch(this.x));
+                    ret.push(GoMath.coor_num2ch(this.y));
                 }
-                ret += "]";
-                txt = this.text;
+                ret.push("]");
+                txt.push(this.text);
             }
 
             if (this.chatlog && this.chatlog.length) {
-                txt += "\n\n-- chat --\n";
+                txt.push("\n\n");
+                txt.push("-- chat --");
+                txt.push("\n");
                 for (let i = 0; i < this.chatlog.length; ++i) {
-                    txt +=
-                        this.chatlog[i].username +
-                        ": " +
+                    txt.push(MoveTree.fmtUsername(this.chatlog[i].username));
+                    txt.push(
                         MoveTree.markupSGFChatMessage(
                             this.chatlog[i].body,
                             this.engine.width,
                             this.engine.height,
-                        ) +
-                        "\n";
+                        ),
+                    );
+                    txt.push("\n");
                 }
             }
 
@@ -609,59 +612,54 @@ export class MoveTree {
                 for (let y = 0; y < this.marks.length; ++y) {
                     for (let x = 0; x < this.marks[0].length; ++x) {
                         const m = this.marks[y][x];
-                        const pos =
-                            "abcdefghijklmnopqrstuvwxyz"[x] + "abcdefghijklmnopqrstuvwxyz"[y];
+                        const pos = GoMath.coor_num2ch(x) + GoMath.coor_num2ch(y);
                         if (m.triangle) {
-                            ret += "TR[" + pos + "]";
+                            ret.push("TR[" + pos + "]");
                         }
                         if (m.square) {
-                            ret += "SQ[" + pos + "]";
+                            ret.push("SQ[" + pos + "]");
                         }
                         if (m.cross) {
-                            ret += "MA[" + pos + "]";
+                            ret.push("MA[" + pos + "]");
                         }
                         if (m.circle) {
-                            ret += "CR[" + pos + "]";
+                            ret.push("CR[" + pos + "]");
                         }
                         if (m.letter) {
-                            ret +=
-                                "LB[" +
-                                pos +
-                                ":" +
-                                m.letter
-                                    .replace(/[\\]/, "\\\\")
-                                    .replace(/\]/g, "\\]")
-                                    .replace(/[[]/g, "\\[") +
-                                "]";
+                            // https://www.red-bean.com/sgf/properties.html
+                            // LB is composed type of simple text (== no newlines, escaped colon)
+                            const body = newline2space(escapeSGFText(m.letter, true));
+                            ret.push("LB[" + pos + ":" + body + "]");
                         }
                     }
                 }
             }
-
-            if (txt !== "") {
-                ret +=
-                    "C[" +
-                    txt.replace(/[\\]/, "\\\\").replace(/\]/g, "\\]").replace(/[[]/g, "\\[") +
-                    "\n]\n";
+            const comment = txt.join("");
+            if (comment !== "") {
+                ret.push("C[" + escapeSGFText(comment) + "]");
             }
-            ret += "\n";
+            ret.push("\n");
 
             const brct = (this.trunk_next != null ? 1 : 0) + this.branches.length;
             const A = brct > 1 ? "(" : "";
             const B = brct > 1 ? ")" : "";
 
             if (this.trunk_next) {
-                ret += A + this.trunk_next.toSGF() + B;
+                ret.push(A);
+                ret.push(this.trunk_next.toSGF());
+                ret.push(B);
             }
             for (let i = 0; i < this.branches.length; ++i) {
-                ret += A + this.branches[i].toSGF() + B;
+                ret.push(A);
+                ret.push(this.branches[i].toSGF());
+                ret.push(B);
             }
         } catch (e) {
             console.log(e);
             throw e;
         }
 
-        return ret;
+        return ret.join("");
     }
     get stoneColor(): "black" | "white" | "empty" {
         switch (this.player) {
@@ -977,7 +975,22 @@ export class MoveTree {
             console.log(e);
         }
 
+        // TODO FIXME: here lives https://github.com/online-go/online-go.com/issues/1518
         return `${message}`;
+    }
+
+    static fmtUsername(username: string): string {
+        return username ? username + ": " : "";
+    }
+    static escapedSGFChat(
+        username: string,
+        message: MoveTreeChatLineBody | string,
+        width: number,
+        height: number,
+    ): string {
+        const txt =
+            MoveTree.fmtUsername(username) + MoveTree.markupSGFChatMessage(message, width, height);
+        return escapeSGFText(txt);
     }
     static markupSGFChat(
         username: string,
@@ -985,32 +998,17 @@ export class MoveTree {
         width: number,
         height: number,
     ): string {
-        return (
-            "C[" +
-            (
-                (username ? username + ": " : "") +
-                MoveTree.markupSGFChatMessage(message, width, height)
-            )
-                .replace(/[\\]/, "\\\\")
-                .replace(/\]/g, "\\]")
-                .replace(/[[]/g, "\\[") +
-            "\n]\n"
-        );
+        return "C[" + MoveTree.escapedSGFChat(username, message, width, height) + "]\n";
     }
+    /*
+     * this is used on backend to serialize chat line
+     */
     static markupSGFChatWithoutNode(
         username: string,
         message: MoveTreeChatLineBody | string,
         width: number,
         height: number,
     ): string {
-        return (
-            (
-                (username ? username + ": " : "") +
-                MoveTree.markupSGFChatMessage(message, width, height)
-            )
-                .replace(/[\\]/, "\\\\")
-                .replace(/\]/g, "\\]")
-                .replace(/[[]/g, "\\[") + "\n"
-        );
+        return MoveTree.escapedSGFChat(username, message, width, height) + "\n";
     }
 }

@@ -1,5 +1,6 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+
 # Current state
 
 _Warning_ This code base has been extracted from the online-go.com source code
@@ -40,3 +41,19 @@ From the `online-go.com` directory run
 
 Once done, your online-go.com development environment will use your development
 `goban` code.
+
+
+# Before PR
+
+Be ready for CI check on PR:
+  - run tests `npm test`
+  - run prettify `npm run prettier`
+
+
+# Running & Writing tests
+
+Tests live in `src/__tests__` directory, check it out & add Your own!
+To run tests:
+```
+npm test
+```
