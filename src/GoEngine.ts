@@ -786,6 +786,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return true;
     }
 
+    public currentPositionId(): string {
+        return GoMath.positionId(this.board, this.height, this.width);
+    }
+
     public followPath(
         from_turn: number,
         moves: AdHocPackedMove | string,
