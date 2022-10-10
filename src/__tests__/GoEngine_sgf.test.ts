@@ -11,36 +11,48 @@
 
 import { TestGoban } from "../TestGoban";
 
-const SGF_TEMPLATES = {
-    unicode:
-        "(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2] RU[Japanese]SZ[19]KM[0.00]PW[White]PB[Black]_MOVES_)",
-    honinbo:
-        "(;FF[4]GM[1]SZ[19]AP[]US[]EV[74th Honinbo challenger decision match]PC[]PB[Shibano Toramaru]BR[7d]PW[Kono Rin]WR[9d]KM[6.5]RE[W+1.5]DT[2019-04-10]TM[0]_MOVES_)",
+type SGFTestcase = {
+    template: string;
+    moves: string;
+    id: string;
 };
 
-const SGF_MOVES = {
-    unicode: ";W[aa]C[příliš žluťoučký kůň úpěl ďábelské ódy];W[pd]",
-    honinbo: ";B[pd];W[dp];B[pq];W[dc];B[ce];W[cg];B[cq];W[cp];B[dq];W[fq]",
-};
+const SGF_TEST_CASES: Array<SGFTestcase> = [
+    {
+        template:
+            "(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2] RU[Japanese]SZ[19]KM[0.00]PW[White]PB[Black]_MOVES_)",
+        moves: ";W[aa]C[příliš žluťoučký kůň úpěl ďábelské ódy];W[pd]",
+        id: "unicode",
+    },
+    {
+        template:
+            "(;FF[4]GM[1]SZ[19]AP[]US[]EV[74th Honinbo challenger decision match]PC[]PB[Shibano Toramaru]BR[7d]PW[Kono Rin]WR[9d]KM[6.5]RE[W+1.5]DT[2019-04-10]TM[0]_MOVES_)",
+        moves: ";B[pd];W[dp];B[pq];W[dc];B[ce];W[cg];B[cq];W[cp];B[dq];W[fq]",
+        id: "honinbo game",
+    },
+];
 
 function rmNewlines(txt: string): string {
     return txt.replace(/[\n\r]/g, "");
 }
 /*
  * check that parse -> serialize roundtrip generates the same sgf
- * (at least for the moves)
+ * (at least for the moves so far)
  */
-test("sgf -> parseSGF() -> toSGF() roundtrip (moves only)", () => {
-    Object.entries(SGF_TEMPLATES).forEach(([key, template], index) => {
-        const moves_ori = (SGF_MOVES as any)[key];
-        const sgf = template.replace(/_MOVES_/, moves_ori);
+test.each(SGF_TEST_CASES)(
+    "sgf -> parseSGF() -> toSGF() roundtrip (moves only)",
+    ({ template, moves, id }) => {
+        const sgf = template.replace(/_MOVES_/, moves);
         const goban = new TestGoban({ original_sgf: sgf, removed: "" });
+        // by default, `edited = true` when `original_sgf` is used, which causes
+        // the moves to be serialized as setup SGF props `AB` & `AW`.
+        // Instead, we need `B` and `W`, thus we set edited to false for each node.
         goban.engine.move_tree.traverse((node) => (node.edited = false));
 
         const moves_gen = goban.engine.move_tree.toSGF();
-        expect(rmNewlines(moves_gen)).toBe(rmNewlines(moves_ori));
-    });
-});
+        expect(rmNewlines(moves_gen)).toBe(rmNewlines(moves));
+    },
+);
 
 /*
  * check that whatever moves we play, we get them back in sgf
