@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { _ } from "translate";
+import { _ } from "./translate";
 import type { GobanMoveErrorMessageId } from "./GobanError";
 
 export type MessageID =
