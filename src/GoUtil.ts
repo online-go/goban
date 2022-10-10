@@ -63,28 +63,31 @@ export function allocateCanvasOrError(
 
 /**
  * Validates that a canvas was created successfully and a 2d context can be
- * allocated for it. If not, we call the , and if not, calls the
- * GobanCore.canvasAllocationErrorHandler hook.
+ * allocated for it. If not, we call the GobanCore.canvasAllocationErrorHandler
+ * hook.
  */
 
 export function validateCanvas(canvas: HTMLCanvasElement | null, err?: Error): boolean {
     let ctx = null;
-    let err_string = null;
-    if (!ctx) {
-        err_string = "Canvas allocation failed";
-    }
-    try {
-        if (!err && ctx) {
-            ctx = canvas?.getContext("2d");
+    let err_string = err ? "Initial error" : null;
+    if (!canvas) {
+        err_string = err_string || "Canvas allocation failed";
+        err = err || new Error(err_string);
+    } else {
+        try {
+            ctx = canvas.getContext("2d");
+        } catch (e) {
+            err_string = err_string || "Canvas context allocation failed";
+            err = err || e;
         }
-    } catch (e) {
-        err = e;
     }
 
-    if (!err) {
-        if (!ctx) {
-            err_string = "Context allocation error";
-        }
+    if (!ctx) {
+        err_string = err_string || "getContext('2d') failed";
+    }
+
+    if (err_string && !err) {
+        err = new Error(err_string);
     }
 
     if (err) {
