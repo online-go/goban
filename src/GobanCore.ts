@@ -53,6 +53,7 @@ declare let swal: any;
 
 export const GOBAN_FONT = "Verdana,Arial,sans-serif";
 
+declare const CLIENT: boolean;
 export const SCORE_ESTIMATION_TRIALS = 1000;
 export const SCORE_ESTIMATION_TOLERANCE = 0.3;
 export const MARK_TYPES: Array<keyof MarkInterface> = [
@@ -4116,8 +4117,10 @@ class FocusTracker {
 
     constructor() {
         try {
-            window.addEventListener("blur", this.onBlur);
-            window.addEventListener("focus", this.onFocus);
+            if (CLIENT) {
+                window.addEventListener("blur", this.onBlur);
+                window.addEventListener("focus", this.onFocus);
+            }
         } catch (e) {
             console.error(e);
         }
