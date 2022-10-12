@@ -426,7 +426,7 @@ export class ScoreEstimator {
      * OGSScoreEstimatorModule */
     private estimateScoreWASM(trials: number, tolerance: number): Promise<void> {
         if (!OGSScoreEstimator_initialized) {
-            throw new Error("Score estimator not intialized yet");
+            throw new Error("Score estimator not intialized yet, uptime = " + performance.now());
         }
 
         if (!trials) {
