@@ -2993,6 +2993,11 @@ export class GobanCanvas extends GobanCore {
 
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];
         this.theme_black_stones = __theme_cache.black[themes.black][this.theme_stone_radius];
+        if (!this.theme_white_stones || !this.theme_black_stones) {
+            throw new Error(
+                "Failed to load stone images for given radius" + this.theme_stone_radius,
+            );
+        }
         this.theme_line_color = this.theme_board.getLineColor();
         this.theme_faded_line_color = this.theme_board.getFadedLineColor();
         this.theme_star_color = this.theme_board.getStarColor();
@@ -3334,6 +3339,12 @@ export class GobanCanvas extends GobanCore {
 
         const theme_white_stones = __theme_cache.white[this.themes.white][MoveTree.stone_radius];
         const theme_black_stones = __theme_cache.black[this.themes.black][MoveTree.stone_radius];
+
+        if (!theme_white_stones || !theme_black_stones) {
+            throw new Error(
+                "Failed to load stone images for given radius" + this.theme_stone_radius,
+            );
+        }
 
         if (color === 1) {
             const stone = theme_black_stones[stone_idx % theme_black_stones.length];

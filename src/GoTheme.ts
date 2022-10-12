@@ -102,10 +102,16 @@ export class GoTheme {
      * random one, if there are multiple images, otherwise whatever was
      * returned by the pre-render method */
     public getStone(x: number, y: number, stones: any, _goban: GobanCore): any {
-        if (Array.isArray(stones)) {
-            return stones[((x + 1) * 53 * ((y + 1) * 97)) % stones.length];
+        const ret = Array.isArray(stones)
+            ? stones[((x + 1) * 53 * ((y + 1) * 97)) % stones.length]
+            : stones;
+
+        if (!ret) {
+            console.error("No stone returned for ", x, y, stones);
+            throw new Error("Failed to get stone for " + x + ", " + y);
         }
-        return stones;
+
+        return ret;
     }
 
     /* Resolve which stone graphic we should use. By default we just pick a
