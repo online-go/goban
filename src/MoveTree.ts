@@ -497,7 +497,7 @@ export class MoveTree {
             return this.trunk_next;
         }
         for (let i = 0; i < this.branches.length; ++i) {
-            let child = this.branches[i];
+            const child = this.branches[i];
             if (predicate(child)) {
                 return child;
             }
@@ -513,8 +513,10 @@ export class MoveTree {
     containsOtherTreeAsChild(other: MoveTree): boolean {
         // there can be at most one candidate children to look for the subtree
         // so the only candidate is the one child that has matching root
-        let candidate = this.findChildWhich((myChild) => myChild.hasTheSameRootMoveAs(other));
-        if (candidate == null) return false;
+        const candidate = this.findChildWhich((myChild) => myChild.hasTheSameRootMoveAs(other));
+        if (candidate == null) {
+            return false;
+        }
         // it also needs to have all children recursively
         return candidate.hasAllChildrenOf(other);
     }
@@ -522,11 +524,15 @@ export class MoveTree {
     hasAllChildrenOf(other: MoveTree): boolean {
         // in order to contain all children of other, we need to:
         // a) contain other's trunk as a subset
-        if (other.trunk_next && !this.containsOtherTreeAsChild(other.trunk_next)) return false;
+        if (other.trunk_next && !this.containsOtherTreeAsChild(other.trunk_next)) {
+            return false;
+        }
         // b) contain all the branches
         for (let i = 0; i < other.branches.length; ++i) {
-            let otherChild = other.branches[i];
-            if (!this.containsOtherTreeAsChild(otherChild)) return false;
+            const otherChild = other.branches[i];
+            if (!this.containsOtherTreeAsChild(otherChild)) {
+                return false;
+            }
         }
         return true;
     }

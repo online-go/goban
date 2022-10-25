@@ -2159,7 +2159,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
 
         /* This must be done last as it will invoke the appropriate .set actions to set the board in it's correct state */
-        let old_engine = this.engine;
+        const old_engine = this.engine;
 
         // we need to have an engine to be able to keep it
         keep_old_engine = keep_old_engine && old_engine !== null && old_engine !== undefined;
@@ -2172,7 +2172,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         // NOTE: the construction needs to be side-effect free, because we might not use the new state
         // so we create the engine twice (in case where keep_old_engine = false)
         // here, it is created without the callback to `this` so that it cannot mess things up
-        let new_engine = new GoEngine(config);
+        const new_engine = new GoEngine(config);
 
         if (old_engine) {
             console.log("old size", old_engine.move_tree.size());
