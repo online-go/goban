@@ -406,6 +406,38 @@ export class MoveTree {
             this.branches[i].traverse(fn);
         }
     }
+    /*
+     * fold a tree in preorder manner
+     *
+     * tree
+     *
+     * A - B - C - D
+     *  \    \
+     *   F    E
+     *
+     * gets folded as
+     *
+     * ((((((z + A) + B) + C) + D) + E) + F)
+     */
+    fold<T>(acc: T, plus: (acc: T, node: MoveTree) => T): T {
+        let val = plus(acc, this);
+        if (this.trunk_next) {
+            val = this.trunk_next.fold(val, plus);
+        }
+        for (let i = 0; i < this.branches.length; ++i) {
+            val = this.branches[i].fold(val, plus);
+        }
+        return val;
+    }
+
+    /*
+     * number of nodes in the tree
+     * (including the empty node in the root)
+     */
+    size(): number {
+        return this.fold(0, (acc, node) => acc + 1);
+    }
+
     next(dont_follow_hints?: boolean): MoveTree | null {
         if (this.trunk_next) {
             /* always follow a trunk first if it's available */
@@ -455,6 +487,50 @@ export class MoveTree {
     is(other?: MoveTree): boolean {
         return !!(other && this.id === other.id);
     }
+
+    hasTheSameRootMoveAs(other: MoveTree): boolean {
+        return this.x === other.x && this.y === other.y && this.player === other.player;
+    }
+
+    findChildWhich(predicate: (node: MoveTree) => boolean): MoveTree | null {
+        if (this.trunk_next && predicate(this.trunk_next)) {
+            return this.trunk_next;
+        }
+        for (let i = 0; i < this.branches.length; ++i) {
+            let child = this.branches[i];
+            if (predicate(child)) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    containsOtherTreeAsSubset(other: MoveTree): boolean {
+        // we contain a other tree as a subset iff
+        return this.hasTheSameRootMoveAs(other) && this.hasAllChildrenOf(other);
+    }
+
+    containsOtherTreeAsChild(other: MoveTree): boolean {
+        // there can be at most one candidate children to look for the subtree
+        // so the only candidate is the one child that has matching root
+        let candidate = this.findChildWhich((myChild) => myChild.hasTheSameRootMoveAs(other));
+        if (candidate == null) return false;
+        // it also needs to have all children recursively
+        return candidate.hasAllChildrenOf(other);
+    }
+
+    hasAllChildrenOf(other: MoveTree): boolean {
+        // in order to contain all children of other, we need to:
+        // a) contain other's trunk as a subset
+        if (other.trunk_next && !this.containsOtherTreeAsChild(other.trunk_next)) return false;
+        // b) contain all the branches
+        for (let i = 0; i < other.branches.length; ++i) {
+            let otherChild = other.branches[i];
+            if (!this.containsOtherTreeAsChild(otherChild)) return false;
+        }
+        return true;
+    }
+
     remove(): MoveTree {
         if (!this.parent) {
             throw new Error(`Cannot remove MoveTree child without a parent`);
