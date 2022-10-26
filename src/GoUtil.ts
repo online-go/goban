@@ -311,39 +311,43 @@ export function elementOffset(element: HTMLElement): { top: number; left: number
     };
 }
 
+function averageMovesPerGame(w: number, h: number): number {
+    // Rough estimate based on discussion at https://forums.online-go.com/t/average-game-length-on-different-board-sizes/35042/11
+    return Math.round(0.7 * w * h);
+}
+
 export function computeAverageMoveTime(
     time_control: JGOFTimeControl,
-    old_time_per_move?: number,
+    w?: number,
+    h?: number,
 ): number {
-    if (old_time_per_move) {
-        return old_time_per_move;
-    }
     if (typeof time_control !== "object") {
         console.warn(
             `computAverageMoveTime passed ${time_control} instead of a time_control object`,
         );
         return time_control;
     }
+    const moves = w != null && h != null ? averageMovesPerGame(w, h) / 2 : 90;
 
     try {
-        let t;
+        let t: number;
         switch (time_control.system) {
             case "fischer":
-                t = time_control.initial_time / 90 + time_control.time_increment;
+                t = time_control.initial_time / moves + time_control.time_increment;
                 break;
             case "byoyomi":
-                t = time_control.main_time / 90 + time_control.period_time;
+                t = time_control.main_time / moves + time_control.period_time;
                 break;
             case "simple":
                 t = time_control.per_move;
                 break;
             case "canadian":
                 t =
-                    time_control.main_time / 90 +
+                    time_control.main_time / moves +
                     time_control.period_time / time_control.stones_per_period;
                 break;
             case "absolute":
-                t = time_control.total_time / 90;
+                t = time_control.total_time / moves;
                 break;
             case "none":
                 t = 0;
