@@ -123,13 +123,13 @@ function checkPath(path: string): MoveTree {
 
 test("toSGF() simple path && tree subsets", () => {
     const path = "aabbccddee";
-    let mt1 = checkPath(path);
+    const mt1 = checkPath(path);
 
     const path2 = "aabbccdd";
-    let mt2 = checkPath(path2);
+    const mt2 = checkPath(path2);
 
     const path3 = "aabbddcc";
-    let mt3 = checkPath(path3);
+    const mt3 = checkPath(path3);
 
     expect(mt1.containsOtherTreeAsSubset(mt2)).toBe(true);
     expect(mt2.containsOtherTreeAsSubset(mt1)).toBe(false);
