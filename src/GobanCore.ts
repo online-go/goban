@@ -4097,7 +4097,7 @@ function repair_config(config: GobanConfig): GobanConfig {
             );
         }
         if (!config.time_control.speed) {
-            const tpm = computeAverageMoveTime(config.time_control);
+            const tpm = computeAverageMoveTime(config.time_control, config.width, config.height);
             (config.time_control as any).speed =
                 tpm === 0 || tpm > 3600 ? "correspondence" : tpm < 10 ? "blitz" : "live";
             console.log(
