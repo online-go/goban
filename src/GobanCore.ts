@@ -2082,8 +2082,15 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             (this.config as any)[k] = (config as any)[k];
         }
         this.clearMessage();
-        this.width = config.width || 19;
-        this.height = config.height || 19;
+
+        const new_width = config.width || 19;
+        const new_height = config.height || 19;
+        // this signalizes that we can keep the old engine
+        // we progressively && more and more conditions
+        let keep_old_engine = new_width === this.width && new_height === this.height;
+        this.width = new_width;
+        this.height = new_height;
+
         delete this.move_selected;
 
         this.bounds = config.bounds || {
@@ -2153,14 +2160,54 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
         /* This must be done last as it will invoke the appropriate .set actions to set the board in it's correct state */
         const old_engine = this.engine;
-        this.engine = new GoEngine(config, this);
-        this.engine.parentEventEmitter = this;
-        this.engine.getState_callback = () => {
-            return this.getState();
-        };
-        this.engine.setState_callback = (state) => {
-            return this.setState(state);
-        };
+
+        // we need to have an engine to be able to keep it
+        keep_old_engine = keep_old_engine && old_engine !== null && old_engine !== undefined;
+        // we only keep the old engine in analyze mode & finished state
+        // JM: this keep_old_engine functionality is being added to fix resetting analyze state on network
+        // reconnect
+        keep_old_engine =
+            keep_old_engine && this.mode === "analyze" && old_engine.phase === "finished";
+
+        // NOTE: the construction needs to be side-effect free, because we might not use the new state
+        // so we create the engine twice (in case where keep_old_engine = false)
+        // here, it is created without the callback to `this` so that it cannot mess things up
+        const new_engine = new GoEngine(config);
+
+        if (old_engine) {
+            console.log("old size", old_engine.move_tree.size());
+            console.log("new size", new_engine.move_tree.size());
+            console.log(
+                "old contains new",
+                old_engine.move_tree.containsOtherTreeAsSubset(new_engine.move_tree),
+            );
+            console.log(
+                "new contains old",
+                new_engine.move_tree.containsOtherTreeAsSubset(old_engine.move_tree),
+            );
+        }
+
+        // more sanity checks
+        keep_old_engine = keep_old_engine && old_engine.phase === new_engine.phase;
+        // just to be on the safe side,
+        // we only keep the old engine, if replacing it with new would not bring no new moves
+        // (meaning: old has at least all the moves of new one, possibly more == such as the analysis)
+        keep_old_engine =
+            keep_old_engine && old_engine.move_tree.containsOtherTreeAsSubset(new_engine.move_tree);
+
+        if (!keep_old_engine) {
+            // we create the engine anew, this time with the callback argument,
+            // in case the constructor some side effects on `this`
+            // (JM: which it currently does)
+            this.engine = new GoEngine(config, this);
+            this.engine.parentEventEmitter = this;
+            this.engine.getState_callback = () => {
+                return this.getState();
+            };
+            this.engine.setState_callback = (state) => {
+                return this.setState(state);
+            };
+        }
 
         this.paused_since = config.paused_since;
         this.pause_control = config.pause_control;
