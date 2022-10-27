@@ -327,7 +327,7 @@ export function computeAverageMoveTime(
         );
         return time_control;
     }
-    const moves = w != null && h != null ? averageMovesPerGame(w, h) / 2 : 90;
+    const moves = w && h ? averageMovesPerGame(w, h) / 2 : 90;
 
     try {
         let t: number;
