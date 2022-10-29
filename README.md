@@ -49,6 +49,11 @@ Be ready for CI check on PR:
   - run tests `npm test`
   - run prettify `npm run prettier`
 
+[Optional] You can also set up a pre-commit to run checks locally before you commit:
+
+```
+npx husky install
+```
 
 # Running & Writing tests
 
