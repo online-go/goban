@@ -697,6 +697,9 @@ export class GobanCanvas extends GobanCore {
         ) {
             return;
         }
+        if (right_click) {
+            return; // we do not have any actions bound to right clicks
+        }
 
         const pos = getRelativeEventPosition(event);
         const xx = pos.x;
@@ -850,7 +853,7 @@ export class GobanCanvas extends GobanCore {
                     puzzle_mode = s.mode;
                     if (s.mode === "setup") {
                         color = s.color;
-                        if (this.shift_key_is_down || right_click) {
+                        if (this.shift_key_is_down) {
                             color = color === 1 ? 2 : 1;
                         }
                     }
