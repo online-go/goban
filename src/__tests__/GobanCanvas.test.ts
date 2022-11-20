@@ -112,4 +112,43 @@ describe("onTap", () => {
             [0, 0, 0],
         ]);
     });
+
+    test("shift clicking in analyze mode jumps to move", () => {
+        const goban = new GobanCanvas({
+            width: 3,
+            height: 3,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+            moves: [
+                [0, 0],
+                [1, 0],
+                [2, 0],
+            ],
+            mode: "analyze",
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+        const mouse_event = new MouseEvent("click", {
+            clientX: 25,
+            clientY: 15,
+            shiftKey: true,
+        });
+
+        expect(goban.engine.board).toEqual([
+            [1, 2, 1],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        expect(goban.engine.cur_move.move_number).toBe(3);
+
+        canvas.dispatchEvent(mouse_event);
+
+        // These are the important expectations
+        expect(goban.engine.board).toEqual([
+            [1, 2, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        expect(goban.engine.cur_move.move_number).toBe(2);
+    });
 });
