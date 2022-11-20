@@ -87,8 +87,7 @@ export type GobanModes =
     | "analyze"
     | "conditional"
     | "setup"
-    | "edit"
-    | "pattern search";
+    | "edit";
 
 export type AnalysisTool = "stone" | "draw" | "label";
 export type AnalysisSubTool =
@@ -2683,15 +2682,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.setSubmit();
 
         if (
-            [
-                "play",
-                "analyze",
-                "conditional",
-                "edit",
-                "score estimation",
-                "pattern search",
-                "puzzle",
-            ].indexOf(mode) === -1
+            ["play", "analyze", "conditional", "edit", "score estimation", "puzzle"].indexOf(
+                mode,
+            ) === -1
         ) {
             swal("Invalid mode for Goban: " + mode);
             return false;
