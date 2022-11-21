@@ -100,7 +100,6 @@ export class GobanCanvas extends GobanCore {
 
     private layer_offset_left: number = 0;
     private layer_offset_top: number = 0;
-    private pattern_search_color: JGOFNumericPlayerColor = 0;
 
     private drawing_enabled: boolean = true;
     private pen_ctx?: CanvasRenderingContext2D;
@@ -691,7 +690,6 @@ export class GobanCanvas extends GobanCore {
                 (this.player_id ||
                     !this.engine.players.black.id ||
                     this.mode === "analyze" ||
-                    this.mode === "pattern search" ||
                     this.mode === "puzzle")
             )
         ) {
@@ -820,28 +818,6 @@ export class GobanCanvas extends GobanCore {
                         this.redraw(true);
                     }
                 }
-            } else if (this.mode === "pattern search") {
-                let color: JGOFNumericPlayerColor = ((this.engine.board[y][x] + 1) %
-                    3) as JGOFNumericPlayerColor; /* cycle through the colors */
-                if (this.pattern_search_color) {
-                    color = this.pattern_search_color;
-                    if (this.engine.board[y][x] === this.pattern_search_color) {
-                        color = 0;
-                    }
-                }
-                if (event.shiftKey && color === 1) {
-                    /* if we're going to place a black on an empty square but we're holding down shift, place white */
-                    color = 2;
-                }
-                if (event.shiftKey && color === 2) {
-                    /* if we're going to place a black on an empty square but we're holding down shift, place white */
-                    color = 1;
-                }
-                if (!double_tap) {
-                    /* we get called for each tap, then once for the final double tap so we only want to process this x2 */
-                    this.engine.editPlace(x, y, color);
-                }
-                this.emit("update");
             } else if (this.mode === "puzzle") {
                 let puzzle_mode = "place";
                 let color: JGOFNumericPlayerColor = 0;
@@ -1608,10 +1584,6 @@ export class GobanCanvas extends GobanCore {
                     stoneAlphaTransparencyValue = this.variation_stone_transparency;
                 } else {
                     color = this.engine.player;
-
-                    if (this.mode === "pattern search" && this.pattern_search_color) {
-                        color = this.pattern_search_color;
-                    }
                 }
 
                 if (!(this.autoplaying_puzzle_move && !stone_color)) {
