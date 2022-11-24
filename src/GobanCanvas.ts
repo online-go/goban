@@ -997,7 +997,6 @@ export class GobanCanvas extends GobanCore {
                 /* Place our stone */
                 try {
                     if (
-                        (this.mode !== "edit" || !this.edit_color) &&
                         !(
                             this.mode === "analyze" &&
                             this.analyze_tool === "stone" &&
@@ -1088,19 +1087,6 @@ export class GobanCanvas extends GobanCore {
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
                         this.playMovementSound();
-                        break;
-                    case "edit":
-                        delete this.move_selected;
-                        this.updateTitleAndStonePlacement();
-                        this.emit("update");
-
-                        this.playMovementSound();
-                        this.sendMove({
-                            auth: this.config.auth,
-                            game_id: this.config.game_id,
-                            player_id: this.config.player_id,
-                            move: "!" + this.engine.board[y][x] + encodeMove(x, y),
-                        });
                         break;
                 }
 
@@ -1549,10 +1535,9 @@ export class GobanCanvas extends GobanCore {
                 } else if (stone_color) {
                     color = stone_color;
                 } else if (
-                    this.mode === "edit" ||
-                    (this.mode === "analyze" &&
-                        this.analyze_tool === "stone" &&
-                        this.analyze_subtool !== "alternate")
+                    this.mode === "analyze" &&
+                    this.analyze_tool === "stone" &&
+                    this.analyze_subtool !== "alternate"
                 ) {
                     color = this.edit_color === "black" ? 1 : 2;
                     if (this.shift_key_is_down) {
@@ -2265,10 +2250,9 @@ export class GobanCanvas extends GobanCore {
                 } else if (stone_color) {
                     color = stone_color;
                 } else if (
-                    this.mode === "edit" ||
-                    (this.mode === "analyze" &&
-                        this.analyze_tool === "stone" &&
-                        this.analyze_subtool !== "alternate")
+                    this.mode === "analyze" &&
+                    this.analyze_tool === "stone" &&
+                    this.analyze_subtool !== "alternate"
                 ) {
                     color = this.edit_color === "black" ? 1 : 2;
                 } else if (this.move_selected) {
