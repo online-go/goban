@@ -80,14 +80,7 @@ interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
     timed_out: boolean;
 }
 
-export type GobanModes =
-    | "play"
-    | "puzzle"
-    | "score estimation"
-    | "analyze"
-    | "conditional"
-    | "setup"
-    | "edit";
+export type GobanModes = "play" | "puzzle" | "score estimation" | "analyze" | "conditional";
 
 export type AnalysisTool = "stone" | "draw" | "label";
 export type AnalysisSubTool =
@@ -190,7 +183,11 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
 
     // deprecated
     username?: string;
-    server_socket?: any;
+    server_socket?: {
+        on: (msg: string, cb: (data: any) => void) => void;
+        send: (msg: string, data: any) => void;
+        connected: boolean;
+    };
     connect_to_chat?: number | boolean;
 }
 
@@ -2332,7 +2329,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 if (
                     this.player_id &&
                     this.player_id === this.engine.playerToMove() &&
-                    this.mode !== "edit" &&
                     this.engine.cur_move.id === this.engine.last_official_move.id
                 ) {
                     if (
@@ -2354,10 +2350,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         this.emit("state_text", { title: _("Your move") });
                     }
                 } else {
-                    let color = this.engine.playerColor(this.engine.playerToMove());
-                    if (this.mode === "edit" && this.edit_color) {
-                        color = this.edit_color;
-                    }
+                    const color = this.engine.playerColor(this.engine.playerToMove());
 
                     let title;
                     if (color === "black") {
@@ -2400,15 +2393,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         if (this.stone_placement_enabled) {
             this.disableStonePlacement();
         }
-
-        /*
-        if (this.engine.phase === "play" || (this.engine.phase === "finished" && this.mode === "analyze")) {
-            let color = this.engine.playerColor(this.engine.playerToMove());
-            if (this.mode === "edit" && this.edit_color) {
-                color = this.edit_color;
-            }
-        }
-        */
 
         this.stone_placement_enabled = true;
         if (this.__last_pt && this.__last_pt.valid) {
@@ -2535,7 +2519,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 case "analyze":
                 case "conditional":
-                case "edit":
                 case "puzzle":
                     this.disableStonePlacement();
                     this.enableStonePlacement();
