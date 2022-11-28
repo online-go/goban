@@ -155,4 +155,38 @@ describe("onTap", () => {
             [0, 0, 0],
         ]);
     });
+
+    test("Clicking submits a move in one-click-submit mode", () => {
+        const mock_socket = {
+            send: jest.fn(),
+            on: jest.fn(),
+            connected: true,
+        };
+        const goban = new GobanCanvas({
+            width: 3,
+            height: 3,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+            one_click_submit: true,
+            server_socket: mock_socket,
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        goban.enableStonePlacement();
+        simulateMouseClick(canvas, { x: 0, y: 0 });
+
+        expect(goban.engine.board).toEqual([
+            [1, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        expect(mock_socket.send).toBeCalledWith(
+            "game/move",
+            expect.objectContaining({
+                move: "aa",
+            }),
+            expect.any(Function),
+        );
+    });
 });

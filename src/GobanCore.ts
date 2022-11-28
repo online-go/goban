@@ -183,7 +183,11 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
 
     // deprecated
     username?: string;
-    server_socket?: any;
+    server_socket?: {
+        on: (msg: string, cb: (data: any) => void) => void;
+        send: (msg: string, data: any) => void;
+        connected: boolean;
+    };
     connect_to_chat?: number | boolean;
 }
 
