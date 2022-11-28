@@ -696,6 +696,12 @@ export class GobanCanvas extends GobanCore {
             return;
         }
 
+        // If there are modes where right click should not behave as if you clicked a placement on the canvas
+        // then return here instead of proceeding.
+        if (right_click && this.mode === "play") {
+            return;
+        }
+
         const pos = getRelativeEventPosition(event);
         const xx = pos.x;
         const yy = pos.y;
