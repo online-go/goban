@@ -742,10 +742,6 @@ export class GobanCanvas extends GobanCore {
         }
 
         this.setSubmit(undefined);
-        if (this.submitBlinkTimer) {
-            clearTimeout(this.submitBlinkTimer);
-            delete this.submitBlinkTimer;
-        }
 
         const tap_time = Date.now();
         let removed_count = 0;

@@ -583,7 +583,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected show_variation_move_numbers: boolean;
     protected square_size: number = 10;
     protected stone_placement_enabled: boolean;
-    protected submitBlinkTimer?: ReturnType<typeof setTimeout>;
     protected sendLatencyTimer?: ReturnType<typeof setInterval>;
     //protected syncToCurrentReviewMove;
     //protected waiting_for_game_to_begin;
@@ -1770,10 +1769,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         /* Clear various timeouts that may be running */
         this.clock_should_be_paused_for_move_submission = false;
         this.setGameClock(null);
-        if (this.submitBlinkTimer) {
-            clearTimeout(this.submitBlinkTimer);
-            delete this.submitBlinkTimer;
-        }
 
         delete (this as any).isPlayerController;
         delete (this as any).isPlayerOwner;
