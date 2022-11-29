@@ -189,4 +189,84 @@ describe("onTap", () => {
             expect.any(Function),
         );
     });
+
+    test("Calling the submit_move() too quickly results in no submission", () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(0);
+        const mock_socket = {
+            send: jest.fn(),
+            on: jest.fn(),
+            connected: true,
+        };
+        const goban = new GobanCanvas({
+            width: 3,
+            height: 3,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+            server_socket: mock_socket,
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        goban.enableStonePlacement();
+        simulateMouseClick(canvas, { x: 0, y: 0 });
+
+        // If we click before 50ms, assume it was a mistake.
+        jest.setSystemTime(40);
+
+        expect(goban.submit_move).toBeDefined();
+        goban.submit_move?.();
+
+        expect(goban.engine.board).toEqual([
+            [1, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        expect(mock_socket.send).not.toHaveBeenCalled();
+
+        jest.useRealTimers();
+    });
+
+    test("Calling submit_move() submits a move", () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(0);
+        const mock_socket = {
+            send: jest.fn(),
+            on: jest.fn(),
+            connected: true,
+        };
+        const goban = new GobanCanvas({
+            width: 3,
+            height: 3,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+            server_socket: mock_socket,
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        goban.enableStonePlacement();
+        simulateMouseClick(canvas, { x: 0, y: 0 });
+
+        // Need to delay, or else we assume it was a misclick
+        jest.setSystemTime(1000);
+
+        expect(goban.submit_move).toBeDefined();
+        goban.submit_move?.();
+
+        expect(goban.engine.board).toEqual([
+            [1, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        expect(mock_socket.send).toBeCalledWith(
+            "game/move",
+            expect.objectContaining({
+                move: "aa",
+            }),
+            expect.any(Function),
+        );
+
+        jest.useRealTimers();
+    });
 });
