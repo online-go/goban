@@ -269,4 +269,30 @@ describe("onTap", () => {
 
         jest.useRealTimers();
     });
+
+    test("Right clicking in play mode should have no effect.", () => {
+        const goban = new GobanCanvas({
+            width: 3,
+            height: 3,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        goban.enableStonePlacement();
+        canvas.dispatchEvent(
+            new MouseEvent("click", {
+                clientX: 15,
+                clientY: 15,
+                button: 2,
+            }),
+        );
+
+        expect(goban.engine.board).toEqual([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+    });
 });
