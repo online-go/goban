@@ -399,4 +399,69 @@ describe("onTap", () => {
             }),
         );
     });
+
+    // I'm not sure this behavior is actually desired, but capturing in the tests
+    // so that it will be easy to test a change to this behavior if desired
+    test("Clicking on stones during stone removal sends two socket messages", () => {
+        const mock_socket = {
+            send: jest.fn(),
+            on: jest.fn(),
+            connected: true,
+        };
+
+        const goban = new GobanCanvas({
+            width: 4,
+            height: 2,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+            player_id: 123,
+            players: {
+                black: { id: 123, username: "p1" },
+                white: { id: 456, username: "p2" },
+            },
+            moves: [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1],
+            ],
+            server_socket: mock_socket,
+            phase: "stone removal",
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        // Just some checks that our setup is correct
+        expect(goban.engine.isActivePlayer(123)).toBe(true);
+        expect(goban.engine.board).toEqual([
+            [0, 1, 2, 0],
+            [0, 1, 2, 0],
+        ]);
+
+        canvas.dispatchEvent(
+            new MouseEvent("click", {
+                clientX: 25,
+                clientY: 15,
+            }),
+        );
+
+        expect(mock_socket.send).toBeCalledTimes(2);
+        expect(mock_socket.send).toBeCalledWith(
+            "game/removed_stones/set",
+            expect.objectContaining({
+                player_id: 123,
+                removed: 1,
+                stones: "babbbabbbbba",
+            }),
+        );
+        // It is my understanding that this second call is not necessary -bpj
+        expect(mock_socket.send).toBeCalledWith(
+            "game/removed_stones/set",
+            expect.objectContaining({
+                player_id: 123,
+                removed: 0,
+                stones: "aaab",
+            }),
+        );
+    });
 });
