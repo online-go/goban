@@ -334,12 +334,68 @@ describe("onTap", () => {
 
         simulateMouseClick(canvas, { x: 0, y: 0 });
 
+        expect(mock_socket.send).toBeCalledTimes(1);
         expect(mock_socket.send).toBeCalledWith(
             "game/removed_stones/set",
             expect.objectContaining({
                 player_id: 123,
                 removed: 1,
                 stones: "aaab",
+            }),
+        );
+    });
+
+    test("Shift-Clicking during stone removal toggles one stone", () => {
+        const mock_socket = {
+            send: jest.fn(),
+            on: jest.fn(),
+            connected: true,
+        };
+
+        const goban = new GobanCanvas({
+            width: 4,
+            height: 2,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+            player_id: 123,
+            players: {
+                black: { id: 123, username: "p1" },
+                white: { id: 456, username: "p2" },
+            },
+            moves: [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1],
+            ],
+            server_socket: mock_socket,
+            phase: "stone removal",
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        // Just some checks that our setup is correct
+        expect(goban.engine.isActivePlayer(123)).toBe(true);
+        expect(goban.engine.board).toEqual([
+            [0, 1, 2, 0],
+            [0, 1, 2, 0],
+        ]);
+
+        canvas.dispatchEvent(
+            new MouseEvent("click", {
+                clientX: 15,
+                clientY: 15,
+                shiftKey: true,
+            }),
+        );
+
+        expect(mock_socket.send).toBeCalledTimes(1);
+        expect(mock_socket.send).toBeCalledWith(
+            "game/removed_stones/set",
+            expect.objectContaining({
+                player_id: 123,
+                removed: 1,
+                stones: "aa",
             }),
         );
     });
