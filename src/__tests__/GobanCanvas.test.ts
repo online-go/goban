@@ -5,6 +5,8 @@
 (global as any).CLIENT = true;
 
 import { GobanCanvas } from "../GobanCanvas";
+import { AUTOSCORE_TOLERANCE, AUTOSCORE_TRIALS } from "../GoEngine";
+import { GoMath } from "../GoMath";
 
 let board_div: HTMLDivElement;
 
@@ -463,5 +465,56 @@ describe("onTap", () => {
                 stones: "aaab",
             }),
         );
+    });
+
+    test("Clicking while in scoring mode triggers score_estimate.handleClick()", () => {
+        const goban = new GobanCanvas({
+            width: 4,
+            height: 2,
+            square_size: 10,
+            board_div: board_div,
+            interactive: true,
+            player_id: 123,
+            players: {
+                black: { id: 123, username: "p1" },
+                white: { id: 456, username: "p2" },
+            },
+            moves: [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1],
+            ],
+        });
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        // The scoring API is a real pain to work with, mainly due to dependence
+        // on the wasm module.  Therefore, we just mock estimateScore() and
+        // check that it was called.
+        const mock_score_estimate = {
+            handleClick: jest.fn(),
+            when_ready: Promise.resolve(),
+            board: GoMath.makeMatrix(4, 2),
+            removal: GoMath.makeMatrix(4, 2),
+            territory: GoMath.makeMatrix(4, 2),
+            heat: GoMath.makeMatrix(4, 2),
+        };
+        goban.engine.estimateScore = jest.fn().mockReturnValue(mock_score_estimate);
+
+        goban.setScoringMode(true);
+
+        expect(goban.engine.estimateScore).toBeCalledTimes(1);
+        expect(goban.engine.estimateScore).toBeCalledWith(
+            AUTOSCORE_TRIALS,
+            AUTOSCORE_TOLERANCE,
+            false,
+        );
+        (goban.engine.estimateScore as jest.Mock).mockClear();
+
+        simulateMouseClick(canvas, { x: 1, y: 0 });
+
+        // estimateScore is NOT called on tap
+        expect(goban.engine.estimateScore).toBeCalledTimes(0);
+        expect(mock_score_estimate.handleClick).toBeCalledTimes(1);
     });
 });
