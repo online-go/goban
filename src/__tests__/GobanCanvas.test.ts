@@ -4,7 +4,7 @@
 
 (global as any).CLIENT = true;
 
-import { GobanCanvas } from "../GobanCanvas";
+import { GobanCanvas, GobanCanvasConfig } from "../GobanCanvas";
 import { AUTOSCORE_TOLERANCE, AUTOSCORE_TRIALS } from "../GoEngine";
 import { GoMath } from "../GoMath";
 
@@ -27,6 +27,39 @@ function simulateMouseClick(canvas: HTMLCanvasElement, { x, y }: { x: number; y:
     canvas.dispatchEvent(new MouseEvent("click", eventInitDict));
 }
 
+function basic3x3Config(additionalOptions?: GobanCanvasConfig): GobanCanvasConfig {
+    return {
+        width: 3,
+        height: 3,
+        square_size: 10,
+        board_div: board_div,
+        interactive: true,
+        ...(additionalOptions ?? {}),
+    };
+}
+
+function basicScorableBoardConfig(additionalOptions?: GobanCanvasConfig): GobanCanvasConfig {
+    return {
+        width: 4,
+        height: 2,
+        square_size: 10,
+        board_div: board_div,
+        interactive: true,
+        player_id: 123,
+        players: {
+            black: { id: 123, username: "p1" },
+            white: { id: 456, username: "p2" },
+        },
+        moves: [
+            [1, 0],
+            [2, 0],
+            [1, 1],
+            [2, 1],
+        ],
+        ...(additionalOptions ?? {}),
+    };
+}
+
 describe("onTap", () => {
     beforeEach(() => {
         board_div = document.createElement("div");
@@ -38,13 +71,7 @@ describe("onTap", () => {
     });
 
     test("clicking without enabling stone placement has no effect", () => {
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-        });
+        const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         simulateMouseClick(canvas, { x: 0, y: 0 });
@@ -57,13 +84,7 @@ describe("onTap", () => {
     });
 
     test("clicking the top left intersection places a stone", () => {
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-        });
+        const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -77,13 +98,7 @@ describe("onTap", () => {
     });
 
     test("clicking the midpoint of two intersections has no effect", () => {
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-        });
+        const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -97,19 +112,16 @@ describe("onTap", () => {
     });
 
     test("shift clicking in analyze mode jumps to move", () => {
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            moves: [
-                [0, 0],
-                [1, 0],
-                [2, 0],
-            ],
-            mode: "analyze",
-        });
+        const goban = new GobanCanvas(
+            basic3x3Config({
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+                mode: "analyze",
+            }),
+        );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
         const mouse_event = new MouseEvent("click", {
             clientX: 25,
@@ -136,14 +148,7 @@ describe("onTap", () => {
     });
 
     test("Clicking with the triangle subtool places a triangle", () => {
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            mode: "analyze",
-        });
+        const goban = new GobanCanvas(basic3x3Config({ mode: "analyze" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -164,15 +169,12 @@ describe("onTap", () => {
             on: jest.fn(),
             connected: true,
         };
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            one_click_submit: true,
-            server_socket: mock_socket,
-        });
+        const goban = new GobanCanvas(
+            basic3x3Config({
+                one_click_submit: true,
+                server_socket: mock_socket,
+            }),
+        );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -200,14 +202,11 @@ describe("onTap", () => {
             on: jest.fn(),
             connected: true,
         };
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            server_socket: mock_socket,
-        });
+        const goban = new GobanCanvas(
+            basic3x3Config({
+                server_socket: mock_socket,
+            }),
+        );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -237,14 +236,11 @@ describe("onTap", () => {
             on: jest.fn(),
             connected: true,
         };
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            server_socket: mock_socket,
-        });
+        const goban = new GobanCanvas(
+            basic3x3Config({
+                server_socket: mock_socket,
+            }),
+        );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -273,13 +269,7 @@ describe("onTap", () => {
     });
 
     test("Right clicking in play mode should have no effect.", () => {
-        const goban = new GobanCanvas({
-            width: 3,
-            height: 3,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-        });
+        const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -305,26 +295,9 @@ describe("onTap", () => {
             connected: true,
         };
 
-        const goban = new GobanCanvas({
-            width: 4,
-            height: 2,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            player_id: 123,
-            players: {
-                black: { id: 123, username: "p1" },
-                white: { id: 456, username: "p2" },
-            },
-            moves: [
-                [1, 0],
-                [2, 0],
-                [1, 1],
-                [2, 1],
-            ],
-            server_socket: mock_socket,
-            phase: "stone removal",
-        });
+        const goban = new GobanCanvas(
+            basicScorableBoardConfig({ server_socket: mock_socket, phase: "stone removal" }),
+        );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         // Just some checks that our setup is correct
@@ -354,26 +327,9 @@ describe("onTap", () => {
             connected: true,
         };
 
-        const goban = new GobanCanvas({
-            width: 4,
-            height: 2,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            player_id: 123,
-            players: {
-                black: { id: 123, username: "p1" },
-                white: { id: 456, username: "p2" },
-            },
-            moves: [
-                [1, 0],
-                [2, 0],
-                [1, 1],
-                [2, 1],
-            ],
-            server_socket: mock_socket,
-            phase: "stone removal",
-        });
+        const goban = new GobanCanvas(
+            basicScorableBoardConfig({ server_socket: mock_socket, phase: "stone removal" }),
+        );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         // Just some checks that our setup is correct
@@ -411,26 +367,9 @@ describe("onTap", () => {
             connected: true,
         };
 
-        const goban = new GobanCanvas({
-            width: 4,
-            height: 2,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            player_id: 123,
-            players: {
-                black: { id: 123, username: "p1" },
-                white: { id: 456, username: "p2" },
-            },
-            moves: [
-                [1, 0],
-                [2, 0],
-                [1, 1],
-                [2, 1],
-            ],
-            server_socket: mock_socket,
-            phase: "stone removal",
-        });
+        const goban = new GobanCanvas(
+            basicScorableBoardConfig({ server_socket: mock_socket, phase: "stone removal" }),
+        );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         // Just some checks that our setup is correct
@@ -468,24 +407,7 @@ describe("onTap", () => {
     });
 
     test("Clicking while in scoring mode triggers score_estimate.handleClick()", () => {
-        const goban = new GobanCanvas({
-            width: 4,
-            height: 2,
-            square_size: 10,
-            board_div: board_div,
-            interactive: true,
-            player_id: 123,
-            players: {
-                black: { id: 123, username: "p1" },
-                white: { id: 456, username: "p2" },
-            },
-            moves: [
-                [1, 0],
-                [2, 0],
-                [1, 1],
-                [2, 1],
-            ],
-        });
+        const goban = new GobanCanvas(basicScorableBoardConfig());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         // The scoring API is a real pain to work with, mainly due to dependence
