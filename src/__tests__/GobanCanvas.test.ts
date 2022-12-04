@@ -9,6 +9,11 @@ import { AUTOSCORE_TOLERANCE, AUTOSCORE_TRIALS } from "../GoEngine";
 import { GoMath } from "../GoMath";
 
 let board_div: HTMLDivElement;
+let mock_socket: {
+    send: jest.Mock<any, any>;
+    on: jest.Mock<any, any>;
+    connected: boolean;
+};
 
 // Nothing special about this square size, just easy to do mental math with
 const TEST_SQUARE_SIZE = 10;
@@ -27,29 +32,31 @@ function simulateMouseClick(canvas: HTMLCanvasElement, { x, y }: { x: number; y:
     canvas.dispatchEvent(new MouseEvent("click", eventInitDict));
 }
 
+function commonConfig(): GobanCanvasConfig {
+    return { square_size: 10, board_div: board_div, interactive: true, server_socket: mock_socket };
+}
+
 function basic3x3Config(additionalOptions?: GobanCanvasConfig): GobanCanvasConfig {
     return {
+        ...commonConfig(),
         width: 3,
         height: 3,
-        square_size: 10,
-        board_div: board_div,
-        interactive: true,
         ...(additionalOptions ?? {}),
     };
 }
 
 function basicScorableBoardConfig(additionalOptions?: GobanCanvasConfig): GobanCanvasConfig {
     return {
+        ...commonConfig(),
         width: 4,
         height: 2,
-        square_size: 10,
-        board_div: board_div,
-        interactive: true,
+        // Scoring checks isActivePlayer
         player_id: 123,
         players: {
             black: { id: 123, username: "p1" },
             white: { id: 456, username: "p2" },
         },
+        // Creates a tiny wall in the center of the board
         moves: [
             [1, 0],
             [2, 0],
@@ -64,6 +71,12 @@ describe("onTap", () => {
     beforeEach(() => {
         board_div = document.createElement("div");
         document.body.appendChild(board_div);
+
+        mock_socket = {
+            send: jest.fn(),
+            on: jest.fn(),
+            connected: true,
+        };
     });
 
     afterEach(() => {
@@ -164,17 +177,7 @@ describe("onTap", () => {
     });
 
     test("Clicking submits a move in one-click-submit mode", () => {
-        const mock_socket = {
-            send: jest.fn(),
-            on: jest.fn(),
-            connected: true,
-        };
-        const goban = new GobanCanvas(
-            basic3x3Config({
-                one_click_submit: true,
-                server_socket: mock_socket,
-            }),
-        );
+        const goban = new GobanCanvas(basic3x3Config({ one_click_submit: true }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -197,16 +200,7 @@ describe("onTap", () => {
     test("Calling the submit_move() too quickly results in no submission", () => {
         jest.useFakeTimers();
         jest.setSystemTime(0);
-        const mock_socket = {
-            send: jest.fn(),
-            on: jest.fn(),
-            connected: true,
-        };
-        const goban = new GobanCanvas(
-            basic3x3Config({
-                server_socket: mock_socket,
-            }),
-        );
+        const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -231,16 +225,7 @@ describe("onTap", () => {
     test("Calling submit_move() submits a move", () => {
         jest.useFakeTimers();
         jest.setSystemTime(0);
-        const mock_socket = {
-            send: jest.fn(),
-            on: jest.fn(),
-            connected: true,
-        };
-        const goban = new GobanCanvas(
-            basic3x3Config({
-                server_socket: mock_socket,
-            }),
-        );
+        const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         goban.enableStonePlacement();
@@ -289,15 +274,7 @@ describe("onTap", () => {
     });
 
     test("Clicking during stone removal sends remove stones message", () => {
-        const mock_socket = {
-            send: jest.fn(),
-            on: jest.fn(),
-            connected: true,
-        };
-
-        const goban = new GobanCanvas(
-            basicScorableBoardConfig({ server_socket: mock_socket, phase: "stone removal" }),
-        );
+        const goban = new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         // Just some checks that our setup is correct
@@ -321,15 +298,7 @@ describe("onTap", () => {
     });
 
     test("Shift-Clicking during stone removal toggles one stone", () => {
-        const mock_socket = {
-            send: jest.fn(),
-            on: jest.fn(),
-            connected: true,
-        };
-
-        const goban = new GobanCanvas(
-            basicScorableBoardConfig({ server_socket: mock_socket, phase: "stone removal" }),
-        );
+        const goban = new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         // Just some checks that our setup is correct
@@ -361,15 +330,7 @@ describe("onTap", () => {
     // I'm not sure this behavior is actually desired, but capturing in the tests
     // so that it will be easy to test a change to this behavior if desired
     test("Clicking on stones during stone removal sends two socket messages", () => {
-        const mock_socket = {
-            send: jest.fn(),
-            on: jest.fn(),
-            connected: true,
-        };
-
-        const goban = new GobanCanvas(
-            basicScorableBoardConfig({ server_socket: mock_socket, phase: "stone removal" }),
-        );
+        const goban = new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         // Just some checks that our setup is correct
