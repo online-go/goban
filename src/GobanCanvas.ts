@@ -18,15 +18,7 @@ import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "./JGOF";
 
 import { AdHocFormat } from "./AdHocFormat";
 
-import {
-    GobanCore,
-    GobanConfig,
-    GobanSelectedThemes,
-    GobanMetrics,
-    GOBAN_FONT,
-    SCORE_ESTIMATION_TRIALS,
-    SCORE_ESTIMATION_TOLERANCE,
-} from "./GobanCore";
+import { GobanCore, GobanConfig, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
 import { GoEngine, encodeMove, encodeMoves } from "./GoEngine";
 import { GoMath, Group } from "./GoMath";
 import { MoveTree } from "./MoveTree";
@@ -787,11 +779,11 @@ export class GobanCanvas extends GobanCore {
             let force_redraw = false;
 
             if (
-                (this.engine.phase === "stone removal" || this.scoring_mode) &&
+                this.engine.phase === "stone removal" &&
                 this.engine.isActivePlayer(this.player_id)
             ) {
-                let arrs: Array<[-1 | 0 | 1, Group]>;
-                if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+                let arrs: Array<[0 | 1, Group]>;
+                if (event.shiftKey) {
                     const removed: 0 | 1 = !this.engine.removal[y][x] ? 1 : 0;
                     arrs = [[removed, [{ x: x, y: y }]]];
                 } else {
@@ -799,11 +791,8 @@ export class GobanCanvas extends GobanCore {
                 }
 
                 for (let i = 0; i < arrs.length; ++i) {
-                    const arr: [-1 | 0 | 1, Group] = arrs[i];
-
-                    const removed = arr[0];
-                    const group = arr[1];
-                    if (group.length && !this.scoring_mode) {
+                    const [removed, group] = arrs[i];
+                    if (group.length) {
                         this.socket.send("game/removed_stones/set", {
                             auth: this.config.auth,
                             game_id: this.config.game_id,
@@ -811,13 +800,6 @@ export class GobanCanvas extends GobanCore {
                             removed: removed,
                             stones: encodeMoves(group),
                         });
-                    }
-                    if (this.scoring_mode) {
-                        this.score_estimate = this.engine.estimateScore(
-                            SCORE_ESTIMATION_TRIALS,
-                            SCORE_ESTIMATION_TOLERANCE,
-                        );
-                        this.redraw(true);
                     }
                 }
             } else if (this.mode === "puzzle") {
