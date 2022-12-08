@@ -355,7 +355,7 @@ describe("onTap", () => {
         expect(addCoordinatesToChatInput).toBeCalledWith("A2");
     });
 
-    test("Clicking on stones during stone removal sends two socket messages", () => {
+    test("Clicking on stones during stone removal sends a socket message", () => {
         new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
