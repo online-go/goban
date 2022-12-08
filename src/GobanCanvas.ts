@@ -782,25 +782,23 @@ export class GobanCanvas extends GobanCore {
                 this.engine.phase === "stone removal" &&
                 this.engine.isActivePlayer(this.player_id)
             ) {
-                let arrs: Array<[0 | 1, Group]>;
+                let removed: 0 | 1;
+                let group: Group;
                 if (event.shiftKey) {
-                    const removed: 0 | 1 = !this.engine.removal[y][x] ? 1 : 0;
-                    arrs = [[removed, [{ x: x, y: y }]]];
+                    removed = !this.engine.removal[y][x] ? 1 : 0;
+                    group = [{ x, y }];
                 } else {
-                    arrs = this.engine.toggleMetaGroupRemoval(x, y);
+                    [[removed, group]] = this.engine.toggleMetaGroupRemoval(x, y);
                 }
 
-                for (let i = 0; i < arrs.length; ++i) {
-                    const [removed, group] = arrs[i];
-                    if (group.length) {
-                        this.socket.send("game/removed_stones/set", {
-                            auth: this.config.auth,
-                            game_id: this.config.game_id,
-                            player_id: this.config.player_id,
-                            removed: removed,
-                            stones: encodeMoves(group),
-                        });
-                    }
+                if (group.length) {
+                    this.socket.send("game/removed_stones/set", {
+                        auth: this.config.auth,
+                        game_id: this.config.game_id,
+                        player_id: this.config.player_id,
+                        removed: removed,
+                        stones: encodeMoves(group),
+                    });
                 }
             } else if (this.mode === "puzzle") {
                 let puzzle_mode = "place";

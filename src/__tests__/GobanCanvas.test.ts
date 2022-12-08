@@ -355,42 +355,23 @@ describe("onTap", () => {
         expect(addCoordinatesToChatInput).toBeCalledWith("A2");
     });
 
-    // I'm not sure this behavior is actually desired, but capturing in the tests
-    // so that it will be easy to test a change to this behavior if desired
     test("Clicking on stones during stone removal sends two socket messages", () => {
-        const goban = new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
+        new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
-        // Just some checks that our setup is correct
-        expect(goban.engine.isActivePlayer(123)).toBe(true);
-        expect(goban.engine.board).toEqual([
-            [0, 1, 2, 0],
-            [0, 1, 2, 0],
-        ]);
+        simulateMouseClick(canvas, { x: 1, y: 0 });
 
-        canvas.dispatchEvent(
-            new MouseEvent("click", {
-                clientX: 25,
-                clientY: 15,
-            }),
-        );
+        //   0 1 2 3
+        // 0 .(x)o .
+        // 1 . x o .
 
-        expect(mock_socket.send).toBeCalledTimes(2);
+        expect(mock_socket.send).toBeCalledTimes(1);
         expect(mock_socket.send).toBeCalledWith(
             "game/removed_stones/set",
             expect.objectContaining({
                 player_id: 123,
                 removed: 1,
                 stones: "babbbabbbbba",
-            }),
-        );
-        // It is my understanding that this second call is not necessary -bpj
-        expect(mock_socket.send).toBeCalledWith(
-            "game/removed_stones/set",
-            expect.objectContaining({
-                player_id: 123,
-                removed: 0,
-                stones: "aaab",
             }),
         );
     });
