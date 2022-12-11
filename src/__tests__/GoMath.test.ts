@@ -1,5 +1,6 @@
 import { GoMath, BoardState } from "../GoMath";
 import { JGOFNumericPlayerColor } from "../JGOF";
+import * as GoMathFunction from "../GoMath";
 
 describe("GoMath constructor", () => {
     test("basic board state", () => {
@@ -509,5 +510,28 @@ describe("sortMoves", () => {
 
     test("repeat elements", () => {
         expect(GoMath.sortMoves("aaaaaa", 2, 2)).toBe("aaaaaa");
+    });
+});
+
+describe("ojeSequenceToMoves", () => {
+    test("bad sequence", () => {
+        expect(() => {
+            GoMathFunction.ojeSequenceToMoves("nonsense");
+        }).toThrow("root");
+    });
+
+    test.each([
+        [".root", []],
+        [".root.A19", [{ x: 0, y: 0 }]],
+        [
+            ".root.A19.pass.K10",
+            [
+                { x: 0, y: 0 },
+                { x: -1, y: -1 },
+                { x: 9, y: 9 },
+            ],
+        ],
+    ])("id of %s", (sequence, id) => {
+        expect(GoMathFunction.ojeSequenceToMoves(sequence)).toStrictEqual(id);
     });
 });
