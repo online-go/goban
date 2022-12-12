@@ -37,6 +37,24 @@ export interface BoardState {
 
 type BoardTransform = (x: number, y: number) => { x: number; y: number };
 
+// OJE Sequence format is '.root.K10.Q1'  ...
+export function ojeSequenceToMoves(sequence: string): Array<JGOFMove> {
+    const plays = sequence.split(".");
+
+    if (plays.shift() !== "" || plays.shift() !== "root") {
+        throw new Error("Sequence passed to sequenceToMoves does not start with .root");
+    }
+
+    const moves = plays.map((play) => {
+        if (play === "pass") {
+            return { x: -1, y: -1 };
+        }
+        return GoMath.decodeGTPCoordinate(play, 19, 19);
+    });
+
+    return moves;
+}
+
 export class GoMath {
     private state: BoardState;
     public group_id_map: Array<Array<number>>;
