@@ -16,7 +16,10 @@
 
 import { GobanMoveError } from "./GobanError";
 import { MoveTree, MoveTreeJson } from "./MoveTree";
-import { GoMath, Move, Intersection, Group } from "./GoMath";
+import { Move, Intersection, encodeMove } from "./GoMath";
+import * as GoMath from "./GoMath";
+import { Group } from "./GoStoneGroup";
+import { GoStoneGroups } from "./GoStoneGroups";
 import { ScoreEstimator } from "./ScoreEstimator";
 import { GobanCore, Events } from "./GobanCore";
 import {
@@ -259,30 +262,6 @@ export type PuzzlePlacementSetting =
     | { mode: "place"; color: 0 };
 
 let __currentMarker = 0;
-
-export function encodeMove(x: number | Move, y?: number): string {
-    if (typeof x === "number") {
-        if (typeof y !== "number") {
-            throw new Error(`Invalid y value passed to encodeMove`);
-        }
-        return GoMath.num2char(x) + GoMath.num2char(y);
-    } else {
-        const mv: Move = x as Move;
-
-        if (!mv.edited) {
-            return GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
-        } else {
-            return "!" + mv.color + GoMath.num2char(mv.x) + GoMath.num2char(mv.y);
-        }
-    }
-}
-export function encodeMoves(lst: Array<Move>) {
-    let ret = "";
-    for (let i = 0; i < lst.length; ++i) {
-        ret += encodeMove(lst[i]);
-    }
-    return ret;
-}
 
 export type PlayerColor = "black" | "white";
 
@@ -980,7 +959,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
 
         moves.reverse();
-        return { from: branch_point.getMoveIndex(), moves: encodeMoves(moves) };
+        return { from: branch_point.getMoveIndex(), moves: GoMath.encodeMoves(moves) };
     }
     public setAsCurrentReviewMove(): void {
         if (this.dontStoreBoardHistory) {
@@ -1519,7 +1498,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     break;
                 }
             }
-            this.initial_state.black = encodeMoves(moves);
+            this.initial_state.black = GoMath.encodeMoves(moves);
 
             moves = this.decodeMoves(this.initial_state?.white || "");
             for (let i = 0; i < moves.length; ++i) {
@@ -1528,7 +1507,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     break;
                 }
             }
-            this.initial_state.white = encodeMoves(moves);
+            this.initial_state.white = GoMath.encodeMoves(moves);
 
             /* Then add if applicable */
             if (color) {
@@ -1536,7 +1515,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
                     this.initial_state[color === 1 ? "black" : "white"] || "",
                 );
                 moves.push({ x: x, y: y, color: color });
-                this.initial_state[color === 1 ? "black" : "white"] = encodeMoves(moves);
+                this.initial_state[color === 1 ? "black" : "white"] = GoMath.encodeMoves(moves);
             }
         }
 
@@ -1789,7 +1768,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         //if (this.phase !== "play") {
         if (!only_prisoners && this.score_territory) {
-            const gm = new GoMath(this, this.cur_move.state.board);
+            const gm = new GoStoneGroups(this, this.cur_move.state.board);
             //console.log(gm);
 
             gm.foreachGroup((gr) => {
@@ -1803,10 +1782,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         return;
                     }
                     if (gr.territory_color === 1) {
-                        ret["black"].scoring_positions += encodeMoves(gr.points);
+                        ret["black"].scoring_positions += GoMath.encodeMoves(gr.points);
                         ret["black"].territory += markScored(gr.points);
                     } else {
-                        ret["white"].scoring_positions += encodeMoves(gr.points);
+                        ret["white"].scoring_positions += GoMath.encodeMoves(gr.points);
                         ret["white"].territory += markScored(gr.points);
                     }
                     for (let i = 0; i < gr.points.length; ++i) {

@@ -21,7 +21,6 @@ import {
     GoEngineConfig,
     GoEnginePhase,
     GoEngineRules,
-    encodeMove,
     ReviewMessage,
     PlayerColor,
     PuzzleConfig,
@@ -29,7 +28,8 @@ import {
     Score,
 } from "./GoEngine";
 import { GobanMoveError } from "./GobanError";
-import { GoMath, Move, NumberMatrix, Intersection } from "./GoMath";
+import { Move, NumberMatrix, Intersection, encodeMove } from "./GoMath";
+import * as GoMath from "./GoMath";
 import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
 import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
 import { init_score_estimator, ScoreEstimator } from "./ScoreEstimator";

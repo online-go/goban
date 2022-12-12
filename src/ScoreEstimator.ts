@@ -15,9 +15,12 @@
  */
 
 import { dup } from "./GoUtil";
-import { GoMath, Intersection, Group } from "./GoMath";
+import { Intersection, encodeMove, encodeMoves } from "./GoMath";
+import * as GoMath from "./GoMath";
+import { Group } from "./GoStoneGroup";
+import { GoStoneGroups } from "./GoStoneGroups";
 import { GobanCore } from "./GobanCore";
-import { GoEngine, encodeMove, encodeMoves, PlayerScore, GoEngineRules } from "./GoEngine";
+import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
 import { JGOFNumericPlayerColor } from "./JGOF";
 import { _ } from "./translate";
 
@@ -825,10 +828,10 @@ export class ScoreEstimator {
 
         //if (this.phase !== "play") {
         if (this.engine.score_territory) {
-            const gm = new GoMath(this);
+            const groups = new GoStoneGroups(this);
             //console.log(gm);
 
-            gm.foreachGroup((gr) => {
+            groups.foreachGroup((gr) => {
                 if (gr.is_territory) {
                     //console.log(gr);
                     if (!this.engine.score_territory_in_seki && gr.is_territory_in_seki) {

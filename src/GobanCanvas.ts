@@ -27,8 +27,9 @@ import {
     SCORE_ESTIMATION_TRIALS,
     SCORE_ESTIMATION_TOLERANCE,
 } from "./GobanCore";
-import { GoEngine, encodeMove, encodeMoves } from "./GoEngine";
-import { GoMath, Group } from "./GoMath";
+import { GoEngine } from "./GoEngine";
+import * as GoMath from "./GoMath";
+import { Group } from "./GoStoneGroup";
 import { MoveTree } from "./MoveTree";
 import { GoTheme } from "./GoTheme";
 import { GoThemes } from "./GoThemes";
@@ -765,7 +766,7 @@ export class GobanCanvas extends GobanCore {
                 auth: this.config.auth,
                 game_id: this.config.game_id,
                 player_id: this.config.player_id,
-                move: encodeMove(x, y),
+                move: GoMath.encodeMove(x, y),
             });
             if (sent) {
                 this.playMovementSound();
@@ -809,7 +810,7 @@ export class GobanCanvas extends GobanCore {
                             game_id: this.config.game_id,
                             player_id: this.config.player_id,
                             removed: removed,
-                            stones: encodeMoves(group),
+                            stones: GoMath.encodeMoves(group),
                         });
                     }
                     if (this.scoring_mode) {

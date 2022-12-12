@@ -1,4 +1,4 @@
-import { GoMath } from "../GoMath";
+import * as GoMath from "../GoMath";
 import { JGOFNumericPlayerColor } from "../JGOF";
 
 type Testcase = {

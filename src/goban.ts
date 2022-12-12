@@ -21,6 +21,7 @@ export * from "./GoEngine";
 export * from "./GobanError";
 export * from "./GoMath";
 export * from "./GoStoneGroup";
+export * from "./GoStoneGroups";
 export * from "./GoTheme";
 export * from "./GoThemes";
 export * from "./GoUtil";

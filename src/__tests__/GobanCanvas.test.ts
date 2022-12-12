@@ -6,7 +6,7 @@
 
 import { GobanCanvas, GobanCanvasConfig } from "../GobanCanvas";
 import { AUTOSCORE_TOLERANCE, AUTOSCORE_TRIALS } from "../GoEngine";
-import { GoMath } from "../GoMath";
+import * as GoMath from "../GoMath";
 
 let board_div: HTMLDivElement;
 let mock_socket: {
