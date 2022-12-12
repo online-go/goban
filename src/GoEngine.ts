@@ -1073,8 +1073,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         done_array[idx] = true;
         fn_of_neighbor_pt(x, y);
     }
-    /** Public for usage in GoStoneGroup */
-    public foreachNeighbor(
+
+    private foreachNeighbor(
         pt_or_group: Intersection | Group,
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {

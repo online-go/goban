@@ -31,7 +31,6 @@ function makeGoMathWithFeatureBoard() {
         removal: REMOVAL,
         width: 5,
         height: 5,
-        foreachNeighbor: () => {},
     });
 }
 

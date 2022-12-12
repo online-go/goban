@@ -19,8 +19,6 @@ describe("GoMath constructor", () => {
             height: 3,
             board: THREExTHREE_board,
             removal: THREExTHREE_removal,
-            // Why does the test pass even if I pass in a no-op here?
-            foreachNeighbor: () => {},
         };
 
         const gomath_obj = new GoMath(board_state);
