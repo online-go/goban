@@ -5,6 +5,7 @@
 (global as any).CLIENT = true;
 
 import { GobanCanvas, GobanCanvasConfig } from "../GobanCanvas";
+import { GobanCore } from "../GobanCore";
 import { AUTOSCORE_TOLERANCE, AUTOSCORE_TRIALS } from "../GoEngine";
 import { GoMath } from "../GoMath";
 
@@ -327,42 +328,50 @@ describe("onTap", () => {
         );
     });
 
-    // I'm not sure this behavior is actually desired, but capturing in the tests
-    // so that it will be easy to test a change to this behavior if desired
-    test("Clicking on stones during stone removal sends two socket messages", () => {
-        const goban = new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
+    // This is not unique to stone-removal, but since stone removal also has
+    // some logic for modifier keys (e.g. shift-click => remove one intersection)
+    // this is good to test for.
+    test("Ctrl-Clicking during stone removal adds coordinates to chat", () => {
+        new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
+
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
-        // Just some checks that our setup is correct
-        expect(goban.engine.isActivePlayer(123)).toBe(true);
-        expect(goban.engine.board).toEqual([
-            [0, 1, 2, 0],
-            [0, 1, 2, 0],
-        ]);
+        const addCoordinatesToChatInput = jest.fn();
+        GobanCore.setHooks({ addCoordinatesToChatInput });
 
         canvas.dispatchEvent(
             new MouseEvent("click", {
-                clientX: 25,
+                clientX: 15,
                 clientY: 15,
+                ctrlKey: true,
             }),
         );
 
-        expect(mock_socket.send).toBeCalledTimes(2);
+        // Unmodified clicks in stone removal send a "game/removed_stones/set" message
+        expect(mock_socket.send).toBeCalledTimes(0);
+        expect(addCoordinatesToChatInput).toBeCalledTimes(1);
+        // Note: "A2" is the correct pretty coordinate for (0,0) on a 2x4 board
+        // because the y coordinate is flipped
+        expect(addCoordinatesToChatInput).toBeCalledWith("A2");
+    });
+
+    test("Clicking on stones during stone removal sends a socket message", () => {
+        new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        simulateMouseClick(canvas, { x: 1, y: 0 });
+
+        //   0 1 2 3
+        // 0 .(x)o .
+        // 1 . x o .
+
+        expect(mock_socket.send).toBeCalledTimes(1);
         expect(mock_socket.send).toBeCalledWith(
             "game/removed_stones/set",
             expect.objectContaining({
                 player_id: 123,
                 removed: 1,
                 stones: "babbbabbbbba",
-            }),
-        );
-        // It is my understanding that this second call is not necessary -bpj
-        expect(mock_socket.send).toBeCalledWith(
-            "game/removed_stones/set",
-            expect.objectContaining({
-                player_id: 123,
-                removed: 0,
-                stones: "aaab",
             }),
         );
     });
