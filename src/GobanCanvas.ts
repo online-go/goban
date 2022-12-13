@@ -18,15 +18,7 @@ import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "./JGOF";
 
 import { AdHocFormat } from "./AdHocFormat";
 
-import {
-    GobanCore,
-    GobanConfig,
-    GobanSelectedThemes,
-    GobanMetrics,
-    GOBAN_FONT,
-    SCORE_ESTIMATION_TRIALS,
-    SCORE_ESTIMATION_TOLERANCE,
-} from "./GobanCore";
+import { GobanCore, GobanConfig, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
 import { GoEngine } from "./GoEngine";
 import * as GoMath from "./GoMath";
 import { Group } from "./GoStoneGroup";
@@ -806,7 +798,7 @@ export class GobanCanvas extends GobanCore {
                         game_id: this.config.game_id,
                         player_id: this.config.player_id,
                         removed: removed,
-                        stones: encodeMoves(group),
+                        stones: GoMath.encodeMoves(group),
                     });
                 }
             } else if (this.mode === "puzzle") {

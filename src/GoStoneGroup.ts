@@ -24,10 +24,6 @@ export interface BoardState {
     height: number;
     board: Array<Array<JGOFNumericPlayerColor>>;
     removal: Array<Array<number>>;
-    foreachNeighbor: (
-        pt_or_group: Intersection | Group,
-        fn_of_neighbor_pt: (x: number, y: number) => void,
-    ) => void;
 }
 
 export class GoStoneGroup {
