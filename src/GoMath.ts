@@ -248,7 +248,6 @@ export function num2char(num: number): string {
     return coor_num2ch(num);
 }
 
-// (note: GoEngine has a function called encodeMove, not to be confused with this utility)
 export function encodeMove(x: number | Move, y?: number): string {
     if (typeof x === "number") {
         if (typeof y !== "number") {
