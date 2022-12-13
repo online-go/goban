@@ -642,7 +642,6 @@ export class ScoreEstimator {
                         if (this.board[yy][xx] === color || (color === 0 && this.removed[yy][xx])) {
                             this.groups[yy][xx] = g;
                             g.add(xx, yy, color);
-                            //this.foreachNeighbor({"x": xx, "y": yy}, function(x,y) { stack.push(x); stack.push(y); });
                             this.foreachNeighbor({ x: xx, y: yy }, push_on_stack);
                         }
                     }
@@ -885,7 +884,7 @@ export class ScoreEstimator {
 
         return this;
     }
-    public foreachNeighbor(
+    private foreachNeighbor(
         pt_or_group: Intersection | Group,
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {

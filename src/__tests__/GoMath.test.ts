@@ -20,8 +20,6 @@ describe("GoStoneGroups constructor", () => {
             height: 3,
             board: THREExTHREE_board,
             removal: THREExTHREE_removal,
-            // Why does the test pass even if I pass in a no-op here?
-            foreachNeighbor: () => {},
         };
 
         const board = new GoStoneGroups(board_state);

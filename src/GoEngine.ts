@@ -1052,8 +1052,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         done_array[idx] = true;
         fn_of_neighbor_pt(x, y);
     }
-    /** Public for usage in GoStoneGroup */
-    public foreachNeighbor(
+
+    private foreachNeighbor(
         pt_or_group: Intersection | Group,
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {
@@ -1559,10 +1559,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
         };
     }
 
-    public toggleMetaGroupRemoval(x: number, y: number): Array<[-1 | 0 | 1, Group]> {
+    public toggleMetaGroupRemoval(x: number, y: number): Array<[0 | 1, Group]> {
         try {
             if (x >= 0 && y >= 0) {
-                const removing: -1 | 0 | 1 = !this.removal[y][x] ? 1 : 0;
+                const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
                 const group = this.getGroup(x, y, true);
                 let removed_stones = this.setGroupForRemoval(x, y, removing)[1];
                 const empty_spaces = [];
