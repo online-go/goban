@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { GoMath } from "./GoMath";
+import * as GoMath from "./GoMath";
 import { GoEngine, GoEngineState } from "./GoEngine";
-import { encodeMove } from "./GoEngine";
+import { encodeMove } from "./GoMath";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
 import { escapeSGFText, newline2space } from "./Misc";

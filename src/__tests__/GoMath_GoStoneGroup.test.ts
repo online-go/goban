@@ -1,4 +1,5 @@
-import { GoMath } from "../GoMath";
+import * as GoMath from "../GoMath";
+import { GoStoneGroups } from "../GoStoneGroups";
 
 // Here is a board displaying many of the features GoStoneGroup cares about.
 
@@ -26,7 +27,7 @@ const FEATURE_BOARD = [
 const REMOVAL = GoMath.makeMatrix(5, 5);
 
 function makeGoMathWithFeatureBoard() {
-    return new GoMath({
+    return new GoStoneGroups({
         board: FEATURE_BOARD,
         removal: REMOVAL,
         width: 5,

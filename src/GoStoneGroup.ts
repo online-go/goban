@@ -14,8 +14,17 @@
  * limitations under the License.
  */
 
-import { BoardState, Intersection } from "./GoMath";
-import { JGOFNumericPlayerColor } from "./JGOF";
+import { Intersection } from "./GoMath";
+import { JGOFNumericPlayerColor, JGOFIntersection } from "./JGOF";
+
+export type Group = Array<JGOFIntersection>;
+
+export interface BoardState {
+    width: number;
+    height: number;
+    board: Array<Array<JGOFNumericPlayerColor>>;
+    removal: Array<Array<number>>;
+}
 
 export class GoStoneGroup {
     probable_color: JGOFNumericPlayerColor;

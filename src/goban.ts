@@ -19,8 +19,8 @@ export * from "./GobanCanvas";
 export * from "./GoConditionalMove";
 export * from "./GoEngine";
 export * from "./GobanError";
-export * from "./GoMath";
 export * from "./GoStoneGroup";
+export * from "./GoStoneGroups";
 export * from "./GoTheme";
 export * from "./GoThemes";
 export * from "./GoUtil";
@@ -32,6 +32,8 @@ export * from "./JGOF";
 export * from "./AIReview";
 export * from "./AdHocFormat";
 export * from "./TestGoban";
+
+export * as GoMath from "./GoMath";
 export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
 export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 
