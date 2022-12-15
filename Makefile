@@ -15,6 +15,10 @@ clean:
 
 publish push: publish_npm upload_to_cdn notify
 
+beta:
+	yarn run build-debug
+	yarn run build-production
+	yarn publish --tag beta ./
 
 notify:
 	MSG=`git log -1 --pretty="%B" | sed s/\"//g | sed s/\'//g `; \
