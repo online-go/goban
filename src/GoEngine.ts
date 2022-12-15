@@ -1053,7 +1053,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         fn_of_neighbor_pt(x, y);
     }
 
-    private foreachNeighbor(
+    public foreachNeighbor(
         pt_or_group: Intersection | Group,
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {
