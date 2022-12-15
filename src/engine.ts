@@ -17,7 +17,6 @@
 export * from "./GobanError";
 export * from "./GoStoneGroup";
 export * from "./GoUtil";
-export * from "./GoMath";
 export * from "./GoEngine";
 export * from "./GoConditionalMove";
 export * from "./MoveTree";
@@ -27,3 +26,5 @@ export * from "./JGOF";
 export * from "./AdHocFormat";
 export * from "./AIReview";
 export * from "./Misc";
+
+export * as GoMath from "./GoMath";
