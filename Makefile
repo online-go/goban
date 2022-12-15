@@ -15,7 +15,9 @@ clean:
 
 publish push: publish_npm upload_to_cdn notify
 
-beta:
+beta: beta_npm upload_to_cdn
+
+beta_npm:
 	yarn run build-debug
 	yarn run build-production
 	yarn publish --tag beta ./
