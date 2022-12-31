@@ -28,7 +28,8 @@ import {
 } from "./JGOF";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
-import { TypedEventEmitter } from "./TypedEventEmitter";
+import { TypedEventEmitter, LegacyEventsShim } from "./TypedEventEmitter";
+import EventEmitter = require("eventemitter3");
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -2819,10 +2820,13 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
 
     public parentEventEmitter?: TypedEventEmitter<Events>;
-    emit<K extends Extract<keyof Events, string>>(event: K, arg?: Events[K]): boolean {
-        let ret: boolean = super.emit(event, arg);
+    emit<K extends EventEmitter.EventNames<LegacyEventsShim<Events>>>(
+        event: K,
+        ...args: EventEmitter.EventArgs<LegacyEventsShim<Events>, K>
+    ): boolean {
+        let ret: boolean = super.emit(event, ...args);
         if (this.parentEventEmitter) {
-            ret ||= this.parentEventEmitter.emit(event, arg);
+            ret ||= this.parentEventEmitter.emit(event, ...args);
         }
         return ret;
     }
