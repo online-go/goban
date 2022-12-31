@@ -287,6 +287,9 @@ export function encodeMoves(lst: Array<Move>) {
 
 export type PlayerColor = "black" | "white";
 
+type EventNames = EventEmitter.EventNames<Events>;
+type EventArgs<K extends EventNames> = EventEmitter.EventArgs<LegacyEventsShim<Events>, K>;
+
 export class GoEngine extends TypedEventEmitter<Events> {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
@@ -2820,10 +2823,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
 
     public parentEventEmitter?: TypedEventEmitter<Events>;
-    emit<K extends EventEmitter.EventNames<LegacyEventsShim<Events>>>(
-        event: K,
-        ...args: EventEmitter.EventArgs<LegacyEventsShim<Events>, K>
-    ): boolean {
+    emit<K extends EventNames>(event: K, ...args: EventArgs<K>): boolean {
         let ret: boolean = super.emit(event, ...args);
         if (this.parentEventEmitter) {
             ret ||= this.parentEventEmitter.emit(event, ...args);
