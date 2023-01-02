@@ -12,7 +12,7 @@ let plugins = [];
 
 
 plugins.push(new webpack.BannerPlugin(
-`Copyright (C) 2012-2020 Online-Go.com
+`Copyright (C)  Online-Go.com
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

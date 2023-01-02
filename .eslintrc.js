@@ -116,7 +116,7 @@ module.exports = {
                 "rules": {
                     "file-header": [
                         true,
-                        "[Cc]opyright ([(][Cc][)])?\\s*\\d{4}"
+                        "[Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com"
                     ],
                     "import-spacing": true,
                     "whitespace": [
