@@ -16,40 +16,29 @@
 
 import { EventEmitter } from "eventemitter3";
 
-export class TypedEventEmitter<T> {
-    protected emitter = new EventEmitter();
+// EventEmitter3 is has typing now, but the generic parameter is slightly
+// different (more flexible, but also more verbose) than what OGS had:
+//
+//        OGS                       EventEmitter
+// interface Events {        interface Events
+//     a: number,                a: (data: number) => void,
+//     b: string,                b: (data: string) => void,
+//     c: never,                 c: () => void,
+//     d: undefined,             d: () => void,
+// }
+//
+//     ...
+//
+// emitter.on("a", (data: number) => console.log("a emitted", data * 2));
+// emitter.on("b", (data: string) => console.log("b emitted", data.length));
+// emitter.on("c", () => console.log("c emitted"))
+// emitter.on("d", () => console.log("d emitted"))
 
-    addListener<K extends Extract<keyof T, string>>(event: K, listener: (arg?: T[K]) => any): this {
-        this.emitter.addListener(event, listener);
-        return this;
-    }
-    on<K extends Extract<keyof T, string>>(event: K, listener: (arg?: T[K]) => any): this {
-        this.emitter.on(event, listener);
-        return this;
-    }
-    off<K extends Extract<keyof T, string>>(event: K, listener: (arg?: T[K]) => any): this {
-        this.emitter.off(event, listener);
-        return this;
-    }
-    once<K extends Extract<keyof T, string>>(event: K, listener: (arg?: T[K]) => any): this {
-        this.emitter.once(event, listener);
-        return this;
-    }
-    removeListener<K extends Extract<keyof T, string>>(
-        event: K,
-        listener: (arg?: T[K]) => any,
-    ): this {
-        this.emitter.removeListener(event, listener);
-        return this;
-    }
-    removeAllListeners<K extends Extract<keyof T, string>>(event?: K): this {
-        this.emitter.removeAllListeners(event);
-        return this;
-    }
-    listeners<K extends Extract<keyof T, string>>(event: K): ((arg: T[K]) => any)[] {
-        return this.emitter.listeners(event);
-    }
-    emit<K extends Extract<keyof T, string>>(event: K, arg?: T[K]): boolean {
-        return this.emitter.emit(event, arg);
-    }
-}
+// This shim allows us to use OGS's events type definitions while using
+// EventEmitter3's types for everything else.
+
+export type LegacyEventsShim<T extends object> = {
+    [K in keyof T]: T[K] extends undefined ? () => void : (data: T[K]) => void;
+};
+
+export class TypedEventEmitter<T extends object> extends EventEmitter<LegacyEventsShim<T>> {}

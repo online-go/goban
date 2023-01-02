@@ -31,7 +31,8 @@ import {
 } from "./JGOF";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
-import { TypedEventEmitter } from "./TypedEventEmitter";
+import { TypedEventEmitter, LegacyEventsShim } from "./TypedEventEmitter";
+import EventEmitter = require("eventemitter3");
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -264,6 +265,9 @@ export type PuzzlePlacementSetting =
 let __currentMarker = 0;
 
 export type PlayerColor = "black" | "white";
+
+type EventNames = EventEmitter.EventNames<Events>;
+type EventArgs<K extends EventNames> = EventEmitter.EventArgs<LegacyEventsShim<Events>, K>;
 
 export class GoEngine extends TypedEventEmitter<Events> {
     //public readonly players.black.id:number;
@@ -2798,10 +2802,10 @@ export class GoEngine extends TypedEventEmitter<Events> {
     }
 
     public parentEventEmitter?: TypedEventEmitter<Events>;
-    emit<K extends Extract<keyof Events, string>>(event: K, arg?: Events[K]): boolean {
-        let ret: boolean = super.emit(event, arg);
+    emit<K extends EventNames>(event: K, ...args: EventArgs<K>): boolean {
+        let ret: boolean = super.emit(event, ...args);
         if (this.parentEventEmitter) {
-            ret ||= this.parentEventEmitter.emit(event, arg);
+            ret ||= this.parentEventEmitter.emit(event, ...args);
         }
         return ret;
     }
