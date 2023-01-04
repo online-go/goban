@@ -662,8 +662,9 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         if (removed) {
             for (let i = 0; i < removed.length; ++i) {
-                this.setRemoved(removed[i].x, removed[i].y, true);
+                this.setRemoved(removed[i].x, removed[i].y, true, false);
             }
+            this.emit("stone-removal.updated");
         }
 
         function unpackMoveTree(cur: MoveTree, tree: MoveTreeJson): void {
@@ -1568,7 +1569,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
             if (x >= 0 && y >= 0) {
                 const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
                 const group = this.getGroup(x, y, true);
-                let removed_stones = this.setGroupForRemoval(x, y, removing)[1];
+                let removed_stones = this.setGroupForRemoval(x, y, removing, false)[1];
                 const empty_spaces = [];
 
                 const group_color = this.board[y][x];
@@ -1593,7 +1594,12 @@ export class GoEngine extends TypedEventEmitter<Events> {
                             for (let j = 0; j < far_neighbors.length; ++j) {
                                 const fpt = far_neighbors[j][0];
                                 if (this.board[fpt.y][fpt.x] === group_color) {
-                                    const res = this.setGroupForRemoval(fpt.x, fpt.y, removing);
+                                    const res = this.setGroupForRemoval(
+                                        fpt.x,
+                                        fpt.y,
+                                        removing,
+                                        false,
+                                    );
                                     removed_stones = removed_stones.concat(res[1]);
                                     space = space.concat(this.getConnectedOpenSpace(res[1]));
                                 }
@@ -1602,6 +1608,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
                         }
                     }
                 }
+
+                this.emit("stone-removal.updated");
 
                 if (!removing) {
                     return [[removing, removed_stones]];
@@ -1618,7 +1626,17 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
         return [[0, []]];
     }
-    private setGroupForRemoval(x: number, y: number, toggle_set: -1 | 0 | 1): [-1 | 0 | 1, Group] {
+
+    /** Sets an entire group as being removed or not removed. If `emit_stone_removal_updated`
+     *  is set to false, the "stone-removal.updated" event will not be emitted, and it is up
+     *  to the caller to emit this event appropriately.
+     */
+    private setGroupForRemoval(
+        x: number,
+        y: number,
+        toggle_set: -1 | 0 | 1,
+        emit_stone_removal_updated: boolean = true,
+    ): [-1 | 0 | 1, Group] {
         /*
            If toggle_set === -1, toggle the selection from marked / unmarked.
            If toggle_set === 0, unmark the group for removal
@@ -1634,14 +1652,24 @@ export class GoEngine extends TypedEventEmitter<Events> {
             for (let i = 0; i < group.length; ++i) {
                 const x = group[i].x;
                 const y = group[i].y;
-                this.setRemoved(x, y, removing);
+                this.setRemoved(x, y, removing, emit_stone_removal_updated);
             }
 
             return [removing, group];
         }
         return [0, []];
     }
-    public setRemoved(x: number, y: number, removed: boolean | 0 | 1): void {
+
+    /** Sets a position as being removed or not removed. If `emit_stone_removal_updated` is set to
+     *  false, the "stone-removal.updated" event will not be emitted, and it is up to the caller
+     *  to emit this event appropriately.
+     */
+    public setRemoved(
+        x: number,
+        y: number,
+        removed: boolean | 0 | 1,
+        emit_stone_removal_updated: boolean = true,
+    ): void {
         if (x < 0 || y < 0) {
             return;
         }
@@ -1650,16 +1678,23 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         this.removal[y][x] = removed ? 1 : 0;
         if (this.goban_callback) {
-            this.goban_callback.setForRemoval(x, y, this.removal[y][x]);
+            this.goban_callback.setForRemoval(x, y, this.removal[y][x], emit_stone_removal_updated);
         }
     }
     public clearRemoved(): void {
+        let updated = false;
+
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
-                    this.setRemoved(x, y, 0);
+                    updated = true;
+                    this.setRemoved(x, y, 0, false);
                 }
             }
+        }
+
+        if (updated) {
+            this.emit("stone-removal.updated");
         }
     }
     public getStoneRemovalString(): string {
