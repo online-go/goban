@@ -1434,8 +1434,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     }
 
                     for (let i = 0; i < moves.length; ++i) {
-                        this.engine.setRemoved(moves[i].x, moves[i].y, removed);
+                        this.engine.setRemoved(moves[i].x, moves[i].y, removed, false);
                     }
+                    this.emit("stone-removal.updated");
                 }
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
@@ -2269,7 +2270,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public set(x: number, y: number, player: JGOFNumericPlayerColor): void {
         this.markDirty();
     }
-    public setForRemoval(x: number, y: number, removed: number) {
+    public setForRemoval(
+        x: number,
+        y: number,
+        removed: number,
+        emit_stone_removal_updated: boolean = true,
+    ) {
         if (removed) {
             this.getMarks(x, y).stone_removed = true;
             this.getMarks(x, y).remove = true;
@@ -2279,7 +2285,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         }
         this.drawSquare(x, y);
         this.emit("set-for-removal", { x, y, removed: !!removed });
-        this.emit("stone-removal.updated");
+        if (emit_stone_removal_updated) {
+            this.emit("stone-removal.updated");
+        }
     }
     public showScores(score: Score, only_show_territory: boolean = false): void {
         this.hideScores();
@@ -3231,8 +3239,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.engine.clearRemoved();
                     const moves = this.engine.decodeMoves(new_removed);
                     for (let i = 0; i < moves.length; ++i) {
-                        this.engine.setRemoved(moves[i].x, moves[i].y, true);
+                        this.engine.setRemoved(moves[i].x, moves[i].y, true, false);
                     }
+                    this.emit("stone-removal.updated");
 
                     this.updateTitleAndStonePlacement();
                     this.emit("update");
