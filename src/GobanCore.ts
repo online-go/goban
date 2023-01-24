@@ -2166,6 +2166,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         // here, it is created without the callback to `this` so that it cannot mess things up
         const new_engine = new GoEngine(config);
 
+        /*
         if (old_engine) {
             console.log("old size", old_engine.move_tree.size());
             console.log("new size", new_engine.move_tree.size());
@@ -2178,6 +2179,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 new_engine.move_tree.containsOtherTreeAsSubset(old_engine.move_tree),
             );
         }
+        */
 
         // more sanity checks
         keep_old_engine = keep_old_engine && old_engine.phase === new_engine.phase;
