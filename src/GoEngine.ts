@@ -86,9 +86,6 @@ export interface GoEnginePlayerEntry {
     /** The accepted stones for the stone removal phase that the player has accepted */
     accepted_stones?: string;
 
-    /** Whether or not the player has accepted scoring with strict seki mode on or not */
-    accepted_strict_seki_mode?: boolean;
-
     /** XXX: The server is using these, the client may or may not be, we need to normalize this */
     name?: string;
     pro?: boolean;
@@ -149,7 +146,6 @@ export interface GoEngineConfig {
     allow_superko?: boolean;
     score_territory?: boolean;
     score_territory_in_seki?: boolean;
-    strict_seki_mode?: boolean;
     score_stones?: boolean;
     score_passes?: boolean;
     score_prisoners?: boolean;
@@ -360,18 +356,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
         }
         this._last_official_move = last_official_move;
         this.emit("last_official_move", this.last_official_move);
-    }
-
-    private _strict_seki_mode: boolean = false;
-    public get strict_seki_mode(): boolean {
-        return this._strict_seki_mode;
-    }
-    public set strict_seki_mode(strict_seki_mode: boolean) {
-        if (this._strict_seki_mode === strict_seki_mode) {
-            return;
-        }
-        this._strict_seki_mode = strict_seki_mode;
-        this.emit("strict_seki_mode", this.strict_seki_mode);
     }
 
     private _rules: GoEngineRules = "japanese"; // can't be readonly at this point since parseSGF sets it
@@ -1812,14 +1796,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
 
             gm.foreachGroup((gr) => {
                 if (gr.is_territory) {
-                    //console.log(gr);
-                    if (
-                        !this.score_territory_in_seki &&
-                        gr.is_territory_in_seki &&
-                        this.strict_seki_mode
-                    ) {
-                        return;
-                    }
                     if (gr.territory_color === 1) {
                         ret["black"].scoring_positions += GoMath.encodeMoves(gr.points);
                         ret["black"].territory += markScored(gr.points);
@@ -1994,7 +1970,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
         defaults.score_passes = true;
         defaults.white_must_pass_last = false;
         defaults.opponent_plays_first_after_resume = false;
-        defaults.strict_seki_mode = game_obj.phase === "finished" ? true : false;
 
         const rules = game_obj.rules || defaults.rules;
 
@@ -2238,7 +2213,6 @@ export class GoEngine extends TypedEventEmitter<Events> {
         delete game_obj.allow_superko;
         delete game_obj.score_territory;
         delete game_obj.score_territory_in_seki;
-        delete game_obj.strict_seki_mode;
         delete game_obj.score_stones;
         delete game_obj.score_prisoners;
         delete game_obj.score_passes;

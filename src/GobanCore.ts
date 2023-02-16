@@ -237,7 +237,6 @@ export interface StateUpdateEvents {
     analyze_tool: AnalysisTool;
     analyze_subtool: AnalysisSubTool;
     score_estimate: ScoreEstimator | null;
-    strict_seki_mode: boolean;
     rules: GoEngineRules;
     winner: number | undefined;
     undo_requested: number | undefined; // move number of the last undo request
@@ -1421,23 +1420,20 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     return;
                 }
 
-                if ("strict_seki_mode" in cfg) {
-                    this.engine.strict_seki_mode = cfg.strict_seki_mode;
+                const removed = cfg.removed;
+                const stones = cfg.stones;
+                let moves: Array<Move>;
+                if (!stones) {
+                    moves = [];
                 } else {
-                    const removed = cfg.removed;
-                    const stones = cfg.stones;
-                    let moves: Array<Move>;
-                    if (!stones) {
-                        moves = [];
-                    } else {
-                        moves = this.engine.decodeMoves(stones);
-                    }
-
-                    for (let i = 0; i < moves.length; ++i) {
-                        this.engine.setRemoved(moves[i].x, moves[i].y, removed, false);
-                    }
-                    this.emit("stone-removal.updated");
+                    moves = this.engine.decodeMoves(stones);
                 }
+
+                for (let i = 0; i < moves.length; ++i) {
+                    this.engine.setRemoved(moves[i].x, moves[i].y, removed, false);
+                }
+                this.emit("stone-removal.updated");
+
                 this.updateTitleAndStonePlacement();
                 this.emit("update");
             });
@@ -1456,10 +1452,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.engine.players[
                         this.engine.playerColor(player_id) as "black" | "white"
                     ].accepted_stones = stones;
-                    this.engine.players[
-                        this.engine.playerColor(player_id) as "black" | "white"
-                    ].accepted_strict_seki_mode =
-                        "strict_seki_mode" in cfg ? cfg.strict_seki_mode : false;
                 }
                 this.updateTitleAndStonePlacement();
                 this.emit("stone-removal.accepted");
@@ -1962,22 +1954,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.redraw(true);
     }
 
-    public setStrictSekiMode(tf: boolean): void {
-        if (this.engine.phase !== "stone removal") {
-            throw "Not in stone removal phase";
-        }
-        if (this.engine.strict_seki_mode === tf) {
-            return;
-        }
-        this.engine.strict_seki_mode = tf;
-
-        this.socket.send("game/removed_stones/set", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
-            strict_seki_mode: tf,
-        });
-    }
     public computeMetrics(): GobanMetrics {
         if (!this.square_size || this.square_size <= 0) {
             this.square_size = 12;
@@ -2816,7 +2792,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             game_id: this.config.game_id,
             player_id: this.config.player_id,
             stones: stones,
-            strict_seki_mode: this.engine.strict_seki_mode,
         });
     }
     public rejectRemovedStones(): void {
