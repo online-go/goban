@@ -10,6 +10,7 @@
 (global as any).CLIENT = true;
 
 import { GoEngine } from "../GoEngine";
+import { movesFromBoardState } from "../test_utils";
 
 test("GoEngine defaults", () => {
     const engine = new GoEngine({});
@@ -92,4 +93,61 @@ test("AGA handicap - white is given compensation ", () => {
             total: 3.5,
         }),
     );
+});
+
+test("Both sides have territory", () => {
+    const board = [
+        [0, 1, 2, 0],
+        [0, 1, 2, 0],
+        [0, 1, 2, 0],
+        [0, 1, 2, 0],
+    ];
+    const engine = new GoEngine({ width: 4, height: 4, moves: movesFromBoardState(board) });
+
+    expect(engine.computeScore()).toEqual({
+        black: expect.objectContaining({
+            scoring_positions: "aaabacad",
+            stones: 0,
+            territory: 4,
+            total: 4,
+        }),
+        white: expect.objectContaining({
+            komi: 6.5,
+            scoring_positions: "dadbdcdd",
+            stones: 0,
+            territory: 4,
+            total: 10.5,
+        }),
+    });
+});
+
+test("Both sides have territory (Chinese)", () => {
+    const board = [
+        [0, 1, 2, 0],
+        [0, 1, 2, 0],
+        [0, 1, 2, 0],
+        [0, 1, 2, 0],
+    ];
+    const engine = new GoEngine({
+        width: 4,
+        height: 4,
+        moves: movesFromBoardState(board),
+        rules: "chinese",
+    });
+
+    expect(engine.computeScore()).toEqual({
+        black: expect.objectContaining({
+            scoring_positions: "aaabacadbabbbcbd",
+            stones: 4,
+            territory: 4,
+            total: 8,
+        }),
+        white: expect.objectContaining({
+            komi: 7.5,
+            scoring_positions: "dadbdcddcacbcccd",
+            stones: 4,
+            territory: 4,
+            total: 15.5,
+        }),
+    });
 });

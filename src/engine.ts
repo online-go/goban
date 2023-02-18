@@ -26,6 +26,7 @@ export * from "./JGOF";
 export * from "./AdHocFormat";
 export * from "./AIReview";
 export * from "./Misc";
+export * from "./test_utils";
 
 export * from "./GoMath";
 export * as GoMath from "./GoMath";
