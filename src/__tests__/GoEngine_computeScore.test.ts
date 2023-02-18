@@ -151,3 +151,37 @@ test("Both sides have territory (Chinese)", () => {
         }),
     });
 });
+
+test("Removed stones", () => {
+    const board = [
+        [2, 1, 2, 0],
+        [0, 1, 2, 0],
+        [0, 1, 2, 0],
+        [0, 1, 2, 1],
+    ];
+    const engine = new GoEngine({
+        width: 4,
+        height: 4,
+        moves: movesFromBoardState(board),
+        rules: "chinese",
+        removed: "aadd",
+    });
+
+    expect(engine.computeScore()).toEqual({
+        black: expect.objectContaining({
+            prisoners: 0,
+            scoring_positions: "aaabacadbabbbcbd",
+            stones: 4,
+            territory: 4,
+            total: 8,
+        }),
+        white: expect.objectContaining({
+            prisoners: 0,
+            komi: 7.5,
+            scoring_positions: "dadbdcddcacbcccd",
+            stones: 4,
+            territory: 4,
+            total: 15.5,
+        }),
+    });
+});
