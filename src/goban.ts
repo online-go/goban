@@ -32,6 +32,7 @@ export * from "./JGOF";
 export * from "./AIReview";
 export * from "./AdHocFormat";
 export * from "./TestGoban";
+export * from "./test_utils";
 
 export * as GoMath from "./GoMath";
 export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
