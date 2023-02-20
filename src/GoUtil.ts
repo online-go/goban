@@ -75,7 +75,7 @@ export function validateCanvas(canvas: HTMLCanvasElement | null, err?: Error): b
         err = err || new Error(err_string);
     } else {
         try {
-            ctx = canvas.getContext("2d");
+            ctx = canvas.getContext("2d", { willReadFrequently: true });
         } catch (e) {
             err_string = err_string || "Canvas context allocation failed";
             err = err || e;
@@ -113,7 +113,7 @@ export function resizeDeviceScaledCanvas(
 ): HTMLCanvasElement {
     validateCanvas(canvas);
 
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context) {
         throw new Error(`Failed to get context for canvas`);
     }
@@ -162,7 +162,7 @@ export function resizeDeviceScaledCanvas(
 export function deviceCanvasScalingRatio() {
     if (!__deviceCanvasScalingRatio) {
         const canvas = allocateCanvasOrError(257, 257);
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
 
         const devicePixelRatio = window.devicePixelRatio || 1;
         const backingStoreRatio =

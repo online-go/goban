@@ -308,8 +308,8 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
     if (typeof document !== "undefined") {
         stone = allocateCanvasOrError(`${ss}px`, `${ss}px`);
         shadow = allocateCanvasOrError(`${sss}px`, `${sss}px`);
-        ctx = stone.getContext("2d");
-        shadow_ctx = shadow.getContext("2d");
+        ctx = stone.getContext("2d", { willReadFrequently: true });
+        shadow_ctx = shadow.getContext("2d", { willReadFrequently: true });
 
         if (!ctx) {
             throw new Error("Error getting stone context 2d");

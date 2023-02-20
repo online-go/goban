@@ -81,7 +81,7 @@ export function preRenderImageStone(
         });
         promises.push(stone_load_promise);
 
-        const shadow_ctx = shadow.getContext("2d");
+        const shadow_ctx = shadow.getContext("2d", { willReadFrequently: true });
         if (!shadow_ctx) {
             throw new Error("Error getting shadow context 2d");
         }
@@ -89,7 +89,7 @@ export function preRenderImageStone(
 
         stone_load_promise
             .then(() => {
-                const stone_ctx = stone.getContext("2d");
+                const stone_ctx = stone.getContext("2d", { willReadFrequently: true });
 
                 if (!stone_ctx) {
                     throw new Error("Error getting stone context 2d");
