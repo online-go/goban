@@ -77,16 +77,7 @@ export class GoStoneGroups {
 
                 if (!(group_id_map[y][x] in groups)) {
                     groups.push(
-                        new GoStoneGroup(
-                            this.state,
-                            group_id_map[y][x],
-                            this.state.board[y][x],
-                            !!(
-                                original_board &&
-                                this.state.removal[y][x] &&
-                                original_board[y][x] === 0
-                            ),
-                        ),
+                        new GoStoneGroup(this.state, group_id_map[y][x], this.state.board[y][x]),
                     );
                 }
                 groups[group_id_map[y][x]].addStone(x, y);

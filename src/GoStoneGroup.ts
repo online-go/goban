@@ -27,20 +27,14 @@ export interface BoardState {
 }
 
 export class GoStoneGroup {
-    probable_color: JGOFNumericPlayerColor;
-    dame: boolean;
     corner_groups: { [y: string]: { [x: string]: GoStoneGroup } };
     points: Array<Intersection>;
     neighbors: Array<GoStoneGroup>;
     is_territory: boolean = false;
     color: JGOFNumericPlayerColor;
-    is_probably_dead: boolean = false;
-    is_probably_dame: boolean = false;
     board_state: BoardState;
     id: number;
     is_strong_eye: boolean;
-    adjacent_white: number;
-    adjacent_black: number;
     is_eye: boolean = false;
     is_strong_string: boolean = false;
     territory_color: JGOFNumericPlayerColor = 0;
@@ -48,17 +42,13 @@ export class GoStoneGroup {
 
     private __added_neighbors: { [group_id: number]: boolean };
 
-    constructor(board_state: BoardState, id: number, color: JGOFNumericPlayerColor, dame: boolean) {
+    constructor(board_state: BoardState, id: number, color: JGOFNumericPlayerColor) {
         this.board_state = board_state;
         this.points = [];
         this.neighbors = [];
         this.id = id;
         this.color = color;
         this.is_strong_eye = false;
-        this.adjacent_black = 0;
-        this.adjacent_white = 0;
-        this.probable_color = 0;
-        this.dame = dame;
 
         this.__added_neighbors = {};
         this.corner_groups = {};
