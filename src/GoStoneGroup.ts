@@ -27,7 +27,6 @@ export interface BoardState {
 }
 
 export class GoStoneGroup {
-    probable_color: JGOFNumericPlayerColor;
     dame: boolean;
     corner_groups: { [y: string]: { [x: string]: GoStoneGroup } };
     points: Array<Intersection>;
@@ -57,7 +56,6 @@ export class GoStoneGroup {
         this.is_strong_eye = false;
         this.adjacent_black = 0;
         this.adjacent_white = 0;
-        this.probable_color = 0;
         this.dame = dame;
 
         this.__added_neighbors = {};
