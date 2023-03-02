@@ -978,9 +978,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         return;
                     }
 
-                    if (!this.config.auth) {
-                        return;
-                    }
                     if (!this.config.game_id || this.config?.game_id <= 0) {
                         return;
                     }
