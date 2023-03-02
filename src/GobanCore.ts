@@ -978,6 +978,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         return;
                     }
 
+                    if (!this.config.auth) {
+                        return;
+                    }
+                    if (!this.config.game_id || this.config?.game_id <= 0) {
+                        return;
+                    }
+                    if (!this.config.player_id || this.config?.player_id <= 0) {
+                        return;
+                    }
+
                     //console.log("Sending latency", this.getNetworkLatency());
                     this.socket.send("game/latency", {
                         auth: this.config.auth,
