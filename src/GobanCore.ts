@@ -963,7 +963,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
 
             if (!this.sendLatencyTimer) {
+                let last_send = 0;
                 const sendLatency = () => {
+                    if (Date.now() - last_send < 6000) {
+                        // When a game is in a background tab on mobile (maybe desktop too), setIntervals
+                        // can be paused for a long time, when the tab is brought to the foreground all
+                        // of the missed intervals are replayed - when this happens we don't want to flood
+                        // the server with sometimes thousands of game/latency calls all at once.
+                        return;
+                    }
+                    last_send = Date.now();
+
                     if (!this.interactive) {
                         return;
                     }
