@@ -48,7 +48,7 @@ import {
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
-import { niceInterval } from "ogssocket";
+import { niceInterval } from "./ogssocket";
 
 declare let swal: any;
 

@@ -17,8 +17,6 @@
 import WebSocket from "isomorphic-ws";
 import { EventEmitter } from "eventemitter3";
 
-console.log("WebSocket", WebSocket);
-
 /* Like setInterval, but debounces catchups that happen
  * when tabs wake up on some browsers. Cleared with
  * the standard clearInterval. */
