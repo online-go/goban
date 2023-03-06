@@ -168,7 +168,7 @@ export class OGSSocket extends EventEmitter<Events> {
         const socket = new WebSocket(this.url);
 
         socket.addEventListener("open", (event: Event) => {
-            console.info("OGSSocket connected", event);
+            console.log("OGSSocket connected to " + this.url);
             this.reconnecting = false;
             this.reconnect_tries = 0;
             if (!this.connected) {
@@ -205,9 +205,8 @@ export class OGSSocket extends EventEmitter<Events> {
         });
 
         socket.addEventListener("close", (event: CloseEvent) => {
-            console.info(
+            console.log(
                 `OGSSocket closed with code ${event.code}: ${closeErrorCodeToString(event.code)}`,
-                event,
             );
 
             this.rejectPromisesInFlight();
