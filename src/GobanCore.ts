@@ -48,6 +48,7 @@ import {
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
+import { niceInterval } from "ogssocket";
 
 declare let swal: any;
 
@@ -583,7 +584,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected show_variation_move_numbers: boolean;
     protected square_size: number = 10;
     protected stone_placement_enabled: boolean;
-    protected sendLatencyTimer?: ReturnType<typeof setInterval>;
+    protected sendLatencyTimer?: ReturnType<typeof niceInterval>;
     //protected syncToCurrentReviewMove;
     //protected waiting_for_game_to_begin;
     //protected white_clock;
@@ -963,17 +964,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             }
 
             if (!this.sendLatencyTimer) {
-                let last_send = 0;
                 const sendLatency = () => {
-                    if (Date.now() - last_send < 6000) {
-                        // When a game is in a background tab on mobile (maybe desktop too), setIntervals
-                        // can be paused for a long time, when the tab is brought to the foreground all
-                        // of the missed intervals are replayed - when this happens we don't want to flood
-                        // the server with sometimes thousands of game/latency calls all at once.
-                        return;
-                    }
-                    last_send = Date.now();
-
                     if (!this.interactive) {
                         return;
                     }
@@ -1003,7 +994,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         latency: this.getNetworkLatency(),
                     });
                 };
-                this.sendLatencyTimer = setInterval(sendLatency, 5000);
+                this.sendLatencyTimer = niceInterval(sendLatency, 5000);
                 sendLatency();
             }
         };
