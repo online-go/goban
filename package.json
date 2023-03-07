@@ -79,7 +79,7 @@
         "webpack-dev-server": "^3.11.2"
     },
     "dependencies": {
-        "isomorphic-ws": "^5.0.0"
+        "modern-isomorphic-ws": "^1.0.3"
     },
     "lint-staged": {
         "src/**/*.{ts,tsx}": [
