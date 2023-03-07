@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import WebSocket from "isomorphic-ws";
+const WebSocket = require("isomorphic-ws");
 import { EventEmitter } from "eventemitter3";
 import { niceInterval } from "GoUtil";
 
