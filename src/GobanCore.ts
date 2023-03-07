@@ -33,7 +33,7 @@ import * as GoMath from "./GoMath";
 import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
 import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
 import { init_score_estimator, ScoreEstimator } from "./ScoreEstimator";
-import { deepEqual, dup, computeAverageMoveTime } from "./GoUtil";
+import { deepEqual, dup, computeAverageMoveTime, niceInterval } from "./GoUtil";
 import { TypedEventEmitter } from "./TypedEventEmitter";
 import { _, interpolate } from "./translate";
 import {
@@ -48,7 +48,6 @@ import {
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
-import { niceInterval } from "./ogssocket";
 
 declare let swal: any;
 

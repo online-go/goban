@@ -360,3 +360,21 @@ export function computeAverageMoveTime(
         return 60;
     }
 }
+
+/* Like setInterval, but debounces catchups that happen
+ * when tabs wake up on some browsers. Cleared with
+ * the standard clearInterval. */
+export function niceInterval(
+    callback: () => void,
+    interval: number,
+): ReturnType<typeof setInterval> {
+    let last = performance.now();
+    return setInterval(() => {
+        const now = performance.now();
+        const diff = now - last;
+        if (diff >= interval * 0.9) {
+            last = now;
+            callback();
+        }
+    }, interval);
+}
