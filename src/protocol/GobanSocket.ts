@@ -17,13 +17,9 @@
 import WebSocket from "modern-isomorphic-ws";
 import { EventEmitter } from "eventemitter3";
 import { niceInterval } from "GoUtil";
+import { ClientToServer, ServerToClient } from "./messages";
 
-export interface OGSClientToServerMessages {
-    //
-    [key: string]: any;
-}
-
-export interface OGSServerToClientMessages {
+export interface OGSServerToClientMessages extends ServerToClient {
     response: {
         u: string | number; // User data sent with the request
     };
@@ -32,25 +28,25 @@ export interface OGSServerToClientMessages {
     };
 }
 
-interface OGSSocketClientToServerMessage {
-    c: string | keyof OGSClientToServerMessages; // Command
+interface GobanSocketClientToServerMessage {
+    c: string | keyof ClientToServer; // Command
     a?: any[]; // Arguments
     u?: string | number; // User defined data to be sent back in the response
 }
 
-interface OGSSocketServerToClientMessage {
+interface GobanSocketServerToClientMessage {
     e: keyof OGSServerToClientMessages; // Event
     a?: any[]; // Arguments
     u?: string | number; // User defined data, available if this is a response
 }
 
 interface Events {
-    connect: () => void;
-    disconnect: () => void;
-    reconnect: () => void;
-    unrecoverable_error: (code: number, tag: string, message: string) => void;
+    "connect": () => void;
+    "disconnect": () => void;
+    "reconnect": () => void;
+    "unrecoverable_error": (code: number, tag: string, message: string) => void;
     /* Emitted when we receive an updated latency measurement */
-    latency: (latency: number, clock_drift: number) => void;
+    "latency": (latency: number, clock_drift: number) => void;
 
     "net/pong": (params: { client: number; server: number }) => void;
 
@@ -74,7 +70,7 @@ const PING_INTERVAL = 10000;
  *
  */
 
-export class OGSSocket extends EventEmitter<Events> {
+export class GobanSocket extends EventEmitter<Events> {
     public readonly url: string;
     public clock_drift = 0.0;
     public latency = 0.0;
@@ -121,7 +117,7 @@ export class OGSSocket extends EventEmitter<Events> {
 
     private startPing(): void {
         if (!this.connected) {
-            throw new Error("OGSSocket not connected");
+            throw new Error("GobanSocket not connected");
         }
 
         const ping = () => {
@@ -151,21 +147,21 @@ export class OGSSocket extends EventEmitter<Events> {
         const socket = new WebSocket(this.url);
 
         socket.addEventListener("open", (event: Event) => {
-            console.log("OGSSocket connected to " + this.url);
+            console.log("GobanSocket connected to " + this.url);
             this.reconnecting = false;
             this.reconnect_tries = 0;
             if (!this.connected) {
-                console.error("OGSSocket connected but readyState !== OPEN");
+                console.error("GobanSocket connected but readyState !== OPEN");
             }
             try {
                 this.emit("connect");
             } catch (e) {
-                console.error("OGSSocket connect event handler error", e);
+                console.error("GobanSocket connect event handler error", e);
             }
 
             if (this.promises_in_flight.size > 0) {
                 // This shouldn't ever happen
-                throw new Error("OGSSocket connected with promises in flight");
+                throw new Error("GobanSocket connected with promises in flight");
             }
 
             this.sendAuthentication();
@@ -179,7 +175,7 @@ export class OGSSocket extends EventEmitter<Events> {
         });
 
         socket.addEventListener("error", (event: Event) => {
-            console.error("OGSSocket error", event);
+            console.error("GobanSocket error", event);
             /*
             if (!this.connected) {
                 this.reconnect();
@@ -189,7 +185,7 @@ export class OGSSocket extends EventEmitter<Events> {
 
         socket.addEventListener("close", (event: CloseEvent) => {
             console.log(
-                `OGSSocket closed with code ${event.code}: ${closeErrorCodeToString(event.code)}`,
+                `GobanSocket closed with code ${event.code}: ${closeErrorCodeToString(event.code)}`,
             );
 
             this.rejectPromisesInFlight();
@@ -221,7 +217,7 @@ export class OGSSocket extends EventEmitter<Events> {
 
         socket.addEventListener("message", (event: MessageEvent) => {
             //console.log("Message from server ", event.data);
-            const payload: OGSSocketServerToClientMessage = JSON.parse(event.data);
+            const payload: GobanSocketServerToClientMessage = JSON.parse(event.data);
             if (payload.u) {
                 const entry = this.promises_in_flight.get(payload.u as number);
                 if (entry) {
@@ -233,7 +229,7 @@ export class OGSSocket extends EventEmitter<Events> {
                             reject(...(payload.a ?? []));
                         } else {
                             console.error(
-                                `OGSSocket received unknown response type ${payload.e} for command ${command} with args ${args}`,
+                                `GobanSocket received unknown response type ${payload.e} for command ${command} with args ${args}`,
                             );
                         }
                     } catch (e) {
@@ -265,7 +261,7 @@ export class OGSSocket extends EventEmitter<Events> {
             RECONNECT_MAX_DELAY,
             RECONNECT_MIN_DELAY * Math.pow(1.5, this.reconnect_tries),
         );
-        console.info(`OGSSocket reconnecting in ${delay}ms`);
+        console.info(`GobanSocket reconnecting in ${delay}ms`);
         setTimeout(() => {
             this.socket = this.connect();
         }, delay);
@@ -282,12 +278,16 @@ export class OGSSocket extends EventEmitter<Events> {
         this.promises_in_flight.clear();
     }
 
-    public send(command: string, ...args: any[]): void {
-        const request: OGSSocketClientToServerMessage = {
+    public send<KeyT extends keyof ClientToServer>(
+        command: KeyT,
+        arg: ClientToServer[KeyT],
+        cb?: (...args: any[]) => void,
+    ): void {
+        const request: GobanSocketClientToServerMessage = {
             c: command,
         };
-        if (args) {
-            request.a = args;
+        if (typeof arg !== "undefined") {
+            request.a = [arg];
         }
 
         if (this.connected) {
@@ -303,7 +303,7 @@ export class OGSSocket extends EventEmitter<Events> {
         return new Promise((resolve, reject) => {
             const udata_id = ++this.last_udata_id;
 
-            const request: OGSSocketClientToServerMessage = {
+            const request: GobanSocketClientToServerMessage = {
                 c: command,
                 u: udata_id,
             };

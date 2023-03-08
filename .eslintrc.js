@@ -1,25 +1,16 @@
 module.exports = {
-    "env": {
-        "browser": true,
-        "es6": true
+    env: {
+        browser: true,
+        es6: true,
     },
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-        "project": "tsconfig.json",
-        "sourceType": "module"
+    parser: "@typescript-eslint/parser",
+    parserOptions: {
+        project: "tsconfig.json",
+        sourceType: "module",
     },
-    "plugins": [
-        "eslint-plugin-jsdoc",
-        "@typescript-eslint",
-        "@typescript-eslint/tslint",
-        "prettier"
-    ],
-    "extends": [
-        "eslint:recommended",
-        "plugin:@typescript-eslint/recommended",
-        "prettier"
-    ],
-    "rules": {
+    plugins: ["eslint-plugin-jsdoc", "@typescript-eslint", "@typescript-eslint/tslint", "prettier"],
+    extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
+    rules: {
         // Recommended rules with errors
         // TODO: Fix these and re-enable them
         "@typescript-eslint/ban-types": "off", // 1 error
@@ -28,7 +19,7 @@ module.exports = {
         "@typescript-eslint/no-this-alias": "off", // 11 errors
         "@typescript-eslint/no-unused-vars": "off", // 38 warnings
         "@typescript-eslint/no-empty-interface": "off", // 1 error
-        "eqeqeq": "off", // 2 errors
+        eqeqeq: "off", // 2 errors
         "no-case-declarations": "off", // 1 error
         "no-constant-condition": "off", // 2 errors
         "no-empty": "off", // 2 errors
@@ -37,7 +28,6 @@ module.exports = {
         "@typescript-eslint/no-var-requires": "off",
         //==============================================================
 
-
         "@typescript-eslint/adjacent-overload-signatures": "error",
         "@typescript-eslint/consistent-type-assertions": "error",
         "@typescript-eslint/member-delimiter-style": "error",
@@ -45,21 +35,18 @@ module.exports = {
         "@typescript-eslint/no-inferrable-types": [
             "error",
             {
-                "ignoreParameters": true,
-                "ignoreProperties": true
-            }
+                ignoreParameters: true,
+                ignoreProperties: true,
+            },
         ],
         //"@typescript-eslint/no-var-requires": "error",
         "@typescript-eslint/prefer-namespace-keyword": "error",
         "@typescript-eslint/semi": "error",
         "@typescript-eslint/type-annotation-spacing": "error",
         "computed-property-spacing": ["error", "never"],
-        "curly": "error",
+        curly: "error",
         "eol-last": "error",
-        "eqeqeq": [
-            "error",
-            "smart"
-        ],
+        eqeqeq: ["error", "smart"],
         "id-denylist": [
             "error",
             "any",
@@ -70,15 +57,12 @@ module.exports = {
             "Boolean",
             "boolean",
             "Undefined",
-            "undefined"
+            "undefined",
         ],
         "id-match": "error",
         "jsdoc/check-alignment": "error",
         "jsdoc/require-asterisk-prefix": "error",
-        "linebreak-style": [
-            "error",
-            "unix"
-        ],
+        "linebreak-style": ["error", "unix"],
         "no-caller": "error",
         "no-cond-assign": "error",
         "no-debugger": "error",
@@ -90,8 +74,8 @@ module.exports = {
         "no-multiple-empty-lines": [
             "error",
             {
-                "max": 3
-            }
+                max: 3,
+            },
         ],
         "no-new-wrappers": "error",
         "no-tabs": "error",
@@ -100,50 +84,41 @@ module.exports = {
         "no-unsafe-finally": "error",
         "no-unused-labels": "error",
         "no-var": "error",
-        "one-var": [
-            "error",
-            "never"
-        ],
-        "prefer-arrow-callback": [
-            "error",
-            { "allowNamedFunctions": true }
-        ],
+        "one-var": ["error", "never"],
+        "prefer-arrow-callback": ["error", { allowNamedFunctions: true }],
         "prettier/prettier": "error",
         "use-isnan": "error",
         "@typescript-eslint/tslint/config": [
             "error",
             {
-                "rules": {
-                    "file-header": [
-                        true,
-                        "[Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com"
-                    ],
+                rules: {
+                    "file-header": [true, "[Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com"],
                     "import-spacing": true,
-                    "whitespace": [
+                    whitespace: [
                         true,
                         "check-branch",
                         "check-decl",
                         "check-operator",
-                        "check-separator"
-                    ]
-                }
-            }
-        ]
+                        "check-separator",
+                    ],
+                },
+            },
+        ],
     },
-    "overrides": [
+    overrides: [
         {
-            "files": ["src/test.tsx", "*/__tests__/*"],
+            files: ["src/test.tsx", "*/__tests__/*"],
             // since test files are not part of tsconfig.json,
             // parserOptions.project must be unset
-            "parserOptions": {
-                "project": null,
+            parserOptions: {
+                project: null,
             },
-            "rules": {
+            rules: {
                 // rules that depend on type information (and therefore
                 // parserOptions.project)
                 "@typescript-eslint/no-floating-promises": "off",
                 "@typescript-eslint/tslint/config": "off",
-            }
-        }
-    ]
+            },
+        },
+    ],
 };
