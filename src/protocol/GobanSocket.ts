@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import WebSocket from "modern-isomorphic-ws";
 import { EventEmitter } from "eventemitter3";
 import { niceInterval } from "../GoUtil";
 import { ClientToServer, ServerToClient } from "./messages";

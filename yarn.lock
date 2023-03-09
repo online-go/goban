@@ -4775,11 +4775,6 @@ mkdirp@^1.0.3:
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-1.0.4.tgz#3eb5ed62622756d79a5f0e2a221dfebad75c2f7e"
   integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
 
-modern-isomorphic-ws@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/modern-isomorphic-ws/-/modern-isomorphic-ws-1.0.3.tgz#e1fc3e2a3ecf2d6e530ae6a3e5997838d2c64fcd"
-  integrity sha512-l513ZrCAgfxbg9hLV2PP+xJdv9Rme3zF7bVETHZChcJ3oFHXCtmGcxp8gCXA2fXEAMaPSg2TRrK2JjIImMgK3w==
-
 ms@2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.0.0.tgz#5608aeadfc00be6c2901df5f9861788de0d597c8"
