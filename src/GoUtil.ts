@@ -182,7 +182,7 @@ export function deviceCanvasScalingRatio() {
 let last_touch_x = -1000;
 let last_touch_y = -1000;
 
-/** Returns {x,y} of the event relative to the event target */
+/** Returns `{x,y}` of the event relative to the event target */
 export function getRelativeEventPosition(event: TouchEvent | MouseEvent) {
     let x = -1000;
     let y = -1000;

@@ -755,9 +755,7 @@ export class GobanCanvas extends GobanCore {
                 }
             }
             const sent = this.sendMove({
-                auth: this.config.auth,
-                game_id: this.config.game_id,
-                player_id: this.config.player_id,
+                game_id: this.game_id,
                 move: GoMath.encodeMove(x, y),
             });
             if (sent) {
@@ -794,10 +792,8 @@ export class GobanCanvas extends GobanCore {
 
                 if (group.length) {
                     this.socket.send("game/removed_stones/set", {
-                        auth: this.config.auth,
-                        game_id: this.config.game_id,
-                        player_id: this.config.player_id,
-                        removed: removed,
+                        game_id: this.game_id,
+                        removed: !!removed,
                         stones: GoMath.encodeMoves(group),
                     });
                 }

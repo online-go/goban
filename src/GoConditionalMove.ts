@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
+/** A branch in the conditional move tree, consists of the response move and
+ *  the sub-tree of the next possible moves */
 export type ConditionalMoveResponse = [
     /** response_move */
     string | null,
 
-    /** next: */
+    /** next move tree */
     ConditionalMoveTree,
 ];
 

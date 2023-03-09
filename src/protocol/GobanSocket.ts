@@ -16,7 +16,7 @@
 
 import WebSocket from "modern-isomorphic-ws";
 import { EventEmitter } from "eventemitter3";
-import { niceInterval } from "GoUtil";
+import { niceInterval } from "../GoUtil";
 import { ClientToServer, ServerToClient } from "./messages";
 
 export interface OGSServerToClientMessages extends ServerToClient {

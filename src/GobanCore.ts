@@ -48,6 +48,7 @@ import {
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
+import { GobanSocket } from "./protocol";
 
 declare let swal: any;
 
@@ -183,11 +184,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
 
     // deprecated
     username?: string;
-    server_socket?: {
-        on: (msg: string, cb: (data: any) => void) => void;
-        send: (msg: string, data: any) => void;
-        connected: boolean;
-    };
+    server_socket?: GobanSocket;
     connect_to_chat?: number | boolean;
 }
 
@@ -214,9 +211,8 @@ export interface AudioClockEvent {
 }
 
 interface MoveCommand {
-    auth?: string;
-    game_id?: number | string;
-    player_id?: number;
+    //game_id?: number | string;
+    game_id: number;
     move: string;
     blur?: number;
     clock?: JGOFPlayerClock;
@@ -249,14 +245,14 @@ export interface StateUpdateEvents {
 }
 
 export interface Events extends StateUpdateEvents {
-    destroy: never;
-    update: never;
+    "destroy": never;
+    "update": never;
     "chat-reset": never;
-    reset: any;
-    error: any;
-    gamedata: any;
-    chat: any;
-    load: GobanConfig;
+    "reset": any;
+    "error": any;
+    "gamedata": any;
+    "chat": any;
+    "load": GobanConfig;
     "show-message": { formatted: string; message_id: string; parameters?: { [key: string]: any } };
     "clear-message": never;
     "submitting-move": boolean;
@@ -274,7 +270,7 @@ export interface Events extends StateUpdateEvents {
     "review.load-end": never;
     "puzzle-wrong-answer": never;
     "puzzle-correct-answer": never;
-    state_text: {
+    "state_text": {
         title: string;
         show_moves_made_count?: boolean;
     };
@@ -302,7 +298,7 @@ export interface Events extends StateUpdateEvents {
         height: number;
         color: "black" | "white";
     };
-    clock: JGOFClockWithTransmitting | null;
+    "clock": JGOFClockWithTransmitting | null;
     "audio-game-started": {
         player_id: number; // Player to move
     };
@@ -384,7 +380,6 @@ export interface GobanMetrics {
 
 export abstract class GobanCore extends TypedEventEmitter<Events> {
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
-    //public black_pause_text: string;
     public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;
     public variation_stone_transparency: number;
@@ -401,10 +396,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     public previous_mode: string;
     public one_click_submit: boolean;
     public pen_marks: Array<any>;
-    public readonly game_id: number | string;
+    public readonly game_id: number;
     public readonly review_id: number;
     public showing_scores: boolean = false;
-    //public white_pause_text: string;
     public width: number;
 
     public pause_control?: AdHocPauseControl;
@@ -526,8 +520,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected __update_move_tree: any = null; /* timer */
     protected analysis_move_counter: number;
     protected auto_scoring_done?: boolean = false;
-    //protected black_clock;
-    //protected black_name;
     protected bounded_height: number;
     protected bounded_width: number;
     protected bounds: GobanBounds;
@@ -564,12 +556,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected last_review_message: ReviewMessage;
     protected last_sound_played_for_a_stone_placement?: string;
     protected last_stone_sound: number;
-    //protected move_number:number;
     protected move_selected?: Intersection;
     protected no_display: boolean;
     protected onError?: (error: Error) => void;
-    //protected onPendingResignation;
-    //protected onPendingResignationCleared;
     protected on_game_screen: boolean;
     protected original_square_size: number | ((goban: GobanCore) => number) | "auto";
     protected player_id: number;
@@ -577,29 +566,16 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected restrict_moves_to_movetree: boolean;
     protected review_had_gamedata: boolean;
     protected scoring_mode: boolean;
-    //protected selectedThemeWatcher;
     protected shift_key_is_down: boolean;
     protected show_move_numbers: boolean;
     protected show_variation_move_numbers: boolean;
     protected square_size: number = 10;
     protected stone_placement_enabled: boolean;
     protected sendLatencyTimer?: ReturnType<typeof niceInterval>;
-    //protected syncToCurrentReviewMove;
-    //protected waiting_for_game_to_begin;
-    //protected white_clock;
-    //protected white_name;
 
-    // todo remove this when we split out connection stuff
-    protected socket: any;
+    protected socket!: GobanSocket;
     protected socket_event_bindings: Array<[string, () => void]> = [];
-    protected game_connection_data: any;
     protected connectToReviewSent?: boolean;
-    protected review_connection_data?: {
-        auth: string;
-        review_id: number;
-        player_id: number;
-    };
-    //protected on_disconnects:Array<()=>void>;
 
     /** GobanCore calls some abstract methods as part of the construction
      *  process. Because our subsclasses might (and do) need to do some of their
@@ -676,11 +652,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.last_stone_sound = -1;
         this.scoring_mode = false;
 
-        /* TODO: Remove this after 5.0 and after doing a check to see if any of these still exist somehow */
-        if ("game_type" in config && config.game_type === "temporary") {
-            config.game_id = "tmp:" + config.game_id;
-        }
-
         this.game_type = config.game_type || "";
         this.one_click_submit = "one_click_submit" in config ? !!config.one_click_submit : false;
         this.double_click_submit =
@@ -702,7 +673,8 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //this.last_move = null;
         this.config = repair_config(config);
         this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
-        this.game_id = config.game_id || 0;
+        this.game_id =
+            (typeof config.game_id === "string" ? parseInt(config.game_id) : config.game_id) || 0;
         this.player_id = config.player_id || 0;
         this.review_id = config.review_id || 0;
         this.last_review_message = {};
@@ -804,28 +776,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
             delete this.last_hover_square;
             this.__last_pt = this.xy2ij(-1, -1);
-
-            this.game_connection_data = {
-                game_id: config.game_id,
-                player_id: config.player_id,
-                chat: config.connect_to_chat || 0,
-                //"game_type": ("game_type" in config ? config.game_type : "temporary")
-            };
-
-            if ("auth" in config) {
-                this.game_connection_data.auth = config.auth;
-            }
-            /*
-            if ("archive_id" in config) {
-                this.game_connection_data.archive_id = config.archive_id;
-            }
-            */
-
-            this.review_connection_data = {
-                auth: config.auth || "missing-auth",
-                review_id: config.review_id || 0,
-                player_id: config.player_id || 0,
-            };
 
             if (preloaded_data) {
                 ret = this.load(preloaded_data);
@@ -937,7 +887,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         //return {white:'Plain', black:'Plain', board:'Kaya'};
         return { white: "Shell", black: "Slate", board: "Kaya" };
     }
-    protected connect(server_socket: any): void {
+    protected connect(server_socket: GobanSocket): void {
         const socket = (this.socket = server_socket);
 
         this.disconnectedFromGame = false;
@@ -953,12 +903,17 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 this.done_loading_review = false;
                 this.setTitle(_("Review"));
                 if (!this.disconnectedFromGame) {
-                    socket.send("review/connect", this.review_connection_data);
+                    socket.send("review/connect", {
+                        review_id: this.review_id,
+                    });
                 }
                 this.emit("chat-reset");
             } else if (this.game_id) {
                 if (!this.disconnectedFromGame) {
-                    socket.send("game/connect", this.game_connection_data);
+                    socket.send("game/connect", {
+                        game_id: this.game_id,
+                        chat: !!this.config.connect_to_chat,
+                    });
                 }
             }
 
@@ -978,18 +933,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         return;
                     }
 
-                    if (!this.config.game_id || this.config?.game_id <= 0) {
-                        return;
-                    }
-                    if (!this.config.player_id || this.config?.player_id <= 0) {
+                    if (!this.game_id || this.game_id <= 0) {
                         return;
                     }
 
-                    //console.log("Sending latency", this.getNetworkLatency());
                     this.socket.send("game/latency", {
-                        auth: this.config.auth,
-                        game_id: this.config.game_id,
-                        player_id: this.config.player_id,
+                        game_id: this.game_id,
                         latency: this.getNetworkLatency(),
                     });
                 };
@@ -1760,7 +1709,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this._socket_on(prefix + "r", process_r);
         }
 
-        return socket;
+        return;
     }
     public destroy(): void {
         this.emit("destroy");
@@ -1829,21 +1778,18 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             body: msg_body,
         };
 
-        let where = null;
         if (this.game_id) {
-            where = "game/chat";
             msg["type"] = type;
-            msg["game_id"] = this.config.game_id;
+            msg["game_id"] = this.game_id;
             msg["move_number"] = this.engine.getCurrentMoveNumber();
+            this.socket.send("game/chat", msg);
         } else {
             const diff = this.engine.getMoveDiff();
-            where = "review/chat";
-            msg["review_id"] = this.config.review_id;
+            msg["review_id"] = this.review_id;
             msg["from"] = diff.from;
             msg["moves"] = diff.moves;
+            this.socket.send("review/chat", msg);
         }
-
-        this.socket.send(where, msg);
     }
 
     protected getWidthForSquareSize(square_size: number): number {
@@ -1979,9 +1925,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.engine.strict_seki_mode = tf;
 
         this.socket.send("game/removed_stones/set", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
+            stones: "",
+            removed: false,
             strict_seki_mode: tf,
         });
     }
@@ -2646,11 +2592,9 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public saveConditionalMoves(): void {
         this.socket.send("game/conditional_moves/set", {
-            auth: this.config.auth,
             move_number: this.engine.getCurrentMoveNumber(),
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
-            cmoves: this.conditional_tree.encode(),
+            game_id: this.game_id,
+            conditional_moves: this.conditional_tree.encode(),
         });
         this.emit("conditional-moves.updated");
     }
@@ -2727,35 +2671,27 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public resign(): void {
         this.socket.send("game/resign", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
         });
     }
     protected sendPendingResignation(): void {
         this.socket.send("game/delayed_resign", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
+            game_id: this.game_id,
         });
     }
     protected clearPendingResignation(): void {
         this.socket.send("game/clear_delayed_resign", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
+            game_id: this.game_id,
         });
     }
     public cancelGame(): void {
         this.socket.send("game/cancel", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
         });
     }
     protected annul(): void {
         this.socket.send("game/annul", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
         });
     }
     public pass(): void {
@@ -2766,9 +2702,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.engine.place(-1, -1);
         if (this.mode === "play") {
             this.sendMove({
-                auth: this.config.auth,
-                game_id: this.config.game_id,
-                player_id: this.config.player_id,
+                game_id: this.game_id,
                 move: encodeMove(-1, -1),
             });
         } else {
@@ -2778,40 +2712,30 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public requestUndo(): void {
         this.socket.send("game/undo/request", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
             move_number: this.engine.getCurrentMoveNumber(),
         });
     }
     public acceptUndo(): void {
         this.socket.send("game/undo/accept", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
             move_number: this.engine.getCurrentMoveNumber(),
         });
     }
     public cancelUndo(): void {
         this.socket.send("game/undo/cancel", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
             move_number: this.engine.getCurrentMoveNumber(),
         });
     }
     public pauseGame(): void {
         this.socket.send("game/pause", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
         });
     }
     public resumeGame(): void {
         this.socket.send("game/resume", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
         });
     }
 
@@ -2821,9 +2745,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.engine.playerColor(this.config.player_id) as "black" | "white"
         ].accepted_stones = stones;
         this.socket.send("game/removed_stones/accept", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
             stones: stones,
             strict_seki_mode: this.engine.strict_seki_mode,
         });
@@ -2833,33 +2755,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
             this.engine.playerColor(this.config.player_id) as "black" | "white"
         ].accepted_stones;
         this.socket.send("game/removed_stones/reject", {
-            auth: this.config.auth,
-            game_id: this.config.game_id,
-            player_id: this.config.player_id,
+            game_id: this.game_id,
         });
     }
     public setEditColor(color: "black" | "white"): void {
         this.edit_color = color;
         this.updateTitleAndStonePlacement();
-    }
-    protected editSettings(changes: GoEngineConfig): void {
-        let need_to_change = false;
-        for (const k in changes) {
-            if ((this.engine as any)[k] !== (changes as any)[k]) {
-                need_to_change = true;
-                break;
-            }
-        }
-
-        if (need_to_change) {
-            /* this will send back a gamedata blob which will in turn update our own state */
-            this.socket.send("editSettings", {
-                auth: this.config.auth,
-                game_id: this.config.game_id,
-                player_id: this.config.player_id,
-                changes: changes,
-            });
-        }
     }
     protected playMovementSound(): void {
         if (
@@ -2907,22 +2808,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     }
     public giveReviewControl(player_id: number): void {
         this.syncReviewMove({ controller: player_id });
-    }
-    protected giveVoice(player_id: number): void {
-        this.socket.send("review/voice/give", {
-            review_id: this.review_id,
-            voice_player: {
-                id: player_id,
-            },
-        });
-    }
-    protected removeVoice(player_id: number): void {
-        this.socket.send("review/voice/remove", {
-            review_id: this.review_id,
-            voice_player: {
-                id: player_id,
-            },
-        });
     }
 
     public setMarks(marks: { [mark: string]: string }, dont_draw?: boolean): void {
@@ -3256,16 +3141,12 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                     this.emit("update");
 
                     this.socket.send("game/removed_stones/set", {
-                        auth: this.config.auth,
-                        game_id: this.config.game_id,
-                        player_id: this.config.player_id,
+                        game_id: this.game_id,
                         removed: false,
                         stones: current_removed,
                     });
                     this.socket.send("game/removed_stones/set", {
-                        auth: this.config.auth,
-                        game_id: this.config.game_id,
-                        player_id: this.config.player_id,
+                        game_id: this.game_id,
                         removed: true,
                         stones: new_removed,
                     });
@@ -3397,9 +3278,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
 
                 this.sent_timed_out_message = true;
                 this.socket.send("game/timed_out", {
-                    auth: this.config.auth,
-                    game_id: this.config.game_id,
-                    player_id: this.config.player_id,
+                    game_id: this.game_id,
                 });
             }
         }
@@ -3965,10 +3844,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                 }
             }
 
-            msg.auth = this.config.auth;
             msg.review_id = this.review_id;
-            msg.player_id = this.player_id;
-            msg.username = this.config.username;
 
             this.socket.send("review/append", msg);
         }

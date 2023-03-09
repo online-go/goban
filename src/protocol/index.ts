@@ -24,15 +24,26 @@
  * messages.
  *
  * # Changes from the Socket.IO implementation.
- *  - These updates are guidelines, existing code should work unmodified.
- *    However several optional changes were made to make the interface
- *    more consistent and to remove some of the cruft that had grown
- *    over time.
+ *  - Several cleanup updates have been made to remove the need for several old
+ *    fields and a few messages that are no longer needed. Including these fields
+ *    will not cause any problems, but below are notes if you want to clean up
+ *    your code.
+ *
+ *  - Several cleanup updates have been made that homogiinize the type of
+ *    fields, namely 0/1 booleans are now true/false booleans and id's are
+ *    always numbers. The server still supports coallecing these fields for
+ *    backwards compatibility.
  *
  *  - All authentication is handled via the `authenticate` message, there
  *    is no longer a need for the various `chat_auth`, `incident_auth`, etc
  *    fields in any of the messages. Those fields are still supported for
  *    backwards compatibility, but if the jwt is provided, they are ignored.
+ *
+ *  - The `auth` field in all game and review messages is no longer necessary
+ *    or used
+ *
+ *  - the `player_id` field in all game and review messages is no longer
+ *    necessary or used
  *
  *  - The `chat/connect` and `incident/connect` messages have been removed
  *    and are an implicitly called by the `authenticate` message.
@@ -46,6 +57,9 @@
  *  - `user/monitor` now accepts an object `{ user_ids: number[] }` for
  *    consistency. Old clients that send raw numeric array will still work.
  *
+ *  - The `cmoves` parameter has been renamed to `conditional_moves` in
+ *    `game/conditional_moves/set`. The server still supports the old name
+ *    for backwards compatibility.
  *
  * @module
  */

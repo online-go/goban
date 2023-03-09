@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+import type { JGOFPlayerClock } from "../JGOF";
+import type { ReviewMessage } from "../GoEngine";
+import type { ConditionalMoveResponse } from "../GoConditionalMove";
+
 /** This is an exhaustive list of the messages that the client can send
  *  to the server. */
 /*eslint quote-props: ["error", "as-needed"]*/
@@ -70,12 +74,218 @@ export interface ClientToServer {
     /** Connect to a game. Once connected, the client will receive game
      *  updates relevant to the game. */
     "game/connect": {
+        /** The game id to connect to */
         game_id: number;
+
+        /** If true, the client will receive the game chat log and new chat events */
+        chat?: boolean;
     };
 
     /** Disconnect from a game. This will stop game updates for a particular game. */
     "game/disconnect": {
         game_id: number;
+    };
+
+    /** Sets removed stones in the stone removal phase. */
+    "game/removed_stones/set": {
+        /** The game id */
+        game_id: number;
+
+        /** True if the stones should be marked as removed (or intersections marked
+         * as dame if there is no stone there), false if they should be marked as
+         * not removed / open area. */
+        removed: boolean;
+
+        /** String encoded list of intersections */
+        stones: string;
+
+        /** Japanese rules technically have some special scoring rules about
+         * whether territory in seki should be counted or not. This is supported
+         * by the backend but the official client no longer displays this as an
+         * option to the user as it was very largely unused and was a large
+         * source of confusion. This field is deprecated and will likely be
+         * removed in the future.*/
+        strict_seki_mode?: boolean;
+    };
+
+    /** Rejects the removed stones and resumes the game from the stone removal phase */
+    "game/removed_stones/reject": {
+        /** The game id */
+        game_id: number;
+    };
+
+    /** Accepts the stones as removed. Once both players have accepted the same
+     *  stones, the stone removal phase will conclude and the game will finish. */
+    "game/removed_stones/accept": {
+        /** The game id */
+        game_id: number;
+        /** All of the stones that are accepted as removed, and all
+         * intersections marked as dame */
+        stones: string;
+        /** Japanese rules technically have some special scoring rules about
+         * whether territory in seki should be counted or not. This is supported
+         * by the backend but clients should always set this to false in this
+         * era of the game, the official client no longer displays this as an
+         * option to the user as it was very largely unused and was a large
+         * source of confusion. */
+        strict_seki_mode: boolean;
+    };
+
+    /** Submit a move for a game */
+    "game/move": {
+        /** The game id */
+        game_id: number;
+        /** The move number to play at */
+        move: string;
+
+        /** Maximum number of milliseconds the client was out of focus between
+         * the last move and this move */
+        blur?: number;
+
+        /** Clock according to the client. If this is within the margin of
+         *  error of the server's clock, the server will accept the new
+         *  clock value. If not provided, the server clock will be used. */
+        clock?: JGOFPlayerClock;
+    };
+
+    /** Requests an undo */
+    "game/undo/request": {
+        /** The game id */
+        game_id: number;
+        /** The current move number */
+        move_number: number;
+    };
+
+    /** Accepts an undo */
+    "game/undo/accept": {
+        /** The game id */
+        game_id: number;
+        /** The current move number */
+        move_number: number;
+    };
+
+    /** Cancels an undo request */
+    "game/undo/cancel": {
+        /** The game id */
+        game_id: number;
+        /** The current move number */
+        move_number: number;
+    };
+
+    /** Pauses the game clocks */
+    "game/pause": {
+        /** The game id */
+        game_id: number;
+    };
+
+    /** Resumes the game clocks */
+    "game/resume": {
+        /** The game id */
+        game_id: number;
+    };
+
+    /** Resigns from the game */
+    "game/resign": {
+        /** The game id */
+        game_id: number;
+    };
+    "game/delayed_resign": {
+        /** The game id */
+        game_id: number;
+    };
+    "game/clear_delayed_resign": {
+        /** The game id */
+        game_id: number;
+    };
+    /** Cancels a game. This is effectively the same as resign, except the
+     *  game will not be ranked. This is only allowed within the first few
+     *  moves of the game. (See GoEngine.gameCanBeCancelled for cancelation ) */
+    "game/cancel": {
+        /** The game id */
+        game_id: number;
+    };
+    /** In Japanese rules, if the game is found to be repeating, the players
+     *  may opt to annul the entire game and start over.
+     *
+     *  This is largely undesired in an online setting and support for this
+     *  will probably be removed in the future, dont' bother implemeting
+     *  this.
+     */
+    "game/annul": {
+        /** The game id */
+        game_id: number;
+    };
+
+    /** Inform the server that the client believes it's clock has timed out
+     *  and the game should be ended in a timeout. This is not strictly necessary
+     *  to implement as the server will also timeout games, however there is
+     *  a grace period to account for network latency, so well behaved clients
+     *  can (and should) send this message to be very exact with timeouts. */
+    "game/timed_out": {
+        /** The game id */
+        game_id: number;
+    };
+
+    /** Sets conditional moves to be made on behalf of the player in response
+     *  to a move by the opponent. */
+    "game/conditional_moves/set": {
+        /** The game id */
+        game_id: number;
+        /** The move number from which the condtional moves are rooted in */
+        move_number: number;
+        /** The conditional moves. The top level should be an array that looks
+         *  like `[null, { ... }]` where the second element contains the responses
+         *  to the opponent's move. */
+        conditional_moves: ConditionalMoveResponse;
+    };
+
+    /** Sends a chat message to a game */
+    "game/chat": {
+        /** The game id */
+        game_id: number;
+        /** The type of chat message being sent */
+        type: "main" | "malkovich" | "moderator" | "hidden" | "personal";
+        /** The move number currently being viewed */
+        move_number: number;
+        /** The chat message */
+        body: string;
+    };
+
+    /** Update your latency information for a particular game. This is used
+     *  for clock synchronization. It is not strictly required, however strongly
+     *  suggested for live games. */
+    "game/latency": {
+        /** The game id */
+        game_id: number;
+        /** Network latency, measured in milliseconds. See net/ping to measure this. */
+        latency: number;
+    };
+
+    /** Connects to a review */
+    "review/connect": {
+        /** The review id */
+        review_id: number;
+    };
+
+    /** Disconnects from a review */
+    "review/disconnect": {
+        /** The review id */
+        review_id: number;
+    };
+
+    /** Append a review action to the review log. */
+    "review/append": ReviewMessage;
+
+    /** Sends a chat message to a review */
+    "review/chat": {
+        /** The review id */
+        review_id: number;
+        /** The root of the branch the user is viewing */
+        from: number;
+        /** The analysis branch the user is viewing */
+        moves: string;
+        /** The chat message */
+        body: string;
     };
 
     /** Request the number of unique authenticated players
