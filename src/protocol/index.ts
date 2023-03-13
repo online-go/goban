@@ -34,7 +34,7 @@
  *    always numbers. The server still supports coallecing these fields for
  *    backwards compatibility.
  *
- *  - All authentication is handled via the `authenticate` message, there
+ *  - All authentication is now handled via the `authenticate` message, there
  *    is no longer a need for the various `chat_auth`, `incident_auth`, etc
  *    fields in any of the messages. Those fields are still supported for
  *    backwards compatibility, but if the jwt is provided, they are ignored.
@@ -45,8 +45,9 @@
  *  - the `player_id` field in all game and review messages is no longer
  *    necessary or used
  *
- *  - The `chat/connect` and `incident/connect` messages have been removed
- *    and are an implicitly called by the `authenticate` message.
+ *  - The `chat/connect`, `incident/connect`, and `notification/connect`
+ *    messages have been removed and are an implicitly called by the
+ *    `authenticate` message.
  *
  *  - `chat/pm/close` and `chat/pm/load` now accept a `{ player_id: number }`
  *    object for consistency. Old clients that simply send a number will still work.
