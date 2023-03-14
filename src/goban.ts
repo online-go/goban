@@ -33,6 +33,7 @@ export * from "./AIReview";
 export * from "./AdHocFormat";
 export * from "./TestGoban";
 export * from "./test_utils";
+export * from "./GobanSocket";
 
 export * as GoMath from "./GoMath";
 export * as protocol from "./protocol";

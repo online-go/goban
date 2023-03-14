@@ -48,7 +48,7 @@ import {
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
-import { GobanSocket } from "./protocol";
+import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
 
 declare let swal: any;
 
@@ -574,7 +574,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
     protected sendLatencyTimer?: ReturnType<typeof niceInterval>;
 
     protected socket!: GobanSocket;
-    protected socket_event_bindings: Array<[string, () => void]> = [];
+    protected socket_event_bindings: Array<[keyof GobanSocketEvents, () => void]> = [];
     protected connectToReviewSent?: boolean;
 
     /** GobanCore calls some abstract methods as part of the construction
@@ -793,7 +793,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         };
     }
 
-    protected _socket_on(event: string, cb: any) {
+    protected _socket_on<KeyT extends keyof GobanSocketEvents>(event: KeyT, cb: any) {
         this.socket.on(event, cb);
         this.socket_event_bindings.push([event, cb]);
     }

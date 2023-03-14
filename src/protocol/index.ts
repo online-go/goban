@@ -23,6 +23,30 @@
  * All of the communication is done via websockets using simple JSON
  * messages.
  *
+ * Messages sent from the client to the server have the following format
+ *
+ *    `[command: string, data: any, id?: number]`
+ *
+ * where command is one of the commands listed in the [[ClientToServer]] protocol,
+ * data is the data associated with that command, and id is an optional
+ * request id that will be echoed in a response if a response is requested.
+ *
+ * Messages sent from the server to the client have the format
+ *
+ *    `[event_name: string, data: any]`
+ *
+ *    or
+ *
+ *    `[id: number, data?: any, error?: {code: string, message: string}]`
+ *
+ * where event_name/data is listed in the [[ServerToClient]] protocol, or if
+ * the message is a response to a command sent by the client, the id
+ * and the data for the response. Exactly one response will be sent for
+ * a given command if an id was sent with the request. If no id was sent,
+ * no response will be sent (but subsequent named commands can be sent back
+ * if appropriate). Responses either have data or error set, never both.
+ *
+ *
  * # Changes from the Socket.IO implementation.
  *  - Several cleanup updates have been made to remove the need for several old
  *    fields and a few messages that are no longer needed. Including these fields
@@ -66,4 +90,3 @@
  */
 
 export * from "./messages";
-export * from "./GobanSocket";

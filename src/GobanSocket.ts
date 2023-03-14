@@ -15,41 +15,30 @@
  */
 
 import { EventEmitter } from "eventemitter3";
-import { niceInterval } from "../GoUtil";
-import { ClientToServer, ServerToClient } from "./messages";
+import { niceInterval } from "./GoUtil";
+import { ClientToServer, ServerToClient } from "./protocol";
 
-export interface OGSServerToClientMessages extends ServerToClient {
-    response: {
-        u: string | number; // User data sent with the request
-    };
-    error: {
-        u: string | number; // User data sent with the request
-    };
-}
+type GobanSocketClientToServerMessage = [keyof ClientToServer, any?, number?];
+type GobanSocketServerToClientMessage = [keyof ServerToClient | number, any, any];
 
-interface GobanSocketClientToServerMessage {
-    c: string | keyof ClientToServer; // Command
-    a?: any[]; // Arguments
-    u?: string | number; // User defined data to be sent back in the response
-}
+type DataToEventEmitterShim<T extends object> = {
+    [K in keyof T]: T[K] extends undefined ? () => void : (data: T[K]) => void;
+};
 
-interface GobanSocketServerToClientMessage {
-    e: keyof OGSServerToClientMessages; // Event
-    a?: any[]; // Arguments
-    u?: string | number; // User defined data, available if this is a response
-}
-
-interface Events {
-    "connect": () => void;
-    "disconnect": () => void;
-    "reconnect": () => void;
-    "unrecoverable_error": (code: number, tag: string, message: string) => void;
+export interface GobanSocketEvents extends DataToEventEmitterShim<ServerToClient> {
+    connect: () => void;
+    disconnect: () => void;
+    reconnect: () => void;
+    unrecoverable_error: (code: number, tag: string, message: string) => void;
     /* Emitted when we receive an updated latency measurement */
-    "latency": (latency: number, clock_drift: number) => void;
+    latency: (latency: number, clock_drift: number) => void;
 
-    "net/pong": (params: { client: number; server: number }) => void;
+    [key: string]: (...data: any[]) => void;
+}
 
-    [key: string]: (...args: any[]) => void;
+interface ErrorResponse {
+    code: string;
+    message: string;
 }
 
 const RECONNECT_MIN_DELAY = 500;
@@ -69,12 +58,12 @@ const PING_INTERVAL = 10000;
  *
  */
 
-export class GobanSocket extends EventEmitter<Events> {
+export class GobanSocket extends EventEmitter<GobanSocketEvents> {
     public readonly url: string;
     public clock_drift = 0.0;
     public latency = 0.0;
     private socket: WebSocket;
-    private last_udata_id = 0;
+    private last_request_id = 0;
     private promises_in_flight: Map<
         number,
         {
@@ -89,6 +78,7 @@ export class GobanSocket extends EventEmitter<Events> {
     private reconnect_tries = 0;
     private send_queue: (() => void)[] = [];
     private ping_interval?: ReturnType<typeof niceInterval>;
+    private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
 
     constructor(url: string) {
         super();
@@ -96,7 +86,7 @@ export class GobanSocket extends EventEmitter<Events> {
         this.url = url;
         this.socket = this.connect();
 
-        this.on("net/pong", ({ client, server }) => {
+        this.on("net/pong", ({ client, server }: { client: number; server: number }) => {
             const now = Date.now();
             const latency = now - client;
             const drift = now - latency / 2 - server;
@@ -215,34 +205,17 @@ export class GobanSocket extends EventEmitter<Events> {
         });
 
         socket.addEventListener("message", (event: MessageEvent) => {
-            //console.log("Message from server ", event.data);
             const payload: GobanSocketServerToClientMessage = JSON.parse(event.data);
-            if (payload.u) {
-                const entry = this.promises_in_flight.get(payload.u as number);
-                if (entry) {
-                    const { command, args, resolve, reject } = entry;
-                    try {
-                        if (payload.e === "response") {
-                            resolve(...(payload.a ?? []));
-                        } else if (payload.e === "error") {
-                            reject(...(payload.a ?? []));
-                        } else {
-                            console.error(
-                                `GobanSocket received unknown response type ${payload.e} for command ${command} with args ${args}`,
-                            );
-                        }
-                    } catch (e) {
-                        console.error(`Error in callback from ${command} with args `, args, e);
-                    }
-                    this.promises_in_flight.delete(payload.u as number);
+            const [id_or_command, data, err] = payload;
+
+            if (typeof id_or_command === "number") {
+                const cb = this.callbacks.get(id_or_command);
+                if (cb) {
+                    this.callbacks.delete(id_or_command);
+                    cb(data, err);
                 }
-            }
-            if (payload.e) {
-                if (payload.a) {
-                    this.emit(payload.e, ...payload.a);
-                } else {
-                    this.emit(payload.e);
-                }
+            } else {
+                this.emit(id_or_command, data);
             }
         });
 
@@ -279,14 +252,17 @@ export class GobanSocket extends EventEmitter<Events> {
 
     public send<KeyT extends keyof ClientToServer>(
         command: KeyT,
-        arg: ClientToServer[KeyT],
-        cb?: (...args: any[]) => void,
+        data: ClientToServer[KeyT],
+        cb?: (data?: any, error?: any) => void,
     ): void {
-        const request: GobanSocketClientToServerMessage = {
-            c: command,
-        };
-        if (typeof arg !== "undefined") {
-            request.a = [arg];
+        const request: GobanSocketClientToServerMessage = cb
+            ? [command, data, ++this.last_request_id]
+            : data
+            ? [command, data]
+            : [command];
+
+        if (cb) {
+            this.callbacks.set(this.last_request_id, cb);
         }
 
         if (this.connected) {
@@ -298,27 +274,18 @@ export class GobanSocket extends EventEmitter<Events> {
         }
     }
 
-    public sendPromise(command: string, ...args: any[]): Promise<any> {
+    public sendPromise<KeyT extends keyof ClientToServer>(
+        command: KeyT,
+        data: ClientToServer[KeyT],
+    ): Promise<any> {
         return new Promise((resolve, reject) => {
-            const udata_id = ++this.last_udata_id;
-
-            const request: GobanSocketClientToServerMessage = {
-                c: command,
-                u: udata_id,
-            };
-            if (args) {
-                request.a = args;
-            }
-
-            if (this.connected) {
-                this.promises_in_flight.set(udata_id, { command, args, resolve, reject });
-                this.socket.send(JSON.stringify(request));
-            } else {
-                this.send_queue.push(() => {
-                    this.promises_in_flight.set(udata_id, { command, args, resolve, reject });
-                    this.socket.send(JSON.stringify(request));
-                });
-            }
+            this.send(command, data, (data, error) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(data);
+                }
+            });
         });
     }
 }

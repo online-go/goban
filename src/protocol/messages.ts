@@ -20,7 +20,6 @@ import type { ConditionalMoveResponse } from "../GoConditionalMove";
 
 /** This is an exhaustive list of the messages that the client can send
  *  to the server. */
-/*eslint quote-props: ["error", "as-needed"]*/
 export interface ClientToServer {
     /** Authenticate with the server.
      *
@@ -404,6 +403,18 @@ export interface ClientToServer {
         message: string;
     };
 
+    /** Join a chat channel */
+    "chat/join": {
+        /** Channel to join */
+        channel: string;
+    };
+
+    /** Leave a channel */
+    "chat/part": {
+        /** Channel to leave */
+        channel: string;
+    };
+
     /** Subscribes to UI related push event messages sent to a particular channel */
     "ui-pushes/subscribe": {
         channel: string;
@@ -485,6 +496,54 @@ export interface ClientToServer {
         channel: string;
         chat_id: string;
     };
+
+    /** Retreive host infomration for the termination server you are connected to */
+    "hostinfo": {};
+
+    /** Request a match via the automatch system */
+    "automatch/find_match": AutomatchPreferences;
+
+    /** Cancel a match request */
+    "automatch/cancel": {
+        uuid: string;
+    };
+}
+
+export type Speed = "blitz" | "live" | "correspondence";
+export type Size = "9x9" | "13x13" | "19x19";
+export type AutomatchCondition = "required" | "preferred" | "no-preference";
+export type RuleSet = "japanese" | "chinese" | "aga" | "korean" | "nz" | "ing";
+
+interface AutomatchPreferences {
+    uuid: string;
+    size_speed_options: Array<{ size: Size; speed: Speed }>;
+
+    timestamp?: number;
+    lower_rank_diff: number;
+    upper_rank_diff: number;
+    rules: {
+        condition: AutomatchCondition;
+        value: "japanese" | "chinese" | "aga" | "korean" | "nz" | "ing";
+    };
+    time_control: {
+        condition: AutomatchCondition;
+        value: {
+            system: "byoyomi" | "fischer" | "simple" | "canadian";
+            initial_time?: number;
+            time_increment?: number;
+            max_time?: number;
+            main_time?: number;
+            period_time?: number;
+            periods?: number;
+            stones_per_period?: number;
+            per_move?: number;
+            pause_on_weekends?: boolean;
+        };
+    };
+    handicap: {
+        condition: AutomatchCondition;
+        value: "enabled" | "disabled";
+    };
 }
 
 /** This enum defines the various replication strategies for the remote storage
@@ -528,5 +587,11 @@ export interface GameListWhere {
 }
 
 export interface ServerToClient {
-    [key: string]: any;
+    /** Pong response from a ping */
+    "net/pong": {
+        /** Client timestamp that was sent */
+        client: number;
+        /** Server timestamp when it was received */
+        server: number;
+    };
 }
