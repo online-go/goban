@@ -43,7 +43,15 @@ interface ErrorResponse {
     message: string;
 }
 
-const RECONNECT_MIN_DELAY = 500;
+interface GobanSocketOptions {
+    /** Don't automatically send pings */
+    dont_ping?: boolean;
+
+    /** Don't log connection/disconnect things*/
+    quiet?: boolean;
+}
+
+const RECONNECT_MIN_DELAY = 10;
 const RECONNECT_MAX_DELAY = 2000;
 const PING_INTERVAL = 10000;
 
@@ -85,10 +93,13 @@ export class GobanSocket<
     private ping_interval?: ReturnType<typeof niceInterval>;
     private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
     private authentication?: ClientToServer["authenticate"];
+    private manually_disconnected = false;
+    public options: GobanSocketOptions;
 
-    constructor(url: string) {
+    constructor(url: string, options: GobanSocketOptions = {}) {
         super();
 
+        this.options = options;
         url = url.replace(/^http/, "ws");
 
         this.url = url;
@@ -125,6 +136,10 @@ export class GobanSocket<
         }
 
         const ping = () => {
+            if (this.options.dont_ping) {
+                return;
+            }
+
             if (this.connected) {
                 this.send(
                     "net/ping" as keyof SendProtocol,
@@ -154,7 +169,9 @@ export class GobanSocket<
         const socket = new WebSocket(this.url);
 
         socket.addEventListener("open", (_event: Event) => {
-            console.log("GobanSocket connected to " + this.url);
+            if (!this.options.quiet) {
+                console.log("GobanSocket connected to " + this.url);
+            }
             this.reconnecting = false;
             this.reconnect_tries = 0;
             if (!this.connected) {
@@ -182,7 +199,9 @@ export class GobanSocket<
         });
 
         socket.addEventListener("error", (event: Event) => {
-            console.error("GobanSocket error", event);
+            if (!this.manually_disconnected) {
+                console.error("GobanSocket error", event);
+            }
             /*
             if (!this.connected) {
                 this.reconnect();
@@ -191,9 +210,13 @@ export class GobanSocket<
         });
 
         socket.addEventListener("close", (event: CloseEvent) => {
-            console.log(
-                `GobanSocket closed with code ${event.code}: ${closeErrorCodeToString(event.code)}`,
-            );
+            if (event.code !== 1000 && !this.manually_disconnected) {
+                console.warn(
+                    `GobanSocket closed with code ${event.code}: ${closeErrorCodeToString(
+                        event.code,
+                    )}`,
+                );
+            }
 
             this.rejectPromisesInFlight();
 
@@ -201,6 +224,10 @@ export class GobanSocket<
                 this.emit("disconnect");
             } catch (e) {
                 console.error("Error in disconnect handler", e);
+            }
+
+            if (this.manually_disconnected) {
+                return;
             }
 
             if (event.code === 1014 || event.code === 1015) {
@@ -241,6 +268,9 @@ export class GobanSocket<
     }
 
     private reconnect(): void {
+        if (this.manually_disconnected) {
+            return;
+        }
         if (this.reconnecting) {
             return;
         }
@@ -251,7 +281,9 @@ export class GobanSocket<
             RECONNECT_MAX_DELAY,
             RECONNECT_MIN_DELAY * Math.pow(1.5, this.reconnect_tries),
         );
-        console.info(`GobanSocket reconnecting in ${delay}ms`);
+        if (!this.options.quiet) {
+            console.info(`GobanSocket reconnecting in ${delay}ms`);
+        }
         setTimeout(() => {
             this.socket = this.connect();
         }, delay);
@@ -306,10 +338,19 @@ export class GobanSocket<
             });
         });
     }
+
+    public disconnect() {
+        this.manually_disconnected = true;
+        this.socket.close();
+        this.rejectPromisesInFlight();
+        for (const cb of this.callbacks) {
+            cb[1](undefined, { code: "manually_disconnected", message: "Manually disconnected" });
+        }
+    }
 }
 
 /* From https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code 2023-03-05 */
-function closeErrorCodeToString(code: number): string {
+export function closeErrorCodeToString(code: number): string {
     if (code >= 0 && code <= 999) {
         return "Not used";
     }

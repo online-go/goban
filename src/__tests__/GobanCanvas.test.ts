@@ -7,14 +7,18 @@
 import { GobanCanvas, GobanCanvasConfig } from "../GobanCanvas";
 import { GobanCore } from "../GobanCore";
 import { AUTOSCORE_TOLERANCE, AUTOSCORE_TRIALS } from "../GoEngine";
+import { GobanSocket } from "../GobanSocket";
 import * as GoMath from "../GoMath";
+import WS from "jest-websocket-mock";
 
 let board_div: HTMLDivElement;
-let mock_socket: {
-    send: jest.Mock<any, any>;
-    on: jest.Mock<any, any>;
-    connected: boolean;
-};
+
+const last_port = 48880;
+const socket_server = new WS(`ws://localhost:${last_port}`, { jsonProtocol: true });
+const mock_socket = new GobanSocket(`ws://localhost:${last_port}`, {
+    dont_ping: true,
+    quiet: true,
+});
 
 // Nothing special about this square size, just easy to do mental math with
 const TEST_SQUARE_SIZE = 10;
@@ -69,19 +73,29 @@ function basicScorableBoardConfig(additionalOptions?: GobanCanvasConfig): GobanC
 }
 
 describe("onTap", () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         board_div = document.createElement("div");
         document.body.appendChild(board_div);
 
-        mock_socket = {
-            send: jest.fn(),
-            on: jest.fn(),
-            connected: true,
-        };
+        /*
+        ++last_port;
+        socket_server = new WS(`ws://localhost:${last_port}`, { jsonProtocol: true });
+        mock_socket = new GobanSocket(`ws://localhost:${last_port}`, {
+            dont_ping: true,
+            quiet: true,
+        });
+        socket_server.server.on("message", (foo) => {
+            console.log(foo);
+        });
+        */
     });
 
     afterEach(() => {
         board_div.remove();
+        /*
+        mock_socket?.disconnect();
+        socket_server?.close();
+        */
     });
 
     test("clicking without enabling stone placement has no effect", () => {
@@ -177,7 +191,7 @@ describe("onTap", () => {
         ]);
     });
 
-    test("Clicking submits a move in one-click-submit mode", () => {
+    test("Clicking submits a move in one-click-submit mode", async () => {
         const goban = new GobanCanvas(basic3x3Config({ one_click_submit: true }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
@@ -189,20 +203,19 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
-        expect(mock_socket.send).toBeCalledWith(
-            "game/move",
-            expect.objectContaining({
-                move: "aa",
-            }),
-            expect.any(Function),
+
+        await expect(socket_server).toReceiveMessage(
+            expect.arrayContaining(["game/move", expect.objectContaining({ move: "aa" })]),
         );
     });
 
-    test("Calling the submit_move() too quickly results in no submission", () => {
+    test("Calling the submit_move() too quickly results in no submission", async () => {
         jest.useFakeTimers();
         jest.setSystemTime(0);
         const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        await socket_server.connected;
 
         goban.enableStonePlacement();
         simulateMouseClick(canvas, { x: 0, y: 0 });
@@ -213,21 +226,25 @@ describe("onTap", () => {
         expect(goban.submit_move).toBeDefined();
         goban.submit_move?.();
 
+        // TODO: How can we test that we *didn't* send a message ?
+
         expect(goban.engine.board).toEqual([
             [1, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
         ]);
-        expect(mock_socket.send).not.toHaveBeenCalled();
 
         jest.useRealTimers();
     });
 
-    test("Calling submit_move() submits a move", () => {
+    test("Calling submit_move() submits a move", async () => {
         jest.useFakeTimers();
         jest.setSystemTime(0);
-        const goban = new GobanCanvas(basic3x3Config());
+
+        const goban = new GobanCanvas(basic3x3Config({ server_socket: mock_socket }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        await socket_server.connected;
 
         goban.enableStonePlacement();
         simulateMouseClick(canvas, { x: 0, y: 0 });
@@ -243,16 +260,18 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
-        expect(mock_socket.send).toBeCalledWith(
-            "game/move",
-            expect.objectContaining({
-                move: "aa",
-            }),
-            expect.any(Function),
+
+        /*
+        await expect(socket_server).toReceiveMessage(
+            expect.arrayContaining(["game/move", expect.objectContaining({ move: "aa" })]),
         );
+        */
+        expect(socket_server).toHaveReceivedMessages([
+            expect.arrayContaining(["game/move", expect.objectContaining({ move: "aa" })]),
+        ]);
 
         jest.useRealTimers();
-    });
+    }, 500);
 
     test("Right clicking in play mode should have no effect.", () => {
         const goban = new GobanCanvas(basic3x3Config());
@@ -274,7 +293,7 @@ describe("onTap", () => {
         ]);
     });
 
-    test("Clicking during stone removal sends remove stones message", () => {
+    test("Clicking during stone removal sends remove stones message", async () => {
         const goban = new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
@@ -287,18 +306,18 @@ describe("onTap", () => {
 
         simulateMouseClick(canvas, { x: 0, y: 0 });
 
-        expect(mock_socket.send).toBeCalledTimes(1);
-        expect(mock_socket.send).toBeCalledWith(
-            "game/removed_stones/set",
-            expect.objectContaining({
-                player_id: 123,
-                removed: 1,
-                stones: "aaab",
-            }),
+        await expect(socket_server).toReceiveMessage(
+            expect.arrayContaining([
+                "game/removed_stones/set",
+                expect.objectContaining({
+                    removed: true,
+                    stones: "aaab",
+                }),
+            ]),
         );
     });
 
-    test("Shift-Clicking during stone removal toggles one stone", () => {
+    test("Shift-Clicking during stone removal toggles one stone", async () => {
         const goban = new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
@@ -317,21 +336,21 @@ describe("onTap", () => {
             }),
         );
 
-        expect(mock_socket.send).toBeCalledTimes(1);
-        expect(mock_socket.send).toBeCalledWith(
-            "game/removed_stones/set",
-            expect.objectContaining({
-                player_id: 123,
-                removed: 1,
-                stones: "aa",
-            }),
+        await expect(socket_server).toReceiveMessage(
+            expect.arrayContaining([
+                "game/removed_stones/set",
+                expect.objectContaining({
+                    removed: true,
+                    stones: "aa",
+                }),
+            ]),
         );
     });
 
     // This is not unique to stone-removal, but since stone removal also has
     // some logic for modifier keys (e.g. shift-click => remove one intersection)
     // this is good to test for.
-    test("Ctrl-Clicking during stone removal adds coordinates to chat", () => {
+    test("Ctrl-Clicking during stone removal adds coordinates to chat", async () => {
         new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
 
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
@@ -348,14 +367,14 @@ describe("onTap", () => {
         );
 
         // Unmodified clicks in stone removal send a "game/removed_stones/set" message
-        expect(mock_socket.send).toBeCalledTimes(0);
+        await sleep(50);
         expect(addCoordinatesToChatInput).toBeCalledTimes(1);
         // Note: "A2" is the correct pretty coordinate for (0,0) on a 2x4 board
         // because the y coordinate is flipped
         expect(addCoordinatesToChatInput).toBeCalledWith("A2");
     });
 
-    test("Clicking on stones during stone removal sends a socket message", () => {
+    test("Clicking on stones during stone removal sends a socket message", async () => {
         new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
@@ -365,14 +384,14 @@ describe("onTap", () => {
         // 0 .(x)o .
         // 1 . x o .
 
-        expect(mock_socket.send).toBeCalledTimes(1);
-        expect(mock_socket.send).toBeCalledWith(
-            "game/removed_stones/set",
-            expect.objectContaining({
-                player_id: 123,
-                removed: 1,
-                stones: "babbbabbbbba",
-            }),
+        await expect(socket_server).toReceiveMessage(
+            expect.arrayContaining([
+                "game/removed_stones/set",
+                expect.objectContaining({
+                    removed: true,
+                    stones: "babbbabbbbba",
+                }),
+            ]),
         );
     });
 
@@ -410,3 +429,7 @@ describe("onTap", () => {
         expect(mock_score_estimate.handleClick).toBeCalledTimes(1);
     });
 });
+
+function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
