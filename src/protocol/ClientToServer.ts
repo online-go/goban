@@ -32,13 +32,15 @@ export interface ClientToServer {
         /** The JSON Web Token (`user_jwt` field) from `/api/v1/ui/config` */
         jwt: string;
         /** Client generated unique id for the device. */
-        device_id: string;
-        /** Browser user agent, or application name */
-        user_agent: string;
+        device_id?: string;
+        /** Browser user agent (or websocket library) */
+        user_agent?: string;
         /** ISO 639-1 language code used on this device. */
         language?: string;
         /** The version of the translation dictionary.  */
         language_version?: string;
+        /** Client name (your application name) */
+        client?: string;
         /** Client version string. */
         client_version?: string;
     };
@@ -584,14 +586,4 @@ export interface GameListWhere {
     tournament_id?: number;
     ladder_id?: number;
     malk_only?: boolean;
-}
-
-export interface ServerToClient {
-    /** Pong response from a ping */
-    "net/pong": {
-        /** Client timestamp that was sent */
-        client: number;
-        /** Server timestamp when it was received */
-        server: number;
-    };
 }

@@ -18,14 +18,16 @@ import { EventEmitter } from "eventemitter3";
 import { niceInterval } from "./GoUtil";
 import { ClientToServer, ServerToClient } from "./protocol";
 
-type GobanSocketClientToServerMessage = [keyof ClientToServer, any?, number?];
-type GobanSocketServerToClientMessage = [keyof ServerToClient | number, any, any];
+type GobanSocketClientToServerMessage<SendProtocol> = [keyof SendProtocol, any?, number?];
+type GobanSocketServerToClientMessage<RecvProtocol> = [keyof RecvProtocol | number, any, any];
 
+/*
 type DataToEventEmitterShim<T extends object> = {
     [K in keyof T]: T[K] extends undefined ? () => void : (data: T[K]) => void;
 };
+*/
 
-export interface GobanSocketEvents extends DataToEventEmitterShim<ServerToClient> {
+export interface GobanSocketEvents {
     connect: () => void;
     disconnect: () => void;
     reconnect: () => void;
@@ -58,7 +60,10 @@ const PING_INTERVAL = 10000;
  *
  */
 
-export class GobanSocket extends EventEmitter<GobanSocketEvents> {
+export class GobanSocket<
+    SendProtocol = ClientToServer,
+    RecvProtocol = ServerToClient,
+> extends EventEmitter<GobanSocketEvents> {
     public readonly url: string;
     public clock_drift = 0.0;
     public latency = 0.0;
@@ -79,6 +84,7 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
     private send_queue: (() => void)[] = [];
     private ping_interval?: ReturnType<typeof niceInterval>;
     private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
+    private authentication?: ClientToServer["authenticate"];
 
     constructor(url: string) {
         super();
@@ -102,8 +108,15 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
         return this.socket.readyState === WebSocket.OPEN;
     }
 
+    public authenticate(authentication: ClientToServer["authenticate"]): void {
+        this.authentication = authentication;
+        this.send("authenticate" as keyof SendProtocol, authentication as any);
+    }
+
     private sendAuthentication(): void {
-        //console.log("TODO: Implement authentication");
+        if (this.authentication) {
+            this.send("authenticate" as keyof SendProtocol, this.authentication as any);
+        }
     }
 
     private startPing(): void {
@@ -113,11 +126,14 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
 
         const ping = () => {
             if (this.connected) {
-                this.send("net/ping", {
-                    client: Date.now(),
-                    drift: this.clock_drift,
-                    latency: this.latency,
-                });
+                this.send(
+                    "net/ping" as keyof SendProtocol,
+                    {
+                        client: Date.now(),
+                        drift: this.clock_drift,
+                        latency: this.latency,
+                    } as any,
+                );
             } else {
                 if (this.ping_interval) {
                     clearInterval(this.ping_interval);
@@ -137,7 +153,7 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
     private connect(): WebSocket {
         const socket = new WebSocket(this.url);
 
-        socket.addEventListener("open", (event: Event) => {
+        socket.addEventListener("open", (_event: Event) => {
             console.log("GobanSocket connected to " + this.url);
             this.reconnecting = false;
             this.reconnect_tries = 0;
@@ -207,7 +223,7 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
         });
 
         socket.addEventListener("message", (event: MessageEvent) => {
-            const payload: GobanSocketServerToClientMessage = JSON.parse(event.data);
+            const payload: GobanSocketServerToClientMessage<RecvProtocol> = JSON.parse(event.data);
             const [id_or_command, data, err] = payload;
 
             if (typeof id_or_command === "number") {
@@ -217,7 +233,7 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
                     cb(data, err);
                 }
             } else {
-                this.emit(id_or_command, data);
+                this.emit(id_or_command as string, data);
             }
         });
 
@@ -252,12 +268,12 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
         this.promises_in_flight.clear();
     }
 
-    public send<KeyT extends keyof ClientToServer>(
+    public send<KeyT extends keyof SendProtocol>(
         command: KeyT,
-        data: ClientToServer[KeyT],
+        data: SendProtocol[KeyT],
         cb?: (data?: any, error?: any) => void,
     ): void {
-        const request: GobanSocketClientToServerMessage = cb
+        const request: GobanSocketClientToServerMessage<SendProtocol> = cb
             ? [command, data, ++this.last_request_id]
             : data
             ? [command, data]
@@ -276,9 +292,9 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
         }
     }
 
-    public sendPromise<KeyT extends keyof ClientToServer>(
+    public sendPromise<KeyT extends keyof SendProtocol>(
         command: KeyT,
-        data: ClientToServer[KeyT],
+        data: SendProtocol[KeyT],
     ): Promise<any> {
         return new Promise((resolve, reject) => {
             this.send(command, data, (data, error) => {
