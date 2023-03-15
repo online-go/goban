@@ -83,6 +83,8 @@ export class GobanSocket extends EventEmitter<GobanSocketEvents> {
     constructor(url: string) {
         super();
 
+        url = url.replace(/^http/, "ws");
+
         this.url = url;
         this.socket = this.connect();
 
