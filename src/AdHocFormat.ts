@@ -123,13 +123,13 @@ export interface AdHocPlayerClock {
 
 export interface AdHocPauseControl {
     "stone-removal"?: true;
-    weekend?: true;
-    system?: true;
-    paused?: {
+    "weekend"?: true;
+    "system"?: true;
+    "paused"?: {
         pausing_player_id: number;
         pauses_left: number;
     };
-    moderator_paused?: {
+    "moderator_paused"?: {
         moderator_id: number;
     };
     [
