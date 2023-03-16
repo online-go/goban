@@ -1742,7 +1742,7 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
         this.emit("destroy");
         if (!this.disconnectedFromGame) {
             this.disconnectedFromGame = true;
-            if (this.socket) {
+            if (this.socket && this.socket.connected) {
                 if (this.review_id) {
                     this.socket.send("review/disconnect", { review_id: this.review_id });
                 }
