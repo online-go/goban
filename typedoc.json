@@ -2,7 +2,7 @@
     "entryPoints": {
         "goban": "src/goban.ts"
     },
-    "out": "doc",
+    "out": "docs",
     "tsconfig": "tsconfig.docs.json",
     "excludeExternals": true,
     "exclude": [
