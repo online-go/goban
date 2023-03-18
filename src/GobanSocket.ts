@@ -51,8 +51,15 @@ interface GobanSocketOptions {
     quiet?: boolean;
 }
 
-const RECONNECT_MIN_DELAY = 10;
-const RECONNECT_MAX_DELAY = 2000;
+const RECONNECTION_INTERVALS = [
+    // Connection drops are common and we can usually reconnect immediately. In
+    // the case of a server restart, we count on the inherant latency of everyone
+    // to even out the initial reconnect surge.
+    [1, 1],
+    [100, 300], // if that doesn't work, try again in 100-300ms
+    [250, 750], // if that doesn't work, keep trying in try again in 250-750ms intervals
+];
+
 const PING_INTERVAL = 10000;
 
 /**
@@ -215,6 +222,7 @@ export class GobanSocket<
                     `GobanSocket closed with code ${event.code}: ${closeErrorCodeToString(
                         event.code,
                     )}`,
+                    event,
                 );
             }
 
@@ -276,11 +284,12 @@ export class GobanSocket<
         }
         this.reconnecting = true;
 
+        const range =
+            RECONNECTION_INTERVALS[
+                Math.min(this.reconnect_tries, RECONNECTION_INTERVALS.length - 1)
+            ];
         ++this.reconnect_tries;
-        const delay = Math.min(
-            RECONNECT_MAX_DELAY,
-            RECONNECT_MIN_DELAY * Math.pow(1.5, this.reconnect_tries),
-        );
+        const delay = Math.floor(Math.random() * (range[1] - range[0]) + range[0]);
         if (!this.options.quiet) {
             console.info(`GobanSocket reconnecting in ${delay}ms`);
         }
@@ -340,6 +349,7 @@ export class GobanSocket<
     }
 
     public disconnect() {
+        console.warn(new Error("Manually disconnected socket"));
         this.manually_disconnected = true;
         this.socket.close();
         this.rejectPromisesInFlight();
