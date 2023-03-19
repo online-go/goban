@@ -31,7 +31,7 @@ export interface ClientToAIServer {
 
     "net/ping": ClientToServer["net/ping"];
 
-    "ai-review-connect": {
+    "ai-review-connect": (data: {
         /** AI UUID */
         uuid: string;
 
@@ -40,14 +40,14 @@ export interface ClientToAIServer {
 
         /** The AI review id we're basing our analysis off of */
         ai_review_id: number | string;
-    };
+    }) => void;
 
-    "ai-review-disconnect": {
+    "ai-review-disconnect": (data: {
         /** AI UUID */
         uuid: string;
-    };
+    }) => void;
 
-    "ai-analyze-variation": {
+    "ai-analyze-variation": (data: {
         /** AI UUID */
         uuid: string;
 
@@ -62,5 +62,5 @@ export interface ClientToAIServer {
 
         /** Move string */
         variation: string;
-    };
+    }) => void;
 }

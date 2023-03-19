@@ -16,10 +16,12 @@
 
 export interface ServerToClient {
     /** Pong response from a ping */
-    "net/pong": {
+    "net/pong": (data: {
         /** Client timestamp that was sent */
         client: number;
         /** Server timestamp when it was received */
         server: number;
-    };
+    }) => void;
+
+    [key: string]: (data: any) => any;
 }

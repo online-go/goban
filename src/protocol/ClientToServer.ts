@@ -19,7 +19,13 @@ import type { ReviewMessage } from "../GoEngine";
 import type { ConditionalMoveResponse } from "../GoConditionalMove";
 
 /** This is an exhaustive list of the messages that the client can send
- *  to the server. */
+ *  to the server.
+ *
+ *
+ *
+ *
+ *
+ */
 export interface ClientToServer {
     /** Authenticate with the server.
      *
@@ -28,7 +34,7 @@ export interface ClientToServer {
      *  to get the current configuration. Within the returned JSON
      *  you will find all of the necessary fields to authenticate.
      */
-    "authenticate": {
+    "authenticate": (data: {
         /** The JSON Web Token (`user_jwt` field) from `/api/v1/ui/config` */
         jwt: string;
         /** Client generated unique id for the device. */
@@ -43,7 +49,7 @@ export interface ClientToServer {
         client?: string;
         /** Client version string. */
         client_version?: string;
-    };
+    }) => void;
 
     /** Sends a ping to the server. This message should be
      *  sent regularly. The default interval is 10 seconds.
@@ -51,44 +57,39 @@ export interface ClientToServer {
      *  to measure clock drift and latency, both of which
      *  are vital to adjusting the client's game clock displays.
      */
-    "net/ping": {
+    "net/ping": (data: {
         /** Client timestamp - milliseconds since epoch */
         client: number;
         /** Last clock drift measurement, or `0` */
         drift: number;
         /** Last latency measurement, or `0` */
         latency: number;
-    };
+    }) => void;
 
     /** Get active automatch entries for the current user */
-    "automatch/list": {};
+    "automatch/list": (data: {}) => void;
 
     /** Message to let the server know the client is still interested
      *  in the specified blitz or live challenge. These should be sent
      *  about once a second to prevent the server from canceling the challenge.
      */
-    "challenge/keepalive": {
-        challenge_id: number;
-        game_id: number;
-    };
+    "challenge/keepalive": (data: { challenge_id: number; game_id: number }) => void;
 
     /** Connect to a game. Once connected, the client will receive game
      *  updates relevant to the game. */
-    "game/connect": {
+    "game/connect": (data: {
         /** The game id to connect to */
         game_id: number;
 
         /** If true, the client will receive the game chat log and new chat events */
         chat?: boolean;
-    };
+    }) => void;
 
     /** Disconnect from a game. This will stop game updates for a particular game. */
-    "game/disconnect": {
-        game_id: number;
-    };
+    "game/disconnect": (data: { game_id: number }) => void;
 
     /** Sets removed stones in the stone removal phase. */
-    "game/removed_stones/set": {
+    "game/removed_stones/set": (data: {
         /** The game id */
         game_id: number;
 
@@ -107,17 +108,17 @@ export interface ClientToServer {
          * source of confusion. This field is deprecated and will likely be
          * removed in the future.*/
         strict_seki_mode?: boolean;
-    };
+    }) => void;
 
     /** Rejects the removed stones and resumes the game from the stone removal phase */
-    "game/removed_stones/reject": {
+    "game/removed_stones/reject": (data: {
         /** The game id */
         game_id: number;
-    };
+    }) => void;
 
     /** Accepts the stones as removed. Once both players have accepted the same
      *  stones, the stone removal phase will conclude and the game will finish. */
-    "game/removed_stones/accept": {
+    "game/removed_stones/accept": (data: {
         /** The game id */
         game_id: number;
         /** All of the stones that are accepted as removed, and all
@@ -130,10 +131,10 @@ export interface ClientToServer {
          * option to the user as it was very largely unused and was a large
          * source of confusion. */
         strict_seki_mode: boolean;
-    };
+    }) => void;
 
     /** Submit a move for a game */
-    "game/move": {
+    "game/move": (data: {
         /** The game id */
         game_id: number;
         /** The move number to play at */
@@ -147,64 +148,64 @@ export interface ClientToServer {
          *  error of the server's clock, the server will accept the new
          *  clock value. If not provided, the server clock will be used. */
         clock?: JGOFPlayerClock;
-    };
+    }) => void;
 
     /** Requests an undo */
-    "game/undo/request": {
+    "game/undo/request": (data: {
         /** The game id */
         game_id: number;
         /** The current move number */
         move_number: number;
-    };
+    }) => void;
 
     /** Accepts an undo */
-    "game/undo/accept": {
+    "game/undo/accept": (data: {
         /** The game id */
         game_id: number;
         /** The current move number */
         move_number: number;
-    };
+    }) => void;
 
     /** Cancels an undo request */
-    "game/undo/cancel": {
+    "game/undo/cancel": (data: {
         /** The game id */
         game_id: number;
         /** The current move number */
         move_number: number;
-    };
+    }) => void;
 
     /** Pauses the game clocks */
-    "game/pause": {
+    "game/pause": (data: {
         /** The game id */
         game_id: number;
-    };
+    }) => void;
 
     /** Resumes the game clocks */
-    "game/resume": {
+    "game/resume": (data: {
         /** The game id */
         game_id: number;
-    };
+    }) => void;
 
     /** Resigns from the game */
-    "game/resign": {
+    "game/resign": (data: {
         /** The game id */
         game_id: number;
-    };
-    "game/delayed_resign": {
+    }) => void;
+    "game/delayed_resign": (data: {
         /** The game id */
         game_id: number;
-    };
-    "game/clear_delayed_resign": {
+    }) => void;
+    "game/clear_delayed_resign": (data: {
         /** The game id */
         game_id: number;
-    };
+    }) => void;
     /** Cancels a game. This is effectively the same as resign, except the
      *  game will not be ranked. This is only allowed within the first few
      *  moves of the game. (See GoEngine.gameCanBeCancelled for cancelation ) */
-    "game/cancel": {
+    "game/cancel": (data: {
         /** The game id */
         game_id: number;
-    };
+    }) => void;
     /** In Japanese rules, if the game is found to be repeating, the players
      *  may opt to annul the entire game and start over.
      *
@@ -212,24 +213,24 @@ export interface ClientToServer {
      *  will probably be removed in the future, dont' bother implemeting
      *  this.
      */
-    "game/annul": {
+    "game/annul": (data: {
         /** The game id */
         game_id: number;
-    };
+    }) => void;
 
     /** Inform the server that the client believes it's clock has timed out
      *  and the game should be ended in a timeout. This is not strictly necessary
      *  to implement as the server will also timeout games, however there is
      *  a grace period to account for network latency, so well behaved clients
      *  can (and should) send this message to be very exact with timeouts. */
-    "game/timed_out": {
+    "game/timed_out": (data: {
         /** The game id */
         game_id: number;
-    };
+    }) => void;
 
     /** Sets conditional moves to be made on behalf of the player in response
      *  to a move by the opponent. */
-    "game/conditional_moves/set": {
+    "game/conditional_moves/set": (data: {
         /** The game id */
         game_id: number;
         /** The move number from which the condtional moves are rooted in */
@@ -238,10 +239,10 @@ export interface ClientToServer {
          *  like `[null, { ... }]` where the second element contains the responses
          *  to the opponent's move. */
         conditional_moves: ConditionalMoveResponse;
-    };
+    }) => void;
 
     /** Sends a chat message to a game */
-    "game/chat": {
+    "game/chat": (data: {
         /** The game id */
         game_id: number;
         /** The type of chat message being sent */
@@ -250,35 +251,35 @@ export interface ClientToServer {
         move_number: number;
         /** The chat message */
         body: string;
-    };
+    }) => void;
 
     /** Update your latency information for a particular game. This is used
      *  for clock synchronization. It is not strictly required, however strongly
      *  suggested for live games. */
-    "game/latency": {
+    "game/latency": (data: {
         /** The game id */
         game_id: number;
         /** Network latency, measured in milliseconds. See net/ping to measure this. */
         latency: number;
-    };
+    }) => void;
 
     /** Connects to a review */
-    "review/connect": {
+    "review/connect": (data: {
         /** The review id */
         review_id: number;
-    };
+    }) => void;
 
     /** Disconnects from a review */
-    "review/disconnect": {
+    "review/disconnect": (data: {
         /** The review id */
         review_id: number;
-    };
+    }) => void;
 
     /** Append a review action to the review log. */
-    "review/append": ReviewMessage;
+    "review/append": (data: ReviewMessage) => void;
 
     /** Sends a chat message to a review */
-    "review/chat": {
+    "review/chat": (data: {
         /** The review id */
         review_id: number;
         /** The root of the branch the user is viewing */
@@ -287,43 +288,43 @@ export interface ClientToServer {
         moves: string;
         /** The chat message */
         body: string;
-    };
+    }) => void;
 
     /** Request the number of unique authenticated players
      *  online within the given interval */
-    "stats/online": {
+    "stats/online": (data: {
         /** Interval in seconds */
         interval: number;
-    };
+    }) => number;
 
     /** Deletes a notification */
-    "notification/delete": {
+    "notification/delete": (data: {
         player_id: number;
         auth: string;
         notification_id: number;
-    };
+    }) => void;
 
     /** Connects to the game list count.
      *  Once connected you'll start receiving `gamelist-count` or
      *  `gamelist-count-${channel}` messages.
      */
-    "gamelist/count/subscribe": {
+    "gamelist/count/subscribe": (data: {
         /** The group or tournament channel to subscribe to. If no
          *  channel is provided, the global server counts will be
          *  sent */
         channel?: string;
-    };
+    }) => void;
 
     /** Disconnects from the game list count */
-    "gamelist/count/unsubscribe": {
+    "gamelist/count/unsubscribe": (data: {
         /** The group or tournament channel to unsubscribe from. If no
          * channel is provided, the global server counts will be
          * unsubscribed from */
         channel?: string;
-    };
+    }) => void;
 
     /** Queries the server for a list of games */
-    "gamelist/query": {
+    "gamelist/query": (data: {
         list: "live" | "corr" | "kidsgo";
         sort_by: "rank";
         /** Filtering options */
@@ -335,48 +336,51 @@ export interface ClientToServer {
 
         /** The group or tournament channel to query */
         channel?: string;
-    };
+    }) =>
+        | undefined
+        | {
+              list: string;
+              by: string;
+              size: number;
+              where: GameListWhere;
+              from: number;
+              limit: number;
+              results: GameListEntry[];
+          };
 
     /** Returns an event log for the given game. This is primarily
      *  for moderation purposes, although the endpoint is generally
      *  available to all users. */
-    "game/log": {
-        game_id: number;
-    };
+    "game/log": (data: { game_id: number }) => { timestamp: string; event: string; data: any }[];
 
     /** Subscribes to online status updates for the given player ids */
-    "user/monitor": {
-        user_ids: number[];
-    };
+    "user/monitor": (data: { user_ids: number[] }) => void;
 
     /** Sends an "Inter Tab Communication" message to all other connected
      *  clients for the current user. This includes other devices, so the
      *  "Tab" part is a bit of a misnomer. */
-    "itc": {
-        event: string;
-        data: any;
-    };
+    "itc": (data: { event: string; data: any }) => void;
 
     /** Set the given key in the remote storage system for this user
      *
      *  For more details on the remote storage replication system see:
      *   https://github.com/online-go/online-go.com/blob/devel/src/lib/data.ts
      */
-    "remote_storage/set": {
+    "remote_storage/set": (data: {
         key: string;
         value: any;
         replication: RemoteStorageReplication;
-    };
+    }) => { error?: string; retry?: boolean } | { success: true };
 
     /** Remove the given key from remote storage system for this user
      *
      *  For more details on the remote storage replication system see:
      *   https://github.com/online-go/online-go.com/blob/devel/src/lib/data.ts
      */
-    "remote_storage/remove": {
+    "remote_storage/remove": (data: {
         key: string;
         replication: RemoteStorageReplication;
-    };
+    }) => { error?: string; retry?: boolean } | { success: true };
 
     /** Requests all updated key/value pairs for this user since the
      *  provided timestamp (as as ISO 8601 string).
@@ -384,63 +388,52 @@ export interface ClientToServer {
      *  For more details on the remote storage replication system see:
      *   https://github.com/online-go/online-go.com/blob/devel/src/lib/data.ts
      */
-    "remote_storage/sync": {
+    "remote_storage/sync": (data: {
         /** ISO 8601 timestamp. Updates made after this timestamp will be sent to the client. */
         since: string;
-    };
+    }) => { error?: string; retry?: boolean } | { success: true };
 
     /** Sets a channel topic */
-    "chat/topic": {
-        channel: string;
-        topic: string;
-    };
+    "chat/topic": (data: { channel: string; topic: string }) => void;
 
     /** Sends a chat message to the given channel */
-    "chat/send": {
+    "chat/send": (data: {
         /** Channel to send the message to */
         channel: string;
         /** ID for the message */
         uuid: string;
         /** Message text */
         message: string;
-    };
+    }) => void;
 
     /** Join a chat channel */
-    "chat/join": {
+    "chat/join": (data: {
         /** Channel to join */
         channel: string;
-    };
+    }) => void;
 
     /** Leave a channel */
-    "chat/part": {
+    "chat/part": (data: {
         /** Channel to leave */
         channel: string;
-    };
+    }) => void;
 
     /** Subscribes to UI related push event messages sent to a particular channel */
-    "ui-pushes/subscribe": {
-        channel: string;
-    };
+    "ui-pushes/subscribe": (data: { channel: string }) => void;
 
     /** Un-Subscribes to UI related push event messages sent to a particular channel */
-    "ui-pushes/unsubscribe": {
-        channel: string;
-    };
+    "ui-pushes/unsubscribe": (data: { channel: string }) => void;
 
     /** Subscribes to the seek graph events. The channel is required to be "global"
      *  for now and the foreseeable future. */
-    "seek_graph/connect": {
-        channel: "global";
-    };
+    "seek_graph/connect": (data: { channel: "global" }) => void;
 
     /** Un-Subscribes to the seek graph events. The channel is required to be "global"
      *  for now and the foreseeable future. */
-    "seek_graph/disconnect": {
-        channel: "global";
-    };
+    "seek_graph/disconnect": (data: { channel: "global" }) => void;
 
     /** Send a private message to another user */
-    "chat/pm": {
+    "chat/pm": (data: {
         /** Player ID of the recipient */
         player_id: number;
         /** Username of the recipient */
@@ -449,22 +442,31 @@ export interface ClientToServer {
         uid: string;
         /** Message text */
         message: string;
-    };
+    }) =>
+        | undefined
+        | {
+              from: User;
+              to: {
+                  id: number;
+                  username: string;
+              };
+              message: {
+                  i: string;
+                  t: number;
+                  m: string;
+              };
+          };
 
     /** Loads the current user's private message session history with the given player id */
-    "chat/pm/load": {
-        player_id: number;
-    };
+    "chat/pm/load": (data: { player_id: number }) => void;
 
     /** Closes the current user's private message session with the given player id */
-    "chat/pm/close": {
-        player_id: number;
-    };
+    "chat/pm/close": (data: { player_id: number }) => void;
 
     /** Begins a "super chat" session with the given player id, which creates an
      *  unclosable dialog if enable is true, and makes the dialog closable again
      * if enable is false. This is only available to moderators. */
-    "chat/pm/superchat": {
+    "chat/pm/superchat": (data: {
         /* Player ID of the recipient */
         player_id: number;
         /** Username of the recipient */
@@ -472,43 +474,36 @@ export interface ClientToServer {
         /** Set to true if you want the modal to be unclosable, false if you want
          * the modal to be closable again */
         enable: boolean;
-    };
+    }) => void;
 
     /** Moderator only command to remove all chat messages for a given player */
-    "chat/remove_all": {
+    "chat/remove_all": (data: {
         /** Player id to remove all messages for */
         player_id: number;
-    };
+    }) => void;
 
     /** Moderator only command to remove a single chat message */
-    "chat/remove": {
-        uuid: string;
-    };
+    "chat/remove": (data: { uuid: string }) => void;
 
     /** Moderator only command to remove a single chat message from a game */
-    "game/chat/remove": {
-        game_id: number;
-        channel: string;
-        chat_id: string;
-    };
+    "game/chat/remove": (data: { game_id: number; channel: string; chat_id: string }) => void;
 
     /** Moderator only command to remove a single chat message from a game */
-    "review/chat/remove": {
-        review_id: number;
-        channel: string;
-        chat_id: string;
-    };
+    "review/chat/remove": (data: { review_id: number; channel: string; chat_id: string }) => void;
 
     /** Retreive host infomration for the termination server you are connected to */
-    "hostinfo": {};
+    "hostinfo": (data: {}) => {
+        "hostname": string;
+        "clients": number;
+        "uptime": number;
+        "ggs-version": string;
+    };
 
     /** Request a match via the automatch system */
-    "automatch/find_match": AutomatchPreferences;
+    "automatch/find_match": (data: AutomatchPreferences) => void;
 
     /** Cancel a match request */
-    "automatch/cancel": {
-        uuid: string;
-    };
+    "automatch/cancel": (data: { uuid: string }) => void;
 }
 
 export type Speed = "blitz" | "live" | "correspondence";
@@ -586,4 +581,91 @@ export interface GameListWhere {
     tournament_id?: number;
     ladder_id?: number;
     malk_only?: boolean;
+}
+
+export interface GameListEntry {
+    id: number;
+    group_ids?: Array<number>;
+    group_ids_map?: { [id: string]: boolean };
+    kidsgo_game?: boolean;
+    phase: string;
+    name: string;
+    player_to_move: number;
+    width: number;
+    height: number;
+    move_number: number;
+    paused: boolean;
+    private: boolean;
+    black: {
+        username: string;
+        id: number;
+        rank: number;
+        professional: boolean;
+        accepted: boolean;
+        ratings: {
+            version: number;
+            overall: {
+                rating: number;
+                deviation: number;
+                volatility: number;
+            };
+        };
+    };
+    white: {
+        username: string;
+        id: number;
+        rank: number;
+        professional: boolean;
+        accepted: boolean;
+        ratings: {
+            version: number;
+            overall: {
+                rating: number;
+                deviation: number;
+                volatility: number;
+            };
+        };
+    };
+
+    rengo: boolean;
+    rengo_teams: {
+        black: Array<User>;
+        white: Array<User>;
+    };
+    dropped_player: number;
+    rengo_casual_mode: boolean;
+
+    _participants?: Array<number>; // computed internally, used for internal lookup
+
+    time_per_move: number;
+    clock_expiration: number;
+
+    bot_game?: boolean;
+    ranked?: boolean;
+    handicap?: number;
+    tournament_id?: number;
+    ladder_id?: number;
+    komi?: number;
+    socket_id?: any;
+
+    in_beginning?: boolean;
+    in_middle?: boolean;
+    in_end?: boolean;
+    malkovich_present?: boolean;
+    //chat_count?:number;
+}
+
+export interface User {
+    id: number;
+    username: string;
+    ratings?: { [speedsize: string]: Glicko2 };
+    ranking?: number;
+    professional?: boolean;
+}
+
+export interface Glicko2 {
+    rating: number;
+    deviation: number;
+    volatility: number;
+    games_played?: number;
 }

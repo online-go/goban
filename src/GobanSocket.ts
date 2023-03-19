@@ -21,12 +21,6 @@ import { ClientToServer, ServerToClient } from "./protocol";
 type GobanSocketClientToServerMessage<SendProtocol> = [keyof SendProtocol, any?, number?];
 type GobanSocketServerToClientMessage<RecvProtocol> = [keyof RecvProtocol | number, any, any];
 
-/*
-type DataToEventEmitterShim<T extends object> = {
-    [K in keyof T]: T[K] extends undefined ? () => void : (data: T[K]) => void;
-};
-*/
-
 export interface GobanSocketEvents {
     connect: () => void;
     disconnect: () => void;
@@ -61,6 +55,9 @@ const RECONNECTION_INTERVALS = [
 ];
 
 const PING_INTERVAL = 10000;
+
+export type DataArgument<Entry> = Entry extends (...args: infer A) => void ? A[0] : never;
+export type ResponseType<Entry> = Entry extends (...args: any[]) => infer R ? R : never;
 
 /**
  * This is a simple wrapper around the WebSocket API that provides a
@@ -309,10 +306,10 @@ export class GobanSocket<
         this.promises_in_flight.clear();
     }
 
-    public send<KeyT extends keyof SendProtocol>(
-        command: KeyT,
-        data: SendProtocol[KeyT],
-        cb?: (data?: any, error?: any) => void,
+    public send<Command extends keyof SendProtocol>(
+        command: Command,
+        data: DataArgument<SendProtocol[Command]>,
+        cb?: (data: ResponseType<SendProtocol[Command]>, error?: any) => void,
     ): void {
         const request: GobanSocketClientToServerMessage<SendProtocol> = cb
             ? [command, data, ++this.last_request_id]
@@ -333,10 +330,10 @@ export class GobanSocket<
         }
     }
 
-    public sendPromise<KeyT extends keyof SendProtocol>(
-        command: KeyT,
-        data: SendProtocol[KeyT],
-    ): Promise<any> {
+    public sendPromise<Command extends keyof SendProtocol>(
+        command: Command,
+        data: DataArgument<SendProtocol[Command]>,
+    ): Promise<ResponseType<SendProtocol[Command]>> {
         return new Promise((resolve, reject) => {
             this.send(command, data, (data, error) => {
                 if (error) {
