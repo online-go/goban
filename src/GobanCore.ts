@@ -3145,12 +3145,6 @@ export abstract class GobanCore extends TypedEventEmitter<Events> {
                         removed: false,
                         stones: current_removed,
                     });
-
-                    this.socket.send("game/removed_stones/set", {
-                        game_id: this.game_id,
-                        removed: false,
-                        stones: current_removed,
-                    });
                     this.socket.send("game/removed_stones/set", {
                         game_id: this.game_id,
                         removed: true,
