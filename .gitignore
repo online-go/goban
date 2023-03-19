@@ -63,5 +63,6 @@ typings/
 lib/
 node/
 doc/
+docs/
 deployment-staging-area/
 archive/
