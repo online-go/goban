@@ -96,7 +96,7 @@ export class GobanSocket<
     private send_queue: (() => void)[] = [];
     private ping_interval?: ReturnType<typeof niceInterval>;
     private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
-    private authentication?: ClientToServer["authenticate"];
+    private authentication?: DataArgument<ClientToServer["authenticate"]>;
     private manually_disconnected = false;
     public options: GobanSocketOptions;
 
@@ -123,7 +123,7 @@ export class GobanSocket<
         return this.socket.readyState === WebSocket.OPEN;
     }
 
-    public authenticate(authentication: ClientToServer["authenticate"]): void {
+    public authenticate(authentication: DataArgument<ClientToServer["authenticate"]>): void {
         this.authentication = authentication;
         this.send("authenticate" as keyof SendProtocol, authentication as any);
     }
@@ -346,7 +346,6 @@ export class GobanSocket<
     }
 
     public disconnect() {
-        console.warn(new Error("Manually disconnected socket"));
         this.manually_disconnected = true;
         this.socket.close();
         this.rejectPromisesInFlight();
