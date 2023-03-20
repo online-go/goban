@@ -23,7 +23,9 @@
 <section class="tsd-panel tsd-hierarchy">
 <h4>Hierarchy</h4>
 <ul class="tsd-hierarchy">
-<li><span class="target">ClientToAIServer</span></li></ul></section><aside class="tsd-sources">
+<li><a href="protocol.ClientToServerBase.html" class="tsd-signature-type" data-tsd-kind="Interface">ClientToServerBase</a>
+<ul class="tsd-hierarchy">
+<li><span class="target">ClientToAIServer</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
 <li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L21">src/protocol/ClientToAIServer.ts:21</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
@@ -36,8 +38,8 @@
 <div class="tsd-index-list"><a href="protocol.ClientToAIServer.html#ai_analyze_variation" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><rect fill="var(--color-icon-background)" stroke="#FF984D" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="12" id="icon-1024-path"></rect><path d="M9.354 16V7.24H12.174C12.99 7.24 13.638 7.476 14.118 7.948C14.606 8.412 14.85 9.036 14.85 9.82C14.85 10.604 14.606 11.232 14.118 11.704C13.638 12.168 12.99 12.4 12.174 12.4H10.434V16H9.354ZM10.434 11.428H12.174C12.646 11.428 13.022 11.284 13.302 10.996C13.59 10.7 13.734 10.308 13.734 9.82C13.734 9.324 13.59 8.932 13.302 8.644C13.022 8.356 12.646 8.212 12.174 8.212H10.434V11.428Z" fill="var(--color-text)" id="icon-1024-text"></path></svg><span>ai-<wbr/>analyze-<wbr/>variation</span></a>
 <a href="protocol.ClientToAIServer.html#ai_review_connect" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>ai-<wbr/>review-<wbr/>connect</span></a>
 <a href="protocol.ClientToAIServer.html#ai_review_disconnect" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>ai-<wbr/>review-<wbr/>disconnect</span></a>
-<a href="protocol.ClientToAIServer.html#authenticate" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>authenticate</span></a>
-<a href="protocol.ClientToAIServer.html#net_ping" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>net/ping</span></a>
+<a href="protocol.ClientToAIServer.html#authenticate" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>authenticate</span></a>
+<a href="protocol.ClientToAIServer.html#net_ping" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>net/ping</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
@@ -79,7 +81,7 @@
 </div></li></ul></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4></li></ul></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L50">src/protocol/ClientToAIServer.ts:50</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L38">src/protocol/ClientToAIServer.ts:38</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="ai_review_connect" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>ai-<wbr/>review-<wbr/>connect</span><a href="#ai_review_connect" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">ai-<wbr/>review-<wbr/>connect<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>ai_review_id<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>game_id<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>uuid<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></div>
@@ -110,7 +112,7 @@
 </div></li></ul></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4></li></ul></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L34">src/protocol/ClientToAIServer.ts:34</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L22">src/protocol/ClientToAIServer.ts:22</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="ai_review_disconnect" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>ai-<wbr/>review-<wbr/>disconnect</span><a href="#ai_review_disconnect" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">ai-<wbr/>review-<wbr/>disconnect<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>uuid<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></div>
@@ -133,8 +135,8 @@
 </div></li></ul></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4></li></ul></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L45">src/protocol/ClientToAIServer.ts:45</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="authenticate" class="tsd-anchor"></a>
+<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L33">src/protocol/ClientToAIServer.ts:33</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="authenticate" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>authenticate</span><a href="#authenticate" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">authenticate<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>client_version<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>device_id<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>jwt<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>language<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>language_version<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>user_agent<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></div>
 <div class="tsd-type-declaration">
@@ -144,8 +146,7 @@
 <ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-property">
 <li class="tsd-signature" id="authenticate.__type-6.__type-7"><span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>client_version<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>device_id<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>jwt<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>language<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>language_version<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>user_agent<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 <li class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>Authenticate with the server. This is the same as the authenticate
- message in ServerToClient.</p>
+<div class="tsd-comment tsd-typography"><p>Authenticate with the server.</p>
 <p> Prior to authentication, you should perform a GET request to
    <code>/api/v1/ui/config</code>
  to get the current configuration. Within the returned JSON
@@ -186,9 +187,10 @@
 <div class="tsd-comment tsd-typography"><p>Browser user agent (or websocket library)</p>
 </div></li></ul></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4></li></ul></li></ul></div><aside class="tsd-sources">
+<p>Inherited from <a href="protocol.ClientToServerBase.html">ClientToServerBase</a>.<a href="protocol.ClientToServerBase.html#authenticate">authenticate</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L30">src/protocol/ClientToAIServer.ts:30</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="net_ping" class="tsd-anchor"></a>
+<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToServer.ts#L30">src/protocol/ClientToServer.ts:30</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="net_ping" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>net/ping</span><a href="#net_ping" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">net/ping<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>client<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>drift<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>latency<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></div>
 <div class="tsd-type-declaration">
@@ -223,8 +225,9 @@
 <div class="tsd-comment tsd-typography"><p>Last latency measurement, or <code>0</code></p>
 </div></li></ul></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4></li></ul></li></ul></div><aside class="tsd-sources">
+<p>Inherited from <a href="protocol.ClientToServerBase.html">ClientToServerBase</a>.<a href="protocol.ClientToServerBase.html#net_ping">net/ping</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToAIServer.ts#L32">src/protocol/ClientToAIServer.ts:32</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/online-go/goban/blob/b5482e4/src/protocol/ClientToServer.ts#L53">src/protocol/ClientToServer.ts:53</a></li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -254,8 +257,8 @@
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="protocol.ClientToAIServer.html#ai_analyze_variation" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>ai-<wbr/>analyze-<wbr/>variation</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="protocol.ClientToAIServer.html#ai_review_connect" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>ai-<wbr/>review-<wbr/>connect</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="protocol.ClientToAIServer.html#ai_review_disconnect" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>ai-<wbr/>review-<wbr/>disconnect</a></li>
-<li class="tsd-kind-property tsd-parent-kind-interface"><a href="protocol.ClientToAIServer.html#authenticate" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>authenticate</a></li>
-<li class="tsd-kind-property tsd-parent-kind-interface"><a href="protocol.ClientToAIServer.html#net_ping" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>net/ping</a></li></ul></li></ul></nav></div></div>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="protocol.ClientToAIServer.html#authenticate" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>authenticate</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="protocol.ClientToAIServer.html#net_ping" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>net/ping</a></li></ul></li></ul></nav></div></div>
 <div class="container tsd-generator">
 <p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div>
 <div class="overlay"></div><script src="../assets/main.js"></script></body></html>
