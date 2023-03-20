@@ -107,7 +107,10 @@ describe("GobanSocket tests", () => {
         await expect(server).toReceiveMessage(expect.arrayContaining(["net/ping"]));
         const now = Date.now();
         server.send(["net/pong", { client: now - 100, server: now }]);
-        expect(client.latency).toBe(100);
+        // We record a new Date.now() in the client, so we can't test the exact value,
+        // within 10ms should allow for plenty of execution speed slop on the CI though, I hope
+        expect(client.latency).toBeGreaterThan(99);
+        expect(client.latency).toBeLessThan(110);
 
         client.options.dont_ping = true;
     });
