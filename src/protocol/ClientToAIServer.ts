@@ -14,23 +14,11 @@
  * limitations under the License.
  */
 
-import { ClientToServer } from "./ClientToServer";
+import { ClientToServerBase } from "./ClientToServer";
 
 /** This is an exhaustive list of the messages that the client can send
  *  to the AI servers. */
-export interface ClientToAIServer {
-    /** Authenticate with the server. This is the same as the authenticate
-     *  message in ServerToClient.
-     *
-     *  Prior to authentication, you should perform a GET request to
-     *    `/api/v1/ui/config`
-     *  to get the current configuration. Within the returned JSON
-     *  you will find all of the necessary fields to authenticate.
-     */
-    "authenticate": ClientToServer["authenticate"];
-
-    "net/ping": ClientToServer["net/ping"];
-
+export interface ClientToAIServer extends ClientToServerBase {
     "ai-review-connect": (data: {
         /** AI UUID */
         uuid: string;
