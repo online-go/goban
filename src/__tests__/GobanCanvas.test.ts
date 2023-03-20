@@ -351,6 +351,8 @@ describe("onTap", () => {
     // some logic for modifier keys (e.g. shift-click => remove one intersection)
     // this is good to test for.
     test("Ctrl-Clicking during stone removal adds coordinates to chat", async () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(0);
         new GobanCanvas(basicScorableBoardConfig({ phase: "stone removal" }));
 
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
@@ -367,11 +369,12 @@ describe("onTap", () => {
         );
 
         // Unmodified clicks in stone removal send a "game/removed_stones/set" message
-        await sleep(50);
+        jest.setSystemTime(50);
         expect(addCoordinatesToChatInput).toBeCalledTimes(1);
         // Note: "A2" is the correct pretty coordinate for (0,0) on a 2x4 board
         // because the y coordinate is flipped
         expect(addCoordinatesToChatInput).toBeCalledWith("A2");
+        jest.useRealTimers();
     });
 
     test("Clicking on stones during stone removal sends a socket message", async () => {
@@ -429,7 +432,3 @@ describe("onTap", () => {
         expect(mock_score_estimate.handleClick).toBeCalledTimes(1);
     });
 });
-
-function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
