@@ -6,6 +6,7 @@
 
 import { GobanSocket, closeErrorCodeToString } from "../GobanSocket";
 import WS from "jest-websocket-mock";
+import * as protocol from "../protocol";
 
 let last_port = 48880;
 
@@ -30,6 +31,10 @@ describe("GobanSocket tests", () => {
         client?.disconnect();
         server?.close();
         */
+    });
+
+    test("Protocol interface stub", () => {
+        expect(protocol).toBeDefined();
     });
 
     test("Connection", async () => {
