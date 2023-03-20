@@ -362,7 +362,12 @@ export interface ClientToServer extends ClientToServerBase {
     /** Sends an "Inter Tab Communication" message to all other connected
      *  clients for the current user. This includes other devices, so the
      *  "Tab" part is a bit of a misnomer. */
-    "itc": (data: { event: string; data: any }) => void;
+    "itc": (data: {
+        /** User defined event string */
+        event: string;
+        /** User defined data */
+        data: any;
+    }) => void;
 
     /** Set the given key in the remote storage system for this user
      *
@@ -514,7 +519,7 @@ export type Size = "9x9" | "13x13" | "19x19";
 export type AutomatchCondition = "required" | "preferred" | "no-preference";
 export type RuleSet = "japanese" | "chinese" | "aga" | "korean" | "nz" | "ing";
 
-interface AutomatchPreferences {
+export interface AutomatchPreferences {
     uuid: string;
     size_speed_options: Array<{ size: Size; speed: Speed }>;
 
@@ -664,6 +669,8 @@ export interface User {
     ratings?: { [speedsize: string]: Glicko2 };
     ranking?: number;
     professional?: boolean;
+    country?: string;
+    ui_class?: string;
 }
 
 export interface Glicko2 {

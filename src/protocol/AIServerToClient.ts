@@ -19,4 +19,7 @@ import { ServerToClient } from "./ServerToClient";
 export interface AIServerToClient {
     /** Pong response from a ping */
     "net/pong": ServerToClient["net/pong"];
+
+    /** AI review messages are streamed back to the AI review UUID. */
+    [uuid: string]: (data: any) => void;
 }

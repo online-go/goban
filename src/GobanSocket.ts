@@ -21,7 +21,9 @@ import { ClientToServer, ClientToServerBase, ServerToClient } from "./protocol";
 type GobanSocketClientToServerMessage<SendProtocol> = [keyof SendProtocol, any?, number?];
 type GobanSocketServerToClientMessage<RecvProtocol> = [keyof RecvProtocol | number, any, any];
 
-export interface GobanSocketEvents {
+// Ideally this would be a generic type that extends RecvProtocol, but that
+// doesn't seem to be possible in typescript yet
+export interface GobanSocketEvents extends ServerToClient {
     connect: () => void;
     disconnect: () => void;
     reconnect: () => void;
@@ -29,7 +31,7 @@ export interface GobanSocketEvents {
     /* Emitted when we receive an updated latency measurement */
     latency: (latency: number, clock_drift: number) => void;
 
-    [key: string]: (...data: any[]) => void;
+    //[key: string]: (...data: any[]) => void;
 }
 
 interface ErrorResponse {
@@ -262,7 +264,7 @@ export class GobanSocket<
                     cb(data, err);
                 }
             } else {
-                this.emit(id_or_command as string, data);
+                this.emit(id_or_command as keyof GobanSocketEvents, data);
             }
         });
 
