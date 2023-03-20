@@ -16,7 +16,7 @@
 
 import { EventEmitter } from "eventemitter3";
 import { niceInterval } from "./GoUtil";
-import { ClientToServer, ServerToClient } from "./protocol";
+import { ClientToServer, ClientToServerBase, ServerToClient } from "./protocol";
 
 type GobanSocketClientToServerMessage<SendProtocol> = [keyof SendProtocol, any?, number?];
 type GobanSocketServerToClientMessage<RecvProtocol> = [keyof RecvProtocol | number, any, any];
@@ -73,7 +73,7 @@ export type ResponseType<Entry> = Entry extends (...args: any[]) => infer R ? R 
  */
 
 export class GobanSocket<
-    SendProtocol = ClientToServer,
+    SendProtocol extends ClientToServerBase = ClientToServer,
     RecvProtocol = ServerToClient,
 > extends EventEmitter<GobanSocketEvents> {
     public readonly url: string;
@@ -96,7 +96,7 @@ export class GobanSocket<
     private send_queue: (() => void)[] = [];
     private ping_interval?: ReturnType<typeof niceInterval>;
     private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
-    private authentication?: DataArgument<ClientToServer["authenticate"]>;
+    private authentication?: DataArgument<SendProtocol["authenticate"]>;
     private manually_disconnected = false;
     public options: GobanSocketOptions;
 
@@ -123,14 +123,14 @@ export class GobanSocket<
         return this.socket.readyState === WebSocket.OPEN;
     }
 
-    public authenticate(authentication: DataArgument<ClientToServer["authenticate"]>): void {
+    public authenticate(authentication: DataArgument<SendProtocol["authenticate"]>): void {
         this.authentication = authentication;
-        this.send("authenticate" as keyof SendProtocol, authentication as any);
+        this.send("authenticate", authentication);
     }
 
     private sendAuthentication(): void {
         if (this.authentication) {
-            this.send("authenticate" as keyof SendProtocol, this.authentication as any);
+            this.send("authenticate", this.authentication);
         }
     }
 
@@ -145,14 +145,11 @@ export class GobanSocket<
             }
 
             if (this.connected) {
-                this.send(
-                    "net/ping" as keyof SendProtocol,
-                    {
-                        client: Date.now(),
-                        drift: this.clock_drift,
-                        latency: this.latency,
-                    } as any,
-                );
+                this.send("net/ping", {
+                    client: Date.now(),
+                    drift: this.clock_drift,
+                    latency: this.latency,
+                } as DataArgument<SendProtocol["net/ping"]>);
             } else {
                 if (this.ping_interval) {
                     clearInterval(this.ping_interval);

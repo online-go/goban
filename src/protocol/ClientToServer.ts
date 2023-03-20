@@ -18,15 +18,8 @@ import type { JGOFPlayerClock } from "../JGOF";
 import type { ReviewMessage } from "../GoEngine";
 import type { ConditionalMoveResponse } from "../GoConditionalMove";
 
-/** This is an exhaustive list of the messages that the client can send
- *  to the server.
- *
- *
- *
- *
- *
- */
-export interface ClientToServer {
+/** Messages that clients send, regardless of target server */
+export interface ClientToServerBase {
     /** Authenticate with the server.
      *
      *  Prior to authentication, you should perform a GET request to
@@ -65,7 +58,17 @@ export interface ClientToServer {
         /** Last latency measurement, or `0` */
         latency: number;
     }) => void;
+}
 
+/** This is an exhaustive list of the messages that the client can send
+ *  to the server.
+ *
+ *
+ *
+ *
+ *
+ */
+export interface ClientToServer extends ClientToServerBase {
     /** Get active automatch entries for the current user */
     "automatch/list": (data: {}) => void;
 
