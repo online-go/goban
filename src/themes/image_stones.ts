@@ -17,7 +17,7 @@
 import { GoTheme } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
-import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../GoUtil";
+import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 import { renderShadow } from "./rendered_stones";
 const anime_black_imagedata = makeSvgImageData(require("../../assets/img/anime_black.svg"));
 const anime_white_imagedata = makeSvgImageData(require("../../assets/img/anime_white.svg"));

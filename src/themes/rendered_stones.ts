@@ -17,7 +17,7 @@
 import { GoTheme } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
-import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../GoUtil";
+import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 
 type StoneType = { stone: HTMLCanvasElement; shadow: HTMLCanvasElement };
 type StoneTypeArray = Array<StoneType>;

@@ -30,8 +30,9 @@ import {
     createDeviceScaledCanvas,
     resizeDeviceScaledCanvas,
     allocateCanvasOrError,
-} from "./GoUtil";
-import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
+    getRelativeEventPosition,
+} from "./canvas_utils";
+import { getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
 
