@@ -1079,7 +1079,7 @@ export class GobanCanvas extends GobanCore {
             // stone already placed is just to be ignored, it's not really an error.
             if (e.message_id !== "stone_already_placed_here") {
                 this.errorHandler(e);
-                this.emit("error");
+                this.emit("error", "stone_already_placed_here");
             }
             this.emit("update");
         }

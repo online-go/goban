@@ -34,7 +34,6 @@ import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove"
 import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
 import { init_score_estimator, ScoreEstimator } from "./ScoreEstimator";
 import { deepEqual, dup, computeAverageMoveTime, niceInterval } from "./GoUtil";
-import { TypedEventEmitter } from "./TypedEventEmitter";
 import { _, interpolate } from "./translate";
 import {
     JGOFClock,
@@ -49,6 +48,7 @@ import {
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
 import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
+import { EventEmitter } from "eventemitter3";
 
 declare let swal: any;
 
@@ -245,91 +245,76 @@ export interface StateUpdateEvents {
 }
 
 export interface Events extends StateUpdateEvents {
-    "destroy": never;
-    "update": never;
-    "chat-reset": never;
-    "reset": any;
-    "error": any;
-    "gamedata": any;
-    "chat": any;
-    "load": GobanConfig;
-    "show-message": { formatted: string; message_id: string; parameters?: { [key: string]: any } };
-    "clear-message": never;
-    "submitting-move": boolean;
-    "chat-remove": { chat_ids: Array<string> };
-    "move-made": never;
-    "player-update": JGOFPlayerSummary;
-    "played-by-click": {
-        player_id: number;
-        x: number;
-        y: number;
-    };
-    "review.sync-to-current-move": never;
-    "review.updated": never;
-    "review.load-start": never;
-    "review.load-end": never;
-    "puzzle-wrong-answer": never;
-    "puzzle-correct-answer": never;
-    "state_text": {
-        title: string;
-        show_moves_made_count?: boolean;
-    };
-    "advance-to-next-board": never;
-    "auto-resign": {
-        game_id: number;
-        player_id: number;
-        expiration: number;
-    };
-    "clear-auto-resign": {
-        game_id: number;
-        player_id: number;
-    };
+    "destroy": () => void;
+    "update": () => void;
+    "chat-reset": () => void;
+    "reset": (d: any) => void;
+    "error": (d: any) => void;
+    "gamedata": (d: any) => void;
+    "chat": (d: any) => void;
+    "load": (config: GobanConfig) => void;
+    "show-message": (message: {
+        formatted: string;
+        message_id: string;
+        parameters?: { [key: string]: any };
+    }) => void;
+    "clear-message": () => void;
+    "submitting-move": (tf: boolean) => void;
+    "chat-remove": (ids: { chat_ids: Array<string> }) => void;
+    "move-made": () => void;
+    "player-update": (player: JGOFPlayerSummary) => void;
+    "played-by-click": (player: { player_id: number; x: number; y: number }) => void;
+    "review.sync-to-current-move": () => void;
+    "review.updated": () => void;
+    "review.load-start": () => void;
+    "review.load-end": () => void;
+    "puzzle-wrong-answer": () => void;
+    "puzzle-correct-answer": () => void;
+    "state_text": (state: { title: string; show_moves_made_count?: boolean }) => void;
+    "advance-to-next-board": () => void;
+    "auto-resign": (obj: { game_id: number; player_id: number; expiration: number }) => void;
+    "clear-auto-resign": (obj: { game_id: number; player_id: number }) => void;
     "set-for-removal": { x: number; y: number; removed: boolean };
-    "captured-stones": {
-        removed_stones: Array<JGOFIntersection>;
-    };
-    "stone-removal.accepted": never;
-    "stone-removal.updated": never;
-    "conditional-moves.updated": never;
-    "puzzle-place": {
+    "captured-stones": (obj: { removed_stones: Array<JGOFIntersection> }) => void;
+    "stone-removal.accepted": () => void;
+    "stone-removal.updated": () => void;
+    "conditional-moves.updated": () => void;
+    "puzzle-place": (obj: {
         x: number;
         y: number;
         width: number;
         height: number;
         color: "black" | "white";
-    };
-    "clock": JGOFClockWithTransmitting | null;
-    "audio-game-started": {
-        player_id: number; // Player to move
-    };
-    "audio-game-ended": "black" | "white" | "tie";
-    "audio-pass": never;
-    "audio-stone": {
+    }) => void;
+    "clock": (clock: JGOFClockWithTransmitting | null) => void;
+    "audio-game-started": (obj: {
+        /**  Player to move */
+        player_id: number;
+    }) => void;
+    "audio-game-ended": (winner: "black" | "white" | "tie") => void;
+    "audio-pass": () => void;
+    "audio-stone": (obj: {
         x: number;
         y: number;
         width: number;
         height: number;
         color: "black" | "white";
-    };
-    "audio-other-player-disconnected": {
-        player_id: number;
-    };
-    "audio-other-player-reconnected": {
-        player_id: number;
-    };
-    "audio-clock": AudioClockEvent;
-    "audio-disconnected": never; // your connection has been lost to the server
-    "audio-reconnected": never; // your connection has been reestablished
-    "audio-capture-stones": {
+    }) => void;
+    "audio-other-player-disconnected": (obj: { player_id: number }) => void;
+    "audio-other-player-reconnected": (obj: { player_id: number }) => void;
+    "audio-clock": (event: AudioClockEvent) => void;
+    "audio-disconnected": () => void; // your connection has been lost to the server
+    "audio-reconnected": () => void; // your connection has been reestablished
+    "audio-capture-stones": (obj: {
         count: number /* number of stones we just captured */;
         already_captured: number /* number of stones that have already been captured by this player */;
-    };
-    "audio-game-paused": never;
-    "audio-game-resumed": never;
-    "audio-enter-stone-removal": never;
-    "audio-resume-game-from-stone-removal": never;
-    "audio-undo-requested": never;
-    "audio-undo-granted": never;
+    }) => void;
+    "audio-game-paused": () => void;
+    "audio-game-resumed": () => void;
+    "audio-enter-stone-removal": () => void;
+    "audio-resume-game-from-stone-removal": () => void;
+    "audio-undo-requested": () => void;
+    "audio-undo-granted": () => void;
 }
 
 export interface GobanHooks {
@@ -378,7 +363,7 @@ export interface GobanMetrics {
     offset: number;
 }
 
-export abstract class GobanCore extends TypedEventEmitter<Events> {
+export abstract class GobanCore extends EventEmitter<Events> {
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;

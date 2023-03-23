@@ -31,8 +31,7 @@ import {
 } from "./JGOF";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
-import { TypedEventEmitter, LegacyEventsShim } from "./TypedEventEmitter";
-import EventEmitter = require("eventemitter3");
+import { EventEmitter } from "eventemitter3";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -285,10 +284,7 @@ let __currentMarker = 0;
 
 export type PlayerColor = "black" | "white";
 
-type EventNames = EventEmitter.EventNames<Events>;
-type EventArgs<K extends EventNames> = EventEmitter.EventArgs<LegacyEventsShim<Events>, K>;
-
-export class GoEngine extends TypedEventEmitter<Events> {
+export class GoEngine extends EventEmitter<Events> {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
@@ -2855,8 +2851,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return ret;
     }
 
-    public parentEventEmitter?: TypedEventEmitter<Events>;
-    emit<K extends EventNames>(event: K, ...args: EventArgs<K>): boolean {
+    public parentEventEmitter?: EventEmitter<Events>;
+    emit<K extends keyof Events>(event: K, ...args: EventEmitter.EventArgs<Events, K>): boolean {
         let ret: boolean = super.emit(event, ...args);
         if (this.parentEventEmitter) {
             ret ||= this.parentEventEmitter.emit(event, ...args);
