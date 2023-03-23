@@ -42,7 +42,17 @@ export interface ClientToServerBase {
         client?: string;
         /** Client version string. */
         client_version?: string;
-    }) => void;
+
+        /** Bot username connecting, if applicable */
+        bot_username?: string;
+        /** Bot API key, if applicable */
+        bot_apikey?: string;
+    }) =>
+        | {
+              id: number;
+              username: string;
+          }
+        | undefined;
 
     /** Sends a ping to the server. This message should be
      *  sent regularly. The default interval is 10 seconds.
@@ -512,6 +522,9 @@ export interface ClientToServer extends ClientToServerBase {
 
     /** Cancel a match request */
     "automatch/cancel": (data: { uuid: string }) => void;
+
+    /** Hides or shows a bot in the bot list */
+    "bot/hidden": (tf: boolean) => void;
 }
 
 export type Speed = "blitz" | "live" | "correspondence";
