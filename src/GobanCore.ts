@@ -583,7 +583,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
     public abstract drawSquare(i: number, j: number): void;
     public abstract redraw(force_clear?: boolean): void;
     public abstract move_tree_redraw(no_warp?: boolean): void;
-    public abstract setMoveTreeContainer(container: HTMLElement): void;
+    /* Because this is used on the server side too, we can't have the HTMLElement
+     * type here. */
+    public abstract setMoveTreeContainer(container: any /* HTMLElement */): void;
     protected abstract setTitle(title: string): void;
     protected abstract enableDrawing(): void;
     protected abstract disableDrawing(): void;

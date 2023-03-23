@@ -112,7 +112,9 @@ export class MoveTree {
     public layout_cy: number = 0;
     public layout_x: number = 0;
     public layout_y: number = 0;
-    public label_metrics?: TextMetrics;
+    /* Because this is used on the server side too, we can't have the TextMetrics
+     * type here. */
+    public label_metrics?: any /* TextMetrics */;
 
     /* These need to be protected by accessor methods now that we're not
      * initializing them on construction */

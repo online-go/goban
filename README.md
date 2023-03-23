@@ -8,6 +8,20 @@ some moderinization of the rest of the site. Until v 1.0 is released of this
 library, it is not recommended to make use of it as much overhaul is happening
 to improve usability on sites other than online-go.com.
 
+# Usage:
+
+To import into an application targeting the web:
+
+```
+import { ... } from "goban";
+```
+
+To import into an application targeting node:
+
+```
+import { ... } from "goban/lib/engine";
+```
+
 # Documentation
 
 https://docs.online-go.com/goban/
