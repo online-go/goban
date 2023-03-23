@@ -229,7 +229,7 @@ export function decodeMoves(
 
     return ret;
 }
-function char2num(ch: string): number {
+export function char2num(ch: string): number {
     if (ch === ".") {
         return -1;
     }
