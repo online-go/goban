@@ -20,7 +20,7 @@ import type {
     AutomatchPreferences,
     RemoteStorageReplication,
 } from "./ClientToServer";
-import type { JGOFTimeControl, JGOFClock } from "../JGOF";
+import type { JGOFTimeControl } from "../JGOF";
 import type { ConditionalMoveResponse } from "../GoConditionalMove";
 import type { GoEngineConfig, Score, ReviewMessage } from "../GoEngine";
 import type { AdHocPackedMove } from "../AdHocFormat";
@@ -438,7 +438,7 @@ export interface ServerToClient {
     }) => void;
 
     /** Game clock update */
-    [k: `game/${number}/clock`]: (data: JGOFClock) => void;
+    [k: `game/${number}/clock`]: (data: GameClock) => void;
 
     /** Update the conditional moves currently active */
     [k: `game/${number}/conditional_moves`]: (data: {
@@ -592,4 +592,59 @@ interface AnalysisComment {
 interface ReviewComment {
     type: "review";
     review_id: number;
+}
+
+type NoneClock = undefined;
+type SimpleClock = number;
+interface AbsoluteClock {
+    thinking_time: number;
+}
+interface FischerClock {
+    thinking_time: number;
+    skip_bonus: boolean;
+}
+interface ByoYomiClock {
+    thinking_time: number;
+    periods: number;
+    period_time: number;
+    period_time_left?: number;
+}
+interface CanadianClock {
+    thinking_time: number;
+    moves_left: number;
+    block_time: number;
+}
+
+type ClockTime =
+    | NoneClock
+    | SimpleClock
+    | AbsoluteClock
+    | FischerClock
+    | ByoYomiClock
+    | CanadianClock;
+
+interface GameClock {
+    game_id: number;
+    title: string;
+    expiration: number;
+    stone_removal_mode?: boolean;
+    stone_removal_expiration?: number;
+    black_player_id: number;
+    white_player_id: number;
+    current_player: number;
+    expiration_delta?: number;
+    pause_delta?: number;
+    last_move: number;
+    now?: number;
+    paused_since?: number;
+    start_mode?: boolean;
+    black_time?: ClockTime;
+    white_time?: ClockTime;
+    pause?: {
+        paused?: boolean;
+        paused_since?: number;
+        pause_control?: {
+            [key: string]: boolean;
+        };
+    };
 }
