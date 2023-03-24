@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import * as ReactDOM from "react-dom";
+import * as ReactDOM from "react-dom/client";
 import { GobanCore, GobanConfig, GobanHooks } from "./GobanCore";
 //import { GobanPixi } from './GobanPixi';
 import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
@@ -348,4 +348,5 @@ function ReactGobanCanvas(props: ReactGobanProps): JSX.Element {
     return ReactGoban<GobanCanvas>(GobanCanvas, props);
 }
 
-ReactDOM.render(<Main />, document.getElementById("test-content"));
+const react_root = ReactDOM.createRoot(document.getElementById("test-content") as Element);
+react_root.render(<Main />);
