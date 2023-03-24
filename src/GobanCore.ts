@@ -224,24 +224,24 @@ export interface JGOFClockWithTransmitting extends JGOFClock {
 }
 
 export interface StateUpdateEvents {
-    mode: GobanModes;
-    title: string;
-    phase: GoEnginePhase;
-    cur_move: MoveTree;
-    last_official_move: MoveTree;
-    submit_move: (() => void) | undefined;
-    analyze_tool: AnalysisTool;
-    analyze_subtool: AnalysisSubTool;
-    score_estimate: ScoreEstimator | null;
-    strict_seki_mode: boolean;
-    rules: GoEngineRules;
-    winner: number | undefined;
-    undo_requested: number | undefined; // move number of the last undo request
-    undo_canceled: undefined;
-    paused: boolean;
-    outcome: string;
-    review_owner_id: number | undefined;
-    review_controller_id: number | undefined;
+    mode: (d: GobanModes) => void;
+    title: (d: string) => void;
+    phase: (d: GoEnginePhase) => void;
+    cur_move: (d: MoveTree) => void;
+    last_official_move: (d: MoveTree) => void;
+    submit_move: (d: (() => void) | undefined) => void;
+    analyze_tool: (d: AnalysisTool) => void;
+    analyze_subtool: (d: AnalysisSubTool) => void;
+    score_estimate: (d: ScoreEstimator | null) => void;
+    strict_seki_mode: (d: boolean) => void;
+    rules: (d: GoEngineRules) => void;
+    winner: (d: number | undefined) => void;
+    undo_requested: (d: number | undefined) => void; // move number of the last undo reques
+    undo_canceled: () => void;
+    paused: (d: boolean) => void;
+    outcome: (d: string) => void;
+    review_owner_id: (d: number | undefined) => void;
+    review_controller_id: (d: number | undefined) => void;
 }
 
 export interface Events extends StateUpdateEvents {
