@@ -121,7 +121,8 @@ export class GobanCanvas extends GobanCore {
     private theme_white_text_color: string = HOT_PINK;
 
     constructor(config: GobanCanvasConfig, preloaded_data?: AdHocFormat | JGOF) {
-        super(config, preloaded_data);
+        /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
+        super(config, preloaded_data as any);
 
         // console.log("Goban canvas v 0.5.74.debug 5"); // GaJ: I use this to be sure I have linked & loaded the updates
         if (config.board_div) {
