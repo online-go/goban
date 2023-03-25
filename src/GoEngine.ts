@@ -32,6 +32,7 @@ import {
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
 import { EventEmitter } from "eventemitter3";
+import { GameClock } from "./protocol";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -157,6 +158,9 @@ export interface GoEngineConfig {
     aga_handicap_scoring?: boolean;
     opponent_plays_first_after_resume?: boolean;
     superko_algorithm?: GoEngineSuperKoAlgorithm;
+
+    // This is used in gtp2ogs
+    clock?: GameClock;
 
     /** When loading initial state or moves, by default GoEngine will try and
      *  handle bad data by just resorting to 'edit placing' moves. If this is

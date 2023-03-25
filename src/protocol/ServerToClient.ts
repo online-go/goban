@@ -623,7 +623,7 @@ type ClockTime =
     | ByoYomiClock
     | CanadianClock;
 
-interface GameClock {
+export interface GameClock {
     game_id: number;
     title: string;
     expiration: number;
