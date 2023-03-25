@@ -31,8 +31,7 @@ import {
 } from "./JGOF";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
-import { TypedEventEmitter, LegacyEventsShim } from "./TypedEventEmitter";
-import EventEmitter = require("eventemitter3");
+import { EventEmitter } from "eventemitter3";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -198,41 +197,60 @@ export interface GoEngineInitialState {
     white?: string;
 }
 
+/** Reviews are constructed by a stream of modifications messages,
+ *  this interface describes the format of those modification messages.
+ *  A message can contain any number of the fields listed. */
 export interface ReviewMessage {
-    ts?: number /* timestamp (ms) */;
-    f?: number /* from (move) */;
-    m?: string /* moves */;
-    om?: [number, number, number] /* offical move [reviewing live game] */;
-    undo?: boolean /* offical undo [reviewing live game] */;
-    t?: string /* text */;
-    "t+"?: string /* text append */;
-    k?: { [mark: string]: string } /* marks */;
-    pp?: [number, number] /* pen point */;
-    pen?: string /* pen color / pen start */;
-    chat?: {
+    /** The review ID. This is used when sending from the client to the server,
+     * but is not sent by the server back to the client (as the id is encoded
+     * in the message event name) */
+    "review_id"?: number;
+
+    /** timestamp (ms) */
+    "ts"?: number;
+    /** from (move number) */
+    "f"?: number;
+    /** Moves made */
+    "m"?: string;
+    /** offical move [reviewing live game] */
+    "om"?: [number, number, number];
+    /** offical undo [reviewing live game] */
+    "undo"?: boolean;
+    /** text note for the current node */
+    "t"?: string;
+    /** text append to the current node */
+    "t+"?: string;
+    /** Marks made */
+    "k"?: { [mark: string]: string };
+    /** pen point */
+    "pp"?: [number, number];
+    /** pen color / pen start */
+    "pen"?: string;
+    /** Chat message */
+    "chat"?: {
         chat_id: string;
         player_id: number;
         channel: string;
         date: number;
-        from: number /* turn number */;
-        moves: AdHocPackedMove | string /* this might just be "string", i'm not entirely sure */;
+        /** Turn number */
+        from: number;
+        /** this might just be "string", i'm not entirely sure */
+        moves: AdHocPackedMove | string;
     };
+    /** Remove's the given chat by id */
     "remove-chat"?: string;
-    //"remove-chat";
-    //"voice";
-    //"unvoice";
-    clearpen?: boolean;
-    delete?: number;
-    //"id";
-    owner?: number | { id: number; username: string };
-    gamedata?: GoEngineConfig;
-    controller?: number | { id: number; username: string };
-    // not stored, but used for auth and message routing
-    auth?: string;
-    review_id?: number;
-    player_id?: number;
-    username?: string;
-    player_update?: JGOFPlayerSummary;
+    /** Clears the pen drawings on the node */
+    "clearpen"?: boolean;
+    /** Delete */
+    "delete"?: number;
+    /** Sets the owner of the review */
+    "owner"?: number | { id: number; username: string };
+    /** Initial gamedata to review */
+    "gamedata"?: GoEngineConfig;
+    /** Sets the controller of the review */
+    "controller"?: number | { id: number; username: string };
+    /** Updated information about the players, such as name etc. */
+    "player_update"?: JGOFPlayerSummary;
 }
 
 export interface PuzzleConfig {
@@ -266,10 +284,7 @@ let __currentMarker = 0;
 
 export type PlayerColor = "black" | "white";
 
-type EventNames = EventEmitter.EventNames<Events>;
-type EventArgs<K extends EventNames> = EventEmitter.EventArgs<LegacyEventsShim<Events>, K>;
-
-export class GoEngine extends TypedEventEmitter<Events> {
+export class GoEngine extends EventEmitter<Events> {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
@@ -986,7 +1001,7 @@ export class GoEngine extends TypedEventEmitter<Events> {
         this.cur_move = t ? t : this.move_tree;
         this.jumpTo(t);
     }
-    public gameCanBeCanceled(): boolean {
+    public gameCanBeCancelled(): boolean {
         if (this.phase !== "play") {
             return false;
         }
@@ -2836,8 +2851,8 @@ export class GoEngine extends TypedEventEmitter<Events> {
         return ret;
     }
 
-    public parentEventEmitter?: TypedEventEmitter<Events>;
-    emit<K extends EventNames>(event: K, ...args: EventArgs<K>): boolean {
+    public parentEventEmitter?: EventEmitter<Events>;
+    emit<K extends keyof Events>(event: K, ...args: EventEmitter.EventArgs<Events, K>): boolean {
         let ret: boolean = super.emit(event, ...args);
         if (this.parentEventEmitter) {
             ret ||= this.parentEventEmitter.emit(event, ...args);

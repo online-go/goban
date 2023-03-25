@@ -30,8 +30,9 @@ import {
     createDeviceScaledCanvas,
     resizeDeviceScaledCanvas,
     allocateCanvasOrError,
-} from "./GoUtil";
-import { getRelativeEventPosition, getRandomInt } from "./GoUtil";
+    getRelativeEventPosition,
+} from "./canvas_utils";
+import { getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
 
@@ -755,9 +756,7 @@ export class GobanCanvas extends GobanCore {
                 }
             }
             const sent = this.sendMove({
-                auth: this.config.auth,
-                game_id: this.config.game_id,
-                player_id: this.config.player_id,
+                game_id: this.game_id,
                 move: GoMath.encodeMove(x, y),
             });
             if (sent) {
@@ -794,10 +793,8 @@ export class GobanCanvas extends GobanCore {
 
                 if (group.length) {
                     this.socket.send("game/removed_stones/set", {
-                        auth: this.config.auth,
-                        game_id: this.config.game_id,
-                        player_id: this.config.player_id,
-                        removed: removed,
+                        game_id: this.game_id,
+                        removed: !!removed,
                         stones: GoMath.encodeMoves(group),
                     });
                 }
@@ -1082,7 +1079,7 @@ export class GobanCanvas extends GobanCore {
             // stone already placed is just to be ignored, it's not really an error.
             if (e.message_id !== "stone_already_placed_here") {
                 this.errorHandler(e);
-                this.emit("error");
+                this.emit("error", "stone_already_placed_here");
             }
             this.emit("update");
         }

@@ -14,37 +14,16 @@
  * limitations under the License.
  */
 
-import WebSocket from "modern-isomorphic-ws";
 import { EventEmitter } from "eventemitter3";
-import { niceInterval } from "GoUtil";
+import { niceInterval } from "./GoUtil";
+import { ClientToServer, ClientToServerBase, ServerToClient } from "./protocol";
 
-export interface OGSClientToServerMessages {
-    //
-    [key: string]: any;
-}
+type GobanSocketClientToServerMessage<SendProtocol> = [keyof SendProtocol, any?, number?];
+type GobanSocketServerToClientMessage<RecvProtocol> = [keyof RecvProtocol | number, any, any];
 
-export interface OGSServerToClientMessages {
-    response: {
-        u: string | number; // User data sent with the request
-    };
-    error: {
-        u: string | number; // User data sent with the request
-    };
-}
-
-interface OGSSocketClientToServerMessage {
-    c: string | keyof OGSClientToServerMessages; // Command
-    a?: any[]; // Arguments
-    u?: string | number; // User defined data to be sent back in the response
-}
-
-interface OGSSocketServerToClientMessage {
-    e: keyof OGSServerToClientMessages; // Event
-    a?: any[]; // Arguments
-    u?: string | number; // User defined data, available if this is a response
-}
-
-interface Events {
+// Ideally this would be a generic type that extends RecvProtocol, but that
+// doesn't seem to be possible in typescript yet
+export interface GobanSocketEvents extends ServerToClient {
     connect: () => void;
     disconnect: () => void;
     reconnect: () => void;
@@ -52,14 +31,35 @@ interface Events {
     /* Emitted when we receive an updated latency measurement */
     latency: (latency: number, clock_drift: number) => void;
 
-    "net/pong": (params: { client: number; server: number }) => void;
-
-    [key: string]: (...args: any[]) => void;
+    //[key: string]: (...data: any[]) => void;
 }
 
-const RECONNECT_MIN_DELAY = 500;
-const RECONNECT_MAX_DELAY = 2000;
+interface ErrorResponse {
+    code: string;
+    message: string;
+}
+
+interface GobanSocketOptions {
+    /** Don't automatically send pings */
+    dont_ping?: boolean;
+
+    /** Don't log connection/disconnect things*/
+    quiet?: boolean;
+}
+
+const RECONNECTION_INTERVALS = [
+    // Connection drops are common and we can usually reconnect immediately. In
+    // the case of a server restart, we count on the inherant latency of everyone
+    // to even out the initial reconnect surge.
+    [1, 1],
+    [100, 300], // if that doesn't work, try again in 100-300ms
+    [250, 750], // if that doesn't work, keep trying in try again in 250-750ms intervals
+];
+
 const PING_INTERVAL = 10000;
+
+export type DataArgument<Entry> = Entry extends (...args: infer A) => void ? A[0] : never;
+export type ResponseType<Entry> = Entry extends (...args: any[]) => infer R ? R : never;
 
 /**
  * This is a simple wrapper around the WebSocket API that provides a
@@ -74,12 +74,15 @@ const PING_INTERVAL = 10000;
  *
  */
 
-export class OGSSocket extends EventEmitter<Events> {
+export class GobanSocket<
+    SendProtocol extends ClientToServerBase = ClientToServer,
+    RecvProtocol = ServerToClient,
+> extends EventEmitter<GobanSocketEvents> {
     public readonly url: string;
     public clock_drift = 0.0;
     public latency = 0.0;
     private socket: WebSocket;
-    private last_udata_id = 0;
+    private last_request_id = 0;
     private promises_in_flight: Map<
         number,
         {
@@ -94,14 +97,21 @@ export class OGSSocket extends EventEmitter<Events> {
     private reconnect_tries = 0;
     private send_queue: (() => void)[] = [];
     private ping_interval?: ReturnType<typeof niceInterval>;
+    private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
+    private authentication?: DataArgument<SendProtocol["authenticate"]>;
+    private manually_disconnected = false;
+    public options: GobanSocketOptions;
 
-    constructor(url: string) {
+    constructor(url: string, options: GobanSocketOptions = {}) {
         super();
+
+        this.options = options;
+        url = url.replace(/^http/, "ws");
 
         this.url = url;
         this.socket = this.connect();
 
-        this.on("net/pong", ({ client, server }) => {
+        this.on("net/pong", ({ client, server }: { client: number; server: number }) => {
             const now = Date.now();
             const latency = now - client;
             const drift = now - latency / 2 - server;
@@ -115,22 +125,33 @@ export class OGSSocket extends EventEmitter<Events> {
         return this.socket.readyState === WebSocket.OPEN;
     }
 
+    public authenticate(authentication: DataArgument<SendProtocol["authenticate"]>): void {
+        this.authentication = authentication;
+        this.send("authenticate", authentication);
+    }
+
     private sendAuthentication(): void {
-        //console.log("TODO: Implement authentication");
+        if (this.authentication) {
+            this.send("authenticate", this.authentication);
+        }
     }
 
     private startPing(): void {
         if (!this.connected) {
-            throw new Error("OGSSocket not connected");
+            throw new Error("GobanSocket not connected");
         }
 
         const ping = () => {
+            if (this.options.dont_ping) {
+                return;
+            }
+
             if (this.connected) {
                 this.send("net/ping", {
                     client: Date.now(),
                     drift: this.clock_drift,
                     latency: this.latency,
-                });
+                } as DataArgument<SendProtocol["net/ping"]>);
             } else {
                 if (this.ping_interval) {
                     clearInterval(this.ping_interval);
@@ -150,22 +171,24 @@ export class OGSSocket extends EventEmitter<Events> {
     private connect(): WebSocket {
         const socket = new WebSocket(this.url);
 
-        socket.addEventListener("open", (event: Event) => {
-            console.log("OGSSocket connected to " + this.url);
+        socket.addEventListener("open", (_event: Event) => {
+            if (!this.options.quiet) {
+                console.log("GobanSocket connected to " + this.url);
+            }
             this.reconnecting = false;
             this.reconnect_tries = 0;
             if (!this.connected) {
-                console.error("OGSSocket connected but readyState !== OPEN");
+                console.error("GobanSocket connected but readyState !== OPEN");
             }
             try {
                 this.emit("connect");
             } catch (e) {
-                console.error("OGSSocket connect event handler error", e);
+                console.error("GobanSocket connect event handler error", e);
             }
 
             if (this.promises_in_flight.size > 0) {
                 // This shouldn't ever happen
-                throw new Error("OGSSocket connected with promises in flight");
+                throw new Error("GobanSocket connected with promises in flight");
             }
 
             this.sendAuthentication();
@@ -179,7 +202,9 @@ export class OGSSocket extends EventEmitter<Events> {
         });
 
         socket.addEventListener("error", (event: Event) => {
-            console.error("OGSSocket error", event);
+            if (!this.manually_disconnected) {
+                console.error("GobanSocket error", event);
+            }
             /*
             if (!this.connected) {
                 this.reconnect();
@@ -188,9 +213,14 @@ export class OGSSocket extends EventEmitter<Events> {
         });
 
         socket.addEventListener("close", (event: CloseEvent) => {
-            console.log(
-                `OGSSocket closed with code ${event.code}: ${closeErrorCodeToString(event.code)}`,
-            );
+            if (event.code !== 1000 && !this.manually_disconnected) {
+                console.warn(
+                    `GobanSocket closed with code ${event.code}: ${closeErrorCodeToString(
+                        event.code,
+                    )}`,
+                    event,
+                );
+            }
 
             this.rejectPromisesInFlight();
 
@@ -198,6 +228,10 @@ export class OGSSocket extends EventEmitter<Events> {
                 this.emit("disconnect");
             } catch (e) {
                 console.error("Error in disconnect handler", e);
+            }
+
+            if (this.manually_disconnected) {
+                return;
             }
 
             if (event.code === 1014 || event.code === 1015) {
@@ -220,34 +254,17 @@ export class OGSSocket extends EventEmitter<Events> {
         });
 
         socket.addEventListener("message", (event: MessageEvent) => {
-            //console.log("Message from server ", event.data);
-            const payload: OGSSocketServerToClientMessage = JSON.parse(event.data);
-            if (payload.u) {
-                const entry = this.promises_in_flight.get(payload.u as number);
-                if (entry) {
-                    const { command, args, resolve, reject } = entry;
-                    try {
-                        if (payload.e === "response") {
-                            resolve(...(payload.a ?? []));
-                        } else if (payload.e === "error") {
-                            reject(...(payload.a ?? []));
-                        } else {
-                            console.error(
-                                `OGSSocket received unknown response type ${payload.e} for command ${command} with args ${args}`,
-                            );
-                        }
-                    } catch (e) {
-                        console.error(`Error in callback from ${command} with args `, args, e);
-                    }
-                    this.promises_in_flight.delete(payload.u as number);
+            const payload: GobanSocketServerToClientMessage<RecvProtocol> = JSON.parse(event.data);
+            const [id_or_command, data, err] = payload;
+
+            if (typeof id_or_command === "number") {
+                const cb = this.callbacks.get(id_or_command);
+                if (cb) {
+                    this.callbacks.delete(id_or_command);
+                    cb(data, err);
                 }
-            }
-            if (payload.e) {
-                if (payload.a) {
-                    this.emit(payload.e, ...payload.a);
-                } else {
-                    this.emit(payload.e);
-                }
+            } else {
+                this.emit(id_or_command as keyof GobanSocketEvents, data);
             }
         });
 
@@ -255,17 +272,23 @@ export class OGSSocket extends EventEmitter<Events> {
     }
 
     private reconnect(): void {
+        if (this.manually_disconnected) {
+            return;
+        }
         if (this.reconnecting) {
             return;
         }
         this.reconnecting = true;
 
+        const range =
+            RECONNECTION_INTERVALS[
+                Math.min(this.reconnect_tries, RECONNECTION_INTERVALS.length - 1)
+            ];
         ++this.reconnect_tries;
-        const delay = Math.min(
-            RECONNECT_MAX_DELAY,
-            RECONNECT_MIN_DELAY * Math.pow(1.5, this.reconnect_tries),
-        );
-        console.info(`OGSSocket reconnecting in ${delay}ms`);
+        const delay = Math.floor(Math.random() * (range[1] - range[0]) + range[0]);
+        if (!this.options.quiet) {
+            console.info(`GobanSocket reconnecting in ${delay}ms`);
+        }
         setTimeout(() => {
             this.socket = this.connect();
         }, delay);
@@ -282,12 +305,19 @@ export class OGSSocket extends EventEmitter<Events> {
         this.promises_in_flight.clear();
     }
 
-    public send(command: string, ...args: any[]): void {
-        const request: OGSSocketClientToServerMessage = {
-            c: command,
-        };
-        if (args) {
-            request.a = args;
+    public send<Command extends keyof SendProtocol>(
+        command: Command,
+        data: DataArgument<SendProtocol[Command]>,
+        cb?: (data: ResponseType<SendProtocol[Command]>, error?: any) => void,
+    ): void {
+        const request: GobanSocketClientToServerMessage<SendProtocol> = cb
+            ? [command, data, ++this.last_request_id]
+            : data
+            ? [command, data]
+            : [command];
+
+        if (cb) {
+            this.callbacks.set(this.last_request_id, cb);
         }
 
         if (this.connected) {
@@ -299,33 +329,33 @@ export class OGSSocket extends EventEmitter<Events> {
         }
     }
 
-    public sendPromise(command: string, ...args: any[]): Promise<any> {
+    public sendPromise<Command extends keyof SendProtocol>(
+        command: Command,
+        data: DataArgument<SendProtocol[Command]>,
+    ): Promise<ResponseType<SendProtocol[Command]>> {
         return new Promise((resolve, reject) => {
-            const udata_id = ++this.last_udata_id;
-
-            const request: OGSSocketClientToServerMessage = {
-                c: command,
-                u: udata_id,
-            };
-            if (args) {
-                request.a = args;
-            }
-
-            if (this.connected) {
-                this.promises_in_flight.set(udata_id, { command, args, resolve, reject });
-                this.socket.send(JSON.stringify(request));
-            } else {
-                this.send_queue.push(() => {
-                    this.promises_in_flight.set(udata_id, { command, args, resolve, reject });
-                    this.socket.send(JSON.stringify(request));
-                });
-            }
+            this.send(command, data, (data, error) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(data);
+                }
+            });
         });
+    }
+
+    public disconnect() {
+        this.manually_disconnected = true;
+        this.socket.close();
+        this.rejectPromisesInFlight();
+        for (const cb of this.callbacks) {
+            cb[1](undefined, { code: "manually_disconnected", message: "Manually disconnected" });
+        }
     }
 }
 
 /* From https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code 2023-03-05 */
-function closeErrorCodeToString(code: number): string {
+export function closeErrorCodeToString(code: number): string {
     if (code >= 0 && code <= 999) {
         return "Not used";
     }

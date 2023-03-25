@@ -115,21 +115,24 @@ module.exports = (env, argv) => {
             },
 
             devServer: {
-                contentBase: [
+                compress: true,
+                host: '0.0.0.0',
+                port: 9000,
+                allowedHosts: ['all'],
+
+                static: [
                     path.join(__dirname, 'assets'),
                     path.join(__dirname, 'test'),
                     path.join(__dirname, 'lib'),
                 ],
-                index: 'index.html',
-                compress: true,
-                host: '0.0.0.0',
-                port: 9000,
-                writeToDisk: true,
-                disableHostCheck: true,
 
+                devMiddleware: {
+                    index: true,
+                    mimeTypes: { phtml: 'text/html' },
+                    serverSideRender: true,
+                    writeToDisk: true,
+                },
                 hot: false,
-                inline: false,
-                //inline: true,
             }
         })
     ];

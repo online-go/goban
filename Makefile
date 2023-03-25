@@ -10,7 +10,7 @@ lint:
 test:
 	yarn run test
 
-doc typedoc:
+doc docs typedoc:
 	yarn run typedoc
 
 clean:
@@ -44,4 +44,4 @@ upload_to_cdn:
 	cp lib/engine.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/`node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version'`/
 
-.PHONY: doc test clean all dev typedoc publich push
+.PHONY: doc docs test clean all dev typedoc publich push

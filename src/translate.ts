@@ -20,8 +20,8 @@ const debug_wrap = debug_mode ? (s: string) => `[${s}]` : (s: string) => s;
 
 export interface GobanStrings {
     "Your move": string;
-    White: string;
-    Black: string;
+    "White": string;
+    "Black": string;
     "Illegal Ko Move": string;
     "Move is suicidal": string;
     "Loading...": string;
@@ -34,32 +34,32 @@ export interface GobanStrings {
     "Black to move": string;
     "White to move": string;
     "Your move - opponent passed": string;
-    Review: string;
+    "Review": string;
     "Control passed to %s": string;
     "Synchronization error, reloading": string;
     "Stone Removal": string;
     "Stone Removal Phase": string;
     "Enter the label you want to add to the board": string;
-    Error: string;
+    "Error": string;
     "Self-capture is not allowed": string;
     "The game would be repeating with that move, please play somewhere else first": string;
 
     "Black Walnut": string;
-    Book: string;
-    Glass: string;
-    Granite: string;
+    "Book": string;
+    "Glass": string;
+    "Granite": string;
     "HNG Night": string;
-    HNG: string;
-    Kaya: string;
+    "HNG": string;
+    "Kaya": string;
     "Night Play": string;
-    Night: string;
-    Persimmon: string;
-    Plain: string;
+    "Night": string;
+    "Persimmon": string;
+    "Plain": string;
     "Red Oak": string;
-    Shell: string;
-    Slate: string;
+    "Shell": string;
+    "Slate": string;
     "Worn Glass": string;
-    Anime: string;
+    "Anime": string;
 
     "%swk": string /* short time week */;
     "%sd": string /* short time day */;

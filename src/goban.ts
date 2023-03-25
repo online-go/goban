@@ -24,18 +24,19 @@ export * from "./GoStoneGroups";
 export * from "./GoTheme";
 export * from "./GoThemes";
 export * from "./GoUtil";
+export * from "./canvas_utils";
 export * from "./MoveTree";
 export * from "./ScoreEstimator";
 export * from "./translate";
-export * from "./TypedEventEmitter";
 export * from "./JGOF";
 export * from "./AIReview";
 export * from "./AdHocFormat";
 export * from "./TestGoban";
 export * from "./test_utils";
-export * from "./ogssocket";
+export * from "./GobanSocket";
 
 export * as GoMath from "./GoMath";
+export * as protocol from "./protocol";
 export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
 export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 

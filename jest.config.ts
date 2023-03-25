@@ -29,6 +29,11 @@ export default {
   // coveragePathIgnorePatterns: [
   //   "/node_modules/"
   // ],
+  coveragePathIgnorePatterns: [
+      "/src/test.tsx",
+      "/src/goban.ts",
+      "/src/engine.ts",
+  ],
 
   // Indicates which provider should be used to instrument code for coverage
   coverageProvider: "v8",
@@ -44,7 +49,7 @@ export default {
   // An object that configures minimum threshold enforcement for coverage results
   coverageThreshold: {
     "global": {
-      "lines": 49
+      "lines": 55
     }
   },
 
@@ -198,4 +203,7 @@ export default {
 
   // Whether to use watchman for file crawling
   // watchman: true,
+
+
+    "testTimeout": 200
 };
