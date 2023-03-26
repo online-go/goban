@@ -23,6 +23,16 @@ some moderinization of the rest of the site. Until v 1.0 is released of this
 library, it is not recommended to make use of it as much overhaul is happening
 to improve usability on sites other than online-go.com.</p>
 
+<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
+  <h1>Usage:</h1>
+</a>
+<p>To import into an application targeting the web:</p>
+<pre><code><span class="hl-0">import</span><span class="hl-1"> { ... } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-2">&quot;goban&quot;</span><span class="hl-1">;</span>
+</code></pre>
+<p>To import into an application targeting node:</p>
+<pre><code><span class="hl-0">import</span><span class="hl-1"> { ... } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-2">&quot;goban/lib/engine&quot;</span><span class="hl-1">;</span>
+</code></pre>
+
 <a href="#documentation" id="documentation" style="color: inherit; text-decoration: none;">
   <h1>Documentation</h1>
 </a>
@@ -36,10 +46,10 @@ to improve usability on sites other than online-go.com.</p>
   <h2>1. Building <code>goban</code></h2>
 </a>
 <p>If you have <code>make</code> installed you can simply run</p>
-<pre><code><span class="hl-0">make</span>
+<pre><code><span class="hl-3">make</span>
 </code></pre>
 <p>Or, you can build and run manually using</p>
-<pre><code><span class="hl-0">yarn</span><span class="hl-1"> </span><span class="hl-0">install</span><br/><span class="hl-0">yarn</span><span class="hl-1"> </span><span class="hl-0">run</span><span class="hl-1"> </span><span class="hl-0">dev</span>
+<pre><code><span class="hl-3">yarn</span><span class="hl-1"> </span><span class="hl-3">install</span><br/><span class="hl-3">yarn</span><span class="hl-1"> </span><span class="hl-3">run</span><span class="hl-1"> </span><span class="hl-3">dev</span>
 </code></pre>
 <p>(<code>yarn install</code> is only necessary the first time you start working on the project,
 or whenever dependencies are updated)</p>
@@ -63,7 +73,7 @@ or whenever dependencies are updated)</p>
 <li>run prettify <code>npm run prettier</code></li>
 </ul>
 <p>[Optional] You can also set up a pre-commit to run checks locally before you commit:</p>
-<pre><code><span class="hl-0">npx</span><span class="hl-1"> </span><span class="hl-0">husky</span><span class="hl-1"> </span><span class="hl-0">install</span>
+<pre><code><span class="hl-3">npx</span><span class="hl-1"> </span><span class="hl-3">husky</span><span class="hl-1"> </span><span class="hl-3">install</span>
 </code></pre>
 
 <a href="#running-amp-writing-tests" id="running-amp-writing-tests" style="color: inherit; text-decoration: none;">
@@ -71,7 +81,7 @@ or whenever dependencies are updated)</p>
 </a>
 <p>Tests live in <code>src/__tests__</code> directory, check it out &amp; add Your own!
 To run tests:</p>
-<pre><code><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-0">test</span>
+<pre><code><span class="hl-3">npm</span><span class="hl-1"> </span><span class="hl-3">test</span>
 </code></pre>
 </div></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
@@ -114,7 +124,6 @@ To run tests:</p>
 <li class="tsd-kind-class"><a href="classes/MoveTree.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-128-path"></use><use href="#icon-128-text"></use></svg>Move<wbr/>Tree</a></li>
 <li class="tsd-kind-class"><a href="classes/ScoreEstimator.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-128-path"></use><use href="#icon-128-text"></use></svg>Score<wbr/>Estimator</a></li>
 <li class="tsd-kind-class"><a href="classes/TestGoban.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-128-path"></use><use href="#icon-128-text"></use></svg>Test<wbr/>Goban</a></li>
-<li class="tsd-kind-class"><a href="classes/TypedEventEmitter.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-128-path"></use><use href="#icon-128-text"></use></svg>Typed<wbr/>Event<wbr/>Emitter</a></li>
 <li class="tsd-kind-interface"><a href="interfaces/AIReviewWorstMoveEntry.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-interface)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6" id="icon-256-path"></rect><path d="M9.51 16V15.016H11.298V8.224H9.51V7.24H14.19V8.224H12.402V15.016H14.19V16H9.51Z" fill="var(--color-text)" id="icon-256-text"></path></svg>AIReview<wbr/>Worst<wbr/>Move<wbr/>Entry</a></li>
 <li class="tsd-kind-interface"><a href="interfaces/AdHocClock.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-256-path"></use><use href="#icon-256-text"></use></svg>Ad<wbr/>Hoc<wbr/>Clock</a></li>
 <li class="tsd-kind-interface"><a href="interfaces/AdHocFormat.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-256-path"></use><use href="#icon-256-text"></use></svg>Ad<wbr/>Hoc<wbr/>Format</a></li>
@@ -191,7 +200,6 @@ To run tests:</p>
 <li class="tsd-kind-type-alias"><a href="types/JGOFTimeControlSpeed.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-4194304-path"></use><use href="#icon-4194304-text"></use></svg>JGOFTime<wbr/>Control<wbr/>Speed</a></li>
 <li class="tsd-kind-type-alias"><a href="types/JGOFTimeControlSystem.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-4194304-path"></use><use href="#icon-4194304-text"></use></svg>JGOFTime<wbr/>Control<wbr/>System</a></li>
 <li class="tsd-kind-type-alias"><a href="types/LabelPosition.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-4194304-path"></use><use href="#icon-4194304-text"></use></svg>Label<wbr/>Position</a></li>
-<li class="tsd-kind-type-alias"><a href="types/LegacyEventsShim.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-4194304-path"></use><use href="#icon-4194304-text"></use></svg>Legacy<wbr/>Events<wbr/>Shim</a></li>
 <li class="tsd-kind-type-alias"><a href="types/MoveTreePenMarks.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-4194304-path"></use><use href="#icon-4194304-text"></use></svg>Move<wbr/>Tree<wbr/>Pen<wbr/>Marks</a></li>
 <li class="tsd-kind-type-alias"><a href="types/PlayerColor.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-4194304-path"></use><use href="#icon-4194304-text"></use></svg>Player<wbr/>Color</a></li>
 <li class="tsd-kind-type-alias"><a href="types/PuzzleOpponentMoveMode.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-4194304-path"></use><use href="#icon-4194304-text"></use></svg>Puzzle<wbr/>Opponent<wbr/>Move<wbr/>Mode</a></li>
