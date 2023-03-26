@@ -25,6 +25,11 @@ import type { ConditionalMoveResponse } from "../GoConditionalMove";
 import type { GoEngineConfig, Score, ReviewMessage } from "../GoEngine";
 import type { AdHocPackedMove } from "../AdHocFormat";
 
+/* NOTE: The reason for the :id non template literal key variants of our
+ *       messsages is to allow typedoc generate documentation for them,
+ *       as documentation is not generated for template literal keys
+ *       at the time of writing. */
+
 export interface ServerToClient {
     /** Pong response from a ping */
     "net/pong": (data: {
@@ -201,14 +206,16 @@ export interface ServerToClient {
         /** Number of correspondence games */
         correspondence: number;
     }) => void;
+
     /** Update number of live and correspondence games are currently being
      * played in a particular channel */
-    [k: `gamelist-count-${string}`]: (data: {
+    "gamelist-count-:channel": (data: {
         /** Number of live games */
         live: number;
         /** Number of correspondence games */
         correspondence: number;
     }) => void;
+    [k: `gamelist-count-${string}`]: ServerToClient["gamelist-count-:channel"];
 
     /** Incident report update */
     "incident-report": (data: {
@@ -407,8 +414,8 @@ export interface ServerToClient {
               },
     ) => void;
 
-    /** A player is scheduled to resign if not cleared */
-    [k: `game/${number}/auto_resign`]: (data: {
+    /** Informs the client the player is scheduled to resign if not cleared */
+    "game/:id/auto_resign": (data: {
         /** The game id */
         game_id: number;
         /** The player id */
@@ -416,32 +423,39 @@ export interface ServerToClient {
         /** Whent he auto resign will happen */
         expiration: number;
     }) => void;
+    [k: `game/${number}/auto_resign`]: ServerToClient["game/:id/auto_resign"];
+
     /** The auto resign for the given player has been cleared */
-    [k: `game/${number}/clear_auto_resign`]: (data: {
+    "game/:id/clear_auto_resign": (data: {
         /** The game id */
         game_id: number;
         /** The player id */
         player_id: number;
     }) => void;
+    [k: `game/${number}/clear_auto_resign`]: ServerToClient["game/:id/clear_auto_resign"];
+
     /**  A game chat message */
-    [k: `game/${number}/chat`]: (data: {
+    "game/:id/chat": (data: {
         channel: "main" | "spectator" | "malkovich" | "shadowban" | "hidden" | "personal";
         line: GameChatLine;
     }) => void;
+    [k: `game/${number}/chat`]: ServerToClient["game/:id/chat"];
 
     /** Game chat lines should be removed */
-    [k: `game/${number}/chat/remove`]: (data: {
+    "game/:id/chat/remove": (data: {
         /** The game id */
         game_id: number;
         /** The chat ids */
         chat_ids: string[];
     }) => void;
+    [k: `game/${number}/chat/remove`]: ServerToClient["game/:id/chat/remove"];
 
     /** Game clock update */
-    [k: `game/${number}/clock`]: (data: GameClock) => void;
+    "game/:id/clock": (data: GameClock) => void;
+    [k: `game/${number}/clock`]: ServerToClient["game/:id/clock"];
 
     /** Update the conditional moves currently active */
-    [k: `game/${number}/conditional_moves`]: (data: {
+    "game/:id/conditional_moves": (data: {
         /** The game id */
         game_id: number;
         /** The move number from which the condtional moves are rooted in */
@@ -451,13 +465,18 @@ export interface ServerToClient {
          *  to the opponent's move. */
         conditional_moves: ConditionalMoveResponse;
     }) => void;
+    [k: `game/${number}/conditional_moves`]: ServerToClient["game/:id/conditional_moves"];
 
     /** Error that should be displayed to the user */
-    [k: `game/${number}/error`]: (data: string) => void;
+    "game/:id/error": (data: string) => void;
+    [k: `game/${number}/error`]: ServerToClient["game/:id/error"];
+
     /** Update the entire game state */
-    [k: `game/${number}/gamedata`]: (data: GoEngineConfig) => void;
+    "game/:id/gamedata": (data: GoEngineConfig) => void;
+    [k: `game/${number}/gamedata`]: ServerToClient["game/:id/gamedata"];
+
     /** Update latency information for a player */
-    [k: `game/${number}/latency`]: (data: {
+    "game/:id/latency": (data: {
         /** The game id */
         game_id: number;
         /** The player id */
@@ -465,8 +484,10 @@ export interface ServerToClient {
         /** The latency in milliseconds */
         latency: number;
     }) => void;
+    [k: `game/${number}/latency`]: ServerToClient["game/:id/latency"];
+
     /** A move was made on a game */
-    [anyk: `game/${number}/move`]: (data: {
+    [k: `game/${number}/move`]: (data: {
         /** The game id */
         game_id: number;
         /** Move number the move was made from*/
@@ -475,10 +496,11 @@ export interface ServerToClient {
         move: AdHocPackedMove;
     }) => void;
     /** The phase has changed for the game */
-    [k: `game/${number}/phase`]: (data: "play" | "stone removal" | "finished") => void;
+    "game/:id/phase": (data: "play" | "stone removal" | "finished") => void;
+    [k: `game/${number}/phase`]: ServerToClient["game/:id/phase"];
 
     /** Player information has been updated. This is a rengo game thing, every move we rotate out players if applicable. */
-    [anyk: `game/${number}/player_update`]: (data: {
+    [k: `game/${number}/player_update`]: (data: {
         players: {
             /** Active black player id */
             black: number;
@@ -492,8 +514,9 @@ export interface ServerToClient {
             white: number[];
         };
     }) => void;
+
     /** Update the state of the stone removal phase */
-    [k: `game/${number}/removed_stones`]: (
+    "game/:id/removed_stones": (
         data:
             | {
                   /** Whether the stones are being flagged or unflagged for
@@ -508,10 +531,12 @@ export interface ServerToClient {
               }
             | { strict_seki_mode: boolean },
     ) => void;
+    [k: `game/${number}/removed_stones`]: ServerToClient["game/:id/removed_stones"];
+
     /** The stone removal phase has been completed, this is the final state and
      * indicates a phase change to the given phase (should always be
      * "finished") */
-    [k: `game/${number}/removed_stones_accepted`]: (data: {
+    "game/:id/removed_stones_accepted": (data: {
         player_id: number;
         stones: string;
         /** True if Japanese strict seki mode was true. This will probably
@@ -534,14 +559,19 @@ export interface ServerToClient {
         /** Timestamp in ms */
         end_time: number;
     }) => void;
+    [
+        k: `game/${number}/removed_stones_accepted`
+    ]: ServerToClient["game/:id/removed_stones_accepted"];
+
     /** The chat log should be reset. */
-    [k: `game/${number}/reset-chats`]: () => void;
+    "game/:id/reset-chats": () => void;
+    [k: `game/${number}/reset-chats`]: ServerToClient["game/:id/reset-chats"];
 
     /** This is sent out when a game is started. This seems like a misnomer,
      * the web client does no "resetting". This may be renamed in the future.
      * If you care about this message, please contact anoek.
      * */
-    [k: `game/${number}/reset`]: (data: {
+    "game/:id/reset": (data: {
         /** The game id */
         game_id: number;
         /** The current player to move */
@@ -552,18 +582,27 @@ export interface ServerToClient {
          * "Game has begun" for the time being. */
         message: string;
     }) => void;
+    [k: `game/${number}/reset`]: ServerToClient["game/:id/reset"];
+
     /** Undo move has been accepted, the parameter is the new move number */
-    [k: `game/${number}/undo_accepted`]: (data: number) => void;
+    "game/:id/undo_accepted": (data: number) => void;
+    [k: `game/${number}/undo_accepted`]: ServerToClient["game/:id/undo_accepted"];
+
     /** Undo request has been canceled, the parameter is the move number of the original request */
-    [k: `game/${number}/undo_canceled`]: (data: number) => void;
+    "game/:id/undo_canceled": (data: number) => void;
+    [k: `game/${number}/undo_canceled`]: ServerToClient["game/:id/undo_canceled"];
+
     /** Undo request has been requested, the parameter is the move number that we want to go back to */
-    [k: `game/${number}/undo_requested`]: (data: number) => void;
+    "game/:id/undo_requested": (data: number) => void;
+    [k: `game/${number}/undo_requested`]: ServerToClient["game/:id/undo_requested"];
 
     /** Replay of the entire full state of the review */
-    [k: `review/${number}/full_state`]: (data: ReviewMessage[]) => void;
+    "review/:id/full_state": (data: ReviewMessage[]) => void;
+    [k: `review/${number}/full_state`]: ServerToClient["review/:id/full_state"];
 
     /** An incremental modification to the review stream */
-    [k: `review/${number}/r`]: (data: ReviewMessage) => void;
+    "review/:id/r": (data: ReviewMessage) => void;
+    [k: `review/${number}/r`]: ServerToClient["review/:id/r"];
 
     // I don't think this is used anymore
     //[k: `game/${number}/rejected`]: (data: any) => void;

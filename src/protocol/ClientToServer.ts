@@ -73,9 +73,46 @@ export interface ClientToServerBase {
 /** This is an exhaustive list of the messages that the client can send
  *  to the server.
  *
+ *  This documenation is generated from the official typescript interface.
+ *  To interpret it, you will every message organized as the name of the
+ *  message followed by a function taking the message data parameters and
+ *  returning what you can expect tor receive back.
  *
+ *  For example, the authentication message documenation looks like this:
  *
+ *  ```typescript
+ *    authenticate: ((data: {
+ *        bot_apikey?: string;
+ *        bot_username?: string;
+ *        client?: string;
+ *        client_version?: string;
+ *        device_id?: string;
+ *        jwt: string;
+ *        language?: string;
+ *        language_version?: string;
+ *        user_agent?: string;
+ *    }) => undefined | {
+ *        id: number;
+ *        username: string;
+ *    })
+ *  ```
  *
+ *  The command you will send is `authenticate`, the data you send will be an object with the following format:
+ *  ```typescript
+ *   {
+ *       bot_apikey?: string;
+ *       bot_username?: string;
+ *       client?: string;
+ *       client_version?: string;
+ *       device_id?: string;
+ *       jwt: string;
+ *       language?: string;
+ *       language_version?: string;
+ *       user_agent?: string;
+ *   }
+ *  ```
+ *
+ *  and you can expect to receive back either `undefined` or `{id: number, username: string}`
  *
  */
 export interface ClientToServer extends ClientToServerBase {
