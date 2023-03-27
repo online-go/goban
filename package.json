@@ -2,8 +2,7 @@
     "name": "goban",
     "version": "0.7.0",
     "description": "",
-    "main": "lib/engine.js",
-    "browser": "lib/goban.js",
+    "main": "lib/goban.js",
     "types": "lib/goban.d.ts",
     "files": [
         "lib/",

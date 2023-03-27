@@ -10,7 +10,6 @@
         "declaration": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "esModuleInterop": true,
         "lib": ["es2017", "dom"],
         "baseUrl": ".",
         "paths": {
