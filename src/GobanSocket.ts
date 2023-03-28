@@ -51,7 +51,7 @@ const RECONNECTION_INTERVALS = [
     // Connection drops are common and we can usually reconnect immediately. In
     // the case of a server restart, we count on the inherant latency of everyone
     // to even out the initial reconnect surge.
-    [1, 1],
+    [50, 50],
     [100, 300], // if that doesn't work, try again in 100-300ms
     [250, 750], // if that doesn't work, keep trying in try again in 250-750ms intervals
 ];
