@@ -42,8 +42,11 @@ export interface ServerToClient {
     /** The client should reload */
     "HUP": () => void;
 
-    /** An error occurred, the message string should be displayed to the user. */
-    "ERROR": (data: string) => void;
+    /** An error occurred, the message string should be displayed to the user.
+     * For a list of errcode's used, see
+     * https://github.com/online-go/online-go.com/blob/devel/src/components/Errcode/Errcode.tsx
+     */
+    "ERROR": (data: string | { errcode: string }) => void;
 
     /** General host information for the termination server you
      * are connected to. This is a response to the `hostinfo` client message. */
