@@ -218,7 +218,6 @@ export class GobanSocket<
                     `GobanSocket closed with code ${event.code}: ${closeErrorCodeToString(
                         event.code,
                     )}`,
-                    event,
                 );
             }
 
