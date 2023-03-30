@@ -128,7 +128,7 @@ export interface GoEngineConfig {
         [review_id: number]: GoEnginePlayerEntry;
     };
 
-    //time_control?:JGOFTimeControl;
+    time_control?: JGOFTimeControl;
     moves?: Array<AdHocPackedMove> | Array<JGOFMove>;
     move_tree?: MoveTreeJson;
     ranked?: boolean;

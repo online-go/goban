@@ -300,7 +300,7 @@ export interface ClientToServer extends ClientToServerBase {
         /** The move number currently being viewed */
         move_number: number;
         /** The chat message */
-        body: string;
+        body: string | GameChatTranslatedMessage | GameChatAnalysisMessage | GameChatReviewMessage;
     }) => void;
 
     /** Update your latency information for a particular game. This is used
@@ -724,4 +724,25 @@ export interface Glicko2 {
     deviation: number;
     volatility: number;
     games_played?: number;
+}
+
+export interface GameChatTranslatedMessage {
+    type: "translated";
+    en: string;
+    [lang: string]: string;
+}
+
+export interface GameChatAnalysisMessage {
+    type: "analysis";
+    name?: string;
+    branch_move?: number; // deprecated
+    from?: number;
+    moves?: string;
+    marks?: { [mark: string]: string };
+    pen_marks?: unknown[];
+}
+
+export interface GameChatReviewMessage {
+    type: "review";
+    review_id: number;
 }
