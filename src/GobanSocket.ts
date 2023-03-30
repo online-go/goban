@@ -203,7 +203,7 @@ export class GobanSocket<
 
         socket.addEventListener("error", (event: Event) => {
             if (!this.manually_disconnected) {
-                console.error("GobanSocket error", event);
+                console.error(`GobanSocket error ${(event as any).message}`);
             }
             /*
             if (!this.connected) {
