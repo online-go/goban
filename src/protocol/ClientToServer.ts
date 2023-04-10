@@ -47,6 +47,8 @@ export interface ClientToServerBase {
         bot_username?: string;
         /** Bot API key, if applicable */
         bot_apikey?: string;
+        /** Full bot configuration, if applicable */
+        bot_config?: any;
     }) =>
         | {
               id: number;
@@ -740,6 +742,12 @@ export interface GameChatAnalysisMessage {
     moves?: string;
     marks?: { [mark: string]: string };
     pen_marks?: unknown[];
+    engine_analysis?: {
+        win_rate: number;
+        score?: number;
+        visits?: number;
+        [key: string]: number | undefined;
+    };
 }
 
 export interface GameChatReviewMessage {
