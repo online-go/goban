@@ -560,6 +560,13 @@ export interface ClientToServer extends ClientToServerBase {
 
     /** Hides or shows a bot in the bot list */
     "bot/hidden": (tf: boolean) => void;
+
+    /** Update the number of games that the bot is currently playing */
+    "bot/status": (data: {
+        ongoing_blitz_count: number;
+        ongoing_live_count: number;
+        ongoing_correspondence_count: number;
+    }) => void;
 }
 
 export type Speed = "blitz" | "live" | "correspondence";
