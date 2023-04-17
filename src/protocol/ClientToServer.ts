@@ -47,8 +47,6 @@ export interface ClientToServerBase {
         bot_username?: string;
         /** Bot API key, if applicable */
         bot_apikey?: string;
-        /** Full bot configuration, if applicable */
-        bot_config?: any;
     }) =>
         | {
               id: number;
@@ -558,8 +556,8 @@ export interface ClientToServer extends ClientToServerBase {
     /** Cancel a match request */
     "automatch/cancel": (data: { uuid: string }) => void;
 
-    /** Hides or shows a bot in the bot list */
-    "bot/hidden": (tf: boolean) => void;
+    /** Updates the config for the bot */
+    "bot/config": (config: any) => void;
 
     /** Update the number of games that the bot is currently playing */
     "bot/status": (data: {
