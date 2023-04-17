@@ -493,6 +493,8 @@ export interface ClientToServer extends ClientToServerBase {
         uid: string;
         /** Message text */
         message: string;
+        /** Moderator option to send the chat from the system not from their personal PM */
+        as_system?: true;
     }) =>
         | undefined
         | {
