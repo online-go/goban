@@ -85,6 +85,14 @@ export interface ServerToClient {
         data: string;
     }) => void;
 
+    /** Update the user's JWT token */
+    "user/jwt": (jwt: string) => void;
+
+    /** Update user information. For other players, this has the standard User
+     *  fields, when this is the current user, it can have additional fields
+     *  that are found in the ui/config */
+    "user/update": (user: User & { [extra: string]: any }) => void;
+
     /** Updates whether a user is online or not. Subscribe to these updates for
      *  particular users using the `user/monitor` command. */
     "user/state": (data: { [player_id: number]: boolean }) => void;
