@@ -510,6 +510,17 @@ export class GobanCanvas extends GobanCore {
         };
         const onTouchEnd = (ev: TouchEvent) => {
             try {
+                // Stop a touch screen device always auto scrolling to the chat input box if it is active when you make a move
+                const currentElement = document.activeElement;
+                if (
+                    ev.target === canvas &&
+                    currentElement &&
+                    currentElement instanceof HTMLElement &&
+                    currentElement.tagName.toLowerCase() === "input"
+                ) {
+                    currentElement.blur();
+                }
+
                 if (mousedisabled) {
                     clearTimeout(mousedisabled);
                 }
