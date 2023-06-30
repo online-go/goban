@@ -94,6 +94,9 @@ export interface GoEnginePlayerEntry {
     pro?: boolean;
 }
 
+// The word "array" is deliberately included in the type name to differentiate from a move tree.
+export type GobanMovesArray = Array<AdHocPackedMove> | Array<JGOFMove>;
+
 export interface GoEngineConfig {
     game_id?: number | string;
     review_id?: number;
@@ -129,7 +132,7 @@ export interface GoEngineConfig {
     };
 
     time_control?: JGOFTimeControl;
-    moves?: Array<AdHocPackedMove> | Array<JGOFMove>;
+    moves?: GobanMovesArray;
     move_tree?: MoveTreeJson;
     ranked?: boolean;
     original_disable_analysis?: boolean;
