@@ -296,7 +296,7 @@ export class GoEngine extends EventEmitter<Events> {
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
     public board: Array<Array<JGOFNumericPlayerColor>>;
-    public cur_review_move?: MoveTree;
+    //public cur_review_move?: MoveTree;
     public getState_callback?: () => any;
     public handicap: number = NaN;
     public initial_state: GoEngineInitialState = { black: "", white: "" };
@@ -370,6 +370,18 @@ export class GoEngine extends EventEmitter<Events> {
         }
         this._cur_move = cur_move;
         this.emit("cur_move", this.cur_move);
+    }
+
+    private _cur_review_move: MoveTree | undefined;
+    public get cur_review_move(): MoveTree | undefined {
+        return this._cur_review_move;
+    }
+    public set cur_review_move(cur_review_move: MoveTree | undefined) {
+        if (this._cur_review_move === cur_review_move) {
+            return;
+        }
+        this._cur_review_move = cur_review_move;
+        this.emit("cur_review_move", this.cur_move);
     }
 
     private _last_official_move: MoveTree;

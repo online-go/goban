@@ -228,6 +228,7 @@ export interface StateUpdateEvents {
     title: (d: string) => void;
     phase: (d: GoEnginePhase) => void;
     cur_move: (d: MoveTree) => void;
+    cur_review_move: (d: MoveTree | undefined) => void;
     last_official_move: (d: MoveTree) => void;
     submit_move: (d: (() => void) | undefined) => void;
     analyze_tool: (d: AnalysisTool) => void;
@@ -252,6 +253,7 @@ export interface Events extends StateUpdateEvents {
     "error": (d: any) => void;
     "gamedata": (d: any) => void;
     "chat": (d: any) => void;
+    "engine.updated": (engine: GoEngine) => void;
     "load": (config: GobanConfig) => void;
     "show-message": (message: {
         formatted: string;
@@ -656,8 +658,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.interactive = !!config.interactive;
         this.pen_marks = [];
 
-        //this.engine = null;
-        //this.last_move = null;
         this.config = repair_config(config);
         this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
         this.game_id =
@@ -1686,7 +1686,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this._socket_on(
                 `review/${this.review_id}/full_state`,
                 (entries: Array<ReviewMessage>) => {
-                    console.log("processing fullstate");
                     try {
                         if (!entries || entries.length === 0) {
                             console.error("Blank full state received, ignoring");
@@ -2168,6 +2167,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
             // in case the constructor some side effects on `this`
             // (JM: which it currently does)
             this.engine = new GoEngine(config, this);
+            this.emit("engine.updated", this.engine);
             this.engine.parentEventEmitter = this;
             this.engine.getState_callback = () => {
                 return this.getState();

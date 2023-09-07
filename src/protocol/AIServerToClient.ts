@@ -22,4 +22,12 @@ export interface AIServerToClient {
 
     /** AI review messages are streamed back to the AI review UUID. */
     [uuid: string]: (data: any) => void;
+
+    /** AI position analysis messages streaming back to a particular channel */
+    [k: `ai-position-analysis-stream-review-${string}`]: (data: {
+        board_string: string;
+        analysis: any;
+        final: boolean;
+        intermediate: boolean;
+    }) => void;
 }

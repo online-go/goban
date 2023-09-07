@@ -177,6 +177,7 @@ export class GobanCanvas extends GobanCore {
         this.on("destroy", () => watcher.remove());
 
         this.engine = this.post_config_constructor();
+        this.emit("engine.updated", this.engine);
 
         this.ready_to_draw = true;
         this.redraw(true);

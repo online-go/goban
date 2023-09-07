@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { ClientToServerBase } from "./ClientToServer";
+import { ClientToServerBase, RuleSet } from "./ClientToServer";
+import { JGOFNumericPlayerColor } from "../JGOF";
 
 /** This is an exhaustive list of the messages that the client can send
  *  to the AI servers. */
@@ -51,4 +52,37 @@ export interface ClientToAIServer extends ClientToServerBase {
         /** Move string */
         variation: string;
     }) => void;
+
+    /** Requests a position be analyzed, intermediate and final results are
+     *  sent to the given channel. The final response is returned as well. */
+    "ai-analyze-position": (data: {
+        /** UUID identifying the request */
+        uuid: string;
+
+        /** Channel identifier, for instance ai-position-analysis-stream-review-<id> */
+        channel_id: string;
+
+        /** Ruleset to use */
+        rules: RuleSet;
+
+        /** Board position state */
+        board: number[][];
+
+        /** Whose turn it is */
+        player: JGOFNumericPlayerColor;
+    }) => any;
+
+    /** Relay an already analyzed position out to any other viewers */
+    "ai-relay-analyzed-position": (data: {
+        /** Channel identifier, for instance ai-position-analysis-stream-review-<id> */
+        channel_id: string;
+
+        data: any;
+    }) => any;
+
+    /** Subscribers to analyze position calls */
+    "ai-analyze-subscribe": (data: { channel_id: string }) => void;
+
+    /** Un-subscribers to analyze position calls */
+    "ai-analyze-unsubscribe": (data: { channel_id: string }) => void;
 }
