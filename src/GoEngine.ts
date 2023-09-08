@@ -381,7 +381,7 @@ export class GoEngine extends EventEmitter<Events> {
             return;
         }
         this._cur_review_move = cur_review_move;
-        this.emit("cur_review_move", this.cur_move);
+        this.emit("cur_review_move", this.cur_review_move);
     }
 
     private _last_official_move: MoveTree;
