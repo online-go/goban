@@ -2874,7 +2874,7 @@ export class GoEngine extends EventEmitter<Events> {
     emit<K extends keyof Events>(event: K, ...args: EventEmitter.EventArgs<Events, K>): boolean {
         let ret: boolean = super.emit(event, ...args);
         if (this.parentEventEmitter) {
-            ret ||= this.parentEventEmitter.emit(event, ...args);
+            ret = this.parentEventEmitter.emit(event, ...args) || ret;
         }
         return ret;
     }
