@@ -32,7 +32,7 @@ import {
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
 import { EventEmitter } from "eventemitter3";
-import { GameClock } from "./protocol";
+import { GameClock, ServerToClient } from "./protocol";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -161,6 +161,7 @@ export interface GoEngineConfig {
     aga_handicap_scoring?: boolean;
     opponent_plays_first_after_resume?: boolean;
     superko_algorithm?: GoEngineSuperKoAlgorithm;
+    stalling_score_estimate?: ServerToClient["game/:id/stalling_score_estimate"];
 
     // This is used in gtp2ogs
     clock?: GameClock;

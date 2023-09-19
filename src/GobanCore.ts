@@ -48,6 +48,7 @@ import {
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
 import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
+import { ServerToClient } from "protocol";
 import { EventEmitter } from "eventemitter3";
 
 declare let swal: any;
@@ -243,6 +244,7 @@ export interface StateUpdateEvents {
     outcome: (d: string) => void;
     review_owner_id: (d: number | undefined) => void;
     review_controller_id: (d: number | undefined) => void;
+    stalling_score_estimate: (d: ServerToClient["game/:id/stalling_score_estimate"]) => void;
 }
 
 export interface Events extends StateUpdateEvents {
@@ -1463,6 +1465,18 @@ export abstract class GobanCore extends EventEmitter<Events> {
                         });
                         delete auto_resign_state[obj.player_id];
                     }
+                },
+            );
+            this._socket_on(
+                (prefix + "stalling_score_estimate") as keyof GobanSocketEvents,
+                (obj: any): void => {
+                    if (this.disconnectedFromGame) {
+                        return;
+                    }
+                    console.log("Score estimate received: ", obj);
+                    //obj.line.channel = obj.channel;
+                    //this.chat_log.push(obj.line);
+                    this.emit("stalling_score_estimate", obj);
                 },
             );
         }
@@ -2757,6 +2771,19 @@ export abstract class GobanCore extends EventEmitter<Events> {
     public resumeGame(): void {
         this.socket.send("game/resume", {
             game_id: this.game_id,
+        });
+    }
+
+    public sendPreventStalling(winner: "black" | "white"): void {
+        this.socket.send("game/prevent_stalling", {
+            game_id: this.game_id,
+            winner,
+        });
+    }
+    public sendPreventEscaping(winner: "black" | "white"): void {
+        this.socket.send("game/prevent_escaping", {
+            game_id: this.game_id,
+            winner,
         });
     }
 

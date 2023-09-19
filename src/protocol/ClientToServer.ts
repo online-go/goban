@@ -268,6 +268,26 @@ export interface ClientToServer extends ClientToServerBase {
         game_id: number;
     }) => void;
 
+    /** Request the server end a game that is being stalled by one of the
+     * players. This will only work if the server agrees in the outcome. */
+    "game/prevent_stalling": (data: {
+        /** The game id */
+        game_id: number;
+
+        /** The proposed winner */
+        winner: "black" | "white";
+    }) => void;
+
+    /** Request the server end a game that someone has left without resigning
+     * from  */
+    "game/prevent_escaping": (data: {
+        /** The game id */
+        game_id: number;
+
+        /** The proposed winner */
+        winner: "black" | "white";
+    }) => void;
+
     /** Inform the server that the client believes it's clock has timed out
      *  and the game should be ended in a timeout. This is not strictly necessary
      *  to implement as the server will also timeout games, however there is

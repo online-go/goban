@@ -607,6 +607,20 @@ export interface ServerToClient {
     "game/:id/undo_requested": (data: number) => void;
     [k: `game/${number}/undo_requested`]: ServerToClient["game/:id/undo_requested"];
 
+    /** A score estimation result has been broadcast, this is used for avoiding game stalling */
+    "game/:id/stalling_score_estimate": (data: {
+        move_number: number;
+        predicted_winner: "black" | "white";
+        game_id: number;
+        removed: string;
+        score: number;
+        win_rate: number;
+        ownership: any[];
+    }) => void;
+    [
+        k: `game/${number}/stalling_score_estimate`
+    ]: ServerToClient["game/:id/stalling_score_estimate"];
+
     /** Replay of the entire full state of the review */
     "review/:id/full_state": (data: ReviewMessage[]) => void;
     [k: `review/${number}/full_state`]: ServerToClient["review/:id/full_state"];
