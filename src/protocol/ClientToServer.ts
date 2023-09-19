@@ -286,6 +286,9 @@ export interface ClientToServer extends ClientToServerBase {
 
         /** The proposed winner */
         winner: "black" | "white";
+
+        /** Request that the game be annulled or not */
+        annul: boolean;
     }) => void;
 
     /** Inform the server that the client believes it's clock has timed out

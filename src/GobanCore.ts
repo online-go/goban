@@ -2780,10 +2780,11 @@ export abstract class GobanCore extends EventEmitter<Events> {
             winner,
         });
     }
-    public sendPreventEscaping(winner: "black" | "white"): void {
+    public sendPreventEscaping(winner: "black" | "white", annul: boolean): void {
         this.socket.send("game/prevent_escaping", {
             game_id: this.game_id,
             winner,
+            annul,
         });
     }
 
