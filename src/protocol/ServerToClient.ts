@@ -608,7 +608,7 @@ export interface ServerToClient {
     [k: `game/${number}/undo_requested`]: ServerToClient["game/:id/undo_requested"];
 
     /** A score estimation result has been broadcast, this is used for avoiding game stalling */
-    "game/:id/stalling_score_estimate": (data: {
+    "game/:id/stalling_score_estimate": (data?: {
         move_number: number;
         predicted_winner: "black" | "white";
         game_id: number;
