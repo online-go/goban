@@ -61,6 +61,9 @@ export interface ScoreEstimateRequest {
     height: number;
     board_state: Array<Array<number>>;
     rules: GoEngineRules;
+    black_prisoners?: number;
+    white_prisoners?: number;
+    komi?: number;
     jwt: string;
 }
 
