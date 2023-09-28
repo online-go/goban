@@ -68,6 +68,15 @@ export interface ClientToAIServer extends ClientToServerBase {
         /** Board position state */
         board: number[][];
 
+        /** Number of captures black has */
+        black_prisoners: number;
+
+        /** Number of captures white has */
+        white_prisoners: number;
+
+        /** Komi */
+        komi: number;
+
         /** Whose turn it is */
         player: JGOFNumericPlayerColor;
     }) => any;
