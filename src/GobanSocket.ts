@@ -43,6 +43,8 @@ interface GobanSocketOptions {
     /** Don't automatically send pings */
     dont_ping?: boolean;
 
+    ping_interval?: number; // milliseconds
+
     /** Don't log connection/disconnect things*/
     quiet?: boolean;
 }
@@ -96,7 +98,7 @@ export class GobanSocket<
     private reconnecting = false;
     private reconnect_tries = 0;
     private send_queue: (() => void)[] = [];
-    private ping_interval?: ReturnType<typeof niceInterval>;
+    private ping_timer?: ReturnType<typeof niceInterval>;
     private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
     private authentication?: DataArgument<SendProtocol["authenticate"]>;
     private manually_disconnected = false;
@@ -118,6 +120,7 @@ export class GobanSocket<
             this.latency = latency;
             this.clock_drift = drift;
             this.emit("latency", latency, drift);
+            ///console.log("Pong:", this.url);
         });
     }
 
@@ -153,18 +156,18 @@ export class GobanSocket<
                     latency: this.latency,
                 } as DataArgument<SendProtocol["net/ping"]>);
             } else {
-                if (this.ping_interval) {
-                    clearInterval(this.ping_interval);
-                    this.ping_interval = undefined;
+                if (this.ping_timer) {
+                    clearInterval(this.ping_timer);
+                    this.ping_timer = undefined;
                 }
             }
         };
 
-        if (this.ping_interval) {
-            clearInterval(this.ping_interval);
+        if (this.ping_timer) {
+            clearInterval(this.ping_timer);
         }
 
-        this.ping_interval = niceInterval(ping, PING_INTERVAL);
+        this.ping_timer = niceInterval(ping, this.options.ping_interval ?? PING_INTERVAL);
         ping();
     }
 
