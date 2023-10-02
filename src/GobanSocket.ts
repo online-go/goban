@@ -31,6 +31,8 @@ export interface GobanSocketEvents extends ServerToClient {
     /* Emitted when we receive an updated latency measurement */
     latency: (latency: number, clock_drift: number) => void;
 
+    /* Emitted when the time since ping exceeds options.timeout_delay */
+    timeout: () => void;
     //[key: string]: (...data: any[]) => void;
 }
 
@@ -44,6 +46,7 @@ interface GobanSocketOptions {
     dont_ping?: boolean;
 
     ping_interval?: number; // milliseconds
+    timeout_delay?: number;
 
     /** Don't log connection/disconnect things*/
     quiet?: boolean;
@@ -99,6 +102,7 @@ export class GobanSocket<
     private reconnect_tries = 0;
     private send_queue: (() => void)[] = [];
     private ping_timer?: ReturnType<typeof niceInterval>;
+    private timeout_timer?: ReturnType<typeof setTimeout>;
     private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
     private authentication?: DataArgument<SendProtocol["authenticate"]>;
     private manually_disconnected = false;
@@ -120,6 +124,7 @@ export class GobanSocket<
             this.latency = latency;
             this.clock_drift = drift;
             this.emit("latency", latency, drift);
+            clearTimeout(this.timeout_timer);
             ///console.log("Pong:", this.url);
         });
     }
@@ -139,6 +144,10 @@ export class GobanSocket<
         }
     }
 
+    signalTimeout = () => {
+        this.emit("timeout");
+    };
+
     private startPing(): void {
         if (!this.connected) {
             throw new Error("GobanSocket not connected");
@@ -155,6 +164,9 @@ export class GobanSocket<
                     drift: this.clock_drift,
                     latency: this.latency,
                 } as DataArgument<SendProtocol["net/ping"]>);
+                if (this.options.timeout_delay) {
+                    this.timeout_timer = setTimeout(this.signalTimeout, this.options.timeout_delay);
+                }
             } else {
                 if (this.ping_timer) {
                     clearInterval(this.ping_timer);
@@ -165,6 +177,9 @@ export class GobanSocket<
 
         if (this.ping_timer) {
             clearInterval(this.ping_timer);
+        }
+        if (this.timeout_timer) {
+            clearTimeout(this.timeout_timer);
         }
 
         this.ping_timer = niceInterval(ping, this.options.ping_interval ?? PING_INTERVAL);
