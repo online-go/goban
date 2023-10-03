@@ -164,9 +164,11 @@ export class GobanSocket<
                 drift: this.clock_drift,
                 latency: this.latency,
             } as DataArgument<SendProtocol["net/ping"]>);
+
             if (this.options.timeout_delay) {
                 this.timeout_timer = setTimeout(this.signalTimeout, this.options.timeout_delay);
             }
+
             if (
                 this.options.ping_interval &&
                 this.options.ping_interval !== this.current_ping_interval
@@ -176,6 +178,7 @@ export class GobanSocket<
                     this.ping,
                     this.options.ping_interval || DEFAULT_PING_INTERVAL,
                 );
+                this.current_ping_interval = this.options.ping_interval;
             }
         } else {
             if (this.ping_timer) {
