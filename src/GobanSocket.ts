@@ -45,7 +45,8 @@ interface GobanSocketOptions {
     /** Don't automatically send pings */
     dont_ping?: boolean;
 
-    ping_interval?: number; // milliseconds
+    // Note: you can't turn off ping by setting ping interval to zero or undefined.
+    ping_interval?: number; // milliseconds, applied if non-zero.
     timeout_delay?: number;
 
     /** Don't log connection/disconnect things*/
@@ -61,7 +62,7 @@ const RECONNECTION_INTERVALS = [
     [250, 750], // if that doesn't work, keep trying in try again in 250-750ms intervals
 ];
 
-const PING_INTERVAL = 10000;
+const DEFAULT_PING_INTERVAL = 10000;
 
 export type DataArgument<Entry> = Entry extends (...args: infer A) => void ? A[0] : never;
 export type ResponseType<Entry> = Entry extends (...args: any[]) => infer R ? R : never;
@@ -86,6 +87,8 @@ export class GobanSocket<
     public readonly url: string;
     public clock_drift = 0.0;
     public latency = 0.0;
+    public options: GobanSocketOptions;
+
     private socket: WebSocket;
     private last_request_id = 0;
     private promises_in_flight: Map<
@@ -106,7 +109,7 @@ export class GobanSocket<
     private callbacks: Map<number, (data?: any, error?: ErrorResponse) => void> = new Map();
     private authentication?: DataArgument<SendProtocol["authenticate"]>;
     private manually_disconnected = false;
-    public options: GobanSocketOptions;
+    private current_ping_interval: number;
 
     constructor(url: string, options: GobanSocketOptions = {}) {
         super();
@@ -115,6 +118,8 @@ export class GobanSocket<
         url = url.replace(/^http/, "ws");
 
         this.url = url;
+        this.current_ping_interval = options.ping_interval || DEFAULT_PING_INTERVAL;
+
         this.socket = this.connect();
 
         this.on("net/pong", ({ client, server }: { client: number; server: number }) => {
@@ -148,32 +153,42 @@ export class GobanSocket<
         this.emit("timeout");
     };
 
+    ping = () => {
+        if (this.options.dont_ping) {
+            return;
+        }
+
+        if (this.connected) {
+            this.send("net/ping", {
+                client: Date.now(),
+                drift: this.clock_drift,
+                latency: this.latency,
+            } as DataArgument<SendProtocol["net/ping"]>);
+            if (this.options.timeout_delay) {
+                this.timeout_timer = setTimeout(this.signalTimeout, this.options.timeout_delay);
+            }
+            if (
+                this.options.ping_interval &&
+                this.options.ping_interval !== this.current_ping_interval
+            ) {
+                clearInterval(this.ping_timer);
+                this.ping_timer = niceInterval(
+                    this.ping,
+                    this.options.ping_interval || DEFAULT_PING_INTERVAL,
+                );
+            }
+        } else {
+            if (this.ping_timer) {
+                clearInterval(this.ping_timer);
+                this.ping_timer = undefined;
+            }
+        }
+    };
+
     private startPing(): void {
         if (!this.connected) {
             throw new Error("GobanSocket not connected");
         }
-
-        const ping = () => {
-            if (this.options.dont_ping) {
-                return;
-            }
-
-            if (this.connected) {
-                this.send("net/ping", {
-                    client: Date.now(),
-                    drift: this.clock_drift,
-                    latency: this.latency,
-                } as DataArgument<SendProtocol["net/ping"]>);
-                if (this.options.timeout_delay) {
-                    this.timeout_timer = setTimeout(this.signalTimeout, this.options.timeout_delay);
-                }
-            } else {
-                if (this.ping_timer) {
-                    clearInterval(this.ping_timer);
-                    this.ping_timer = undefined;
-                }
-            }
-        };
 
         if (this.ping_timer) {
             clearInterval(this.ping_timer);
@@ -182,8 +197,11 @@ export class GobanSocket<
             clearTimeout(this.timeout_timer);
         }
 
-        this.ping_timer = niceInterval(ping, this.options.ping_interval ?? PING_INTERVAL);
-        ping();
+        this.ping_timer = niceInterval(
+            this.ping,
+            this.options.ping_interval || DEFAULT_PING_INTERVAL,
+        );
+        this.ping();
     }
 
     private connect(): WebSocket {
