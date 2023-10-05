@@ -25,7 +25,7 @@ type GobanSocketServerToClientMessage<RecvProtocol> = [keyof RecvProtocol | numb
 // doesn't seem to be possible in typescript yet
 export interface GobanSocketEvents extends ServerToClient {
     connect: () => void;
-    disconnect: () => void;
+    disconnect: (code: number) => void;
     reconnect: () => void;
     unrecoverable_error: (code: number, tag: string, message: string) => void;
     /* Emitted when we receive an updated latency measurement */
@@ -263,7 +263,7 @@ export class GobanSocket<
             this.rejectPromisesInFlight();
 
             try {
-                this.emit("disconnect");
+                this.emit("disconnect", event.code);
             } catch (e) {
                 console.error("Error in disconnect handler", e);
             }
