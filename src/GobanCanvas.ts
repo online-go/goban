@@ -92,9 +92,6 @@ export class GobanCanvas extends GobanCore {
     private last_pen_position?: [number, number];
     protected metrics: GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
 
-    private layer_offset_left: number = 0;
-    private layer_offset_top: number = 0;
-
     private drawing_enabled: boolean = true;
     private pen_ctx?: CanvasRenderingContext2D;
     private pen_layer?: HTMLCanvasElement;
@@ -249,9 +246,6 @@ export class GobanCanvas extends GobanCore {
                     console.error(e);
                 }
             }
-            //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.shadow_layer.style.left = this.layer_offset_left + "px";
-            this.shadow_layer.style.top = this.layer_offset_top + "px";
 
             const ctx = this.shadow_layer.getContext("2d", { willReadFrequently: true });
             if (ctx) {
@@ -279,9 +273,6 @@ export class GobanCanvas extends GobanCore {
             this.pen_layer.setAttribute("id", "pen-canvas");
             this.pen_layer.className = "PenLayer";
             this.parent.appendChild(this.pen_layer);
-            //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-            this.pen_layer.style.left = this.layer_offset_left + "px";
-            this.pen_layer.style.top = this.layer_offset_top + "px";
             const ctx = this.pen_layer.getContext("2d", { willReadFrequently: true });
             if (ctx) {
                 this.pen_ctx = ctx;
@@ -2503,15 +2494,9 @@ export class GobanCanvas extends GobanCore {
                 this.parent.style.height = metrics.height + "px";
                 resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
 
-                this.layer_offset_left = 0;
-                this.layer_offset_top = 0;
-
                 if (this.pen_layer) {
                     if (this.pen_marks.length) {
                         resizeDeviceScaledCanvas(this.pen_layer, metrics.width, metrics.height);
-                        //this.pen_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                        this.pen_layer.style.left = this.layer_offset_left + "px";
-                        this.pen_layer.style.top = this.layer_offset_top + "px";
                         const ctx = this.pen_layer.getContext("2d", { willReadFrequently: true });
                         if (ctx) {
                             this.pen_ctx = ctx;
@@ -2525,9 +2510,6 @@ export class GobanCanvas extends GobanCore {
 
                 if (this.shadow_layer) {
                     resizeDeviceScaledCanvas(this.shadow_layer, metrics.width, metrics.height);
-                    //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                    this.shadow_layer.style.left = this.layer_offset_left + "px";
-                    this.shadow_layer.style.top = this.layer_offset_top + "px";
                     const ctx = this.shadow_layer.getContext("2d", { willReadFrequently: true });
                     if (ctx) {
                         this.shadow_ctx = ctx;
@@ -2835,9 +2817,6 @@ export class GobanCanvas extends GobanCore {
                     this.metrics.width,
                     this.metrics.height,
                 );
-                //this.shadow_layer.css({"left": this.layer_offset_left, "top": this.layer_offset_top});
-                this.shadow_layer.style.left = this.layer_offset_left + "px";
-                this.shadow_layer.style.top = this.layer_offset_top + "px";
                 const ctx = this.shadow_layer.getContext("2d", { willReadFrequently: true });
                 if (ctx) {
                     this.shadow_ctx = ctx;
