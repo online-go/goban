@@ -129,7 +129,9 @@ export class GobanSocket<
             this.latency = latency;
             this.clock_drift = drift;
             this.emit("latency", latency, drift);
-            clearTimeout(this.timeout_timer);
+            if (this.timeout_timer) {
+                clearTimeout(this.timeout_timer);
+            }
             ///console.log("Pong:", this.url);
         });
     }
@@ -173,7 +175,9 @@ export class GobanSocket<
                 this.options.ping_interval &&
                 this.options.ping_interval !== this.current_ping_interval
             ) {
-                clearInterval(this.ping_timer);
+                if (this.ping_timer) {
+                    clearInterval(this.ping_timer);
+                }
                 this.ping_timer = niceInterval(
                     this.ping,
                     this.options.ping_interval || DEFAULT_PING_INTERVAL,
