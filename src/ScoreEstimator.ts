@@ -47,8 +47,6 @@ export interface ScoreEstimateRequest {
     height: number;
     board_state: Array<Array<number>>;
     rules: GoEngineRules;
-    black_prisoners?: number;
-    white_prisoners?: number;
     komi?: number;
     jwt: string;
 }
@@ -239,8 +237,6 @@ export class ScoreEstimator {
     width: number;
     height: number;
     board: Array<Array<JGOFNumericPlayerColor>>;
-    white_prisoners: number = 0;
-    black_prisoners: number = 0;
     white: PlayerScore = {
         total: 0,
         stones: 0,
@@ -742,8 +738,8 @@ export class ScoreEstimator {
         }
 
         if (this.engine.score_prisoners) {
-            this.black.prisoners = this.black_prisoners + removed_white;
-            this.white.prisoners = this.white_prisoners + removed_black;
+            this.black.prisoners = removed_white;
+            this.white.prisoners = removed_black;
         }
 
         this.black.total =
