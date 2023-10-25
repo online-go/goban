@@ -135,7 +135,6 @@ class SEGroup {
     removed: boolean;
     neighbors: Array<SEGroup>;
     neighbor_map: { [group_id: string]: boolean };
-    liberties: number = 0;
 
     constructor(se: ScoreEstimator, color: JGOFNumericPlayerColor, id: number) {
         this.points = [];
@@ -147,8 +146,6 @@ class SEGroup {
         this.neighboring_enemy = [];
         this.neighbor_map = {};
         this.removed = false;
-
-        // this.liberties is set by ScoreEstimator.resetGroups */
     }
     add(i: number, j: number) {
         this.points.push({ x: i, y: j });
@@ -502,19 +499,6 @@ export class ScoreEstimator {
                 grp.addNeighbor(this.group_list[gs_neighbor.id - 1]);
             }
         }
-
-        /* compute liberties */
-        this.foreachGroup((g: SEGroup) => {
-            if (g.color) {
-                let liberties = 0;
-                g.foreachNeighboringPoint((pt) => {
-                    if (this.board[pt.y][pt.x] === 0 || this.removal[pt.y][pt.x]) {
-                        ++liberties;
-                    }
-                });
-                g.liberties = liberties;
-            }
-        });
     }
     foreachGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.group_list.length; ++i) {
