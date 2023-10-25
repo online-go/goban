@@ -579,34 +579,17 @@ export class ScoreEstimator {
         let ret = "";
         const arr = [];
 
-        if (remote_scorer) {
-            for (let y = 0; y < this.height; ++y) {
-                for (let x = 0; x < this.width; ++x) {
-                    const current = this.board[y][x];
-                    const estimated =
-                        this.ownership[y][x] < -this.tolerance
-                            ? 2 // white
-                            : this.ownership[y][x] > this.tolerance
-                            ? 1 // black
-                            : 0; // unclear
-                    if (estimated === 0 /* dame */ || (current !== 0 && current !== estimated)) {
-                        arr.push(encodeMove(x, y));
-                    }
-                }
-            }
-        } else {
-            // Old WASM
-            for (let y = 0; y < this.height; ++y) {
-                for (let x = 0; x < this.width; ++x) {
-                    if (
-                        //(this.board[y][x] === 0 && this.area[y][x] === 0) /* dame */
-                        //||
-                        //(this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x]) /* captured */
-                        this.area[y][x] === 0 ||
-                        (this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x])
-                    ) {
-                        arr.push(encodeMove(x, y));
-                    }
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                const current = this.board[y][x];
+                const estimated =
+                    this.ownership[y][x] < -this.tolerance
+                        ? 2 // white
+                        : this.ownership[y][x] > this.tolerance
+                        ? 1 // black
+                        : 0; // unclear
+                if (estimated === 0 /* dame */ || (current !== 0 && current !== estimated)) {
+                    arr.push(encodeMove(x, y));
                 }
             }
         }
