@@ -134,8 +134,6 @@ class SEGroup {
     id: number;
     color: JGOFNumericPlayerColor;
     removed: boolean;
-    estimated_score: number;
-    estimated_hard_score: number;
     neighbors: Array<SEGroup>;
     neighbor_map: { [group_id: string]: boolean };
     liberties: number = 0;
@@ -150,8 +148,6 @@ class SEGroup {
         this.neighboring_enemy = [];
         this.neighbor_map = {};
         this.removed = false;
-        this.estimated_score = 0.0;
-        this.estimated_hard_score = 0.0;
 
         // this.liberties is set by ScoreEstimator.resetGroups */
     }
