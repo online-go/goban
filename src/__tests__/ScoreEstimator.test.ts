@@ -46,10 +46,22 @@ describe("ScoreEstimator", () => {
         [1, 1, -1, -1],
     ];
     const KOMI = 0.5;
+    const engine = new GoEngine({ komi: KOMI, width: 4, height: 2 });
+    engine.place(1, 0);
+    engine.place(2, 0);
+    engine.place(1, 1);
+    engine.place(2, 1);
+
+    // It might seem weird to set prefer_remote = true just to test
+    // resetGroups, but is a necessary hack to bypass initialization of
+    // the OGSScoreEstimation library
+    const prefer_remote = true;
+    const trials = 10;
+    const tolerance = 0.25;
 
     beforeEach(() => {
         set_remote_scorer(async () => {
-            return { ownership: OWNERSHIP };
+            return { ownership: OWNERSHIP, score: -7.5 };
         });
     });
 
@@ -58,17 +70,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("resetGroups", async () => {
-        const engine = new GoEngine({ komi: KOMI, width: 4, height: 2 });
-        engine.place(1, 0);
-        engine.place(2, 0);
-        engine.place(1, 1);
-        engine.place(2, 1);
-
-        // It might seem weird to set prefer_remote = true just to test
-        // resetGroups, but is a necessary hack to bypass initialization of
-        // the OGSScoreEstimation library
-        const prefer_remote = true;
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, prefer_remote);
+        const se = new ScoreEstimator(undefined, engine, trials, tolerance, prefer_remote);
 
         await se.when_ready;
 
@@ -92,5 +94,16 @@ describe("ScoreEstimator", () => {
             ],
         ]);
         expect(se.group_list.map((group) => group.color)).toEqual([0, 1, 2, 0]);
+    });
+
+    test("amount and winner", async () => {
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, prefer_remote);
+
+        await se.when_ready;
+
+        // Though these properties are not used within Goban,
+        // They are used in the UI as of this writing.
+        expect(se.winner).toBe("White");
+        expect(se.amount).toBe(0.5);
     });
 });
