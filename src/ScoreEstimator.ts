@@ -275,7 +275,6 @@ export class ScoreEstimator {
     trials: number;
     winner: string = "";
     color_to_move: "black" | "white";
-    estimated_score: number;
     estimated_hard_score: number;
     when_ready: Promise<void>;
     prefer_remote: boolean;
@@ -300,7 +299,6 @@ export class ScoreEstimator {
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
-        this.estimated_score = 0.0;
         this.estimated_hard_score = 0.0;
         this.group_list = [];
         this.trials = trials;
@@ -453,13 +451,12 @@ export class ScoreEstimator {
         /* Build up our heat map and ownership */
         /* negative for black, 0 for neutral, positive for white */
         this.ownership = ownership;
-        this.estimated_score = estimated_score - this.engine.komi;
         this.estimated_hard_score = estimated_score - this.engine.komi;
 
         if (typeof score === "undefined") {
             this.winner = this.estimated_hard_score > 0 ? _("Black") : _("White");
             this.amount = Math.abs(this.estimated_hard_score);
-            this.amount_fractional = Math.abs(this.estimated_score).toFixed(1);
+            this.amount_fractional = Math.abs(this.estimated_hard_score).toFixed(1);
         } else {
             this.winner = score > 0 ? _("Black") : _("White");
             this.amount = Math.abs(score);
