@@ -85,19 +85,11 @@ let init_promise: Promise<boolean>;
 
 export function init_score_estimator(): Promise<boolean> {
     if (CLIENT) {
-        /*
-        if (remote_scorer) {
-            return Promise.resolve(true);
-        }
-        */
-
         if (OGSScoreEstimator_initialized) {
-            //console.log("Already initialized");
             return Promise.resolve(true);
         }
 
         if (init_promise) {
-            //console.log("An existing promise");
             return init_promise;
         }
 
@@ -114,22 +106,18 @@ export function init_score_estimator(): Promise<boolean> {
         }
 
         if (OGSScoreEstimatorModule) {
-            //console.log("Already loaded");
             OGSScoreEstimatorModule = OGSScoreEstimatorModule();
             OGSScoreEstimator_initialized = true;
             return Promise.resolve(true);
         }
 
-        //console.log("Sync script");
         const script: HTMLScriptElement = document.getElementById(
             "ogs_score_estimator_script",
         ) as HTMLScriptElement;
         if (script) {
             let resolve: (tf: boolean) => void;
-            //let reject;
             init_promise = new Promise<boolean>((_resolve, _reject) => {
                 resolve = _resolve;
-                //reject  = _reject;
             });
 
             script.onload = () => {
@@ -247,23 +235,17 @@ class SEGroup {
     }
     foreachNeighborGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.neighbors.length; ++i) {
-            //if (!this.neighbors[i].removed) {
             fn(this.neighbors[i]);
-            //}
         }
     }
     foreachNeighborSpaceGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.neighboring_space.length; ++i) {
-            //if (!this.neighboring_space[i].removed) {
             fn(this.neighboring_space[i]);
-            //}
         }
     }
     foreachNeighborEnemyGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.neighboring_enemy.length; ++i) {
-            //if (!this.neighboring_enemy[i].removed) {
             fn(this.neighboring_enemy[i]);
-            //}
         }
     }
     setRemoved(removed: boolean): void {
@@ -281,10 +263,6 @@ export class ScoreEstimator {
     board: Array<Array<JGOFNumericPlayerColor>>;
     white_prisoners: number = 0;
     black_prisoners: number = 0;
-    //score_stones:boolean;
-    //score_prisoners:boolean;
-    //score_territory:boolean;
-    //score_territory_in_seki:boolean;
     white: PlayerScore = {
         total: 0,
         stones: 0,
@@ -359,7 +337,6 @@ export class ScoreEstimator {
 
         this.resetGroups();
         this.when_ready = this.estimateScore(this.trials, this.tolerance);
-        //this.sealDame();
     }
 
     public estimateScore(trials: number, tolerance: number): Promise<void> {
@@ -494,7 +471,6 @@ export class ScoreEstimator {
         i = 0;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                //ownership[y][x] = ints[i] < 0 ? 2 : ints[i];
                 ownership[y][x] = ints[i];
                 ++i;
 
@@ -541,13 +517,11 @@ export class ScoreEstimator {
     updateEstimate(estimated_score: number, ownership: Array<Array<number>>, score?: number) {
         /* Build up our heat map and ownership */
         /* negative for black, 0 for neutral, positive for white */
-        //this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.ownership = ownership;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 this.heat[y][x] = ownership[y][x];
                 this.area[y][x] = ownership[y][x] < 0 ? 2 : ownership[y][x];
-                //this.area[y][x] = ownership[y][x];
                 this.estimated_area[y][x] = this.area[y][x];
             }
         }
@@ -564,11 +538,6 @@ export class ScoreEstimator {
             this.amount_fractional = Math.abs(score).toFixed(1);
         }
 
-        /*
-        if (this.goban_callback && this.goban_callback.heatmapUpdated) {
-            this.goban_callback.heatmapUpdated();
-        }
-        */
         if (this.goban_callback && this.goban_callback.updateScoreEstimation) {
             this.goban_callback.updateScoreEstimation();
         }
@@ -679,7 +648,6 @@ export class ScoreEstimator {
         this.estimateScore(this.trials, this.tolerance).catch(() => {
             /* empty */
         });
-        //this.resetGroups();
     }
     toggleMetaGroupRemoval(x: number, y: number): void {
         const already_done: { [k: string]: boolean } = {};
@@ -810,14 +778,11 @@ export class ScoreEstimator {
             }
         }
 
-        //if (this.phase !== "play") {
         if (this.engine.score_territory) {
             const groups = new GoStoneGroups(this);
-            //console.log(gm);
 
             groups.foreachGroup((gr) => {
                 if (gr.is_territory) {
-                    //console.log(gr);
                     if (!this.engine.score_territory_in_seki && gr.is_territory_in_seki) {
                         return;
                     }
@@ -831,7 +796,6 @@ export class ScoreEstimator {
                         "What should be unreached code is running, should probably be running " +
                             "this[color].territory += markScored(gr.points, false);",
                     );
-                    //this[color].territory += markScored(gr.points, false);
                 }
             });
         }
@@ -851,7 +815,6 @@ export class ScoreEstimator {
                 }
             }
         }
-        //}
 
         if (this.engine.score_prisoners) {
             this.black.prisoners = this.black_prisoners + removed_white;
