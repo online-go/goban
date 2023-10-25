@@ -25,20 +25,14 @@ import { JGOFNumericPlayerColor } from "./JGOF";
 import { _ } from "./translate";
 
 declare const CLIENT: boolean;
-declare const SERVER: boolean;
 
-/* This script is used on both the front end and back end, and the way the
- * OGSScoreEstimator module is loaded is quite differente between the two.
- *
- * On the server, the OGSScoreEsimtator module is loaded by score-estimator.ts
- * and the set_OGSScoreEstimator function is called with the module.
- *
- * On the client, the OGSScoreEstimator script is loaded in an async fashion,
- * so at some point that global variable becomes not null and can be used.
+/* The OGSScoreEstimator method is a wasm compiled C program that
+ * does simple random playouts. On the client, the OGSScoreEstimator script
+ * is loaded in an async fashion, so at some point that global variable
+ * becomes not null and can be used.
  */
 
-/* In addition to the OGSScoreEstimator method, which is a wasm compiled
- * C program that does simple random playouts, we have a RemoteScoring system
+/* In addition to the OGSScoreEstimator method, we have a RemoteScoring system
  * which needs to be initialized by either the client or the server if we want
  * remote scoring enabled.
  */
@@ -46,14 +40,6 @@ declare const SERVER: boolean;
 declare let OGSScoreEstimator: any;
 let OGSScoreEstimator_initialized = false;
 let OGSScoreEstimatorModule: any;
-
-/* This is used on the server side */
-export function set_OGSScoreEstimator(mod: any): void {
-    OGSScoreEstimatorModule = mod;
-    init_score_estimator()
-        .then((tf) => console.info("Score estimator intialized"))
-        .catch((err) => console.error(err));
-}
 
 export interface ScoreEstimateRequest {
     player_to_move: "black" | "white";
@@ -84,64 +70,56 @@ export function set_remote_scorer(
 let init_promise: Promise<boolean>;
 
 export function init_score_estimator(): Promise<boolean> {
-    if (CLIENT) {
-        if (OGSScoreEstimator_initialized) {
-            return Promise.resolve(true);
-        }
-
-        if (init_promise) {
-            return init_promise;
-        }
-
-        try {
-            if (
-                !OGSScoreEstimatorModule &&
-                (("OGSScoreEstimator" in window) as any) &&
-                ((window as any)["OGSScoreEstimator"] as any)
-            ) {
-                OGSScoreEstimatorModule = (window as any)["OGSScoreEstimator"] as any;
-            }
-        } catch (e) {
-            console.error(e);
-        }
-
-        if (OGSScoreEstimatorModule) {
-            OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-            OGSScoreEstimator_initialized = true;
-            return Promise.resolve(true);
-        }
-
-        const script: HTMLScriptElement = document.getElementById(
-            "ogs_score_estimator_script",
-        ) as HTMLScriptElement;
-        if (script) {
-            let resolve: (tf: boolean) => void;
-            init_promise = new Promise<boolean>((_resolve, _reject) => {
-                resolve = _resolve;
-            });
-
-            script.onload = () => {
-                OGSScoreEstimatorModule = OGSScoreEstimator;
-                OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-                OGSScoreEstimator_initialized = true;
-                resolve(true);
-            };
-
-            return init_promise;
-        } else {
-            return Promise.reject("score estimator not available");
-        }
+    if (!CLIENT) {
+        throw new Error("Only initialize WASM library on the client side");
     }
 
-    if (SERVER) {
+    if (OGSScoreEstimator_initialized) {
+        return Promise.resolve(true);
+    }
+
+    if (init_promise) {
+        return init_promise;
+    }
+
+    try {
+        if (
+            !OGSScoreEstimatorModule &&
+            (("OGSScoreEstimator" in window) as any) &&
+            ((window as any)["OGSScoreEstimator"] as any)
+        ) {
+            OGSScoreEstimatorModule = (window as any)["OGSScoreEstimator"] as any;
+        }
+    } catch (e) {
+        console.error(e);
+    }
+
+    if (OGSScoreEstimatorModule) {
         OGSScoreEstimatorModule = OGSScoreEstimatorModule();
         OGSScoreEstimator_initialized = true;
         return Promise.resolve(true);
     }
 
-    // this can't be reached so long as one of CLIENT or SERVER is set, which
-    // should always be the case.
-    throw new Error("Unreachable code reached");
+    const script: HTMLScriptElement = document.getElementById(
+        "ogs_score_estimator_script",
+    ) as HTMLScriptElement;
+    if (script) {
+        let resolve: (tf: boolean) => void;
+        init_promise = new Promise<boolean>((_resolve, _reject) => {
+            resolve = _resolve;
+        });
+
+        script.onload = () => {
+            OGSScoreEstimatorModule = OGSScoreEstimator;
+            OGSScoreEstimatorModule = OGSScoreEstimatorModule();
+            OGSScoreEstimator_initialized = true;
+            resolve(true);
+        };
+
+        return init_promise;
+    } else {
+        return Promise.reject("score estimator not available");
+    }
 }
 
 interface SEPoint {
