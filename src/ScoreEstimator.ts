@@ -256,7 +256,6 @@ export class ScoreEstimator {
     tolerance: number;
     group_list: Array<SEGroup>;
     amount: number = NaN;
-    amount_fractional: string = "[unset]";
     ownership: Array<Array<number>>;
     territory: Array<Array<number>>;
     trials: number;
@@ -442,11 +441,9 @@ export class ScoreEstimator {
         if (typeof score === "undefined") {
             this.winner = this.estimated_hard_score > 0 ? _("Black") : _("White");
             this.amount = Math.abs(this.estimated_hard_score);
-            this.amount_fractional = Math.abs(this.estimated_hard_score).toFixed(1);
         } else {
             this.winner = score > 0 ? _("Black") : _("White");
             this.amount = Math.abs(score);
-            this.amount_fractional = Math.abs(score).toFixed(1);
         }
 
         if (this.goban_callback && this.goban_callback.updateScoreEstimation) {
