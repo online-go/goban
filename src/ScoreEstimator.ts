@@ -15,9 +15,9 @@
  */
 
 import { dup } from "./GoUtil";
-import { Intersection, encodeMove, encodeMoves } from "./GoMath";
+import { encodeMove, encodeMoves } from "./GoMath";
 import * as GoMath from "./GoMath";
-import { Group } from "./GoStoneGroup";
+import { GoStoneGroup } from "./GoStoneGroup";
 import { GoStoneGroups } from "./GoStoneGroups";
 import { GobanCore } from "./GobanCore";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
@@ -123,7 +123,6 @@ export function init_score_estimator(): Promise<boolean> {
 interface SEPoint {
     x: number;
     y: number;
-    color?: JGOFNumericPlayerColor;
 }
 
 class SEGroup {
@@ -151,8 +150,8 @@ class SEGroup {
 
         // this.liberties is set by ScoreEstimator.resetGroups */
     }
-    add(i: number, j: number, color: JGOFNumericPlayerColor) {
-        this.points.push({ x: i, y: j, color: color });
+    add(i: number, j: number) {
+        this.points.push({ x: i, y: j });
     }
     foreachPoint(fn: (pt: SEPoint) => void) {
         for (let i = 0; i < this.points.length; ++i) {
@@ -259,7 +258,6 @@ export class ScoreEstimator {
     goban_callback?: GobanCore;
     tolerance: number;
     group_list: Array<SEGroup>;
-    marks: Array<Array<number>>;
     amount: number = NaN;
     amount_fractional: string = "[unset]";
     ownership: Array<Array<number>>;
@@ -287,7 +285,6 @@ export class ScoreEstimator {
         this.color_to_move = engine.colorToMove();
         this.board = dup(engine.board);
         this.removal = GoMath.makeMatrix(this.width, this.height, 0);
-        this.marks = GoMath.makeMatrix(this.width, this.height, 0);
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
@@ -489,51 +486,20 @@ export class ScoreEstimator {
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.group_list = [];
-        let stack = null;
 
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (!this.groups[y][x]) {
-                    this.incrementCurrentMarker(); /* clear marks */
-                    const color = this.board[y][x];
-                    const g = new SEGroup(this, color, this.currentMarker);
-                    this.group_list.push(g);
-                    stack = [x, y];
-                    while (stack.length) {
-                        const yy = stack.pop();
-                        const xx = stack.pop();
-                        if (xx === undefined || yy === undefined) {
-                            throw new Error(`Invalid stack state`);
-                        }
+        const go_stone_groups = new GoStoneGroups(this);
 
-                        if (this.marks[yy][xx] === this.currentMarker) {
-                            continue;
-                        }
-                        this.marks[yy][xx] = this.currentMarker;
-                        if (this.board[yy][xx] === color || (color === 0 && this.removal[yy][xx])) {
-                            this.groups[yy][xx] = g;
-                            g.add(xx, yy, color);
-                            this.foreachNeighbor({ x: xx, y: yy }, push_on_stack);
-                        }
-                    }
-                }
-            }
-        }
+        go_stone_groups.foreachGroup((gs_grp) => {
+            const se_grp = make_se_group_from_gs_group(gs_grp, this);
+            gs_grp.points.forEach((pt) => {
+                this.groups[pt.y][pt.x] = se_grp;
+            });
+            this.group_list.push(se_grp);
+        });
 
-        function push_on_stack(x: number, y: number) {
-            stack.push(x);
-            stack.push(y);
-        }
-
-        /* compute group neighborhoodship */
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                this.foreachNeighbor({ x: x, y: y }, (xx, yy) => {
-                    if (this.groups[y][x].id !== this.groups[yy][xx].id) {
-                        this.groups[y][x].addNeighbor(this.groups[yy][xx]);
-                        this.groups[yy][xx].addNeighbor(this.groups[y][x]);
-                    }
-                });
+        for (const grp of this.group_list) {
+            for (const gs_neighbor of go_stone_groups.groups[grp.id].neighbors) {
+                grp.addNeighbor(this.group_list[gs_neighbor.id - 1]);
             }
         }
 
@@ -749,61 +715,6 @@ export class ScoreEstimator {
 
         return this;
     }
-    private foreachNeighbor(
-        pt_or_group: Intersection | Group,
-        fn_of_neighbor_pt: (x: number, y: number) => void,
-    ): void {
-        const self = this;
-        let group: Group;
-        let done_array: Array<boolean>;
-
-        if (pt_or_group instanceof Array) {
-            group = pt_or_group as Group;
-            done_array = new Array(this.height * this.width);
-            for (let i = 0; i < group.length; ++i) {
-                done_array[group[i].x + group[i].y * this.width] = true;
-            }
-            for (let i = 0; i < group.length; ++i) {
-                const pt = group[i];
-                if (pt.x - 1 >= 0) {
-                    checkAndDo(pt.x - 1, pt.y);
-                }
-                if (pt.x + 1 !== this.width) {
-                    checkAndDo(pt.x + 1, pt.y);
-                }
-                if (pt.y - 1 >= 0) {
-                    checkAndDo(pt.x, pt.y - 1);
-                }
-                if (pt.y + 1 !== this.height) {
-                    checkAndDo(pt.x, pt.y + 1);
-                }
-            }
-        } else {
-            const pt = pt_or_group;
-            if (pt.x - 1 >= 0) {
-                fn_of_neighbor_pt(pt.x - 1, pt.y);
-            }
-            if (pt.x + 1 !== this.width) {
-                fn_of_neighbor_pt(pt.x + 1, pt.y);
-            }
-            if (pt.y - 1 >= 0) {
-                fn_of_neighbor_pt(pt.x, pt.y - 1);
-            }
-            if (pt.y + 1 !== this.height) {
-                fn_of_neighbor_pt(pt.x, pt.y + 1);
-            }
-        }
-
-        function checkAndDo(x: number, y: number): void {
-            const idx = x + y * self.width;
-            if (done_array[idx]) {
-                return;
-            }
-            done_array[idx] = true;
-
-            fn_of_neighbor_pt(x, y);
-        }
-    }
 }
 
 /**
@@ -873,4 +784,13 @@ export function adjust_estimate(
 
 function get_dimensions(board: Array<Array<unknown>>) {
     return { width: board[0].length, height: board.length };
+}
+
+/**
+ * SE Group and GoStoneGroup have a slightly different interface.
+ */
+function make_se_group_from_gs_group(gsg: GoStoneGroup, se: ScoreEstimator) {
+    const se_group = new SEGroup(se, gsg.color, gsg.id);
+    se_group.points = gsg.points.map((pt) => pt);
+    return se_group;
 }
