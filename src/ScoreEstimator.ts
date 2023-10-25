@@ -271,11 +271,9 @@ export class ScoreEstimator {
     amount: number = NaN;
     amount_fractional: string = "[unset]";
     ownership: Array<Array<number>>;
-    area: Array<Array<number>>; // hard numeric values
     territory: Array<Array<number>>;
     trials: number;
     winner: string = "";
-    heat: Array<Array<number>>;
     color_to_move: "black" | "white";
     estimated_score: number;
     estimated_hard_score: number;
@@ -299,9 +297,7 @@ export class ScoreEstimator {
         this.board = dup(engine.board);
         this.removal = GoMath.makeMatrix(this.width, this.height, 0);
         this.marks = GoMath.makeMatrix(this.width, this.height, 0);
-        this.area = GoMath.makeMatrix(this.width, this.height, 0);
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
-        this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.estimated_score = 0.0;
@@ -457,12 +453,6 @@ export class ScoreEstimator {
         /* Build up our heat map and ownership */
         /* negative for black, 0 for neutral, positive for white */
         this.ownership = ownership;
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                this.heat[y][x] = ownership[y][x];
-                this.area[y][x] = ownership[y][x] < 0 ? 2 : ownership[y][x];
-            }
-        }
         this.estimated_score = estimated_score - this.engine.komi;
         this.estimated_hard_score = estimated_score - this.engine.komi;
 

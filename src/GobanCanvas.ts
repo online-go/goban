@@ -2100,7 +2100,7 @@ export class GobanCanvas extends GobanCore {
 
         if (this.scoring_mode && this.score_estimate) {
             const se = this.score_estimate;
-            const est = se.heat[j][i];
+            const est = se.ownership[j][i];
 
             ctx.beginPath();
 
