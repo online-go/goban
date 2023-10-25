@@ -285,7 +285,6 @@ export class ScoreEstimator {
     //score_prisoners:boolean;
     //score_territory:boolean;
     //score_territory_in_seki:boolean;
-    removed: Array<Array<number>>;
     white: PlayerScore = {
         total: 0,
         stones: 0,
@@ -308,7 +307,7 @@ export class ScoreEstimator {
     engine: GoEngine;
     groups: Array<Array<SEGroup>>;
     currentMarker: number;
-    removal: Array<Array<number>>; // TODO: This is defined to be a dup of this.removed, can we remove that?
+    removal: Array<Array<number>>;
     goban_callback?: GobanCore;
     tolerance: number;
     group_list: Array<SEGroup>;
@@ -343,7 +342,7 @@ export class ScoreEstimator {
         this.height = engine.height;
         this.color_to_move = engine.colorToMove();
         this.board = dup(engine.board);
-        this.removal = this.removed = GoMath.makeMatrix(this.width, this.height, 0);
+        this.removal = GoMath.makeMatrix(this.width, this.height, 0);
         this.marks = GoMath.makeMatrix(this.width, this.height, 0);
         this.area = GoMath.makeMatrix(this.width, this.height, 0);
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
@@ -625,7 +624,7 @@ export class ScoreEstimator {
                             continue;
                         }
                         this.marks[yy][xx] = this.currentMarker;
-                        if (this.board[yy][xx] === color || (color === 0 && this.removed[yy][xx])) {
+                        if (this.board[yy][xx] === color || (color === 0 && this.removal[yy][xx])) {
                             this.groups[yy][xx] = g;
                             g.add(xx, yy, color);
                             this.foreachNeighbor({ x: xx, y: yy }, push_on_stack);
@@ -657,7 +656,7 @@ export class ScoreEstimator {
             if (g.color) {
                 let liberties = 0;
                 g.foreachNeighboringPoint((pt) => {
-                    if (this.board[pt.y][pt.x] === 0 || this.removed[pt.y][pt.x]) {
+                    if (this.board[pt.y][pt.x] === 0 || this.removal[pt.y][pt.x]) {
                         ++liberties;
                     }
                 });
@@ -799,7 +798,7 @@ export class ScoreEstimator {
         /* clear removed */
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                if (this.removed[y][x]) {
+                if (this.removal[y][x]) {
                     if (this.board[y][x] === 1) {
                         ++removed_black;
                     }
