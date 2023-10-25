@@ -315,13 +315,13 @@ export class ScoreEstimator {
         }
 
         if (remote_scorer) {
-            return this.estimateScoreRemote(tolerance);
+            return this.estimateScoreRemote();
         } else {
             return this.estimateScoreWASM(trials, tolerance);
         }
     }
 
-    private estimateScoreRemote(tolerance: number = 0.25): Promise<void> {
+    private estimateScoreRemote(): Promise<void> {
         const komi = this.engine.komi;
         const captures_delta = this.engine.score_prisoners
             ? this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners()
