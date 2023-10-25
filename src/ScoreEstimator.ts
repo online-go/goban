@@ -274,7 +274,6 @@ export class ScoreEstimator {
     area: Array<Array<number>>; // hard numeric values
     territory: Array<Array<number>>;
     trials: number;
-    estimated_area: Array<Array<number>>;
     winner: string = "";
     heat: Array<Array<number>>;
     color_to_move: "black" | "white";
@@ -303,7 +302,6 @@ export class ScoreEstimator {
         this.area = GoMath.makeMatrix(this.width, this.height, 0);
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
         this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
-        this.estimated_area = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.estimated_score = 0.0;
@@ -500,7 +498,6 @@ export class ScoreEstimator {
             for (let x = 0; x < this.width; ++x) {
                 this.heat[y][x] = ownership[y][x];
                 this.area[y][x] = ownership[y][x] < 0 ? 2 : ownership[y][x];
-                this.estimated_area[y][x] = this.area[y][x];
             }
         }
         this.estimated_score = estimated_score - this.engine.komi;
