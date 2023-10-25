@@ -428,7 +428,7 @@ export class ScoreEstimator {
             tr: number,
             to: number,
         ) => number;
-        let estimated_score = estimate(
+        const estimated_score = estimate(
             this.width,
             this.height,
             ptr,
@@ -436,12 +436,6 @@ export class ScoreEstimator {
             trials,
             tolerance,
         );
-        estimated_score -= this.engine.getHandicapPointAdjustmentForWhite();
-
-        // For Japanese rules we use territory counting.  Don't even
-        // attempt to handle rules with score_stones and not
-        // score_prisoners or vice-versa.
-        const territory_counting = !this.engine.score_stones && this.engine.score_prisoners;
 
         const ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
@@ -449,44 +443,13 @@ export class ScoreEstimator {
             for (let x = 0; x < this.width; ++x) {
                 ownership[y][x] = ints[i];
                 ++i;
-
-                if (territory_counting && this.board[y][x]) {
-                    // Fix display and count in Japanese rules.
-
-                    // Board/ownership being 1/1 or 2/-1 means it's a
-                    // live stone; clear ownership so the display
-                    // looks like it is using territory scoring.
-                    if (
-                        (this.board[y][x] === 1 && ownership[y][x] === 1) ||
-                        (this.board[y][x] === 2 && ownership[y][x] === -1)
-                    ) {
-                        ownership[y][x] = 0;
-                    }
-
-                    // Any stone on the board means one less point for
-                    // the corresponding player, whether it's a
-                    // prisoner, a live stone that doesn't count as
-                    // territory, or (does this even happen?) a stone
-                    // of unknown status.
-                    if (this.board[y][x] === 1) {
-                        // black stone gives White a point
-                        estimated_score -= 1;
-                    } else {
-                        // white stone gives Black a point
-                        estimated_score += 1;
-                    }
-                }
             }
         }
 
-        // Account for already-captured prisoners in Japanese rules.
-        if (territory_counting) {
-            estimated_score += this.engine.getBlackPrisoners();
-            estimated_score -= this.engine.getWhitePrisoners();
-        }
+        const adjusted = adjust_estimate(this.engine, this.board, ownership, estimated_score);
 
         OGSScoreEstimatorModule._free(ptr);
-        this.updateEstimate(estimated_score, ownership);
+        this.updateEstimate(adjusted.score, adjusted.ownership);
         return Promise.resolve();
     }
 
@@ -862,4 +825,73 @@ export class ScoreEstimator {
             fn_of_neighbor_pt(x, y);
         }
     }
+}
+
+/**
+ * Adjust Estimate to account for Ruleset (i.e. territory vs area) and captures
+ * @param engine Go engine is required because the ruleset is taken into account
+ * @param board the current board state
+ * @param area_map Representation of the ownership, 1=Black, -1=White, 0=Undecided
+ *                 using Area rules
+ * @param score estimated score (not accounting for captures)
+ */
+export function adjust_estimate(
+    engine: GoEngine,
+    board: Array<Array<JGOFNumericPlayerColor>>,
+    area_map: number[][],
+    score: number,
+) {
+    let adjusted_score = score - engine.getHandicapPointAdjustmentForWhite();
+    const { width, height } = get_dimensions(board);
+    const ownership = GoMath.makeMatrix(width, height);
+
+    // For Japanese rules we use territory counting.  Don't even
+    // attempt to handle rules with score_stones and not
+    // score_prisoners or vice-versa.
+    const territory_counting = !engine.score_stones && engine.score_prisoners;
+
+    for (let y = 0; y < board.length; ++y) {
+        for (let x = 0; x < board[y].length; ++x) {
+            ownership[y][x] = area_map[y][x];
+
+            if (territory_counting && board[y][x]) {
+                // Fix display and count in Japanese rules.
+
+                // Board/ownership being 1/1 or 2/-1 means it's a
+                // live stone; clear ownership so the display
+                // looks like it is using territory scoring.
+                if (
+                    (board[y][x] === 1 && area_map[y][x] === 1) ||
+                    (board[y][x] === 2 && area_map[y][x] === -1)
+                ) {
+                    ownership[y][x] = 0;
+                }
+
+                // Any stone on the board means one less point for
+                // the corresponding player, whether it's a
+                // prisoner, a live stone that doesn't count as
+                // territory, or (does this even happen?) a stone
+                // of unknown status.
+                if (board[y][x] === 1) {
+                    // black stone gives White a point
+                    adjusted_score -= 1;
+                } else {
+                    // white stone gives Black a point
+                    adjusted_score += 1;
+                }
+            }
+        }
+
+        // Account for already-captured prisoners in Japanese rules.
+        if (territory_counting) {
+            adjusted_score += engine.getBlackPrisoners();
+            adjusted_score -= engine.getWhitePrisoners();
+        }
+    }
+
+    return { score: adjusted_score, ownership };
+}
+
+function get_dimensions(board: Array<Array<unknown>>) {
+    return { width: board[0].length, height: board.length };
 }
