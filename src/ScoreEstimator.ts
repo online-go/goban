@@ -250,7 +250,6 @@ export class ScoreEstimator {
 
     engine: GoEngine;
     groups: Array<Array<SEGroup>>;
-    currentMarker: number;
     removal: Array<Array<number>>;
     goban_callback?: GobanCore;
     tolerance: number;
@@ -274,7 +273,6 @@ export class ScoreEstimator {
     ) {
         this.goban_callback = goban_callback;
 
-        this.currentMarker = 1;
         this.engine = engine;
         this.width = engine.width;
         this.height = engine.height;
@@ -594,9 +592,6 @@ export class ScoreEstimator {
     }
     getGroup(x: number, y: number): SEGroup {
         return this.groups[y][x];
-    }
-    incrementCurrentMarker(): void {
-        ++this.currentMarker;
     }
 
     /**
