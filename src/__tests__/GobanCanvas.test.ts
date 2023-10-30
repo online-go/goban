@@ -411,7 +411,7 @@ describe("onTap", () => {
             board: GoMath.makeMatrix(4, 2),
             removal: GoMath.makeMatrix(4, 2),
             territory: GoMath.makeMatrix(4, 2),
-            heat: GoMath.makeMatrix(4, 2),
+            ownership: GoMath.makeMatrix(4, 2),
         };
         goban.engine.estimateScore = jest.fn().mockReturnValue(mock_score_estimate);
 
