@@ -681,28 +681,6 @@ export class GoEngine extends EventEmitter<Events> {
         if (config.removed) {
             removed = this.decodeMoves(config.removed);
         }
-        if (
-            CLIENT &&
-            !this.territory_included_in_sgf &&
-            typeof config.removed === "undefined" &&
-            config.original_sgf &&
-            /[0-9.]+/.test(self.outcome)
-        ) {
-            // Game data for SGF uploaded games don't always include removed stones, so we use score
-            // estimator to find probably dead stones to get a closer approximation of what
-            // territories should be marked in the final board position.
-            //
-            // NOTE: Some Go clients (not OGS, at least for now) do include dead stones in their
-            // SGFs, which we respect if present and skip using the score estimator.
-            const se = new ScoreEstimator(
-                this.goban_callback,
-                this,
-                AUTOSCORE_TRIALS,
-                AUTOSCORE_TOLERANCE,
-                true,
-            );
-            removed = this.decodeMoves(se.getProbablyDead());
-        }
         if (removed) {
             for (let i = 0; i < removed.length; ++i) {
                 this.setRemoved(removed[i].x, removed[i].y, true, false);

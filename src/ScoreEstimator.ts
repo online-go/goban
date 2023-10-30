@@ -15,9 +15,9 @@
  */
 
 import { dup } from "./GoUtil";
-import { Intersection, encodeMove, encodeMoves } from "./GoMath";
+import { encodeMove, encodeMoves } from "./GoMath";
 import * as GoMath from "./GoMath";
-import { Group } from "./GoStoneGroup";
+import { GoStoneGroup } from "./GoStoneGroup";
 import { GoStoneGroups } from "./GoStoneGroups";
 import { GobanCore } from "./GobanCore";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
@@ -25,20 +25,14 @@ import { JGOFNumericPlayerColor } from "./JGOF";
 import { _ } from "./translate";
 
 declare const CLIENT: boolean;
-declare const SERVER: boolean;
 
-/* This script is used on both the front end and back end, and the way the
- * OGSScoreEstimator module is loaded is quite differente between the two.
- *
- * On the server, the OGSScoreEsimtator module is loaded by score-estimator.ts
- * and the set_OGSScoreEstimator function is called with the module.
- *
- * On the client, the OGSScoreEstimator script is loaded in an async fashion,
- * so at some point that global variable becomes not null and can be used.
+/* The OGSScoreEstimator method is a wasm compiled C program that
+ * does simple random playouts. On the client, the OGSScoreEstimator script
+ * is loaded in an async fashion, so at some point that global variable
+ * becomes not null and can be used.
  */
 
-/* In addition to the OGSScoreEstimator method, which is a wasm compiled
- * C program that does simple random playouts, we have a RemoteScoring system
+/* In addition to the OGSScoreEstimator method, we have a RemoteScoring system
  * which needs to be initialized by either the client or the server if we want
  * remote scoring enabled.
  */
@@ -46,14 +40,6 @@ declare const SERVER: boolean;
 declare let OGSScoreEstimator: any;
 let OGSScoreEstimator_initialized = false;
 let OGSScoreEstimatorModule: any;
-
-/* This is used on the server side */
-export function set_OGSScoreEstimator(mod: any): void {
-    OGSScoreEstimatorModule = mod;
-    init_score_estimator()
-        .then((tf) => console.info("Score estimator intialized"))
-        .catch((err) => console.error(err));
-}
 
 export interface ScoreEstimateRequest {
     player_to_move: "black" | "white";
@@ -84,82 +70,61 @@ export function set_remote_scorer(
 let init_promise: Promise<boolean>;
 
 export function init_score_estimator(): Promise<boolean> {
-    if (CLIENT) {
-        /*
-        if (remote_scorer) {
-            return Promise.resolve(true);
-        }
-        */
-
-        if (OGSScoreEstimator_initialized) {
-            //console.log("Already initialized");
-            return Promise.resolve(true);
-        }
-
-        if (init_promise) {
-            //console.log("An existing promise");
-            return init_promise;
-        }
-
-        try {
-            if (
-                !OGSScoreEstimatorModule &&
-                (("OGSScoreEstimator" in window) as any) &&
-                ((window as any)["OGSScoreEstimator"] as any)
-            ) {
-                OGSScoreEstimatorModule = (window as any)["OGSScoreEstimator"] as any;
-            }
-        } catch (e) {
-            console.error(e);
-        }
-
-        if (OGSScoreEstimatorModule) {
-            //console.log("Already loaded");
-            OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-            OGSScoreEstimator_initialized = true;
-            return Promise.resolve(true);
-        }
-
-        //console.log("Sync script");
-        const script: HTMLScriptElement = document.getElementById(
-            "ogs_score_estimator_script",
-        ) as HTMLScriptElement;
-        if (script) {
-            let resolve: (tf: boolean) => void;
-            //let reject;
-            init_promise = new Promise<boolean>((_resolve, _reject) => {
-                resolve = _resolve;
-                //reject  = _reject;
-            });
-
-            script.onload = () => {
-                OGSScoreEstimatorModule = OGSScoreEstimator;
-                OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-                OGSScoreEstimator_initialized = true;
-                resolve(true);
-            };
-
-            return init_promise;
-        } else {
-            return Promise.reject("score estimator not available");
-        }
+    if (!CLIENT) {
+        throw new Error("Only initialize WASM library on the client side");
     }
 
-    if (SERVER) {
+    if (OGSScoreEstimator_initialized) {
+        return Promise.resolve(true);
+    }
+
+    if (init_promise) {
+        return init_promise;
+    }
+
+    try {
+        if (
+            !OGSScoreEstimatorModule &&
+            (("OGSScoreEstimator" in window) as any) &&
+            ((window as any)["OGSScoreEstimator"] as any)
+        ) {
+            OGSScoreEstimatorModule = (window as any)["OGSScoreEstimator"] as any;
+        }
+    } catch (e) {
+        console.error(e);
+    }
+
+    if (OGSScoreEstimatorModule) {
         OGSScoreEstimatorModule = OGSScoreEstimatorModule();
         OGSScoreEstimator_initialized = true;
         return Promise.resolve(true);
     }
 
-    // this can't be reached so long as one of CLIENT or SERVER is set, which
-    // should always be the case.
-    throw new Error("Unreachable code reached");
+    const script: HTMLScriptElement = document.getElementById(
+        "ogs_score_estimator_script",
+    ) as HTMLScriptElement;
+    if (script) {
+        let resolve: (tf: boolean) => void;
+        init_promise = new Promise<boolean>((_resolve, _reject) => {
+            resolve = _resolve;
+        });
+
+        script.onload = () => {
+            OGSScoreEstimatorModule = OGSScoreEstimator;
+            OGSScoreEstimatorModule = OGSScoreEstimatorModule();
+            OGSScoreEstimator_initialized = true;
+            resolve(true);
+        };
+
+        return init_promise;
+    } else {
+        return Promise.reject("score estimator not available");
+    }
 }
 
 interface SEPoint {
     x: number;
     y: number;
-    color?: JGOFNumericPlayerColor;
 }
 
 class SEGroup {
@@ -170,11 +135,8 @@ class SEGroup {
     id: number;
     color: JGOFNumericPlayerColor;
     removed: boolean;
-    estimated_score: number;
-    estimated_hard_score: number;
     neighbors: Array<SEGroup>;
     neighbor_map: { [group_id: string]: boolean };
-    liberties: number = 0;
 
     constructor(se: ScoreEstimator, color: JGOFNumericPlayerColor, id: number) {
         this.points = [];
@@ -186,13 +148,9 @@ class SEGroup {
         this.neighboring_enemy = [];
         this.neighbor_map = {};
         this.removed = false;
-        this.estimated_score = 0.0;
-        this.estimated_hard_score = 0.0;
-
-        // this.liberties is set by ScoreEstimator.resetGroups */
     }
-    add(i: number, j: number, color: JGOFNumericPlayerColor) {
-        this.points.push({ x: i, y: j, color: color });
+    add(i: number, j: number) {
+        this.points.push({ x: i, y: j });
     }
     foreachPoint(fn: (pt: SEPoint) => void) {
         for (let i = 0; i < this.points.length; ++i) {
@@ -247,23 +205,17 @@ class SEGroup {
     }
     foreachNeighborGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.neighbors.length; ++i) {
-            //if (!this.neighbors[i].removed) {
             fn(this.neighbors[i]);
-            //}
         }
     }
     foreachNeighborSpaceGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.neighboring_space.length; ++i) {
-            //if (!this.neighboring_space[i].removed) {
             fn(this.neighboring_space[i]);
-            //}
         }
     }
     foreachNeighborEnemyGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.neighboring_enemy.length; ++i) {
-            //if (!this.neighboring_enemy[i].removed) {
             fn(this.neighboring_enemy[i]);
-            //}
         }
     }
     setRemoved(removed: boolean): void {
@@ -279,13 +231,6 @@ export class ScoreEstimator {
     width: number;
     height: number;
     board: Array<Array<JGOFNumericPlayerColor>>;
-    white_prisoners: number = 0;
-    black_prisoners: number = 0;
-    //score_stones:boolean;
-    //score_prisoners:boolean;
-    //score_territory:boolean;
-    //score_territory_in_seki:boolean;
-    removed: Array<Array<number>>;
     white: PlayerScore = {
         total: 0,
         stones: 0,
@@ -307,23 +252,16 @@ export class ScoreEstimator {
 
     engine: GoEngine;
     groups: Array<Array<SEGroup>>;
-    currentMarker: number;
-    removal: Array<Array<number>>; // TODO: This is defined to be a dup of this.removed, can we remove that?
+    removal: Array<Array<number>>;
     goban_callback?: GobanCore;
     tolerance: number;
     group_list: Array<SEGroup>;
-    marks: Array<Array<number>>;
     amount: number = NaN;
-    amount_fractional: string = "[unset]";
     ownership: Array<Array<number>>;
-    area: Array<Array<number>>; // hard numeric values
     territory: Array<Array<number>>;
     trials: number;
-    estimated_area: Array<Array<number>>;
     winner: string = "";
-    heat: Array<Array<number>>;
     color_to_move: "black" | "white";
-    estimated_score: number;
     estimated_hard_score: number;
     when_ready: Promise<void>;
     prefer_remote: boolean;
@@ -337,21 +275,15 @@ export class ScoreEstimator {
     ) {
         this.goban_callback = goban_callback;
 
-        this.currentMarker = 1;
         this.engine = engine;
         this.width = engine.width;
         this.height = engine.height;
         this.color_to_move = engine.colorToMove();
         this.board = dup(engine.board);
-        this.removal = this.removed = GoMath.makeMatrix(this.width, this.height, 0);
-        this.marks = GoMath.makeMatrix(this.width, this.height, 0);
-        this.area = GoMath.makeMatrix(this.width, this.height, 0);
+        this.removal = GoMath.makeMatrix(this.width, this.height, 0);
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
-        this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
-        this.estimated_area = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
-        this.estimated_score = 0.0;
         this.estimated_hard_score = 0.0;
         this.group_list = [];
         this.trials = trials;
@@ -360,7 +292,6 @@ export class ScoreEstimator {
 
         this.resetGroups();
         this.when_ready = this.estimateScore(this.trials, this.tolerance);
-        //this.sealDame();
     }
 
     public estimateScore(trials: number, tolerance: number): Promise<void> {
@@ -369,13 +300,13 @@ export class ScoreEstimator {
         }
 
         if (remote_scorer) {
-            return this.estimateScoreRemote(tolerance);
+            return this.estimateScoreRemote();
         } else {
             return this.estimateScoreWASM(trials, tolerance);
         }
     }
 
-    private estimateScoreRemote(tolerance: number = 0.25): Promise<void> {
+    private estimateScoreRemote(): Promise<void> {
         const komi = this.engine.komi;
         const captures_delta = this.engine.score_prisoners
             ? this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners()
@@ -476,7 +407,7 @@ export class ScoreEstimator {
             tr: number,
             to: number,
         ) => number;
-        let estimated_score = estimate(
+        const estimated_score = estimate(
             this.width,
             this.height,
             ptr,
@@ -484,92 +415,37 @@ export class ScoreEstimator {
             trials,
             tolerance,
         );
-        estimated_score -= this.engine.getHandicapPointAdjustmentForWhite();
-
-        // For Japanese rules we use territory counting.  Don't even
-        // attempt to handle rules with score_stones and not
-        // score_prisoners or vice-versa.
-        const territory_counting = !this.engine.score_stones && this.engine.score_prisoners;
 
         const ownership = GoMath.makeMatrix(this.width, this.height, 0);
         i = 0;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                //ownership[y][x] = ints[i] < 0 ? 2 : ints[i];
                 ownership[y][x] = ints[i];
                 ++i;
-
-                if (territory_counting && this.board[y][x]) {
-                    // Fix display and count in Japanese rules.
-
-                    // Board/ownership being 1/1 or 2/-1 means it's a
-                    // live stone; clear ownership so the display
-                    // looks like it is using territory scoring.
-                    if (
-                        (this.board[y][x] === 1 && ownership[y][x] === 1) ||
-                        (this.board[y][x] === 2 && ownership[y][x] === -1)
-                    ) {
-                        ownership[y][x] = 0;
-                    }
-
-                    // Any stone on the board means one less point for
-                    // the corresponding player, whether it's a
-                    // prisoner, a live stone that doesn't count as
-                    // territory, or (does this even happen?) a stone
-                    // of unknown status.
-                    if (this.board[y][x] === 1) {
-                        // black stone gives White a point
-                        estimated_score -= 1;
-                    } else {
-                        // white stone gives Black a point
-                        estimated_score += 1;
-                    }
-                }
             }
         }
 
-        // Account for already-captured prisoners in Japanese rules.
-        if (territory_counting) {
-            estimated_score += this.engine.getBlackPrisoners();
-            estimated_score -= this.engine.getWhitePrisoners();
-        }
+        const adjusted = adjust_estimate(this.engine, this.board, ownership, estimated_score);
 
         OGSScoreEstimatorModule._free(ptr);
-        this.updateEstimate(estimated_score, ownership);
+        this.updateEstimate(adjusted.score, adjusted.ownership);
         return Promise.resolve();
     }
 
     updateEstimate(estimated_score: number, ownership: Array<Array<number>>, score?: number) {
         /* Build up our heat map and ownership */
         /* negative for black, 0 for neutral, positive for white */
-        //this.heat = GoMath.makeMatrix(this.width, this.height, 0.0);
         this.ownership = ownership;
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                this.heat[y][x] = ownership[y][x];
-                this.area[y][x] = ownership[y][x] < 0 ? 2 : ownership[y][x];
-                //this.area[y][x] = ownership[y][x];
-                this.estimated_area[y][x] = this.area[y][x];
-            }
-        }
-        this.estimated_score = estimated_score - this.engine.komi;
         this.estimated_hard_score = estimated_score - this.engine.komi;
 
         if (typeof score === "undefined") {
             this.winner = this.estimated_hard_score > 0 ? _("Black") : _("White");
             this.amount = Math.abs(this.estimated_hard_score);
-            this.amount_fractional = Math.abs(this.estimated_score).toFixed(1);
         } else {
             this.winner = score > 0 ? _("Black") : _("White");
             this.amount = Math.abs(score);
-            this.amount_fractional = Math.abs(score).toFixed(1);
         }
 
-        /*
-        if (this.goban_callback && this.goban_callback.heatmapUpdated) {
-            this.goban_callback.heatmapUpdated();
-        }
-        */
         if (this.goban_callback && this.goban_callback.updateScoreEstimation) {
             this.goban_callback.updateScoreEstimation();
         }
@@ -579,34 +455,17 @@ export class ScoreEstimator {
         let ret = "";
         const arr = [];
 
-        if (remote_scorer) {
-            for (let y = 0; y < this.height; ++y) {
-                for (let x = 0; x < this.width; ++x) {
-                    const current = this.board[y][x];
-                    const estimated =
-                        this.ownership[y][x] < -this.tolerance
-                            ? 2 // white
-                            : this.ownership[y][x] > this.tolerance
-                            ? 1 // black
-                            : 0; // unclear
-                    if (estimated === 0 /* dame */ || (current !== 0 && current !== estimated)) {
-                        arr.push(encodeMove(x, y));
-                    }
-                }
-            }
-        } else {
-            // Old WASM
-            for (let y = 0; y < this.height; ++y) {
-                for (let x = 0; x < this.width; ++x) {
-                    if (
-                        //(this.board[y][x] === 0 && this.area[y][x] === 0) /* dame */
-                        //||
-                        //(this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x]) /* captured */
-                        this.area[y][x] === 0 ||
-                        (this.board[y][x] !== 0 && this.area[y][x] !== this.board[y][x])
-                    ) {
-                        arr.push(encodeMove(x, y));
-                    }
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                const current = this.board[y][x];
+                const estimated =
+                    this.ownership[y][x] < -this.tolerance
+                        ? 2 // white
+                        : this.ownership[y][x] > this.tolerance
+                        ? 1 // black
+                        : 0; // unclear
+                if (estimated === 0 /* dame */ || (current !== 0 && current !== estimated)) {
+                    arr.push(encodeMove(x, y));
                 }
             }
         }
@@ -621,66 +480,22 @@ export class ScoreEstimator {
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.group_list = [];
-        let stack = null;
 
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (!this.groups[y][x]) {
-                    this.incrementCurrentMarker(); /* clear marks */
-                    const color = this.board[y][x];
-                    const g = new SEGroup(this, color, this.currentMarker);
-                    this.group_list.push(g);
-                    stack = [x, y];
-                    while (stack.length) {
-                        const yy = stack.pop();
-                        const xx = stack.pop();
-                        if (xx === undefined || yy === undefined) {
-                            throw new Error(`Invalid stack state`);
-                        }
+        const go_stone_groups = new GoStoneGroups(this);
 
-                        if (this.marks[yy][xx] === this.currentMarker) {
-                            continue;
-                        }
-                        this.marks[yy][xx] = this.currentMarker;
-                        if (this.board[yy][xx] === color || (color === 0 && this.removed[yy][xx])) {
-                            this.groups[yy][xx] = g;
-                            g.add(xx, yy, color);
-                            this.foreachNeighbor({ x: xx, y: yy }, push_on_stack);
-                        }
-                    }
-                }
-            }
-        }
-
-        function push_on_stack(x: number, y: number) {
-            stack.push(x);
-            stack.push(y);
-        }
-
-        /* compute group neighborhoodship */
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                this.foreachNeighbor({ x: x, y: y }, (xx, yy) => {
-                    if (this.groups[y][x].id !== this.groups[yy][xx].id) {
-                        this.groups[y][x].addNeighbor(this.groups[yy][xx]);
-                        this.groups[yy][xx].addNeighbor(this.groups[y][x]);
-                    }
-                });
-            }
-        }
-
-        /* compute liberties */
-        this.foreachGroup((g: SEGroup) => {
-            if (g.color) {
-                let liberties = 0;
-                g.foreachNeighboringPoint((pt) => {
-                    if (this.board[pt.y][pt.x] === 0 || this.removed[pt.y][pt.x]) {
-                        ++liberties;
-                    }
-                });
-                g.liberties = liberties;
-            }
+        go_stone_groups.foreachGroup((gs_grp) => {
+            const se_grp = make_se_group_from_gs_group(gs_grp, this);
+            gs_grp.points.forEach((pt) => {
+                this.groups[pt.y][pt.x] = se_grp;
+            });
+            this.group_list.push(se_grp);
         });
+
+        for (const grp of this.group_list) {
+            for (const gs_neighbor of go_stone_groups.groups[grp.id].neighbors) {
+                grp.addNeighbor(this.group_list[gs_neighbor.id - 1]);
+            }
+        }
     }
     foreachGroup(fn: (group: SEGroup) => void): void {
         for (let i = 0; i < this.group_list.length; ++i) {
@@ -697,7 +512,6 @@ export class ScoreEstimator {
         this.estimateScore(this.trials, this.tolerance).catch(() => {
             /* empty */
         });
-        //this.resetGroups();
     }
     toggleMetaGroupRemoval(x: number, y: number): void {
         const already_done: { [k: string]: boolean } = {};
@@ -781,9 +595,6 @@ export class ScoreEstimator {
     getGroup(x: number, y: number): SEGroup {
         return this.groups[y][x];
     }
-    incrementCurrentMarker(): void {
-        ++this.currentMarker;
-    }
 
     /**
      * This gets run after we've instructed the estimator how/when to fill dame,
@@ -816,7 +627,7 @@ export class ScoreEstimator {
         /* clear removed */
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                if (this.removed[y][x]) {
+                if (this.removal[y][x]) {
                     if (this.board[y][x] === 1) {
                         ++removed_black;
                     }
@@ -828,14 +639,11 @@ export class ScoreEstimator {
             }
         }
 
-        //if (this.phase !== "play") {
         if (this.engine.score_territory) {
             const groups = new GoStoneGroups(this);
-            //console.log(gm);
 
             groups.foreachGroup((gr) => {
                 if (gr.is_territory) {
-                    //console.log(gr);
                     if (!this.engine.score_territory_in_seki && gr.is_territory_in_seki) {
                         return;
                     }
@@ -849,7 +657,6 @@ export class ScoreEstimator {
                         "What should be unreached code is running, should probably be running " +
                             "this[color].territory += markScored(gr.points, false);",
                     );
-                    //this[color].territory += markScored(gr.points, false);
                 }
             });
         }
@@ -869,11 +676,10 @@ export class ScoreEstimator {
                 }
             }
         }
-        //}
 
         if (this.engine.score_prisoners) {
-            this.black.prisoners = this.black_prisoners + removed_white;
-            this.white.prisoners = this.white_prisoners + removed_black;
+            this.black.prisoners = removed_white;
+            this.white.prisoners = removed_black;
         }
 
         this.black.total =
@@ -887,59 +693,82 @@ export class ScoreEstimator {
 
         return this;
     }
-    private foreachNeighbor(
-        pt_or_group: Intersection | Group,
-        fn_of_neighbor_pt: (x: number, y: number) => void,
-    ): void {
-        const self = this;
-        let group: Group;
-        let done_array: Array<boolean>;
+}
 
-        if (pt_or_group instanceof Array) {
-            group = pt_or_group as Group;
-            done_array = new Array(this.height * this.width);
-            for (let i = 0; i < group.length; ++i) {
-                done_array[group[i].x + group[i].y * this.width] = true;
-            }
-            for (let i = 0; i < group.length; ++i) {
-                const pt = group[i];
-                if (pt.x - 1 >= 0) {
-                    checkAndDo(pt.x - 1, pt.y);
+/**
+ * Adjust Estimate to account for Ruleset (i.e. territory vs area) and captures
+ * @param engine Go engine is required because the ruleset is taken into account
+ * @param board the current board state
+ * @param area_map Representation of the ownership, 1=Black, -1=White, 0=Undecided
+ *                 using Area rules
+ * @param score estimated score (not accounting for captures)
+ */
+export function adjust_estimate(
+    engine: GoEngine,
+    board: Array<Array<JGOFNumericPlayerColor>>,
+    area_map: number[][],
+    score: number,
+) {
+    let adjusted_score = score - engine.getHandicapPointAdjustmentForWhite();
+    const { width, height } = get_dimensions(board);
+    const ownership = GoMath.makeMatrix(width, height);
+
+    // For Japanese rules we use territory counting.  Don't even
+    // attempt to handle rules with score_stones and not
+    // score_prisoners or vice-versa.
+    const territory_counting = !engine.score_stones && engine.score_prisoners;
+
+    for (let y = 0; y < board.length; ++y) {
+        for (let x = 0; x < board[y].length; ++x) {
+            ownership[y][x] = area_map[y][x];
+
+            if (territory_counting && board[y][x]) {
+                // Fix display and count in Japanese rules.
+
+                // Board/ownership being 1/1 or 2/-1 means it's a
+                // live stone; clear ownership so the display
+                // looks like it is using territory scoring.
+                if (
+                    (board[y][x] === 1 && area_map[y][x] === 1) ||
+                    (board[y][x] === 2 && area_map[y][x] === -1)
+                ) {
+                    ownership[y][x] = 0;
                 }
-                if (pt.x + 1 !== this.width) {
-                    checkAndDo(pt.x + 1, pt.y);
+
+                // Any stone on the board means one less point for
+                // the corresponding player, whether it's a
+                // prisoner, a live stone that doesn't count as
+                // territory, or (does this even happen?) a stone
+                // of unknown status.
+                if (board[y][x] === 1) {
+                    // black stone gives White a point
+                    adjusted_score -= 1;
+                } else {
+                    // white stone gives Black a point
+                    adjusted_score += 1;
                 }
-                if (pt.y - 1 >= 0) {
-                    checkAndDo(pt.x, pt.y - 1);
-                }
-                if (pt.y + 1 !== this.height) {
-                    checkAndDo(pt.x, pt.y + 1);
-                }
-            }
-        } else {
-            const pt = pt_or_group;
-            if (pt.x - 1 >= 0) {
-                fn_of_neighbor_pt(pt.x - 1, pt.y);
-            }
-            if (pt.x + 1 !== this.width) {
-                fn_of_neighbor_pt(pt.x + 1, pt.y);
-            }
-            if (pt.y - 1 >= 0) {
-                fn_of_neighbor_pt(pt.x, pt.y - 1);
-            }
-            if (pt.y + 1 !== this.height) {
-                fn_of_neighbor_pt(pt.x, pt.y + 1);
             }
         }
 
-        function checkAndDo(x: number, y: number): void {
-            const idx = x + y * self.width;
-            if (done_array[idx]) {
-                return;
-            }
-            done_array[idx] = true;
-
-            fn_of_neighbor_pt(x, y);
+        // Account for already-captured prisoners in Japanese rules.
+        if (territory_counting) {
+            adjusted_score += engine.getBlackPrisoners();
+            adjusted_score -= engine.getWhitePrisoners();
         }
     }
+
+    return { score: adjusted_score, ownership };
+}
+
+function get_dimensions(board: Array<Array<unknown>>) {
+    return { width: board[0].length, height: board.length };
+}
+
+/**
+ * SE Group and GoStoneGroup have a slightly different interface.
+ */
+function make_se_group_from_gs_group(gsg: GoStoneGroup, se: ScoreEstimator) {
+    const se_group = new SEGroup(se, gsg.color, gsg.id);
+    se_group.points = gsg.points.map((pt) => pt);
+    return se_group;
 }
