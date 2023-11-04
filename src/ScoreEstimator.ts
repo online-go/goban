@@ -58,6 +58,27 @@ export function set_remote_scorer(
     remote_scorer = scorer;
 }
 
+/**
+ * The interface that local estimators should follow.
+ *
+ * @param board representation of the board with any dead stones already
+ *              removed (black = 1, empty = 0, white = -1)
+ * @param color_to_move the player whose turn it is
+ * @param trials number of playouts.  Not applicable to all estimators, but
+ *               higher generally means higher accuracy and higher compute cost
+ * @param tolerance (0.0-1.0) confidence required to mark an intersection not neutral.
+ */
+type LocalEstimator = (
+    board: number[][],
+    color_to_move: "black" | "white",
+    trials: number,
+    tolerance: number,
+) => { ownership: GoMath.NumberMatrix; estimated_score: number };
+let local_scorer = estimateScoreWasm;
+export function set_local_scorer(scorer: LocalEstimator) {
+    local_scorer = scorer;
+}
+
 interface SEPoint {
     x: number;
     y: number;
@@ -315,7 +336,7 @@ export class ScoreEstimator {
             }
         }
 
-        const { ownership, estimated_score } = estimateScoreWasm(
+        const { ownership, estimated_score } = local_scorer(
             board,
             this.engine.colorToMove(),
             trials,
