@@ -1,5 +1,11 @@
 import { GoEngine } from "../GoEngine";
-import { ScoreEstimator, adjust_estimate, set_remote_scorer } from "../ScoreEstimator";
+import {
+    ScoreEstimator,
+    adjust_estimate,
+    set_local_scorer,
+    set_remote_scorer,
+} from "../ScoreEstimator";
+import { estimateScoreVoronoi } from "../local_estimators/voronoi";
 
 describe("adjust_estimate", () => {
     const BOARD = [
@@ -63,6 +69,8 @@ describe("ScoreEstimator", () => {
         set_remote_scorer(async () => {
             return { ownership: OWNERSHIP, score: -7.5 };
         });
+
+        set_local_scorer(estimateScoreVoronoi);
     });
 
     afterEach(() => {
@@ -97,7 +105,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("amount and winner", async () => {
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, prefer_remote);
+        const se = new ScoreEstimator(undefined, engine, trials, tolerance, false);
 
         await se.when_ready;
 
@@ -105,5 +113,48 @@ describe("ScoreEstimator", () => {
         // They are used in the UI as of this writing.
         expect(se.winner).toBe("White");
         expect(se.amount).toBe(0.5);
+    });
+
+    test("local", async () => {
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+
+        await se.when_ready;
+
+        expect(se.ownership).toEqual([
+            [1, 0, 0, -1],
+            [1, 0, 0, -1],
+        ]);
+    });
+
+    test("local 9x9 unfinished", async () => {
+        const moves = [
+            [4, 4],
+            [2, 4],
+            [6, 4],
+            [3, 6],
+            [2, 2],
+            [3, 3],
+            [5, 2],
+            [3, 2],
+            [4, 1],
+            [3, 1],
+        ];
+        const engine = new GoEngine({ komi: KOMI, width: 9, height: 9, rules: "chinese" });
+        for (const [x, y] of moves) {
+            engine.place(x, y);
+        }
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+
+        expect(se.ownership).toEqual([
+            [0, 0, 0, -1, 1, 1, 1, 1, 1],
+            [0, 0, 0, -1, 1, 1, 1, 1, 1],
+            [1, 1, 1, -1, 0, 1, 1, 1, 1],
+            [0, 0, 0, -1, 0, 1, 1, 1, 1],
+            [-1, -1, -1, 0, 1, 1, 1, 1, 1],
+            [-1, -1, -1, -1, 1, 1, 1, 1, 1],
+            [-1, -1, -1, -1, -1, -1, 1, 1, 1],
+            [-1, -1, -1, -1, -1, -1, 1, 1, 1],
+            [-1, -1, -1, -1, -1, -1, 1, 1, 1],
+        ]);
     });
 });

@@ -25,7 +25,8 @@ import { JGOFNumericPlayerColor } from "./JGOF";
 import { _ } from "./translate";
 import { estimateScoreWasm } from "./local_estimators/wasm_estimator";
 
-export { init_score_estimator } from "./local_estimators/wasm_estimator";
+export { init_score_estimator, estimateScoreWasm } from "./local_estimators/wasm_estimator";
+export { estimateScoreVoronoi } from "./local_estimators/voronoi";
 
 /* In addition to the local estimators, we have a RemoteScoring system
  * which needs to be initialized by either the client or the server if we want
