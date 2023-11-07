@@ -157,4 +157,170 @@ describe("ScoreEstimator", () => {
             [-1, -1, -1, -1, -1, -1, 1, 1, 1],
         ]);
     });
+
+    test("score()", async () => {
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        se.score();
+
+        expect(se.white).toEqual({
+            handicap: 0,
+            komi: 0.5,
+            prisoners: 0,
+            scoring_positions: "dadb",
+            stones: 0,
+            territory: 0,
+            total: 0.5,
+        });
+        expect(se.black).toEqual({
+            handicap: 0,
+            komi: 0,
+            prisoners: 0,
+            scoring_positions: "aaab",
+            stones: 0,
+            territory: 0,
+            total: 0,
+        });
+    });
+
+    test("score() chinese", async () => {
+        const engine = new GoEngine({ komi: KOMI, width: 4, height: 2, rules: "chinese" });
+        engine.place(1, 0);
+        engine.place(2, 0);
+        engine.place(1, 1);
+        engine.place(2, 1);
+
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        se.score();
+
+        expect(se.white).toEqual({
+            handicap: 0,
+            komi: 0.5,
+            prisoners: 0,
+            scoring_positions: "dadbcacb",
+            stones: 2,
+            territory: 0,
+            total: 2.5,
+        });
+        expect(se.black).toEqual({
+            handicap: 0,
+            komi: 0,
+            prisoners: 0,
+            scoring_positions: "aaabbabb",
+            stones: 2,
+            territory: 0,
+            total: 2,
+        });
+    });
+
+    test("don't score territory in seki (japanese)", async () => {
+        // . x o .
+        // x x . o
+
+        const engine = new GoEngine({ komi: KOMI, width: 4, height: 2, rules: "japanese" });
+        engine.place(1, 0);
+        engine.place(2, 0);
+        engine.place(1, 1);
+        engine.place(3, 1);
+        engine.place(0, 1);
+
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        se.score();
+
+        expect(se.white).toEqual({
+            handicap: 0,
+            komi: 0.5,
+            prisoners: 0,
+            scoring_positions: "",
+            stones: 0,
+            territory: 0,
+            total: 0.5,
+        });
+        expect(se.black).toEqual({
+            handicap: 0,
+            komi: 0,
+            prisoners: 0,
+            scoring_positions: "",
+            stones: 0,
+            territory: 0,
+            total: 0,
+        });
+    });
+
+    test("score() with removed stones", async () => {
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        se.toggleMetaGroupRemoval(1, 0);
+        se.toggleMetaGroupRemoval(2, 0);
+        await se.when_ready;
+
+        se.score();
+
+        expect(se.white).toEqual({
+            handicap: 0,
+            komi: 0.5,
+            prisoners: 2,
+            scoring_positions: "",
+            stones: 0,
+            territory: 0,
+            total: 2.5,
+        });
+        expect(se.black).toEqual({
+            handicap: 0,
+            komi: 0,
+            prisoners: 2,
+            scoring_positions: "",
+            stones: 0,
+            territory: 0,
+            total: 2,
+        });
+    });
+
+    test("getStoneRemovalString()", async () => {
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        se.toggleMetaGroupRemoval(1, 0);
+        se.toggleMetaGroupRemoval(2, 0);
+        await se.when_ready;
+
+        expect(se.getStoneRemovalString()).toBe("babbcacb");
+
+        se.clearRemoved();
+
+        expect(se.getStoneRemovalString()).toBe("");
+    });
+
+    test("goban callback", async () => {
+        const fake_goban = {
+            updateScoreEstimation: jest.fn(),
+            setForRemoval: jest.fn(),
+        };
+
+        const se = new ScoreEstimator(fake_goban as any, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        expect(fake_goban.updateScoreEstimation).toBeCalled();
+
+        se.setRemoved(1, 0, 1);
+        expect(fake_goban.setForRemoval).toBeCalledWith(1, 0, 1);
+    });
+
+    test("getProbablyDead", async () => {
+        const markBoardAllBlack = () => [
+            [1, 1, 1, 1],
+            [1, 1, 1, 1],
+        ];
+        set_local_scorer(markBoardAllBlack);
+
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        // Note (bpj): I think this might be a bug
+        // This is marking all stones dead, but the black stones should still be alive.
+        expect(se.getProbablyDead()).toBe("babbcacb");
+        // expect(se.getProbablyDead()).toBe("cacb");
+    });
 });
