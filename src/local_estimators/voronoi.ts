@@ -16,12 +16,11 @@
 
 import { makeEmptyObjectMatrix, makeMatrix } from "../GoMath";
 
-/* The OGSScoreEstimator method is a wasm compiled C program that
- * does simple random playouts. On the client, the OGSScoreEstimator script
- * is loaded in an async fashion, so at some point that global variable
- * becomes not null and can be used.
+/**
+ * This estimator simply marks territory for whichever color has a
+ * closer stone (Manhattan distance).  See discussion at
+ * https://forums.online-go.com/t/weak-score-estimator-and-japanese-rules/41041/70
  */
-
 export function estimateScoreVoronoi(board: number[][]) {
     const black_distance_map = distanceMap(board, 1);
     const white_distance_map = distanceMap(board, -1);
