@@ -254,13 +254,13 @@ export class ScoreEstimator {
 
     public estimateScore(trials: number, tolerance: number): Promise<void> {
         if (!this.prefer_remote || this.height > 19 || this.width > 19) {
-            return this.estimateScoreWASM(trials, tolerance);
+            return this.estimateScoreLocal(trials, tolerance);
         }
 
         if (remote_scorer) {
             return this.estimateScoreRemote();
         } else {
-            return this.estimateScoreWASM(trials, tolerance);
+            return this.estimateScoreLocal(trials, tolerance);
         }
     }
 
@@ -319,7 +319,7 @@ export class ScoreEstimator {
 
     /* Somewhat deprecated in-browser score estimator that utilizes our WASM compiled
      * OGSScoreEstimatorModule */
-    private estimateScoreWASM(trials: number, tolerance: number): Promise<void> {
+    private estimateScoreLocal(trials: number, tolerance: number): Promise<void> {
         if (!trials) {
             trials = 1000;
         }
