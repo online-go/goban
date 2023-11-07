@@ -74,7 +74,7 @@ type LocalEstimator = (
     color_to_move: "black" | "white",
     trials: number,
     tolerance: number,
-) => { ownership: GoMath.NumberMatrix; estimated_score: number };
+) => GoMath.NumberMatrix;
 let local_scorer = estimateScoreWasm;
 export function set_local_scorer(scorer: LocalEstimator) {
     local_scorer = scorer;
@@ -337,13 +337,9 @@ export class ScoreEstimator {
             }
         }
 
-        const { ownership, estimated_score } = local_scorer(
-            board,
-            this.engine.colorToMove(),
-            trials,
-            tolerance,
-        );
+        const ownership = local_scorer(board, this.engine.colorToMove(), trials, tolerance);
 
+        const estimated_score = sum_board(ownership);
         const adjusted = adjust_estimate(this.engine, this.board, ownership, estimated_score);
 
         this.updateEstimate(adjusted.score, adjusted.ownership);
@@ -680,6 +676,17 @@ export function adjust_estimate(
 
 function get_dimensions(board: Array<Array<unknown>>) {
     return { width: board[0].length, height: board.length };
+}
+
+function sum_board(board: GoMath.NumberMatrix) {
+    const { width, height } = get_dimensions(board);
+    let sum = 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            sum += board[y][x];
+        }
+    }
+    return sum;
 }
 
 /**

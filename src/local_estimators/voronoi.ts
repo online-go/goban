@@ -42,7 +42,7 @@ export function estimateScoreVoronoi(board: number[][]) {
         }
     }
 
-    return { ownership, estimated_score: 0 };
+    return ownership;
 }
 
 export function distanceMap(board: number[][], color: -1 | 1) {

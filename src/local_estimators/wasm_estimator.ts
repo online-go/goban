@@ -121,14 +121,7 @@ export function estimateScoreWasm(
         tr: number,
         to: number,
     ) => number;
-    const estimated_score = estimate(
-        width,
-        height,
-        ptr,
-        color_to_move === "black" ? 1 : -1,
-        trials,
-        tolerance,
-    );
+    estimate(width, height, ptr, color_to_move === "black" ? 1 : -1, trials, tolerance);
 
     const ownership = GoMath.makeMatrix(width, height, 0);
     i = 0;
@@ -141,5 +134,5 @@ export function estimateScoreWasm(
 
     OGSScoreEstimatorModule._free(ptr);
 
-    return { ownership, estimated_score };
+    return ownership;
 }

@@ -39,7 +39,7 @@ test("one color only scores board for that color", () => {
         [0, 0, 0],
     ];
 
-    expect(estimateScoreVoronoi(board).ownership).toEqual([
+    expect(estimateScoreVoronoi(board)).toEqual([
         [1, 1, 1],
         [1, 1, 1],
         [1, 1, 1],
