@@ -14,23 +14,7 @@
  * limitations under the License.
  */
 
-import { distanceMap, estimateScoreVoronoi } from "../voronoi";
-
-test("distanceMap", async () => {
-    const board = [
-        [0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0],
-        [0, 0, 1, 0, 0],
-        [0, 0, 0, 0, 0],
-    ];
-
-    expect(distanceMap(board, 1)).toEqual([
-        [2, 1, 2, 3, 4],
-        [1, 0, 1, 2, 3],
-        [2, 1, 0, 1, 2],
-        [3, 2, 1, 2, 3],
-    ]);
-});
+import { estimateScoreVoronoi } from "../voronoi";
 
 test("one color only scores board for that color", () => {
     const board = [
@@ -43,5 +27,25 @@ test("one color only scores board for that color", () => {
         [1, 1, 1],
         [1, 1, 1],
         [1, 1, 1],
+    ]);
+});
+
+test("border is one stone wide", () => {
+    const board = [
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 0, -1, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+    ];
+
+    expect(estimateScoreVoronoi(board)).toEqual([
+        [1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 1, 0, -1],
+        [1, 1, 1, 0, -1, -1],
+        [1, 1, 0, -1, -1, -1],
+        [1, 0, -1, -1, -1, -1],
+        [0, -1, -1, -1, -1, -1],
     ]);
 });

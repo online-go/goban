@@ -146,8 +146,8 @@ describe("ScoreEstimator", () => {
         const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
 
         expect(se.ownership).toEqual([
-            [0, 0, 0, -1, 1, 1, 1, 1, 1],
-            [0, 0, 0, -1, 1, 1, 1, 1, 1],
+            [1, 0, -1, -1, 1, 1, 1, 1, 1],
+            [1, 1, 0, -1, 1, 1, 1, 1, 1],
             [1, 1, 1, -1, 0, 1, 1, 1, 1],
             [0, 0, 0, -1, 0, 1, 1, 1, 1],
             [-1, -1, -1, 0, 1, 1, 1, 1, 1],

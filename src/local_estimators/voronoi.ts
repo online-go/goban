@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { makeEmptyObjectMatrix, makeMatrix } from "../GoMath";
+import { dup } from "../GoUtil";
 
 /**
  * This estimator simply marks territory for whichever color has a
@@ -22,52 +22,34 @@ import { makeEmptyObjectMatrix, makeMatrix } from "../GoMath";
  * https://forums.online-go.com/t/weak-score-estimator-and-japanese-rules/41041/70
  */
 export function estimateScoreVoronoi(board: number[][]) {
-    const black_distance_map = distanceMap(board, 1);
-    const white_distance_map = distanceMap(board, -1);
-
     const { width, height } = get_dims(board);
-
-    const ownership = makeMatrix(width, height);
-
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            if (white_distance_map[y][x] < black_distance_map[y][x]) {
-                ownership[y][x] = -1;
-            } else if (white_distance_map[y][x] > black_distance_map[y][x]) {
-                ownership[y][x] = 1;
-            } else {
-                ownership[y][x] = 0;
-            }
-        }
+    const ownership: number[][] = dup(board);
+    let points = getPoints(board, (pt) => pt !== 0);
+    while (points.length) {
+        const unvisited = points
+            .flatMap((pt) => getNeighbors(width, height, pt))
+            .filter((pt) => ownership[pt.y][pt.x] === 0);
+        unvisited
+            .map((pt) => ({ x: pt.x, y: pt.y, color: getOwningColor(ownership, pt) }))
+            .forEach(({ x, y, color }) => {
+                ownership[y][x] = color;
+            });
+        points = unvisited.filter(({ x, y }) => ownership[y][x] !== 0);
     }
-
     return ownership;
 }
 
-export function distanceMap(board: number[][], color: -1 | 1) {
+function getOwningColor(board: number[][], pt: Coordinate): -1 | 0 | 1 {
     const { width, height } = get_dims(board);
-    let points = getPoints(board, (pt) => pt === color);
-    if (points.length === 0) {
-        return makeMatrix(width, height, Infinity);
+    const neighbors = getNeighbors(width, height, pt);
+    const non_neutral_neighbors = neighbors.filter((pt) => board[pt.y][pt.x] !== 0);
+    if (non_neutral_neighbors.every((pt) => board[pt.y][pt.x] === 1)) {
+        return 1;
     }
-
-    let i = 0;
-    const distance_map = makeEmptyObjectMatrix<number>(width, height);
-    while (points.length) {
-        const next_points: Coordinate[] = [];
-        for (const pt of points) {
-            if (distance_map[pt.y][pt.x] !== undefined) {
-                continue;
-            }
-            distance_map[pt.y][pt.x] = i;
-            for (const n of getNeighbors(width, height, pt)) {
-                next_points.push(n);
-            }
-        }
-        points = next_points;
-        i++;
+    if (non_neutral_neighbors.every((pt) => board[pt.y][pt.x] === -1)) {
+        return -1;
     }
-    return distance_map;
+    return 0;
 }
 
 type Coordinate = { x: number; y: number };
