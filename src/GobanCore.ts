@@ -3170,7 +3170,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 this,
                 this.engine,
                 AUTOSCORE_TRIALS,
-                Math.min(0.1, AUTOSCORE_TOLERANCE),
+                AUTOSCORE_TOLERANCE,
                 true,
             );
 
