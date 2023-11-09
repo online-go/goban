@@ -566,11 +566,6 @@ export class ScoreEstimator {
                     } else {
                         this.white.scoring_positions += encodeMoves(gr.points);
                     }
-
-                    console.warn(
-                        "What should be unreached code is running, should probably be running " +
-                            "this[color].territory += markScored(gr.points, false);",
-                    );
                 }
             });
         }

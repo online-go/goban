@@ -5,8 +5,7 @@
 (global as any).CLIENT = true;
 
 import { GobanCanvas, GobanCanvasConfig } from "../GobanCanvas";
-import { GobanCore } from "../GobanCore";
-import { AUTOSCORE_TOLERANCE, AUTOSCORE_TRIALS } from "../GoEngine";
+import { GobanCore, SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../GobanCore";
 import { GobanSocket } from "../GobanSocket";
 import * as GoMath from "../GoMath";
 import WS from "jest-websocket-mock";
@@ -419,8 +418,8 @@ describe("onTap", () => {
 
         expect(goban.engine.estimateScore).toBeCalledTimes(1);
         expect(goban.engine.estimateScore).toBeCalledWith(
-            AUTOSCORE_TRIALS,
-            AUTOSCORE_TOLERANCE,
+            SCORE_ESTIMATION_TRIALS,
+            SCORE_ESTIMATION_TOLERANCE,
             false,
         );
         (goban.engine.estimateScore as jest.Mock).mockClear();
