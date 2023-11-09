@@ -23,23 +23,15 @@ import { GobanCore } from "./GobanCore";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
 import { JGOFNumericPlayerColor } from "./JGOF";
 import { _ } from "./translate";
+import { estimateScoreWasm } from "./local_estimators/wasm_estimator";
 
-declare const CLIENT: boolean;
+export { init_score_estimator, estimateScoreWasm } from "./local_estimators/wasm_estimator";
+export { estimateScoreVoronoi } from "./local_estimators/voronoi";
 
-/* The OGSScoreEstimator method is a wasm compiled C program that
- * does simple random playouts. On the client, the OGSScoreEstimator script
- * is loaded in an async fashion, so at some point that global variable
- * becomes not null and can be used.
- */
-
-/* In addition to the OGSScoreEstimator method, we have a RemoteScoring system
+/* In addition to the local estimators, we have a RemoteScoring system
  * which needs to be initialized by either the client or the server if we want
  * remote scoring enabled.
  */
-
-declare let OGSScoreEstimator: any;
-let OGSScoreEstimator_initialized = false;
-let OGSScoreEstimatorModule: any;
 
 export interface ScoreEstimateRequest {
     player_to_move: "black" | "white";
@@ -67,59 +59,25 @@ export function set_remote_scorer(
     remote_scorer = scorer;
 }
 
-let init_promise: Promise<boolean>;
-
-export function init_score_estimator(): Promise<boolean> {
-    if (!CLIENT) {
-        throw new Error("Only initialize WASM library on the client side");
-    }
-
-    if (OGSScoreEstimator_initialized) {
-        return Promise.resolve(true);
-    }
-
-    if (init_promise) {
-        return init_promise;
-    }
-
-    try {
-        if (
-            !OGSScoreEstimatorModule &&
-            (("OGSScoreEstimator" in window) as any) &&
-            ((window as any)["OGSScoreEstimator"] as any)
-        ) {
-            OGSScoreEstimatorModule = (window as any)["OGSScoreEstimator"] as any;
-        }
-    } catch (e) {
-        console.error(e);
-    }
-
-    if (OGSScoreEstimatorModule) {
-        OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-        OGSScoreEstimator_initialized = true;
-        return Promise.resolve(true);
-    }
-
-    const script: HTMLScriptElement = document.getElementById(
-        "ogs_score_estimator_script",
-    ) as HTMLScriptElement;
-    if (script) {
-        let resolve: (tf: boolean) => void;
-        init_promise = new Promise<boolean>((_resolve, _reject) => {
-            resolve = _resolve;
-        });
-
-        script.onload = () => {
-            OGSScoreEstimatorModule = OGSScoreEstimator;
-            OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-            OGSScoreEstimator_initialized = true;
-            resolve(true);
-        };
-
-        return init_promise;
-    } else {
-        return Promise.reject("score estimator not available");
-    }
+/**
+ * The interface that local estimators should follow.
+ *
+ * @param board representation of the board with any dead stones already
+ *              removed (black = 1, empty = 0, white = -1)
+ * @param color_to_move the player whose turn it is
+ * @param trials number of playouts.  Not applicable to all estimators, but
+ *               higher generally means higher accuracy and higher compute cost
+ * @param tolerance (0.0-1.0) confidence required to mark an intersection not neutral.
+ */
+type LocalEstimator = (
+    board: number[][],
+    color_to_move: "black" | "white",
+    trials: number,
+    tolerance: number,
+) => GoMath.NumberMatrix;
+let local_scorer = estimateScoreWasm;
+export function set_local_scorer(scorer: LocalEstimator) {
+    local_scorer = scorer;
 }
 
 interface SEPoint {
@@ -296,13 +254,13 @@ export class ScoreEstimator {
 
     public estimateScore(trials: number, tolerance: number): Promise<void> {
         if (!this.prefer_remote || this.height > 19 || this.width > 19) {
-            return this.estimateScoreWASM(trials, tolerance);
+            return this.estimateScoreLocal(trials, tolerance);
         }
 
         if (remote_scorer) {
             return this.estimateScoreRemote();
         } else {
-            return this.estimateScoreWASM(trials, tolerance);
+            return this.estimateScoreLocal(trials, tolerance);
         }
     }
 
@@ -361,11 +319,7 @@ export class ScoreEstimator {
 
     /* Somewhat deprecated in-browser score estimator that utilizes our WASM compiled
      * OGSScoreEstimatorModule */
-    private estimateScoreWASM(trials: number, tolerance: number): Promise<void> {
-        if (!OGSScoreEstimator_initialized) {
-            throw new Error("Score estimator not intialized yet, uptime = " + performance.now());
-        }
-
+    private estimateScoreLocal(trials: number, tolerance: number): Promise<void> {
         if (!trials) {
             trials = 1000;
         }
@@ -373,61 +327,21 @@ export class ScoreEstimator {
             tolerance = 0.25;
         }
 
-        /* Call our score estimator code to do the estimation. We do this assignment here
-         * because it's likely that the module isn't done loading on the client
-         * when the top of this script (where score estimator is first assigned) is
-         * executing. (it's loaded async)
-         */
-        const nbytes = 4 * this.engine.width * this.engine.height;
-        const ptr = OGSScoreEstimatorModule._malloc(nbytes);
-        const ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, nbytes);
-        let i = 0;
+        const board = GoMath.makeMatrix(this.width, this.height);
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
-                ints[i] = this.board[y][x] === 2 ? -1 : this.board[y][x];
+                board[y][x] = this.board[y][x] === 2 ? -1 : this.board[y][x];
                 if (this.removal[y][x]) {
-                    ints[i] = 0;
+                    board[y][x] = 0;
                 }
-                ++i;
-            }
-        }
-        const _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", [
-            "number",
-            "number",
-            "number",
-            "number",
-            "number",
-            "number",
-        ]);
-        const estimate = _estimate as (
-            w: number,
-            h: number,
-            p: number,
-            c: number,
-            tr: number,
-            to: number,
-        ) => number;
-        const estimated_score = estimate(
-            this.width,
-            this.height,
-            ptr,
-            this.engine.colorToMove() === "black" ? 1 : -1,
-            trials,
-            tolerance,
-        );
-
-        const ownership = GoMath.makeMatrix(this.width, this.height, 0);
-        i = 0;
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                ownership[y][x] = ints[i];
-                ++i;
             }
         }
 
+        const ownership = local_scorer(board, this.engine.colorToMove(), trials, tolerance);
+
+        const estimated_score = sum_board(ownership);
         const adjusted = adjust_estimate(this.engine, this.board, ownership, estimated_score);
 
-        OGSScoreEstimatorModule._free(ptr);
         this.updateEstimate(adjusted.score, adjusted.ownership);
         return Promise.resolve();
     }
@@ -652,11 +566,6 @@ export class ScoreEstimator {
                     } else {
                         this.white.scoring_positions += encodeMoves(gr.points);
                     }
-
-                    console.warn(
-                        "What should be unreached code is running, should probably be running " +
-                            "this[color].territory += markScored(gr.points, false);",
-                    );
                 }
             });
         }
@@ -762,6 +671,17 @@ export function adjust_estimate(
 
 function get_dimensions(board: Array<Array<unknown>>) {
     return { width: board[0].length, height: board.length };
+}
+
+function sum_board(board: GoMath.NumberMatrix) {
+    const { width, height } = get_dimensions(board);
+    let sum = 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            sum += board[y][x];
+        }
+    }
+    return sum;
 }
 
 /**

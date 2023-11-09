@@ -38,7 +38,7 @@ declare const CLIENT: boolean;
 declare const SERVER: boolean;
 
 export const AUTOSCORE_TRIALS = 1000;
-export const AUTOSCORE_TOLERANCE = 0.3;
+export const AUTOSCORE_TOLERANCE = 0.1;
 
 export type GoEnginePhase = "play" | "stone removal" | "finished";
 export type GoEngineRules = "chinese" | "aga" | "japanese" | "korean" | "ing" | "nz";
