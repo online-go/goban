@@ -58,10 +58,6 @@ describe("ScoreEstimator", () => {
     engine.place(1, 1);
     engine.place(2, 1);
 
-    // It might seem weird to set prefer_remote = true just to test
-    // resetGroups, but is a necessary hack to bypass initialization of
-    // the OGSScoreEstimation library
-    const prefer_remote = true;
     const trials = 10;
     const tolerance = 0.25;
 
@@ -75,33 +71,6 @@ describe("ScoreEstimator", () => {
 
     afterEach(() => {
         set_remote_scorer(undefined as any);
-    });
-
-    test("resetGroups", async () => {
-        const se = new ScoreEstimator(undefined, engine, trials, tolerance, prefer_remote);
-
-        await se.when_ready;
-
-        expect(se.group_list).toHaveLength(4);
-        expect(se.group_list.map((group) => group.points)).toEqual([
-            [
-                { x: 0, y: 0 },
-                { x: 0, y: 1 },
-            ],
-            [
-                { x: 1, y: 0 },
-                { x: 1, y: 1 },
-            ],
-            [
-                { x: 2, y: 0 },
-                { x: 2, y: 1 },
-            ],
-            [
-                { x: 3, y: 0 },
-                { x: 3, y: 1 },
-            ],
-        ]);
-        expect(se.group_list.map((group) => group.color)).toEqual([0, 1, 2, 0]);
     });
 
     test("amount and winner", async () => {

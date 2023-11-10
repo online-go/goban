@@ -80,111 +80,6 @@ export function set_local_scorer(scorer: LocalEstimator) {
     local_scorer = scorer;
 }
 
-interface SEPoint {
-    x: number;
-    y: number;
-}
-
-class SEGroup {
-    points: Array<SEPoint>;
-    neighboring_enemy: Array<SEGroup>;
-    neighboring_space: Array<SEGroup>;
-    se: ScoreEstimator;
-    id: number;
-    color: JGOFNumericPlayerColor;
-    removed: boolean;
-    neighbors: Array<SEGroup>;
-    neighbor_map: { [group_id: string]: boolean };
-
-    constructor(se: ScoreEstimator, color: JGOFNumericPlayerColor, id: number) {
-        this.points = [];
-        this.se = se;
-        this.id = id;
-        this.color = color;
-        this.neighbors = [];
-        this.neighboring_space = [];
-        this.neighboring_enemy = [];
-        this.neighbor_map = {};
-        this.removed = false;
-    }
-    add(i: number, j: number) {
-        this.points.push({ x: i, y: j });
-    }
-    foreachPoint(fn: (pt: SEPoint) => void) {
-        for (let i = 0; i < this.points.length; ++i) {
-            fn(this.points[i]);
-        }
-    }
-    foreachNeighboringPoint(fn: (pt: SEPoint) => void) {
-        const self = this;
-        const points = this.points;
-        const done_array = new Array(this.se.height * this.se.width);
-        for (let i = 0; i < points.length; ++i) {
-            done_array[points[i].x + points[i].y * this.se.width] = true;
-        }
-
-        function checkAndDo(x: number, y: number): void {
-            const idx = x + y * self.se.width;
-            if (done_array[idx]) {
-                return;
-            }
-            done_array[idx] = true;
-
-            fn({ x: x, y: y });
-        }
-
-        for (let i = 0; i < points.length; ++i) {
-            const pt = points[i];
-            if (pt.x - 1 >= 0) {
-                checkAndDo(pt.x - 1, pt.y);
-            }
-            if (pt.x + 1 !== this.se.width) {
-                checkAndDo(pt.x + 1, pt.y);
-            }
-            if (pt.y - 1 >= 0) {
-                checkAndDo(pt.x, pt.y - 1);
-            }
-            if (pt.y + 1 !== this.se.height) {
-                checkAndDo(pt.x, pt.y + 1);
-            }
-        }
-    }
-    addNeighbor(group: SEGroup): void {
-        if (!(group.id in this.neighbor_map)) {
-            this.neighbors.push(group);
-            this.neighbor_map[group.id] = true;
-
-            if (group.color === 0) {
-                this.neighboring_space.push(group);
-            } else {
-                this.neighboring_enemy.push(group);
-            }
-        }
-    }
-    foreachNeighborGroup(fn: (group: SEGroup) => void): void {
-        for (let i = 0; i < this.neighbors.length; ++i) {
-            fn(this.neighbors[i]);
-        }
-    }
-    foreachNeighborSpaceGroup(fn: (group: SEGroup) => void): void {
-        for (let i = 0; i < this.neighboring_space.length; ++i) {
-            fn(this.neighboring_space[i]);
-        }
-    }
-    foreachNeighborEnemyGroup(fn: (group: SEGroup) => void): void {
-        for (let i = 0; i < this.neighboring_enemy.length; ++i) {
-            fn(this.neighboring_enemy[i]);
-        }
-    }
-    setRemoved(removed: boolean): void {
-        this.removed = removed;
-        for (let i = 0; i < this.points.length; ++i) {
-            const pt = this.points[i];
-            this.se.setRemoved(pt.x, pt.y, removed ? 1 : 0);
-        }
-    }
-}
-
 export class ScoreEstimator {
     width: number;
     height: number;
@@ -209,11 +104,10 @@ export class ScoreEstimator {
     };
 
     engine: GoEngine;
-    groups: Array<Array<SEGroup>>;
+    private groups: GoStoneGroups;
     removal: Array<Array<number>>;
     goban_callback?: GobanCore;
     tolerance: number;
-    group_list: Array<SEGroup>;
     amount: number = NaN;
     ownership: Array<Array<number>>;
     territory: Array<Array<number>>;
@@ -240,15 +134,15 @@ export class ScoreEstimator {
         this.board = dup(engine.board);
         this.removal = GoMath.makeMatrix(this.width, this.height, 0);
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
-        this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.estimated_hard_score = 0.0;
-        this.group_list = [];
         this.trials = trials;
         this.tolerance = tolerance;
         this.prefer_remote = prefer_remote;
 
-        this.resetGroups();
+        this.territory = GoMath.makeMatrix(this.width, this.height, 0);
+        this.groups = new GoStoneGroups(this);
+
         this.when_ready = this.estimateScore(this.trials, this.tolerance);
     }
 
@@ -390,32 +284,6 @@ export class ScoreEstimator {
         }
         return ret;
     }
-    resetGroups(): void {
-        this.territory = GoMath.makeMatrix(this.width, this.height, 0);
-        this.groups = GoMath.makeEmptyObjectMatrix(this.width, this.height);
-        this.group_list = [];
-
-        const go_stone_groups = new GoStoneGroups(this);
-
-        go_stone_groups.foreachGroup((gs_grp) => {
-            const se_grp = make_se_group_from_gs_group(gs_grp, this);
-            gs_grp.points.forEach((pt) => {
-                this.groups[pt.y][pt.x] = se_grp;
-            });
-            this.group_list.push(se_grp);
-        });
-
-        for (const grp of this.group_list) {
-            for (const gs_neighbor of go_stone_groups.groups[grp.id].neighbors) {
-                grp.addNeighbor(this.group_list[gs_neighbor.id - 1]);
-            }
-        }
-    }
-    foreachGroup(fn: (group: SEGroup) => void): void {
-        for (let i = 0; i < this.group_list.length; ++i) {
-            fn(this.group_list[i]);
-        }
-    }
     handleClick(i: number, j: number, modkey: boolean) {
         if (modkey) {
             this.setRemoved(i, j, !this.removal[j][i] ? 1 : 0);
@@ -427,16 +295,21 @@ export class ScoreEstimator {
             /* empty */
         });
     }
+
+    private removeGroup(g: GoStoneGroup, removing: boolean) {
+        g.foreachStone(({ x, y }) => this.setRemoved(x, y, removing ? 1 : 0));
+    }
+
     toggleMetaGroupRemoval(x: number, y: number): void {
         const already_done: { [k: string]: boolean } = {};
-        const space_groups: Array<SEGroup> = [];
+        const space_groups: Array<GoStoneGroup> = [];
         let group_color: JGOFNumericPlayerColor;
 
         try {
             if (x >= 0 && y >= 0) {
                 const removing = !this.removal[y][x];
                 const group = this.getGroup(x, y);
-                group.setRemoved(removing);
+                this.removeGroup(group, removing);
 
                 group_color = this.board[y][x];
                 if (group_color === 0) {
@@ -458,7 +331,7 @@ export class ScoreEstimator {
                             if (!already_done[g.id]) {
                                 already_done[g.id] = true;
                                 if (g.color === group_color) {
-                                    g.setRemoved(removing);
+                                    this.removeGroup(g, removing);
                                     g.foreachNeighborSpaceGroup((gspace) => {
                                         if (!already_done[gspace.id]) {
                                             space_groups.push(gspace);
@@ -506,8 +379,8 @@ export class ScoreEstimator {
         }
         return ret;
     }
-    getGroup(x: number, y: number): SEGroup {
-        return this.groups[y][x];
+    getGroup(x: number, y: number): GoStoneGroup {
+        return this.groups.groups[this.groups.group_id_map[y][x]];
     }
 
     /**
@@ -682,13 +555,4 @@ function sum_board(board: GoMath.NumberMatrix) {
         }
     }
     return sum;
-}
-
-/**
- * SE Group and GoStoneGroup have a slightly different interface.
- */
-function make_se_group_from_gs_group(gsg: GoStoneGroup, se: ScoreEstimator) {
-    const se_group = new SEGroup(se, gsg.color, gsg.id);
-    se_group.points = gsg.points.map((pt) => pt);
-    return se_group;
 }
