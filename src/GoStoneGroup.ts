@@ -41,11 +41,15 @@ export class GoStoneGroup {
     is_territory_in_seki: boolean = false;
 
     private __added_neighbors: { [group_id: number]: boolean };
+    private neighboring_space: GoStoneGroup[];
+    private neighboring_enemy: GoStoneGroup[];
 
     constructor(board_state: BoardState, id: number, color: JGOFNumericPlayerColor) {
         this.board_state = board_state;
         this.points = [];
         this.neighbors = [];
+        this.neighboring_space = [];
+        this.neighboring_enemy = [];
         this.id = id;
         this.color = color;
         this.is_strong_eye = false;
@@ -60,6 +64,14 @@ export class GoStoneGroup {
         if (!(group.id in this.__added_neighbors)) {
             this.neighbors.push(group);
             this.__added_neighbors[group.id] = true;
+
+            if (group.color !== this.color) {
+                if (group.color === JGOFNumericPlayerColor.EMPTY) {
+                    this.neighboring_space.push(group);
+                } else {
+                    this.neighboring_enemy.push(group);
+                }
+            }
         }
     }
     addCornerGroup(x: number, y: number, group: GoStoneGroup): void {
@@ -76,6 +88,16 @@ export class GoStoneGroup {
     foreachNeighborGroup(fn: (group: GoStoneGroup) => void): void {
         for (let i = 0; i < this.neighbors.length; ++i) {
             fn(this.neighbors[i]);
+        }
+    }
+    foreachNeighborSpaceGroup(fn: (group: GoStoneGroup) => void): void {
+        for (let i = 0; i < this.neighboring_space.length; ++i) {
+            fn(this.neighboring_space[i]);
+        }
+    }
+    foreachNeighborEnemyGroup(fn: (group: GoStoneGroup) => void): void {
+        for (let i = 0; i < this.neighbors.length; ++i) {
+            fn(this.neighboring_enemy[i]);
         }
     }
     computeIsEye(): void {
