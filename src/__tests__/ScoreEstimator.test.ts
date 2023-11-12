@@ -1,4 +1,5 @@
 import { GoEngine } from "../GoEngine";
+import { makeMatrix } from "../GoMath";
 import {
     ScoreEstimator,
     adjust_estimate,
@@ -322,5 +323,75 @@ describe("ScoreEstimator", () => {
         // This is marking all stones dead, but the black stones should still be alive.
         expect(se.getProbablyDead()).toBe("babbcacb");
         // expect(se.getProbablyDead()).toBe("cacb");
+    });
+
+    test("Falls back to local scorer if remote scorer is not set", async () => {
+        set_remote_scorer(undefined as any);
+        const mock_local_scorer = jest.fn();
+        mock_local_scorer.mockReturnValue([
+            [1, 1, -1, -1],
+            [1, 1, -1, -1],
+        ]);
+        set_local_scorer(mock_local_scorer);
+
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, true);
+        await se.when_ready;
+
+        expect(mock_local_scorer).toBeCalled();
+        expect(se.ownership).toEqual([
+            [1, 0, 0, -1],
+            [1, 0, 0, -1],
+        ]);
+    });
+
+    test("remote scorers do not need to set score", async () => {
+        const engine = new GoEngine({ komi: 3.5, width: 4, height: 2, rules: "chinese" });
+        engine.place(1, 0);
+        engine.place(2, 0);
+        engine.place(1, 1);
+        engine.place(2, 1);
+
+        set_remote_scorer(async () => ({
+            ownership: OWNERSHIP,
+        }));
+
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, true);
+        await se.when_ready;
+
+        expect(se.ownership).toEqual(OWNERSHIP);
+        expect(se.winner).toBe("Black");
+        // I'm not actually sure this is the "right" behavior when the
+        // remote scorer doesn't return a score.  I would think it would
+        // derive the score from the ownership map.  Instead, it assumes
+        // missing score means zero, and compensates for a komi of 7.5..
+        //   - bpj
+        expect(se.amount).toBe(4);
+    });
+
+    test("local scorer with stones removed", async () => {
+        set_local_scorer(estimateScoreVoronoi);
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        se.handleClick(1, 0, false);
+        se.handleClick(2, 0, false);
+        expect(se.removal).toEqual([
+            [0, 1, 1, 0],
+            [0, 1, 1, 0],
+        ]);
+
+        expect(se.ownership).toEqual(makeMatrix(4, 2));
+    });
+
+    test("modkey", async () => {
+        set_local_scorer(estimateScoreVoronoi);
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        se.handleClick(1, 0, true);
+        expect(se.removal).toEqual([
+            [0, 1, 0, 0],
+            [0, 0, 0, 0],
+        ]);
     });
 });
