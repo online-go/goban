@@ -54,6 +54,12 @@ const SGF_TEST_CASES: Array<SGFTestcase> = [
         id: "cgoban_tree3",
         size: 7,
     },
+    {
+        template: "(;GM[1]FF[4]CA[UTF-8]_MOVES_)",
+        moves: ";B[aa];W[aa]",
+        id: "invalid move - stone on top of stone",
+        size: 3,
+    },
 ];
 
 function rmNewlines(txt: string): string {
