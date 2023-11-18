@@ -37,3 +37,37 @@ test("cur_move", () => {
     expect(engine.cur_move.y).toBe(3);
     expect(on_cur_move).toBeCalledTimes(1);
 });
+
+describe("setLastOfficialMove", () => {
+    test("cur_move on trunk", () => {
+        const engine = new GoEngine({});
+        const on_last_official_move = jest.fn();
+        engine.addListener("last_official_move", on_last_official_move);
+
+        expect(engine.last_official_move).toBe(engine.cur_move);
+
+        engine.place(10, 10, false, false, false, false, true /* isTrunkMove */);
+
+        expect(on_last_official_move).not.toBeCalled();
+        expect(engine.last_official_move).not.toBe(engine.cur_move);
+
+        engine.setLastOfficialMove();
+
+        expect(engine.last_official_move).toBe(engine.cur_move);
+        expect(on_last_official_move).toBeCalledTimes(1);
+
+        on_last_official_move.mockClear();
+
+        engine.setLastOfficialMove();
+        // nothing changed, so no message is emitted
+        expect(on_last_official_move).toBeCalledTimes(0);
+    });
+
+    test("cur_move not on trunk is an error", () => {
+        const engine = new GoEngine({});
+
+        // isTrunkMove is false by default
+        engine.place(10, 10);
+        expect(() => engine.setLastOfficialMove()).toThrow("non-trunk move");
+    });
+});
