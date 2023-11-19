@@ -71,3 +71,16 @@ describe("setLastOfficialMove", () => {
         expect(() => engine.setLastOfficialMove()).toThrow("non-trunk move");
     });
 });
+
+test("config.moves", () => {
+    const moves = [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+    ];
+    const engine = new GoEngine({ width: 2, height: 2, moves: moves });
+
+    expect(engine.board).toEqual([
+        [1, 0],
+        [0, 2],
+    ]);
+});
