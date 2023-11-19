@@ -72,15 +72,30 @@ describe("setLastOfficialMove", () => {
     });
 });
 
-test("config.moves", () => {
-    const moves = [
-        { x: 0, y: 0 },
-        { x: 1, y: 1 },
-    ];
-    const engine = new GoEngine({ width: 2, height: 2, moves: moves });
+describe("config.moves", () => {
+    test("two good moves", () => {
+        const moves = [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+        ];
+        const engine = new GoEngine({ width: 2, height: 2, moves: moves });
 
-    expect(engine.board).toEqual([
-        [1, 0],
-        [0, 2],
-    ]);
+        expect(engine.board).toEqual([
+            [1, 0],
+            [0, 2],
+        ]);
+    });
+
+    test("one illegal move", () => {
+        const moves = [
+            { x: 0, y: 0 },
+            { x: 0, y: 0 },
+        ];
+        const engine = new GoEngine({ width: 2, height: 2, moves: moves });
+
+        expect(engine.board).toEqual([
+            [0, 0],
+            [0, 0],
+        ]);
+    });
 });
