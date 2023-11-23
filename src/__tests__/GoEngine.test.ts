@@ -530,6 +530,48 @@ describe("moves", () => {
                 [0, 2],
             ]);
         });
+
+        test("showNext", () => {
+            const move_tree = {
+                x: -1,
+                y: -1,
+                trunk_next: {
+                    x: 0,
+                    y: 0,
+                    trunk_next: {
+                        x: 1,
+                        y: 1,
+                    },
+                },
+            };
+
+            const engine = new GoEngine({ width: 2, height: 2, move_tree });
+
+            expect(engine.cur_move.move_number).toBe(0);
+            expect(engine.showNext()).toBe(true);
+            expect(engine.cur_move.move_number).toBe(1);
+        });
+
+        test("showNextTrunk", () => {
+            const move_tree = {
+                x: -1,
+                y: -1,
+                trunk_next: {
+                    x: 0,
+                    y: 0,
+                    trunk_next: {
+                        x: 1,
+                        y: 1,
+                    },
+                },
+            };
+
+            const engine = new GoEngine({ width: 2, height: 2, move_tree });
+
+            expect(engine.cur_move.move_number).toBe(0);
+            expect(engine.showNextTrunk()).toBe(true);
+            expect(engine.cur_move.move_number).toBe(1);
+        });
     });
 
     test("followPath", () => {
@@ -637,5 +679,42 @@ describe("groups", () => {
             [0, []],
         ]);
         expect(on_removal_updated).toBeCalledTimes(1);
+    });
+
+    test("clearRemoved", () => {
+        const engine = new GoEngine({
+            width: 4,
+            height: 2,
+            initial_state: { black: "aabb", white: "cacb" },
+            removed: "aabb",
+        });
+
+        /*   A B C D
+         * 2 x . o .
+         * 1 . x o .
+         */
+
+        const on_removal_updated = jest.fn();
+        engine.addListener("stone-removal.updated", on_removal_updated);
+        engine.clearRemoved();
+
+        expect(on_removal_updated).toBeCalledTimes(1);
+        expect(engine.removal).toEqual(makeMatrix(4, 2));
+    });
+
+    test("clearRemoved", () => {
+        const engine = new GoEngine({
+            width: 4,
+            height: 2,
+            initial_state: { black: "aabb", white: "cacb" },
+            removed: "aabb",
+        });
+
+        /*   A B C D
+         * 2 x . o .
+         * 1 . x o .
+         */
+
+        expect(engine.getStoneRemovalString()).toBe("aabb");
     });
 });
