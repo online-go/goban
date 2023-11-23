@@ -17,6 +17,7 @@ type SGFTestcase = {
     moves: string;
     id: string;
     size: number;
+    num_errors?: number;
 };
 
 const SGF_TEST_CASES: Array<SGFTestcase> = [
@@ -59,6 +60,7 @@ const SGF_TEST_CASES: Array<SGFTestcase> = [
         moves: ";B[aa];W[aa]",
         id: "invalid move - stone on top of stone",
         size: 3,
+        num_errors: 1,
     },
 ];
 
@@ -71,8 +73,10 @@ function rmNewlines(txt: string): string {
  */
 test.each(SGF_TEST_CASES)(
     "sgf -> parseSGF() -> toSGF() roundtrip (moves only)",
-    ({ template, moves, id, size }) => {
+    ({ template, moves, size, num_errors }) => {
         const sgf = template.replace(/_MOVES_/, moves);
+        // Placement errors are logged, not thrown
+        const log_spy = jest.spyOn(console, "log").mockImplementation(() => {});
         const goban = new TestGoban({ original_sgf: sgf, removed: "" });
         // by default, `edited = true` when `original_sgf` is used, which causes
         // the moves to be serialized as setup SGF props `AB` & `AW`.
@@ -82,6 +86,9 @@ test.each(SGF_TEST_CASES)(
         const moves_gen = goban.engine.move_tree.toSGF();
         expect(rmNewlines(moves_gen)).toBe(rmNewlines(moves));
         expect(goban.engine.move_tree.size()).toBe(size);
+        if (num_errors) {
+            expect(log_spy).toBeCalledTimes(num_errors);
+        }
     },
 );
 

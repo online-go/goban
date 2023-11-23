@@ -477,12 +477,15 @@ describe("moves", () => {
                 { x: 0, y: 0 },
                 { x: 0, y: 0 },
             ];
+            // Placement errors are logged, not thrown
+            const log_spy = jest.spyOn(console, "log").mockImplementation(() => {});
             const engine = new GoEngine({ width: 2, height: 2, moves: moves });
 
             expect(engine.board).toEqual([
                 [0, 0],
                 [0, 0],
             ]);
+            expect(log_spy.mock.calls[0][0].error).toBe("Error placing black at A2 (0, 0)");
         });
     });
 

@@ -214,6 +214,8 @@ describe("onTap", () => {
         const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
+        const log_spy = jest.spyOn(console, "info").mockImplementation(() => {});
+
         await socket_server.connected;
 
         goban.enableStonePlacement();
@@ -232,6 +234,11 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
+        expect(log_spy).toBeCalledWith(
+            "Submit button pressed only ",
+            40,
+            "ms after stone was placed, presuming bad click",
+        );
 
         jest.useRealTimers();
     });
