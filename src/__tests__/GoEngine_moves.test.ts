@@ -99,3 +99,49 @@ describe("config.moves", () => {
         ]);
     });
 });
+
+describe("config.move_tree", () => {
+    test("move_tree but  not starting with pass", () => {
+        const move_tree = {
+            x: 0,
+            y: 0,
+            trunk_next: {
+                x: 1,
+                y: 1,
+            },
+        };
+
+        // Personally I don't think this should throw - it would be nice if we could just pass in
+        // a move_tree, but not moves and moves could be inferred by traversing trunk.
+        expect(() => new GoEngine({ width: 2, height: 2, move_tree })).toThrow("Node mismatch");
+    });
+
+    test("move_tree with two trunk moves", () => {
+        const move_tree = {
+            x: -1,
+            y: -1,
+            trunk_next: {
+                x: 0,
+                y: 0,
+                trunk_next: {
+                    x: 1,
+                    y: 1,
+                },
+            },
+        };
+
+        const engine = new GoEngine({ width: 2, height: 2, move_tree });
+
+        expect(engine.board).toEqual([
+            [0, 0],
+            [0, 0],
+        ]);
+
+        engine.jumpToOfficialMoveNumber(2);
+
+        expect(engine.board).toEqual([
+            [1, 0],
+            [0, 2],
+        ]);
+    });
+});
