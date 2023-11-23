@@ -430,4 +430,23 @@ describe("onTap", () => {
         expect(goban.engine.estimateScore).toBeCalledTimes(0);
         expect(mock_score_estimate.handleClick).toBeCalledTimes(1);
     });
+
+    test("puzzle mode", () => {
+        const goban = new GobanCanvas(
+            basic3x3Config({
+                mode: "puzzle",
+                getPuzzlePlacementSetting: () => ({ mode: "setup", color: 1 }),
+            }),
+        );
+        goban.enableStonePlacement();
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        simulateMouseClick(canvas, { x: 0, y: 0 });
+
+        expect(goban.engine.board).toEqual([
+            [1, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+    });
 });

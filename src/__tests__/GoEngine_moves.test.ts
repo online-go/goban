@@ -145,3 +145,30 @@ describe("config.move_tree", () => {
         ]);
     });
 });
+
+test("followPath", () => {
+    const engine = new GoEngine({ width: 4, height: 2 });
+    engine.followPath(10, "aabacada");
+    expect(engine.board).toEqual([
+        [1, 2, 1, 2],
+        [0, 0, 0, 0],
+    ]);
+    expect(engine.cur_move.move_number).toBe(4);
+});
+
+test("deleteCurMove", () => {
+    const engine = new GoEngine({
+        width: 4,
+        height: 2,
+    });
+
+    engine.followPath(0, "aabacada");
+
+    expect(engine.cur_move.x).toBe(3);
+    expect(engine.cur_move.move_number).toBe(4);
+
+    engine.deleteCurMove();
+
+    expect(engine.cur_move.x).toBe(2);
+    expect(engine.cur_move.move_number).toBe(3);
+});
