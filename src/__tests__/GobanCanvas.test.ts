@@ -214,6 +214,8 @@ describe("onTap", () => {
         const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
+        const log_spy = jest.spyOn(console, "info").mockImplementation(() => {});
+
         await socket_server.connected;
 
         goban.enableStonePlacement();
@@ -232,6 +234,11 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
+        expect(log_spy).toBeCalledWith(
+            "Submit button pressed only ",
+            40,
+            "ms after stone was placed, presuming bad click",
+        );
 
         jest.useRealTimers();
     });
@@ -429,5 +436,24 @@ describe("onTap", () => {
         // estimateScore is NOT called on tap
         expect(goban.engine.estimateScore).toBeCalledTimes(0);
         expect(mock_score_estimate.handleClick).toBeCalledTimes(1);
+    });
+
+    test("puzzle mode", () => {
+        const goban = new GobanCanvas(
+            basic3x3Config({
+                mode: "puzzle",
+                getPuzzlePlacementSetting: () => ({ mode: "setup", color: 1 }),
+            }),
+        );
+        goban.enableStonePlacement();
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        simulateMouseClick(canvas, { x: 0, y: 0 });
+
+        expect(goban.engine.board).toEqual([
+            [1, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
     });
 });
