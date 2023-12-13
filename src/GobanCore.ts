@@ -2868,13 +2868,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
             }
         }
     }
-    public setHeatmap(heatmap: NumberMatrix, dont_draw?: boolean) {
+    public setHeatmap(heatmap?: NumberMatrix, dont_draw?: boolean) {
         this.heatmap = heatmap;
         if (!dont_draw) {
             this.redraw(true);
         }
     }
-    public setColoredCircles(circles: Array<ColoredCircle>, dont_draw?: boolean): void {
+    public setColoredCircles(circles?: Array<ColoredCircle>, dont_draw?: boolean): void {
         if (!circles || circles.length === 0) {
             delete this.colored_circles;
             return;

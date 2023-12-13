@@ -107,8 +107,8 @@ export function computeAverageMoveTime(
     w?: number,
     h?: number,
 ): number {
-    if (typeof time_control !== "object") {
-        console.warn(
+    if (typeof time_control !== "object" || time_control === null) {
+        console.error(
             `computAverageMoveTime passed ${time_control} instead of a time_control object`,
         );
         return time_control;
