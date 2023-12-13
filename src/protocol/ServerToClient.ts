@@ -193,6 +193,19 @@ export interface ServerToClient {
         topic: string;
         /** Tiemstamp (ms) of the topic change */
         timestamp: number;
+
+        /** User id of the user that changed the topic */
+        id: number;
+        /** Username of the user that changed the topic */
+        username: string;
+        /** Ranking of the user that changed the topic */
+        ranking: number;
+        /** If the user that changed the topic was a professional */
+        professional: boolean;
+        /** UI class of the user that changed the topic */
+        ui_class: string;
+        /** Country of the user that changed the topic */
+        country?: string;
     }) => void;
 
     /** A user's profile was updated */
