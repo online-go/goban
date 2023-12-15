@@ -48,7 +48,12 @@ import {
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
 import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
-import { ServerToClient } from "./protocol/ServerToClient";
+import {
+    ServerToClient,
+    GameChatAnalysisMessage,
+    GameChatReviewMessage,
+    GameChatTranslatedMessage,
+} from "./protocol";
 import { EventEmitter } from "eventemitter3";
 
 declare let swal: any;
@@ -115,8 +120,14 @@ export interface GobanBounds {
 
 export interface GobanChatLogLine {
     chat_id: string;
-    // TODO: there are other fields in here, we need to flesh them out, and/or
-    // figure out if we even still need this
+    body: string | GameChatAnalysisMessage | GameChatReviewMessage | GameChatTranslatedMessage;
+    date: number;
+    move_number: number;
+    from?: number;
+    moves?: string;
+    channel: string;
+    player_id: number;
+    username?: string;
 }
 
 export type GobanChatLog = Array<{
@@ -244,7 +255,7 @@ export interface StateUpdateEvents {
     outcome: (d: string) => void;
     review_owner_id: (d: number | undefined) => void;
     review_controller_id: (d: number | undefined) => void;
-    stalling_score_estimate: (d: ServerToClient["game/:id/stalling_score_estimate"]) => void;
+    stalling_score_estimate: ServerToClient["game/:id/stalling_score_estimate"];
 }
 
 export interface Events extends StateUpdateEvents {
@@ -1858,9 +1869,10 @@ export abstract class GobanCore extends EventEmitter<Events> {
         }
         return { i: i, j: j, valid: i >= 0 && j >= 0 && i < this.width && j < this.height };
     }
-    public setAnalyzeTool(tool: AnalysisTool, subtool: AnalysisSubTool) {
+    public setAnalyzeTool(tool: AnalysisTool, subtool: AnalysisSubTool | undefined | null) {
         this.analyze_tool = tool;
-        this.analyze_subtool = subtool;
+        this.analyze_subtool = subtool ?? "alternate";
+
         if (tool === "stone" && subtool === "black") {
             this.edit_color = "black";
         } else if (tool === "stone" && subtool === "white") {

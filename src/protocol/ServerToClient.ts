@@ -341,101 +341,7 @@ export interface ServerToClient {
     }) => void;
 
     "seekgraph/global": (
-        data:
-            | {
-                  /** The ID of the challenge */
-                  challenge_id: number;
-                  /** The entry should be deleted if this field exists and is true */
-                  delete: true;
-              }
-            | {
-                  /** The ID of the challenge */
-                  challenge_id: number;
-                  /** If exists and is true, the game has been started and the entry should be removed from the seek graph */
-                  game_started?: true;
-                  /** The game id */
-                  game_id: number;
-                  /** Player ID of the creator */
-                  creator: number;
-                  /** Black player */
-                  black: User;
-                  /** White player */
-                  white: User;
-                  /** Time control system */
-                  time_control: string;
-                  /** Time control parameters */
-                  time_control_parameters: JGOFTimeControl;
-                  /** Rengo game if true */
-                  rengo?: true;
-                  /** Player ids of the players on the Black team */
-                  rengo_black_team?: number[];
-                  /** Player ids of the players on the White team */
-                  rengo_white_team?: number[];
-                  /** Wether it's a Casual mode rengo game */
-                  rengo_casual_mode?: boolean;
-                  /** Whether the rengo game with automatically start */
-                  rengo_auto_start?: boolean;
-              }
-            | {
-                  /** The ID of the challenge */
-                  challenge_id: number;
-                  /** User id of the player who is looking for a game */
-                  user_id: number;
-                  /** Username of the player looking for the game */
-                  username: string;
-                  /** Their ranking **/
-                  ranking: number;
-                  /** If they are a professional player */
-                  professional: boolean;
-                  /** Minimum rank allowed to accept the game */
-                  min_rank: number;
-                  /** Maximum rank allowed to accept the game */
-                  max_rank: number;
-                  /** The game ID */
-                  game_id: number;
-                  /** Game name */
-                  name: string;
-                  /** If the game is ranked */
-                  ranked: boolean;
-                  /** The game handicap */
-                  handicap: number | null;
-                  /** Komi */
-                  komi: number | null;
-                  /** Rules being used */
-                  rules: string;
-                  /** Board width */
-                  width: number;
-                  /** Board height */
-                  height: number;
-                  /** Color the accepting player will be */
-                  challenger_color: "black" | "white" | "automatic";
-                  /** If analysis is disabled */
-                  disable_analysis: boolean;
-                  /** Time control system type */
-                  time_control: string;
-                  /** Time control parameters */
-                  time_control_parameters: JGOFTimeControl;
-                  /** Average time per move */
-                  time_per_move: number;
-                  /** If it's a rengo game */
-                  rengo: boolean;
-                  /** Player ids of people that have been nominated to play */
-                  rengo_nominees: number[];
-                  /** Player ids of the players on the Black team */
-                  rengo_black_team: number[];
-                  /** Player ids of the players on the White team */
-                  rengo_white_team: number[];
-                  /** All player ids involved in the game */
-                  rengo_participants: number[];
-                  /** If the game is a casual rengo game */
-                  rengo_casual_mode: boolean;
-                  /** If the rengo game will automatically start */
-                  rengo_auto_start: boolean;
-                  /** If the game is only joinable by invitation */
-                  invite_only: boolean;
-                  /** A UUID for the invitation */
-                  uuid: string;
-              },
+        messages: (SeekgraphDeleteMessage | SeekgraphStartedMessage | SeekgraphChallengeMessage)[],
     ) => void;
 
     /** Informs the client the player is scheduled to resign if not cleared */
@@ -444,7 +350,7 @@ export interface ServerToClient {
         game_id: number;
         /** The player id */
         player_id: number;
-        /** Whent he auto resign will happen */
+        /** When the auto resign will happen */
         expiration: number;
     }) => void;
     [k: `game/${number}/auto_resign`]: ServerToClient["game/:id/auto_resign"];
@@ -621,15 +527,7 @@ export interface ServerToClient {
     [k: `game/${number}/undo_requested`]: ServerToClient["game/:id/undo_requested"];
 
     /** A score estimation result has been broadcast, this is used for avoiding game stalling */
-    "game/:id/stalling_score_estimate": (data?: {
-        move_number: number;
-        predicted_winner: "black" | "white";
-        game_id: number;
-        removed: string;
-        score: number;
-        win_rate: number;
-        ownership: any[];
-    }) => void;
+    "game/:id/stalling_score_estimate": (data?: StallingScoreEstimate) => void;
     [
         k: `game/${number}/stalling_score_estimate`
     ]: ServerToClient["game/:id/stalling_score_estimate"];
@@ -724,4 +622,109 @@ export interface GameClock {
             [key: string]: boolean;
         };
     };
+}
+
+export interface SeekgraphDeleteMessage {
+    /** The ID of the challenge */
+    challenge_id: number;
+    /** The entry should be deleted if this field exists and is true */
+    delete: true;
+}
+export interface SeekgraphStartedMessage {
+    /** The ID of the challenge */
+    challenge_id: number;
+    /** If exists and is true, the game has been started and the entry should be removed from the seek graph */
+    game_started?: true;
+    /** The game id */
+    game_id: number;
+    /** Player ID of the creator */
+    creator: number;
+    /** Black player */
+    black: User;
+    /** White player */
+    white: User;
+    /** Time control system */
+    time_control: string;
+    /** Time control parameters */
+    time_control_parameters: JGOFTimeControl;
+    /** Rengo game if true */
+    rengo?: true;
+    /** Player ids of the players on the Black team */
+    rengo_black_team?: number[];
+    /** Player ids of the players on the White team */
+    rengo_white_team?: number[];
+    /** Wether it's a Casual mode rengo game */
+    rengo_casual_mode?: boolean;
+    /** Whether the rengo game with automatically start */
+    rengo_auto_start?: boolean;
+}
+export interface SeekgraphChallengeMessage {
+    /** The ID of the challenge */
+    challenge_id: number;
+    /** User id of the player who is looking for a game */
+    user_id: number;
+    /** Username of the player looking for the game */
+    username: string;
+    /** Their ranking **/
+    ranking: number;
+    /** If they are a professional player */
+    professional: boolean;
+    /** Minimum rank allowed to accept the game */
+    min_rank: number;
+    /** Maximum rank allowed to accept the game */
+    max_rank: number;
+    /** The game ID */
+    game_id: number;
+    /** Game name */
+    name: string;
+    /** If the game is ranked */
+    ranked: boolean;
+    /** The game handicap */
+    handicap: number | null;
+    /** Komi */
+    komi: number | null;
+    /** Rules being used */
+    rules: string;
+    /** Board width */
+    width: number;
+    /** Board height */
+    height: number;
+    /** Color the accepting player will be */
+    challenger_color: "black" | "white" | "automatic";
+    /** If analysis is disabled */
+    disable_analysis: boolean;
+    /** Time control system type */
+    time_control: string;
+    /** Time control parameters */
+    time_control_parameters: JGOFTimeControl;
+    /** Average time per move */
+    time_per_move: number;
+    /** If it's a rengo game */
+    rengo: boolean;
+    /** Player ids of people that have been nominated to play */
+    rengo_nominees: number[];
+    /** Player ids of the players on the Black team */
+    rengo_black_team: number[];
+    /** Player ids of the players on the White team */
+    rengo_white_team: number[];
+    /** All player ids involved in the game */
+    rengo_participants: number[];
+    /** If the game is a casual rengo game */
+    rengo_casual_mode: boolean;
+    /** If the rengo game will automatically start */
+    rengo_auto_start: boolean;
+    /** If the game is only joinable by invitation */
+    invite_only: boolean;
+    /** A UUID for the invitation */
+    uuid: string;
+}
+
+export interface StallingScoreEstimate {
+    move_number: number;
+    predicted_winner: "black" | "white";
+    game_id: number;
+    removed: string;
+    score: number;
+    win_rate: number;
+    ownership: any[];
 }
