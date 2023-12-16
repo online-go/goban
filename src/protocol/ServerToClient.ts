@@ -365,10 +365,7 @@ export interface ServerToClient {
     [k: `game/${number}/clear_auto_resign`]: ServerToClient["game/:id/clear_auto_resign"];
 
     /**  A game chat message */
-    "game/:id/chat": (data: {
-        channel: "main" | "spectator" | "malkovich" | "shadowban" | "hidden" | "personal";
-        line: GameChatLine;
-    }) => void;
+    "game/:id/chat": (data: GameChatMessage) => void;
     [k: `game/${number}/chat`]: ServerToClient["game/:id/chat"];
 
     /** Game chat lines should be removed */
@@ -544,7 +541,7 @@ export interface ServerToClient {
     //[k: `game/${number}/rejected`]: (data: any) => void;
 }
 
-interface GameChatLine {
+export interface GameChatLine {
     chat_id: string;
     body: string | AnalysisComment | ReviewComment;
     date: number;
@@ -727,4 +724,9 @@ export interface StallingScoreEstimate {
     score: number;
     win_rate: number;
     ownership: any[];
+}
+
+export interface GameChatMessage {
+    channel: "main" | "spectator" | "malkovich" | "shadowban" | "hidden" | "personal";
+    line: GameChatLine;
 }

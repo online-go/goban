@@ -48,12 +48,7 @@ import {
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
 import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
-import {
-    ServerToClient,
-    GameChatAnalysisMessage,
-    GameChatReviewMessage,
-    GameChatTranslatedMessage,
-} from "./protocol";
+import { ServerToClient, GameChatMessage, GameChatLine } from "./protocol";
 import { EventEmitter } from "eventemitter3";
 
 declare let swal: any;
@@ -118,23 +113,7 @@ export interface GobanBounds {
     bottom: number;
 }
 
-export interface GobanChatLogLine {
-    chat_id: string;
-    body: string | GameChatAnalysisMessage | GameChatReviewMessage | GameChatTranslatedMessage;
-    date: number;
-    move_number: number;
-    from?: number;
-    moves?: string;
-    channel: string;
-    player_id: number;
-    username?: string;
-}
-
-export type GobanChatLog = Array<{
-    channel: "main" | "spectator" | "malkovich";
-    date: number;
-    lines: Array<GobanChatLogLine>;
-}>;
+export type GobanChatLog = Array<GameChatLine>;
 
 export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     display_width?: number;
@@ -1061,20 +1040,23 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     if (obj.phase) {
                         this.last_phase = obj.phase;
                     } else {
-                        console.warn(`Game gameata missing phase`);
+                        console.warn(`Game gamedata missing phase`);
                     }
                     this.load(obj);
                     this.emit("gamedata", obj);
                 },
             );
-            this._socket_on((prefix + "chat") as keyof GobanSocketEvents, (obj: any): void => {
-                if (this.disconnectedFromGame) {
-                    return;
-                }
-                obj.line.channel = obj.channel;
-                this.chat_log.push(obj.line);
-                this.emit("chat", obj.line);
-            });
+            this._socket_on(
+                (prefix + "chat") as keyof GobanSocketEvents,
+                (obj: GameChatMessage): void => {
+                    if (this.disconnectedFromGame) {
+                        return;
+                    }
+                    obj.line.channel = obj.channel;
+                    this.chat_log.push(obj.line);
+                    this.emit("chat", obj.line);
+                },
+            );
             this._socket_on((prefix + "reset-chats") as keyof GobanSocketEvents, (): void => {
                 if (this.disconnectedFromGame) {
                     return;
