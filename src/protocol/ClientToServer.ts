@@ -28,7 +28,8 @@ export interface ClientToServerBase {
      *  you will find all of the necessary fields to authenticate.
      */
     "authenticate": (data: {
-        /** The JSON Web Token (`user_jwt` field) from `/api/v1/ui/config` */
+        /** The JSON Web Token (`user_jwt` field) from `/api/v1/ui/config`. If
+         * connecting as a guest, send "" */
         jwt: string;
         /** Client generated unique id for the device. */
         device_id?: string;
