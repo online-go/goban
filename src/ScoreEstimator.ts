@@ -531,12 +531,12 @@ export function adjust_estimate(
                 }
             }
         }
+    }
 
-        // Account for already-captured prisoners in Japanese rules.
-        if (territory_counting) {
-            adjusted_score += engine.getBlackPrisoners();
-            adjusted_score -= engine.getWhitePrisoners();
-        }
+    // Account for already-captured prisoners in Japanese rules.
+    if (territory_counting) {
+        adjusted_score += engine.getBlackPrisoners();
+        adjusted_score -= engine.getWhitePrisoners();
     }
 
     return { score: adjusted_score, ownership };
