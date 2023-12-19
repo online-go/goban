@@ -363,4 +363,38 @@ describe("ScoreEstimator", () => {
             [0, 0, 0, 0],
         ]);
     });
+
+    test("score() with captures", async () => {
+        // A board that is split down the middle between black and white
+        const engine = new GoEngine({
+            width: 8,
+            height: 8,
+            initial_state: { black: "dadbdcdddedfdgdh", white: "eaebecedeeefegeh" },
+            komi: 0,
+        });
+
+        // Capture a stone in the corner
+        engine.place(7, 0);
+        engine.place(7, 1);
+        engine.place(-1, -1);
+        engine.place(6, 0);
+
+        //   A B C D E F G H
+        // 8 . . . X O . O{.}
+        // 7 . . . X O . . O
+        // 6 . . . X O . . .
+        // 5 . . . X O . . .
+        // 4 . . . X O . . .
+        // 3 . . . X O . . .
+        // 2 . . . X O . . .
+        // 1 . . . X O . . .
+
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        se.score();
+
+        expect(se.amount).toBe(1);
+        expect(se.winner).toBe("Black");
+    });
 });
