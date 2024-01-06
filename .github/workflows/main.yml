@@ -17,15 +17,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: '14'
+          node-version: '18'
           
       - name: Cache node modules
         id: cache-node-modules
@@ -41,17 +42,19 @@ jobs:
           max_attempts: 3
           command: yarn install
 
-      # Build
-
-      # TODO: add build check
-
       - name: Lint
-        run: yarn lint
+        run: npm run lint
 
       - name: Prettier
-        run: yarn prettier:check
+        run: npm run prettier:check
 
       - name: Test
-        run: yarn test
+        run: npm run test
 
-      # TODO: add webpack checks
+      - name: Spell check
+        uses: streetsidesoftware/cspell-action@v5
+        with:
+            files: src/**/*.{ts,tsx}
+
+      - name: Build
+        run: npm run build-production
