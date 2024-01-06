@@ -1,12 +1,13 @@
 /**
  * @jest-environment jsdom
- * cspell: disable
  */
 
 // ^^ jsdom environment is because getLocation() returns window.location.pathname
 // Same about CLIENT.
 //
 // TODO: move this into a setup-jest.ts file
+
+// cspell: disable
 
 (global as any).CLIENT = true;
 
