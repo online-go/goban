@@ -74,12 +74,12 @@ export interface ClientToServerBase {
 /** This is an exhaustive list of the messages that the client can send
  *  to the server.
  *
- *  This documenation is generated from the official typescript interface.
+ *  This documentation is generated from the official typescript interface.
  *  To interpret it, you will every message organized as the name of the
  *  message followed by a function taking the message data parameters and
  *  returning what you can expect tor receive back.
  *
- *  For example, the authentication message documenation looks like this:
+ *  For example, the authentication message documentation looks like this:
  *
  *  ```typescript
  *    authenticate: ((data: {
@@ -261,7 +261,7 @@ export interface ClientToServer extends ClientToServerBase {
      *  may opt to annul the entire game and start over.
      *
      *  This is largely undesired in an online setting and support for this
-     *  will probably be removed in the future, dont' bother implemeting
+     *  will probably be removed in the future, dont' bother implementing
      *  this.
      */
     "game/annul": (data: {
@@ -307,7 +307,7 @@ export interface ClientToServer extends ClientToServerBase {
     "game/conditional_moves/set": (data: {
         /** The game id */
         game_id: number;
-        /** The move number from which the condtional moves are rooted in */
+        /** The move number from which the conditional moves are rooted in */
         move_number: number;
         /** The conditional moves. The top level should be an array that looks
          *  like `[null, { ... }]` where the second element contains the responses
@@ -568,7 +568,7 @@ export interface ClientToServer extends ClientToServerBase {
     /** Moderator only command to remove a single chat message from a game */
     "review/chat/remove": (data: { review_id: number; channel: string; chat_id: string }) => void;
 
-    /** Retreive host infomration for the termination server you are connected to */
+    /** Retrieve host information for the termination server you are connected to */
     "hostinfo": (data: {}) => {
         "hostname": string;
         "clients": number;
@@ -745,7 +745,7 @@ export interface GameListEntry {
 export interface User {
     id: number;
     username: string;
-    ratings?: { [speedsize: string]: Glicko2 };
+    ratings?: { [speed_size: string]: Glicko2 };
     ranking?: number;
     professional?: boolean;
     country?: string;

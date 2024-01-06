@@ -41,7 +41,7 @@ export class TestGoban extends GobanCore {
     public enablePen(): void {}
     public disablePen(): void {}
     public clearAnalysisDrawing(): void {}
-    public drawPenMarks(penmarks: MoveTreePenMarks): void {}
+    public drawPenMarks(pen_marks: MoveTreePenMarks): void {}
     public showMessage(
         msg_id: MessageID,
         parameters?: { [key: string]: any } | undefined,

@@ -26,7 +26,7 @@ import type { GoEngineConfig, Score, ReviewMessage } from "../GoEngine";
 import type { AdHocPackedMove } from "../AdHocFormat";
 
 /* NOTE: The reason for the :id non template literal key variants of our
- *       messsages is to allow typedoc generate documentation for them,
+ *       messages is to allow typedoc generate documentation for them,
  *       as documentation is not generated for template literal keys
  *       at the time of writing. */
 
@@ -158,7 +158,7 @@ export interface ServerToClient {
         system?: true;
         /** The message received */
         message: {
-            /** Message id. This is always set for non system mesages. */
+            /** Message id. This is always set for non system messages. */
             i?: string;
             /** Message text */
             m: string;
@@ -191,7 +191,7 @@ export interface ServerToClient {
         channel: string;
         /** The new topic */
         topic: string;
-        /** Tiemstamp (ms) of the topic change */
+        /** Timestamp (ms) of the topic change */
         timestamp: number;
 
         /** User id of the user that changed the topic */
@@ -214,7 +214,7 @@ export interface ServerToClient {
         channel: string;
         /** Player id entry that was update. This might change in the case of a
          * guest logging in, in this case this will switch from being a
-         * nevative (guest) id, to some positive id. It is not expected that a
+         * negative (guest) id, to some positive id. It is not expected that a
          * non guest id should change using this system. */
         old_player_id: number;
 
@@ -385,7 +385,7 @@ export interface ServerToClient {
     "game/:id/conditional_moves": (data: {
         /** The game id */
         game_id: number;
-        /** The move number from which the condtional moves are rooted in */
+        /** The move number from which the conditional moves are rooted in */
         move_number: number;
         /** The conditional moves. The top level should be an array that looks
          *  like `[null, { ... }]` where the second element contains the responses

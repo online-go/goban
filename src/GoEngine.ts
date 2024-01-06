@@ -199,7 +199,7 @@ export interface GoEngineConfig {
     // unknown if we use this
     errors?: Array<{ error: string; stack: any }>;
 
-    /** Deprecated, I dno't think we need this anymore, but need to be sure */
+    /** Deprecated, I don't think we need this anymore, but need to be sure */
     ogs_import?: boolean;
 
     // deprecated, normalized out
@@ -228,9 +228,9 @@ export interface ReviewMessage {
     "f"?: number;
     /** Moves made */
     "m"?: string;
-    /** offical move [reviewing live game] */
+    /** official move [reviewing live game] */
     "om"?: [number, number, number];
-    /** offical undo [reviewing live game] */
+    /** official undo [reviewing live game] */
     "undo"?: boolean;
     /** text note for the current node */
     "t"?: string;
@@ -328,7 +328,7 @@ export class GoEngine extends EventEmitter<Events> {
         white: { username: "white", id: NaN },
     };
     public puzzle_collection: number = NaN;
-    public puzzle_description: string = "[missing puzzle descripton]";
+    public puzzle_description: string = "[missing puzzle description]";
     public puzzle_opponent_move_mode: PuzzleOpponentMoveMode = "manual";
     public puzzle_player_move_mode: PuzzlePlayerMoveMode = "free";
     public puzzle_rank: number = NaN;
@@ -762,7 +762,7 @@ export class GoEngine extends EventEmitter<Events> {
 
         return state;
     }
-    public boardMatriciesAreTheSame(
+    public boardMatricesAreTheSame(
         m1: Array<Array<JGOFNumericPlayerColor>>,
         m2: Array<Array<JGOFNumericPlayerColor>>,
     ): boolean {
@@ -964,7 +964,7 @@ export class GoEngine extends EventEmitter<Events> {
         this.last_official_move = this.cur_move;
     }
 
-    /** return strue if our current move is our last official move */
+    /** returns true if our current move is our last official move */
     public isLastOfficialMove(): boolean {
         return this.cur_move.is(this.last_official_move);
     }
@@ -1167,7 +1167,7 @@ export class GoEngine extends EventEmitter<Events> {
                 }
                 const g = this.getGroup(x, y, false);
                 if (g.length) {
-                    /* can be zero if the peice has already been marked */
+                    /* can be zero if the piece has already been marked */
                     ret.push(g);
                 }
             }
@@ -1281,8 +1281,8 @@ export class GoEngine extends EventEmitter<Events> {
             return player_id === this.players.black.id
                 ? "black"
                 : player_id === this.players.white.id
-                ? "white"
-                : "invalid";
+                  ? "white"
+                  : "invalid";
         } else {
             return this.colorToMove();
         }
@@ -1805,7 +1805,7 @@ export class GoEngine extends EventEmitter<Events> {
                 const x = group[i].x;
                 const y = group[i].y;
 
-                const oldboard = this.cur_move.state.board;
+                const old_board = this.cur_move.state.board;
 
                 /* XXX: TODO: When we implement stone removal and scoring stuff
                  * into the review mode and analysis mode, this needs to change to
@@ -1818,7 +1818,7 @@ export class GoEngine extends EventEmitter<Events> {
                     }
                     */
                 } catch (e) {}
-                if (!this.removal[y][x] || oldboard[y][x] || in_review) {
+                if (!this.removal[y][x] || old_board[y][x] || in_review) {
                     ++ct;
                     scored[y][x] = 1;
                 }
@@ -1851,7 +1851,7 @@ export class GoEngine extends EventEmitter<Events> {
                     for (let i = 0; i < gr.points.length; ++i) {
                         const pt = gr.points[i];
                         if (this.board[pt.y][pt.x] && !this.removal[pt.y][pt.x]) {
-                            /* This can happen as peopel are using the edit tool to force stone position colors */
+                            /* This can happen as people are using the edit tool to force stone position colors */
                             /* This can also happen now that we are doing estimate based scoring */
                             //console.log("Point "+ GoMath.prettyCoords(pt.x, pt.y, this.height) +" should be removed, but is not because of an edit");
                             //throw "Fucking hell: " + pt.x + "," + pt.y;
@@ -2212,7 +2212,7 @@ export class GoEngine extends EventEmitter<Events> {
                     }
 
                     if ("ogs_import" in game_obj) {
-                        /* ogs had the starting stones for 2 and 3 swapped from the cannonical positioning */
+                        /* ogs had the starting stones for 2 and 3 swapped from the canonical positioning */
                         if (game_obj.handicap === 2) {
                             black = stars[0][0] + stars[2][2];
                         }
@@ -2270,7 +2270,7 @@ export class GoEngine extends EventEmitter<Events> {
     private parseSGF(sgf: string): () => void {
         /* This callback is eventually returned after the parse. It is the function
          * that should be run which will perform the actual moves. This function is
-         * constructed by making a bunch of dyanmic functions and chaining them
+         * constructed by making a bunch of dynamic functions and chaining them
          * together.. slick or sick, depending on your PoV..  */
         const instructions: Array<() => void> = [];
 
@@ -2279,7 +2279,7 @@ export class GoEngine extends EventEmitter<Events> {
         let line = 1;
 
         let inMainBranch = true;
-        let gametree_depth = 0;
+        let game_tree_depth = 0;
         let farthest_move: MoveTree;
         let initial_player: "black" | "white" | undefined;
 
@@ -2291,7 +2291,7 @@ export class GoEngine extends EventEmitter<Events> {
         function collection() {
             const ret = [];
             while (pos < sgf.length) {
-                ret.push(gametree());
+                ret.push(game_tree());
                 inMainBranch = false;
             }
             return ret;
@@ -2311,9 +2311,9 @@ export class GoEngine extends EventEmitter<Events> {
             }
         }
 
-        function gametree() {
-            gametree_depth++;
-            if (gametree_depth > 1) {
+        function game_tree() {
+            game_tree_depth++;
+            if (game_tree_depth > 1) {
                 inMainBranch = false;
             }
 
@@ -2336,7 +2336,7 @@ export class GoEngine extends EventEmitter<Events> {
                     //console.log("Stashing jump pos: ", cur.id);
                 });
 
-                const g = gametree();
+                const g = game_tree();
                 ret.push(g);
 
                 instructions.push(() => {
@@ -2353,7 +2353,7 @@ export class GoEngine extends EventEmitter<Events> {
             }
             ++pos;
             whitespace();
-            --gametree_depth;
+            --game_tree_depth;
             return ret;
         }
 

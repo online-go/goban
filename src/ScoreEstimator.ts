@@ -270,8 +270,8 @@ export class ScoreEstimator {
                     this.ownership[y][x] < -this.tolerance
                         ? 2 // white
                         : this.ownership[y][x] > this.tolerance
-                        ? 1 // black
-                        : 0; // unclear
+                          ? 1 // black
+                          : 0; // unclear
                 if (estimated === 0 /* dame */ || (current !== 0 && current !== estimated)) {
                     arr.push(encodeMove(x, y));
                 }
@@ -284,8 +284,8 @@ export class ScoreEstimator {
         }
         return ret;
     }
-    handleClick(i: number, j: number, modkey: boolean) {
-        if (modkey) {
+    handleClick(i: number, j: number, mod_key: boolean) {
+        if (mod_key) {
             this.setRemoved(i, j, !this.removal[j][i] ? 1 : 0);
         } else {
             this.toggleMetaGroupRemoval(i, j);
@@ -332,10 +332,10 @@ export class ScoreEstimator {
                                 already_done[g.id] = true;
                                 if (g.color === group_color) {
                                     this.removeGroup(g, removing);
-                                    g.foreachNeighborSpaceGroup((gspace) => {
-                                        if (!already_done[gspace.id]) {
-                                            space_groups.push(gspace);
-                                            already_done[gspace.id] = true;
+                                    g.foreachNeighborSpaceGroup((g_space) => {
+                                        if (!already_done[g_space.id]) {
+                                            space_groups.push(g_space);
+                                            already_done[g_space.id] = true;
                                         }
                                     });
                                 }

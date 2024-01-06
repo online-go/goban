@@ -228,7 +228,7 @@ export interface StateUpdateEvents {
     strict_seki_mode: (d: boolean) => void;
     rules: (d: GoEngineRules) => void;
     winner: (d: number | undefined) => void;
-    undo_requested: (d: number | undefined) => void; // move number of the last undo reques
+    undo_requested: (d: number | undefined) => void; // move number of the last undo request
     undo_canceled: () => void;
     paused: (d: boolean) => void;
     outcome: (d: string) => void;
@@ -557,7 +557,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     protected connectToReviewSent?: boolean;
 
     /** GobanCore calls some abstract methods as part of the construction
-     *  process. Because our subsclasses might (and do) need to do some of their
+     *  process. Because our subclasses might (and do) need to do some of their
      *  own config before these are called, we set this function to be called
      *  by our subclass after it's done it's own internal config stuff.
      */
@@ -566,7 +566,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     public abstract enablePen(): void;
     public abstract disablePen(): void;
     public abstract clearAnalysisDrawing(): void;
-    public abstract drawPenMarks(penmarks: MoveTreePenMarks): void;
+    public abstract drawPenMarks(pen_marks: MoveTreePenMarks): void;
     public abstract showMessage(
         msg_id: MessageID,
         parameters?: { [key: string]: any },
@@ -1226,14 +1226,14 @@ export abstract class GobanCore extends EventEmitter<Events> {
                         this.setMode("play");
                     }
 
-                    let jumptomove = null;
+                    let jump_to_move = null;
                     if (
                         this.engine.cur_move.id !== this.engine.last_official_move.id &&
                         ((this.engine.cur_move.parent == null &&
                             this.engine.cur_move.trunk_next != null) ||
                             this.engine.cur_move.parent?.id !== this.engine.last_official_move.id)
                     ) {
-                        jumptomove = this.engine.cur_move;
+                        jump_to_move = this.engine.cur_move;
                     }
                     this.engine.jumpToLastOfficialMove();
 
@@ -1293,8 +1293,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     this.setLastOfficialMove();
                     delete this.move_selected;
 
-                    if (jumptomove) {
-                        this.engine.jumpTo(jumptomove);
+                    if (jump_to_move) {
+                        this.engine.jumpTo(jump_to_move);
                     }
 
                     this.emit("update");
@@ -1327,7 +1327,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 (prefix + "player_update") as keyof GobanSocketEvents,
                 (player_update: JGOFPlayerSummary): void => {
                     try {
-                        let jumptomove = null;
+                        let jump_to_move = null;
                         if (
                             this.engine.cur_move.id !== this.engine.last_official_move.id &&
                             ((this.engine.cur_move.parent == null &&
@@ -1335,7 +1335,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                                 this.engine.cur_move.parent?.id !==
                                     this.engine.last_official_move.id)
                         ) {
-                            jumptomove = this.engine.cur_move;
+                            jump_to_move = this.engine.cur_move;
                         }
                         this.engine.jumpToLastOfficialMove();
 
@@ -1348,8 +1348,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
                             console.warn("unexpected player_update received!");
                         }
 
-                        if (jumptomove) {
-                            this.engine.jumpTo(jumptomove);
+                        if (jump_to_move) {
+                            this.engine.jumpTo(jump_to_move);
                         }
                     } catch (e) {
                         console.error(e);
@@ -1524,10 +1524,10 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 "om" in obj /* official moves are always alone in these object broadcasts */ ||
                 "undo" in obj /* official moves are always alone in these object broadcasts */
             ) {
-                const curmove = this.engine.cur_move;
+                const cur_move = this.engine.cur_move;
                 const follow =
                     this.engine.cur_review_move == null ||
-                    this.engine.cur_review_move.id === curmove.id;
+                    this.engine.cur_review_move.id === cur_move.id;
                 let do_redraw = false;
                 if ("f" in obj && typeof obj.m === "string") {
                     /* specifying node */
@@ -1554,7 +1554,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                             t.y !== mv.y) /* case when a branch has been promoted to trunk */ &&
                         !follow_om
                     ) {
-                        /* case when they were on a last official move, autofollow to next */
+                        /* case when they were on a last official move, auto-follow to next */
                         this.engine.jumpTo(t);
                     }
                     this.engine.setAsCurrentReviewMove();
@@ -1645,7 +1645,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
 
                 if (this.done_loading_review) {
                     if (!follow) {
-                        this.engine.jumpTo(curmove);
+                        this.engine.jumpTo(cur_move);
                         this.move_tree_redraw();
                     } else {
                         if (do_redraw) {
@@ -2216,10 +2216,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
         }
 
         if (
-            !(
-                old_engine &&
-                old_engine.boardMatriciesAreTheSame(old_engine.board, this.engine.board)
-            )
+            !(old_engine && old_engine.boardMatricesAreTheSame(old_engine.board, this.engine.board))
         ) {
             this.redraw(true);
         }
@@ -2530,8 +2527,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.emit("conditional-moves.updated");
         this.emit("update");
     }
-    public followConditionalPath(movepath: string) {
-        const moves = this.engine.decodeMoves(movepath);
+    public followConditionalPath(move_path: string) {
+        const moves = this.engine.decodeMoves(move_path);
         for (let i = 0; i < moves.length; ++i) {
             this.engine.place(moves[i].x, moves[i].y);
             this.followConditionalSegment(moves[i].x, moves[i].y);
@@ -2603,8 +2600,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.currently_my_cmove = !this.currently_my_cmove;
         this.emit("conditional-moves.updated");
     }
-    public deleteConditionalPath(movepath: string): void {
-        const moves = this.engine.decodeMoves(movepath);
+    public deleteConditionalPath(move_path: string): void {
+        const moves = this.engine.decodeMoves(move_path);
         if (moves.length) {
             for (let i = 0; i < moves.length - 1; ++i) {
                 if (i !== moves.length - 2) {
@@ -3260,9 +3257,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     const elapsed: number = original_clock.start_mode
                         ? 0
                         : paused && original_clock.paused_since
-                        ? Math.max(original_clock.paused_since, original_clock.last_move) -
-                          original_clock.last_move
-                        : current_server_time - original_clock.last_move;
+                          ? Math.max(original_clock.paused_since, original_clock.last_move) -
+                            original_clock.last_move
+                          : current_server_time - original_clock.last_move;
 
                     const clock = this.computeNewPlayerClock(
                         original_clock[`${color}_time`] as any,
@@ -3655,7 +3652,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                         }
                     }
                 } else {
-                    // Engine and clock code didn't agreen on whose turn it was, don't emit audio-clock event yet
+                    // Engine and clock code didn't agree on whose turn it was, don't emit audio-clock event yet
                 }
             }
 
@@ -3831,14 +3828,14 @@ export abstract class GobanCore extends EventEmitter<Events> {
                         const pos = this.getMarks(x, y);
                         for (let i = 0; i < MARK_TYPES.length; ++i) {
                             if (MARK_TYPES[i] in pos && pos[MARK_TYPES[i]]) {
-                                const markkey: keyof MarkInterface =
+                                const mark_key: keyof MarkInterface =
                                     MARK_TYPES[i] === "letter"
                                         ? pos.letter || "[ERR]"
                                         : MARK_TYPES[i];
-                                if (!(markkey in marks)) {
-                                    marks[markkey] = "";
+                                if (!(mark_key in marks)) {
+                                    marks[mark_key] = "";
                                 }
-                                marks[markkey] += encodeMove(x, y);
+                                marks[mark_key] += encodeMove(x, y);
                             }
                         }
                     }
@@ -3922,7 +3919,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
 
     /* Computes the relative latency between the target player and the current viewer.
      * For example, if player P has a latency of 500ms and we have a latency of 200ms,
-     * the relative latency will be 300ms. This is used to artifically delay the clock
+     * the relative latency will be 300ms. This is used to artificially delay the clock
      * countdown for that player to minimize the amount of apparent time jumping that can
      * happen as clocks are synchronized */
     public getPlayerRelativeLatency(player_id: number): number {
@@ -3989,6 +3986,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     }
 }
 function uuid(): string {
+    // cspell: words yxxx
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0;
         const v = c === "x" ? r : (r & 0x3) | 0x8;

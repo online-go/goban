@@ -1,10 +1,12 @@
+//cspell: disable
+
 import { GoEngine } from "../GoEngine";
 import { movesFromBoardState } from "../test_utils";
 import { GobanMoveError } from "../GobanError";
 import { JGOFIntersection } from "../JGOF";
 import { makeMatrix } from "../GoMath";
 
-test("boardMatriciesAreTheSame", () => {
+test("boardMatricesAreTheSame", () => {
     const engine = new GoEngine({});
     const a = [
         [1, 2],
@@ -22,9 +24,9 @@ test("boardMatriciesAreTheSame", () => {
         [1, 2, 5],
         [3, 4, 6],
     ];
-    expect(engine.boardMatriciesAreTheSame(a, b)).toBe(true);
-    expect(engine.boardMatriciesAreTheSame(a, c)).toBe(false);
-    expect(engine.boardMatriciesAreTheSame(a, d)).toBe(false);
+    expect(engine.boardMatricesAreTheSame(a, b)).toBe(true);
+    expect(engine.boardMatricesAreTheSame(a, c)).toBe(false);
+    expect(engine.boardMatricesAreTheSame(a, d)).toBe(false);
 });
 
 describe("computeScore", () => {

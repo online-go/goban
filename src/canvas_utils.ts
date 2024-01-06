@@ -97,7 +97,7 @@ export function validateCanvas(canvas: HTMLCanvasElement | null, err?: Error): b
     return true;
 }
 
-/* Creates a non-blury canvas object. Most systems don't have an issue with
+/* Creates a non-blurry canvas object. Most systems don't have an issue with
  * this, but HDPI android devices deal with scaling canvases and images in a
  * retarded fashion and require this hack to get around it. */
 export function createDeviceScaledCanvas(width: number, height: number): HTMLCanvasElement {

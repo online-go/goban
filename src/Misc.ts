@@ -22,7 +22,7 @@
  * - closing bracket is a special symbol
  * - whitespaces other than space & newline should be converted to space
  * - in compose data type, we should also escape ':'
- *   (but that is only used in special SGFproperties)
+ *   (but that is only used in special SGF properties)
  *
  * so we gotta:
  * - escape (double) all slashes in the text (so that they do not have the special meaning)
@@ -36,11 +36,11 @@ export function escapeSGFText(txt: string, escapeColon: boolean = false): string
     txt = txt.replace(/\\/g, "\\\\");
 
     // escape closing square bracket ]
-    // 'hideki[9dan]' -> 'hideki[9dan\]'
+    // 'blah[9dan]' -> 'blah[9dan\]'
     txt = txt.replace(/]/g, "\\]");
 
     // no need to escape opening bracket, SGF grammar handles that
-    // 'C[[[[[[blabla]'
+    // 'C[[[[[[blah blah]'
     //   ^ after it finds the first [, it is only looking for the closing bracket
     // parsing SGF properties, so the remaining [ are safely treated as text
     //txt = txt.replace(/[/g, "\\[");

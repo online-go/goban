@@ -1,5 +1,6 @@
 /**
  * @jest-environment jsdom
+ * cspell: disable
  */
 
 // ^^ jsdom environment is because getLocation() returns window.location.pathname

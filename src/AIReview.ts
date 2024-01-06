@@ -90,23 +90,23 @@ export function getWorstMoves(
     max_moves: number = 3,
 ): Array<AIReviewWorstMoveEntry> {
     let worst_moves: AIReviewWorstMoveEntry[];
-    let threshhold: number;
+    let threshold: number;
 
     if (ai_review.scores) {
         worst_moves = computeWorstMoves(starting_move, ai_review, /*use_score=*/ true);
-        threshhold = -5.0;
+        threshold = -5.0;
     } else {
         worst_moves = computeWorstMoves(starting_move, ai_review);
-        threshhold = -0.2;
+        threshold = -0.2;
     }
 
-    const filtered_worst_moves = worst_moves.filter((de) => de.delta <= threshhold);
+    const filtered_worst_moves = worst_moves.filter((de) => de.delta <= threshold);
 
     if (filtered_worst_moves.length >= max_moves) {
         return filtered_worst_moves.slice(0, max_moves);
     }
 
-    // If there weren't enough moves below the threshhold, just return the top
+    // If there weren't enough moves below the threshold, just return the top
     // three.
     return worst_moves.slice(0, max_moves);
 }

@@ -423,9 +423,9 @@ export function positionId(
     width: number,
 ): string {
     // The basic algorithm is to list where each of the stones are, in a long string.
-    // We do this once for each transform, selecting the lowest (lexixally) as we go.
+    // We do this once for each transform, selecting the lowest (lexically) as we go.
 
-    const tforms: Array<BoardTransform> = [
+    const transforms: Array<BoardTransform> = [
         (x, y) => ({ x, y }),
         (x, y) => ({ x, y: height - y - 1 }),
         (x, y) => ({ x: y, y: x }),
@@ -438,12 +438,12 @@ export function positionId(
 
     const ids = [];
 
-    for (const tform of tforms) {
+    for (const transform of transforms) {
         let black_state = "";
         let white_state = "";
         for (let x = 0; x < width; x++) {
             for (let y = 0; y < height; y++) {
-                const c = tform(x, y);
+                const c = transform(x, y);
                 if (position[x][y] === JGOFNumericPlayerColor.BLACK) {
                     black_state += encodeMove(c.x, c.y);
                 }

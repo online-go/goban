@@ -55,7 +55,7 @@ interface GobanSocketOptions {
 
 const RECONNECTION_INTERVALS = [
     // Connection drops are common and we can usually reconnect immediately. In
-    // the case of a server restart, we count on the inherant latency of everyone
+    // the case of a server restart, we count on the inherent latency of everyone
     // to even out the initial reconnect surge.
     [50, 50],
     [100, 300], // if that doesn't work, try again in 100-300ms
@@ -284,8 +284,8 @@ export class GobanSocket<
                     event.code === 1014
                         ? "bad_gateway"
                         : event.code === 1015
-                        ? "tls_handshake"
-                        : "unknown",
+                          ? "tls_handshake"
+                          : "unknown",
                     closeErrorCodeToString(event.code),
                 );
                 return;
@@ -355,8 +355,8 @@ export class GobanSocket<
         const request: GobanSocketClientToServerMessage<SendProtocol> = cb
             ? [command, data, ++this.last_request_id]
             : data
-            ? [command, data]
-            : [command];
+              ? [command, data]
+              : [command];
 
         if (cb) {
             this.callbacks.set(this.last_request_id, cb);
@@ -413,7 +413,7 @@ export function closeErrorCodeToString(code: number): string {
         case 1004:
             return "Reserved";
         case 1005:
-            return "No Status Rcvd";
+            return "No Status Received";
         case 1006:
             return "Abnormal Closure";
         case 1007:

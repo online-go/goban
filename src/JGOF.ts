@@ -126,7 +126,7 @@ export interface JGOFClock {
     start_time_left?: number;
 
     /**
-     * If `puase_State.stone_removal` is true, this is the number of
+     * If `pause_State.stone_removal` is true, this is the number of
      * milliseconds left before the result is automatically accepted.
      */
     stone_removal_time_left?: number;
@@ -291,7 +291,7 @@ export interface JGOFAIReview {
 
     /** Analysis of variations in the game. */
     analyzed_variations?: {
-        [varkey: string]: JGOFAIReviewMove;
+        [var_key: string]: JGOFAIReviewMove;
     };
 
     /** If there was an error processing the review, it can be stored here */

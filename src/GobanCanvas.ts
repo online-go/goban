@@ -419,10 +419,10 @@ export class GobanCanvas extends GobanCore {
             }
         };
 
-        let mousedisabled: any = 0;
+        let mouse_disabled: any = 0;
 
         canvas.addEventListener("click", (ev) => {
-            if (!mousedisabled) {
+            if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, false);
             }
@@ -430,7 +430,7 @@ export class GobanCanvas extends GobanCore {
             return false;
         });
         canvas.addEventListener("dblclick", (ev) => {
-            if (!mousedisabled) {
+            if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, true);
             }
@@ -438,21 +438,21 @@ export class GobanCanvas extends GobanCore {
             return false;
         });
         canvas.addEventListener("mousedown", (ev) => {
-            if (!mousedisabled) {
+            if (!mouse_disabled) {
                 pointerDown(ev);
             }
             ev.preventDefault();
             return false;
         });
         canvas.addEventListener("mousemove", (ev) => {
-            if (!mousedisabled) {
+            if (!mouse_disabled) {
                 pointerMove(ev);
             }
             ev.preventDefault();
             return false;
         });
         canvas.addEventListener("mouseout", (ev) => {
-            if (!mousedisabled) {
+            if (!mouse_disabled) {
                 pointerOut(ev);
             } else {
                 ev.preventDefault();
@@ -460,7 +460,7 @@ export class GobanCanvas extends GobanCore {
             return false;
         });
         canvas.addEventListener("contextmenu", (ev) => {
-            if (!mousedisabled) {
+            if (!mouse_disabled) {
                 pointerUp(ev, false);
             } else {
                 ev.preventDefault();
@@ -479,11 +479,11 @@ export class GobanCanvas extends GobanCore {
 
         const onTouchStart = (ev: TouchEvent) => {
             try {
-                if (mousedisabled) {
-                    clearTimeout(mousedisabled);
+                if (mouse_disabled) {
+                    clearTimeout(mouse_disabled);
                 }
-                mousedisabled = setTimeout(() => {
-                    mousedisabled = 0;
+                mouse_disabled = setTimeout(() => {
+                    mouse_disabled = 0;
                 }, 5000);
                 getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
 
@@ -513,11 +513,11 @@ export class GobanCanvas extends GobanCore {
                     currentElement.blur();
                 }
 
-                if (mousedisabled) {
-                    clearTimeout(mousedisabled);
+                if (mouse_disabled) {
+                    clearTimeout(mouse_disabled);
                 }
-                mousedisabled = setTimeout(() => {
-                    mousedisabled = 0;
+                mouse_disabled = setTimeout(() => {
+                    mouse_disabled = 0;
                 }, 5000);
 
                 if (ev.target === canvas) {
@@ -540,11 +540,11 @@ export class GobanCanvas extends GobanCore {
         };
         const onTouchMove = (ev: TouchEvent) => {
             try {
-                if (mousedisabled) {
-                    clearTimeout(mousedisabled);
+                if (mouse_disabled) {
+                    clearTimeout(mouse_disabled);
                 }
-                mousedisabled = setTimeout(() => {
-                    mousedisabled = 0;
+                mouse_disabled = setTimeout(() => {
+                    mouse_disabled = 0;
                 }, 5000);
                 getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
 
@@ -650,11 +650,11 @@ export class GobanCanvas extends GobanCore {
 
         this.syncReviewMove({ pp: [dx, dy] });
     }
-    public drawPenMarks(penmarks: MoveTreePenMarks): void {
+    public drawPenMarks(pen_marks: MoveTreePenMarks): void {
         if (this.review_id && !this.done_loading_review) {
             return;
         }
-        if (!penmarks.length) {
+        if (!pen_marks.length) {
             return;
         }
         this.attachPenCanvas();
@@ -662,9 +662,9 @@ export class GobanCanvas extends GobanCore {
             throw new Error(`onPenMove called with null pen_ctx`);
         }
         this.clearAnalysisDrawing();
-        this.pen_marks = penmarks;
-        for (let i = 0; i < penmarks.length; ++i) {
-            const stroke = penmarks[i];
+        this.pen_marks = pen_marks;
+        for (let i = 0; i < pen_marks.length; ++i) {
+            const stroke = pen_marks[i];
             this.setPenStyle(stroke.color);
 
             let px = stroke.points[0];
@@ -894,7 +894,7 @@ export class GobanCanvas extends GobanCore {
                                     if (
                                         calls === 1 &&
                                         /* only move if it's the "ai" turn.. if we undo we can get into states where we
-                                         * are playing for the ai for some moves so don't automove blindly */ ((next.player ===
+                                         * are playing for the ai for some moves so don't auto-move blindly */ ((next.player ===
                                             2 &&
                                             this.engine.config.initial_player === "black") ||
                                             (next.player === 1 &&
@@ -1194,7 +1194,7 @@ export class GobanCanvas extends GobanCore {
             console.error("No position for ", j, i);
             pos = {};
         }
-        let altmarking: string | undefined;
+        let alt_marking: string | undefined;
         if (
             this.engine &&
             this.engine.cur_move &&
@@ -1207,7 +1207,7 @@ export class GobanCanvas extends GobanCore {
                     const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
                         if (!cur.edited && this.show_move_numbers) {
-                            altmarking = cur.getMoveNumberDifferenceFromTrunk().toString();
+                            alt_marking = cur.getMoveNumberDifferenceFromTrunk().toString();
                         }
                     }
                 }
@@ -1800,8 +1800,8 @@ export class GobanCanvas extends GobanCore {
                 transparent = true;
                 letter = this.label_character;
             }
-            if (!letter && altmarking !== "triangle") {
-                letter = altmarking;
+            if (!letter && alt_marking !== "triangle") {
+                letter = alt_marking;
             }
 
             if (
@@ -1821,7 +1821,7 @@ export class GobanCanvas extends GobanCore {
                     if (m.edited) {
                         //letter = "triangle";
                         if (this.engine.board[j][i]) {
-                            altmarking = "triangle";
+                            alt_marking = "triangle";
                         }
                     } else {
                         letter = m.getMoveNumberDifferenceFromTrunk().toString();
@@ -1901,13 +1901,13 @@ export class GobanCanvas extends GobanCore {
         /* draw special symbols */
         {
             let transparent = letter_was_drawn;
-            let hovermark: string | undefined;
+            let hover_mark: string | undefined;
             const symbol_color =
                 stone_color === 1
                     ? this.theme_black_text_color
                     : stone_color === 2
-                    ? this.theme_white_text_color
-                    : text_color;
+                      ? this.theme_white_text_color
+                      : text_color;
 
             if (
                 this.analyze_tool === "label" &&
@@ -1922,11 +1922,11 @@ export class GobanCanvas extends GobanCore {
                     this.analyze_subtool === "circle"
                 ) {
                     transparent = true;
-                    hovermark = this.analyze_subtool;
+                    hover_mark = this.analyze_subtool;
                 }
             }
 
-            if (pos.circle || hovermark === "circle") {
+            if (pos.circle || hover_mark === "circle") {
                 ctx.lineCap = "round";
                 ctx.save();
                 ctx.beginPath();
@@ -1945,8 +1945,8 @@ export class GobanCanvas extends GobanCore {
                 pos.triangle ||
                 pos.chat_triangle ||
                 pos.sub_triangle ||
-                altmarking === "triangle" ||
-                hovermark === "triangle"
+                alt_marking === "triangle" ||
+                hover_mark === "triangle"
             ) {
                 let scale = 1.0;
                 let oy = 0.0;
@@ -1979,7 +1979,7 @@ export class GobanCanvas extends GobanCore {
                 ctx.restore();
                 draw_last_move = false;
             }
-            if (pos.cross || hovermark === "cross") {
+            if (pos.cross || hover_mark === "cross") {
                 ctx.lineCap = "square";
                 ctx.save();
                 ctx.beginPath();
@@ -1998,7 +1998,7 @@ export class GobanCanvas extends GobanCore {
                 draw_last_move = false;
             }
 
-            if (pos.square || hovermark === "square") {
+            if (pos.square || hover_mark === "square") {
                 ctx.lineCap = "square";
                 ctx.save();
                 ctx.beginPath();
@@ -2158,7 +2158,7 @@ export class GobanCanvas extends GobanCore {
             console.error("No position for ", j, i);
             pos = {};
         }
-        let altmarking: string | undefined;
+        let alt_marking: string | undefined;
         if (
             this.engine &&
             this.engine.cur_move &&
@@ -2171,7 +2171,7 @@ export class GobanCanvas extends GobanCore {
                     const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
                         if (!cur.edited && this.show_move_numbers) {
-                            altmarking = cur.getMoveNumberDifferenceFromTrunk().toString();
+                            alt_marking = cur.getMoveNumberDifferenceFromTrunk().toString();
                         }
                     }
                 }
@@ -2387,8 +2387,8 @@ export class GobanCanvas extends GobanCore {
                 transparent = true;
                 letter = this.label_character;
             }
-            if (!letter && altmarking !== "triangle") {
-                letter = altmarking;
+            if (!letter && alt_marking !== "triangle") {
+                letter = alt_marking;
             }
 
             if (
@@ -2401,7 +2401,7 @@ export class GobanCanvas extends GobanCore {
                     if (m.edited) {
                         //letter = "triangle";
                         if (this.engine.board[j][i]) {
-                            altmarking = "triangle";
+                            alt_marking = "triangle";
                         }
                     } else {
                         letter = m.getMoveNumberDifferenceFromTrunk().toString();
@@ -2438,7 +2438,7 @@ export class GobanCanvas extends GobanCore {
             if (pos.circle) {
                 ret += "circle,";
             }
-            if (pos.triangle || pos.chat_triangle || altmarking === "triangle") {
+            if (pos.triangle || pos.chat_triangle || alt_marking === "triangle") {
                 ret += "triangle,";
             }
             if (pos.cross) {
@@ -2538,14 +2538,14 @@ export class GobanCanvas extends GobanCore {
         const ctx = this.ctx;
 
         const place = (ch: string, x: number, y: number): void => {
-            /* places centered (horizontally & veritcally) text at x,y */
+            /* places centered (horizontally & vertically) text at x,y */
             const metrics = ctx.measureText(ch);
             const xx = x - metrics.width / 2;
             const yy = y;
             ctx.fillText(ch, xx, yy);
         };
-        const vplace = (ch: string, x: number, y: number): void => {
-            /* places centered (horizontally & veritcally) text at x,y, with text going down vertically. */
+        const v_place = (ch: string, x: number, y: number): void => {
+            /* places centered (horizontally & vertically) text at x,y, with text going down vertically. */
             for (let i = 0; i < ch.length; ++i) {
                 const metrics = ctx.measureText(ch[i]);
                 const xx = x - metrics.width / 2;
@@ -2643,7 +2643,7 @@ export class GobanCanvas extends GobanCore {
                                 (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
                                 this.square_size +
                             this.square_size / 2;
-                        vplace(chinese_japanese_numbers[c], x, y);
+                        v_place(chinese_japanese_numbers[c], x, y);
                     }
                     break;
             }
@@ -2886,7 +2886,7 @@ export class GobanCanvas extends GobanCore {
 
         // We should only need a few sizes, like 6 in most cases, but when we resize a window slowly or
         // have a bunch of weird sized boards, we'll need more. These are very small and there aren't
-        // any devices that should have a problem with them, except for an artifical limit on iOS devices
+        // any devices that should have a problem with them, except for an artificial limit on iOS devices
         // which we'll handle below.
         let max_cache_size = 500;
         try {
@@ -2934,10 +2934,10 @@ export class GobanCanvas extends GobanCore {
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         //this.parent.css(this.theme_board.getBackgroundCSS());
-        const bgcss = this.theme_board.getBackgroundCSS();
+        const bg_css = this.theme_board.getBackgroundCSS();
         if (this.parent) {
-            for (const key in bgcss) {
-                (this.parent.style as any)[key] = (bgcss as any)[key];
+            for (const key in bg_css) {
+                (this.parent.style as any)[key] = (bg_css as any)[key];
             }
         }
 
@@ -3225,7 +3225,7 @@ export class GobanCanvas extends GobanCore {
                         // note that getRelativeEventPosition handles various
                         // nasty looking things to do with Touch etc, so using it here
                         // gets around that kind of thing, even though in theory it
-                        // might be nicer to sent the client absolute coods, maybe.
+                        // might be nicer to sent the client absolute coords, maybe.
                         const rpos = getRelativeEventPosition(event);
                         this.emit("played-by-click", {
                             player_id: this.engine.cur_move.played_by,

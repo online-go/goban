@@ -1,3 +1,5 @@
+//cspell: disable
+
 import { GoEngine } from "../GoEngine";
 import { makeMatrix } from "../GoMath";
 import {

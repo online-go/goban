@@ -1,3 +1,5 @@
+//cspell: disable
+
 import { BoardState } from "../GoStoneGroup";
 import { GoStoneGroups } from "../GoStoneGroups";
 import { JGOFNumericPlayerColor } from "../JGOF";

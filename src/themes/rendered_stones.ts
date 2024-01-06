@@ -293,6 +293,7 @@ export function renderShadow(
 }
 
 function preRenderStone(radius: number, seed: number, options: RenderOptions): StoneTypeArray {
+    // cspell: words dcsr
     const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
     radius = Math.max(0.1, radius);
@@ -346,34 +347,34 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
     if (options.shell_lines) {
         try {
             const alphas = copyAlpha(ctx, ss, ss);
-            const nlines = 5 + (seed % 5);
+            const n_lines = 5 + (seed % 5);
             let angle = ((seed % 160) + 10) * 0.0174532925; /* -> radians */
             if (seed & 0x100) {
                 angle = -angle;
             }
 
-            const sep = radius / (nlines * 2);
+            const sep = radius / (n_lines * 2);
             const rise = Math.cos(angle);
             const run = Math.sin(angle);
             const m = rise / run;
-            const minv = run / rise;
+            const min_v = run / rise;
 
-            let minv2_1 = minv * minv - 1;
-            minv2_1 = Math.abs(minv2_1);
+            let min_v2_1 = min_v * min_v - 1;
+            min_v2_1 = Math.abs(min_v2_1);
 
             let s = seed;
-            const rstep = Math.round(radius * 0.1);
+            const r_step = Math.round(radius * 0.1);
 
             ctx.save();
 
             let r = -radius;
             const base_line_width = radius * 0.07;
-            for (let i = 0; i < nlines * 4; ++i) {
+            for (let i = 0; i < n_lines * 4; ++i) {
                 for (let neg = 0; neg < 2; ++neg) {
-                    r += sep + (s % rstep);
+                    r += sep + (s % r_step);
 
-                    const xp = Math.sqrt((r * r) / minv2_1);
-                    const yp = minv * xp;
+                    const xp = Math.sqrt((r * r) / min_v2_1);
+                    const yp = min_v * xp;
                     const b = (neg ? -1 : 1) * yp - m * xp;
 
                     const sx = 0;

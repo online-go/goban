@@ -90,14 +90,14 @@ export function estimateScoreWasm(
     tolerance: number,
 ) {
     if (!OGSScoreEstimator_initialized) {
-        throw new Error("Score estimator not intialized yet, uptime = " + performance.now());
+        throw new Error("Score estimator not initialized yet, uptime = " + performance.now());
     }
 
     const width = board[0].length;
     const height = board.length;
-    const nbytes = 4 * width * height;
-    const ptr = OGSScoreEstimatorModule._malloc(nbytes);
-    const ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, nbytes);
+    const n_bytes = 4 * width * height;
+    const ptr = OGSScoreEstimatorModule._malloc(n_bytes);
+    const ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, n_bytes);
     let i = 0;
     for (let y = 0; y < height; ++y) {
         for (let x = 0; x < width; ++x) {

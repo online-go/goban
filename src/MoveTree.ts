@@ -118,7 +118,7 @@ export class MoveTree {
 
     /* These need to be protected by accessor methods now that we're not
      * initializing them on construction */
-    private chatlog?: Array<MoveTreeChatLine>;
+    private chat_log?: Array<MoveTreeChatLine>;
     private marks?: Array<Array<MarkInterface>>;
     public isobranches: any;
     private isobranch_hash?: string;
@@ -394,7 +394,7 @@ export class MoveTree {
         return m;
     }
     /*
-     * recursively walks the tree in depth-first manner, preorder
+     * recursively walks the tree in depth-first manner, pre-order
      * - calls the `fn` function first on body
      * - then on trunk
      * - then branches
@@ -409,7 +409,7 @@ export class MoveTree {
         }
     }
     /*
-     * fold a tree in preorder manner
+     * fold a tree in pre-order manner
      *
      * tree
      *
@@ -569,10 +569,10 @@ export class MoveTree {
         }
     }
     getChatLog(): Array<any> {
-        if (!this.chatlog) {
-            this.chatlog = [];
+        if (!this.chat_log) {
+            this.chat_log = [];
         }
-        return this.chatlog;
+        return this.chat_log;
     }
     getAllMarks(): Array<Array<MarkInterface>> {
         if (!this.marks) {
@@ -675,15 +675,15 @@ export class MoveTree {
                 txt.push(this.text);
             }
 
-            if (this.chatlog && this.chatlog.length) {
+            if (this.chat_log && this.chat_log.length) {
                 txt.push("\n\n");
                 txt.push("-- chat --");
                 txt.push("\n");
-                for (let i = 0; i < this.chatlog.length; ++i) {
-                    txt.push(MoveTree.fmtUsername(this.chatlog[i].username));
+                for (let i = 0; i < this.chat_log.length; ++i) {
+                    txt.push(MoveTree.fmtUsername(this.chat_log[i].username));
                     txt.push(
                         MoveTree.markupSGFChatMessage(
-                            this.chatlog[i].body,
+                            this.chat_log[i].body,
                             this.engine.width,
                             this.engine.height,
                         ),
@@ -724,9 +724,9 @@ export class MoveTree {
             }
             ret.push("\n");
 
-            const brct = (this.trunk_next != null ? 1 : 0) + this.branches.length;
-            const A = brct > 1 ? "(" : "";
-            const B = brct > 1 ? ")" : "";
+            const branch_ct = (this.trunk_next != null ? 1 : 0) + this.branches.length;
+            const A = branch_ct > 1 ? "(" : "";
+            const B = branch_ct > 1 ? ")" : "";
 
             if (this.trunk_next) {
                 ret.push(A);
@@ -1047,12 +1047,12 @@ export class MoveTree {
             if (typeof message === "object") {
                 if (message.type === "analysis") {
                     const moves = GoMath.decodeMoves(message.moves, width, height);
-                    let movestr = "";
+                    let move_str = "";
                     for (let i = 0; i < moves.length; ++i) {
-                        movestr += GoMath.prettyCoords(moves[i].x, moves[i].y, height) + " ";
+                        move_str += GoMath.prettyCoords(moves[i].x, moves[i].y, height) + " ";
                     }
 
-                    return message.name + ". From move " + message.from + ": " + movestr;
+                    return message.name + ". From move " + message.from + ": " + move_str;
                 }
             }
         } catch (e) {

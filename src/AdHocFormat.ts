@@ -79,7 +79,7 @@ export interface AdHocClock {
     /** Current server time, in milliseconds since 1970 */
     //now:number;
 
-    /** Time the game was paused. This field erronously exists even after the
+    /** Time the game was paused. This field erroneously exists even after the
      *  game has been resumed, this will be removed in these cases. */
     paused_since?: number;
 

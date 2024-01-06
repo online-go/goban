@@ -49,6 +49,7 @@ export function preRenderImageStone(
     urls: string | string[],
     deferredRenderCallback: () => void,
 ): StoneTypeArray {
+    // cspell: words dcsr
     const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
 

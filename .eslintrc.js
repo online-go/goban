@@ -92,7 +92,7 @@ module.exports = {
             "error",
             {
                 rules: {
-                    "file-header": [true, "[Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com"],
+                    "file-header": [true, "[Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com"], // cspell: disable-line
                     "import-spacing": true,
                     whitespace: [
                         true,

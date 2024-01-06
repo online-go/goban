@@ -109,7 +109,7 @@ export function computeAverageMoveTime(
 ): number {
     if (typeof time_control !== "object" || time_control === null) {
         console.error(
-            `computAverageMoveTime passed ${time_control} instead of a time_control object`,
+            `computeAverageMoveTime passed ${time_control} instead of a time_control object`,
         );
         return time_control;
     }
@@ -141,7 +141,7 @@ export function computeAverageMoveTime(
         }
         return Math.round(t);
     } catch (err) {
-        console.error("Error computing avergate move time for time control: ", time_control);
+        console.error("Error computing average move time for time control: ", time_control);
         console.error(err);
         return 60;
     }

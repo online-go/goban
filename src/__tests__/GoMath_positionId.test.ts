@@ -1,3 +1,5 @@
+// cspell: disable
+
 import * as GoMath from "../GoMath";
 import { JGOFNumericPlayerColor } from "../JGOF";
 

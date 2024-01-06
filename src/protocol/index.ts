@@ -53,9 +53,9 @@
  *    will not cause any problems, but below are notes if you want to clean up
  *    your code.
  *
- *  - Several cleanup updates have been made that homogiinize the type of
+ *  - Several cleanup updates have been made that homogenize the type of
  *    fields, namely 0/1 booleans are now true/false booleans and id's are
- *    always numbers. The server still supports coallecing these fields for
+ *    always numbers. The server still supports coalescing these fields for
  *    backwards compatibility.
  *
  *  - All authentication is now handled via the `authenticate` message, there
