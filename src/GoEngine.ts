@@ -1267,6 +1267,11 @@ export class GoEngine extends EventEmitter<Events> {
         return players.map((p) => p.id).includes(player_id);
     }
 
+    public playerToMoveOnOfficialBranch(): number {
+        return this.last_official_move.state.player === 1
+            ? this.players.black.id
+            : this.players.white.id;
+    }
     public playerToMove(): number {
         return this.player === 1 ? this.players.black.id : this.players.white.id;
     }
