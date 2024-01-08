@@ -2564,7 +2564,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.currently_my_cmove = !this.currently_my_cmove;
         this.emit("conditional-moves.updated");
     }
-    protected deleteConditionalSegment(x: number, y: number) {
+    private deleteConditionalSegment(x: number, y: number) {
         this.conditional_path += encodeMove(x, y);
 
         if (!this.current_cmove) {
@@ -2612,6 +2612,10 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 this.followConditionalSegment(moves[i].x, moves[i].y);
             }
             this.deleteConditionalSegment(moves[moves.length - 1].x, moves[moves.length - 1].y);
+            this.conditional_path = this.conditional_path.substr(
+                0,
+                this.conditional_path.length - 4,
+            );
         }
         this.emit("conditional-moves.updated");
     }
