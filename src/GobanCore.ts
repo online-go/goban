@@ -2234,7 +2234,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 this.enableStonePlacement();
             }
         }
-        this.setLastOfficialMove();
+        if (!keep_old_engine) {
+            this.setLastOfficialMove();
+        }
         this.emit("update");
 
         if (
