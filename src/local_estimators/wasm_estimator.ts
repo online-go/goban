@@ -89,12 +89,15 @@ export function estimateScoreWasm(
     trials: number,
     tolerance: number,
 ) {
-    if (!OGSScoreEstimator_initialized) {
-        throw new Error("Score estimator not initialized yet, uptime = " + performance.now());
-    }
-
     const width = board[0].length;
     const height = board.length;
+
+    if (!OGSScoreEstimator_initialized) {
+        console.warn("Score estimator not initialized yet, uptime = " + performance.now());
+        const ownership = GoMath.makeMatrix(width, height, 0);
+        return ownership;
+    }
+
     const n_bytes = 4 * width * height;
     const ptr = OGSScoreEstimatorModule._malloc(n_bytes);
     const ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, n_bytes);
