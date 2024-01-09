@@ -91,51 +91,54 @@ export function estimateScoreWasm(
 ) {
     const width = board[0].length;
     const height = board.length;
+    const ownership = GoMath.makeMatrix(width, height, 0);
 
     if (!OGSScoreEstimator_initialized) {
         console.warn("Score estimator not initialized yet, uptime = " + performance.now());
-        const ownership = GoMath.makeMatrix(width, height, 0);
         return ownership;
     }
 
-    const n_bytes = 4 * width * height;
-    const ptr = OGSScoreEstimatorModule._malloc(n_bytes);
-    const ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, n_bytes);
-    let i = 0;
-    for (let y = 0; y < height; ++y) {
-        for (let x = 0; x < width; ++x) {
-            ints[i] = board[y][x];
-            ++i;
+    try {
+        const n_bytes = 4 * width * height;
+        const ptr = OGSScoreEstimatorModule._malloc(n_bytes);
+        const ints = new Int32Array(OGSScoreEstimatorModule.HEAP32.buffer, ptr, n_bytes);
+        let i = 0;
+        for (let y = 0; y < height; ++y) {
+            for (let x = 0; x < width; ++x) {
+                ints[i] = board[y][x];
+                ++i;
+            }
         }
-    }
-    const _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", [
-        "number",
-        "number",
-        "number",
-        "number",
-        "number",
-        "number",
-    ]);
-    const estimate = _estimate as (
-        w: number,
-        h: number,
-        p: number,
-        c: number,
-        tr: number,
-        to: number,
-    ) => number;
-    estimate(width, height, ptr, color_to_move === "black" ? 1 : -1, trials, tolerance);
+        const _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", [
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+        ]);
+        const estimate = _estimate as (
+            w: number,
+            h: number,
+            p: number,
+            c: number,
+            tr: number,
+            to: number,
+        ) => number;
+        estimate(width, height, ptr, color_to_move === "black" ? 1 : -1, trials, tolerance);
 
-    const ownership = GoMath.makeMatrix(width, height, 0);
-    i = 0;
-    for (let y = 0; y < height; ++y) {
-        for (let x = 0; x < width; ++x) {
-            ownership[y][x] = ints[i];
-            ++i;
+        i = 0;
+        for (let y = 0; y < height; ++y) {
+            for (let x = 0; x < width; ++x) {
+                ownership[y][x] = ints[i];
+                ++i;
+            }
         }
-    }
 
-    OGSScoreEstimatorModule._free(ptr);
+        OGSScoreEstimatorModule._free(ptr);
+    } catch (e) {
+        console.warn(e);
+    }
 
     return ownership;
 }
