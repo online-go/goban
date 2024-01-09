@@ -241,7 +241,6 @@ export interface Events extends StateUpdateEvents {
     "destroy": () => void;
     "update": () => void;
     "chat-reset": () => void;
-    "reset": (d: any) => void;
     "error": (d: any) => void;
     "gamedata": (d: any) => void;
     "chat": (d: any) => void;
@@ -964,35 +963,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
             prefix = "review/" + this.review_id + "/";
         }
 
-        this._socket_on((prefix + "reset") as keyof GobanSocketEvents, (msg: any): void => {
-            if (this.disconnectedFromGame) {
-                return;
-            }
-            this.emit("reset", msg);
-
-            if (msg.gamestart_beep) {
-                this.emit("audio-game-started", {
-                    player_id: msg.player_to_move,
-                });
-            }
-            if (msg.message) {
-                if (
-                    !(window as any)["has_focus"] &&
-                    !(window as any)["user"].anonymous &&
-                    /^\/game\//.test(this.getLocation())
-                ) {
-                    //swal(_(msg.message));
-                    try {
-                        swal.fire(_(msg.message));
-                    } catch (e) {
-                        console.error(e);
-                    }
-                } else {
-                    console.info(msg.message);
-                }
-            }
-            console.info("Game connection reset");
-        });
         this._socket_on((prefix + "error") as keyof GobanSocketEvents, (msg: any): void => {
             if (this.disconnectedFromGame) {
                 return;

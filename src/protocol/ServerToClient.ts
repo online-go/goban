@@ -494,23 +494,6 @@ export interface ServerToClient {
     "game/:id/reset-chats": () => void;
     [k: `game/${number}/reset-chats`]: ServerToClient["game/:id/reset-chats"];
 
-    /** This is sent out when a game is started. This seems like a misnomer,
-     * the web client does no "resetting". This may be renamed in the future.
-     * If you care about this message, please contact anoek.
-     * */
-    "game/:id/reset": (data: {
-        /** The game id */
-        game_id: number;
-        /** The current player to move */
-        player_to_move: number;
-        /** If a gamestart sound should be played */
-        gamestart_beep?: boolean;
-        /** A message to display as a notification, this seems to always be
-         * "Game has begun" for the time being. */
-        message: string;
-    }) => void;
-    [k: `game/${number}/reset`]: ServerToClient["game/:id/reset"];
-
     /** Undo move has been accepted, the parameter is the new move number */
     "game/:id/undo_accepted": (data: number) => void;
     [k: `game/${number}/undo_accepted`]: ServerToClient["game/:id/undo_accepted"];
