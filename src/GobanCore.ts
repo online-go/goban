@@ -981,7 +981,12 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     !(window as any)["user"].anonymous &&
                     /^\/game\//.test(this.getLocation())
                 ) {
-                    swal(_(msg.message));
+                    //swal(_(msg.message));
+                    try {
+                        swal.fire(_(msg.message));
+                    } catch (e) {
+                        console.error(e);
+                    }
                 } else {
                     console.info(msg.message);
                 }
@@ -1170,9 +1175,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
 
                 if (!this.engine.undo_requested) {
                     console.warn("Undo accepted, but no undo requested, we might be out of sync");
-                    swal(
-                        "Game synchronization error related to undo, please reload your game page",
-                    );
+                    try {
+                        swal.fire(
+                            "Game synchronization error related to undo, please reload your game page",
+                        );
+                    } catch (e) {
+                        console.error(e);
+                    }
                     return;
                 }
 
@@ -2646,7 +2655,11 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this.mode !== "score estimation"
         ) {
             /* this shouldn't ever get called, but incase we screw up.. */
-            swal("Can't enter conditional move planning when it's your turn");
+            try {
+                swal.fire("Can't enter conditional move planning when it's your turn");
+            } catch (e) {
+                console.error(e);
+            }
             return false;
         }
 
@@ -2657,7 +2670,11 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 mode,
             ) === -1
         ) {
-            swal("Invalid mode for Goban: " + mode);
+            try {
+                swal.fire("Invalid mode for Goban: " + mode);
+            } catch (e) {
+                console.error(e);
+            }
             return false;
         }
 
@@ -2666,7 +2683,11 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this.engine.phase !== "finished" &&
             (mode === "analyze" || mode === "conditional")
         ) {
-            swal("Unable to enter " + mode + " mode");
+            try {
+                swal.fire("Unable to enter " + mode + " mode");
+            } catch (e) {
+                console.error(e);
+            }
             return false;
         }
 
