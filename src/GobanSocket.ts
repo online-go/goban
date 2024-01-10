@@ -252,18 +252,18 @@ export class GobanSocket<
         });
 
         socket.addEventListener("close", (event: CloseEvent) => {
-            if (event.code !== 1000 && !this.manually_disconnected) {
+            const code = event?.code;
+
+            if (code !== 1000 && !this.manually_disconnected) {
                 console.warn(
-                    `GobanSocket closed with code ${event.code}: ${closeErrorCodeToString(
-                        event.code,
-                    )}`,
+                    `GobanSocket closed with code ${code}: ${closeErrorCodeToString(code)}`,
                 );
             }
 
             this.rejectPromisesInFlight();
 
             try {
-                this.emit("disconnect", event.code);
+                this.emit("disconnect", code);
             } catch (e) {
                 console.error("Error in disconnect handler", e);
             }
@@ -272,17 +272,13 @@ export class GobanSocket<
                 return;
             }
 
-            if (event.code === 1014 || event.code === 1015) {
+            if (code === 1014 || code === 1015) {
                 console.error("OGS Socket closed with an unrecoverable error, not reconnecting");
                 this.emit(
                     "unrecoverable_error",
-                    event.code,
-                    event.code === 1014
-                        ? "bad_gateway"
-                        : event.code === 1015
-                          ? "tls_handshake"
-                          : "unknown",
-                    closeErrorCodeToString(event.code),
+                    code,
+                    code === 1014 ? "bad_gateway" : code === 1015 ? "tls_handshake" : "unknown",
+                    closeErrorCodeToString(code),
                 );
                 return;
             }
