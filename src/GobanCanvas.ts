@@ -163,12 +163,12 @@ export class GobanCanvas extends GobanCore {
         window.addEventListener("keydown", this.handleShiftKey);
         window.addEventListener("keyup", this.handleShiftKey);
 
-        let first_pass = true;
-        //these are set in this.setThemes
-        //this.theme_board = new GoThemes["board"][this.themes.board]();
-        //this.theme_white = new GoThemes["white"][this.themes.white](this.theme_board);
-        //this.theme_black = new GoThemes["black"][this.themes.black](this.theme_board);
+        // these are set in this.setThemes(..)
+        // this.theme_board
+        // this.theme_white
+        // this.theme_black
         this.setThemes(this.getSelectedThemes(), true);
+        let first_pass = true;
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
             this.setThemes(themes, first_pass ? true : false);
             first_pass = false;
