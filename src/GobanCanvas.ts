@@ -1150,10 +1150,7 @@ export class GobanCanvas extends GobanCore {
         }
     }
     public drawSquare(i: number, j: number): void {
-        if (!this.ready_to_draw) {
-            return;
-        }
-        if (i < 0 || j < 0) {
+        if (i < 0 || j < 0 || !this.no_display) {
             return;
         }
         if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
@@ -1161,10 +1158,7 @@ export class GobanCanvas extends GobanCore {
         }
     }
     private __drawSquare(i: number, j: number): void {
-        if (!this.drawing_enabled) {
-            return;
-        }
-        if (this.no_display) {
+        if (!this.drawing_enabled || this.no_display) {
             return;
         }
         const ctx = this.ctx;
@@ -2128,6 +2122,9 @@ export class GobanCanvas extends GobanCore {
         this.__draw_state[j][i] = this.drawingHash(i, j);
     }
     private drawingHash(i: number, j: number): string {
+        if (this.no_display) {
+            return "";
+        }
         if (i < 0 || j < 0) {
             return "..";
         }
