@@ -1402,13 +1402,24 @@ export abstract class GobanCore extends EventEmitter<Events> {
                         this.engine.players["white"].accepted_stones = stones;
                         this.engine.players["black"].accepted_stones = stones;
                     } else {
-                        this.engine.players[
-                            this.engine.playerColor(player_id) as "black" | "white"
-                        ].accepted_stones = stones;
-                        this.engine.players[
-                            this.engine.playerColor(player_id) as "black" | "white"
-                        ].accepted_strict_seki_mode =
-                            "strict_seki_mode" in cfg ? cfg.strict_seki_mode : false;
+                        const color = this.engine.playerColor(player_id);
+                        if (color === "invalid") {
+                            console.error(
+                                `Invalid player_id ${player_id} in removed_stones_accepted`,
+                                {
+                                    cfg,
+                                    player_id: this.player_id,
+                                    players: this.engine.players,
+                                },
+                            );
+                            throw new Error(
+                                `Invalid player_id ${player_id} in removed_stones_accepted`,
+                            );
+                        } else {
+                            this.engine.players[color].accepted_stones = stones;
+                            this.engine.players[color].accepted_strict_seki_mode =
+                                "strict_seki_mode" in cfg ? cfg.strict_seki_mode : false;
+                        }
                     }
                     this.updateTitleAndStonePlacement();
                     this.emit("stone-removal.accepted");
