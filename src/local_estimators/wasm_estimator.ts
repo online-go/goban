@@ -66,14 +66,21 @@ export function init_score_estimator(): Promise<boolean> {
     ) as HTMLScriptElement;
     if (script) {
         let resolve: (tf: boolean) => void;
+        let reject: (err: any) => void;
         init_promise = new Promise<boolean>((_resolve, _reject) => {
             resolve = _resolve;
+            reject = _reject;
         });
 
         script.onload = () => {
-            OGSScoreEstimatorModule = OGSScoreEstimator;
-            OGSScoreEstimatorModule = OGSScoreEstimatorModule();
-            OGSScoreEstimator_initialized = true;
+            try {
+                OGSScoreEstimatorModule = OGSScoreEstimator;
+                OGSScoreEstimatorModule = OGSScoreEstimatorModule();
+                OGSScoreEstimator_initialized = true;
+            } catch (e) {
+                reject(e);
+                return;
+            }
             resolve(true);
         };
 
