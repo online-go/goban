@@ -2851,42 +2851,50 @@ export class GobanCanvas extends GobanCore {
             this.move_tree_redraw();
         };
 
-        if (!(this.theme_stone_radius in __theme_cache.white[themes.white])) {
-            __theme_cache.white[themes.white][this.theme_stone_radius] =
-                this.theme_white.preRenderWhite(
-                    this.theme_stone_radius,
-                    23434,
-                    deferredRenderCallback,
-                );
-            __theme_cache.white[themes.white].creation_order.push(this.theme_stone_radius);
-        }
-        if (!(this.theme_stone_radius in __theme_cache.black[themes.black])) {
-            __theme_cache.black[themes.black][this.theme_stone_radius] =
-                this.theme_black.preRenderBlack(
-                    this.theme_stone_radius,
-                    2081,
-                    deferredRenderCallback,
-                );
-            __theme_cache.black[themes.black].creation_order.push(this.theme_stone_radius);
-        }
+        try {
+            if (!(this.theme_stone_radius in __theme_cache.white[themes.white])) {
+                __theme_cache.white[themes.white][this.theme_stone_radius] =
+                    this.theme_white.preRenderWhite(
+                        this.theme_stone_radius,
+                        23434,
+                        deferredRenderCallback,
+                    );
+                __theme_cache.white[themes.white].creation_order.push(this.theme_stone_radius);
+            }
+            if (!(this.theme_stone_radius in __theme_cache.black[themes.black])) {
+                __theme_cache.black[themes.black][this.theme_stone_radius] =
+                    this.theme_black.preRenderBlack(
+                        this.theme_stone_radius,
+                        2081,
+                        deferredRenderCallback,
+                    );
+                __theme_cache.black[themes.black].creation_order.push(this.theme_stone_radius);
+            }
 
-        if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
-            __theme_cache.white[themes.white][MoveTree.stone_radius] =
-                this.theme_white.preRenderWhite(
-                    MoveTree.stone_radius,
-                    23434,
-                    deferredRenderCallback,
-                );
-            __theme_cache.white[themes.white].creation_order.push(MoveTree.stone_radius);
-        }
-        if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
-            __theme_cache.black[themes.black][MoveTree.stone_radius] =
-                this.theme_black.preRenderBlack(
-                    MoveTree.stone_radius,
-                    2081,
-                    deferredRenderCallback,
-                );
-            __theme_cache.black[themes.black].creation_order.push(MoveTree.stone_radius);
+            if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
+                __theme_cache.white[themes.white][MoveTree.stone_radius] =
+                    this.theme_white.preRenderWhite(
+                        MoveTree.stone_radius,
+                        23434,
+                        deferredRenderCallback,
+                    );
+                __theme_cache.white[themes.white].creation_order.push(MoveTree.stone_radius);
+            }
+            if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
+                __theme_cache.black[themes.black][MoveTree.stone_radius] =
+                    this.theme_black.preRenderBlack(
+                        MoveTree.stone_radius,
+                        2081,
+                        deferredRenderCallback,
+                    );
+                __theme_cache.black[themes.black].creation_order.push(MoveTree.stone_radius);
+            }
+        } catch (e) {
+            console.error(`Error pre-rendering stones.`, {
+                themes,
+                move_tree_stone_radius: MoveTree.stone_radius,
+            });
+            throw e;
         }
 
         // We should only need a few sizes, like 6 in most cases, but when we resize a window slowly or
