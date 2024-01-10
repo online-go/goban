@@ -18,6 +18,7 @@ import { GobanCore } from "./GobanCore";
 
 let __deviceCanvasScalingRatio = 0;
 let canvases_allocated = 0;
+let total_pixels_allocated = 0;
 
 /** On iOS devices they limit the number of canvases we create to a a very low
  * number and so sometimes we'll exhaust that limit. When this happens, we this
@@ -36,7 +37,6 @@ export function allocateCanvasOrError(
     try {
         canvas = document.createElement("canvas");
         ++canvases_allocated;
-        //console.debug("Allocated canvas", canvases_allocated, "width", width, "height", height);
     } catch (e) {
         validateCanvas(null, e);
     }
@@ -53,9 +53,10 @@ export function allocateCanvasOrError(
         canvas.height = height;
     }
 
-    if (!validateCanvas(canvas)) {
+    if (!validateCanvas(canvas, undefined, width, height)) {
         return null as unknown as HTMLCanvasElement;
     }
+    total_pixels_allocated += ((canvas && canvas.width) || 0) * ((canvas && canvas.height) || 0);
     return canvas as HTMLCanvasElement;
 }
 
@@ -65,7 +66,12 @@ export function allocateCanvasOrError(
  * hook.
  */
 
-export function validateCanvas(canvas: HTMLCanvasElement | null, err?: Error): boolean {
+export function validateCanvas(
+    canvas: HTMLCanvasElement | null,
+    err?: Error,
+    width?: number | string,
+    height?: number | string,
+): boolean {
     let ctx: CanvasRenderingContext2D | null = null;
     let err_string = err ? "Initial error" : null;
     if (!canvas) {
@@ -90,7 +96,12 @@ export function validateCanvas(canvas: HTMLCanvasElement | null, err?: Error): b
 
     if (err) {
         if (GobanCore.hooks.canvasAllocationErrorHandler) {
-            GobanCore.hooks.canvasAllocationErrorHandler(err_string, canvases_allocated, err);
+            GobanCore.hooks.canvasAllocationErrorHandler(err_string, err, {
+                total_pixels_allocated,
+                total_allocations_made: canvases_allocated,
+                width,
+                height,
+            });
         }
         return false;
     }

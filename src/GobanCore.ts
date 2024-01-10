@@ -338,8 +338,13 @@ export interface GobanHooks {
 
     canvasAllocationErrorHandler?: (
         note: string | null,
-        total_allocations_made: number,
-        error?: Error,
+        error: Error,
+        extra: {
+            total_allocations_made: number;
+            total_pixels_allocated: number;
+            width?: number | string;
+            height?: number | string;
+        },
     ) => void;
 
     addCoordinatesToChatInput?: (coordinates: string) => void;
