@@ -102,18 +102,18 @@ export class GobanCanvas extends GobanCore {
         black: "Plain",
         white: "Plain",
     };
-    private theme_black: GoTheme;
+    private theme_black!: GoTheme;
     private theme_black_stones: Array<any> = [];
     private theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
-    private theme_board: GoTheme;
+    private theme_board!: GoTheme;
     private theme_faded_line_color: string = HOT_PINK;
     private theme_faded_star_color: string = HOT_PINK;
     //private theme_faded_text_color:string;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
-    private theme_white: GoTheme;
+    private theme_white!: GoTheme;
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
 
@@ -164,9 +164,11 @@ export class GobanCanvas extends GobanCore {
         window.addEventListener("keyup", this.handleShiftKey);
 
         let first_pass = true;
-        this.theme_board = new GoThemes["board"][this.themes.board]();
-        this.theme_white = new GoThemes["white"][this.themes.white](this.theme_board);
-        this.theme_black = new GoThemes["black"][this.themes.black](this.theme_board);
+        //these are set in this.setThemes
+        //this.theme_board = new GoThemes["board"][this.themes.board]();
+        //this.theme_white = new GoThemes["white"][this.themes.white](this.theme_board);
+        //this.theme_black = new GoThemes["black"][this.themes.black](this.theme_board);
+        this.setThemes(this.getSelectedThemes(), true);
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
             this.setThemes(themes, first_pass ? true : false);
             first_pass = false;
@@ -2791,9 +2793,12 @@ export class GobanCanvas extends GobanCore {
         }
 
         this.themes = themes;
-        this.theme_board = new GoThemes["board"][themes.board]();
-        this.theme_white = new GoThemes["white"][themes.white](this.theme_board);
-        this.theme_black = new GoThemes["black"][themes.black](this.theme_board);
+        const BoardTheme = GoThemes["board"]?.[themes.board] || GoThemes["board"]["Plain"];
+        const WhiteTheme = GoThemes["white"]?.[themes.white] || GoThemes["white"]["Plain"];
+        const BlackTheme = GoThemes["black"]?.[themes.black] || GoThemes["black"]["Plain"];
+        this.theme_board = new BoardTheme();
+        this.theme_white = new WhiteTheme(this.theme_board);
+        this.theme_black = new BlackTheme(this.theme_board);
 
         if (!this.metrics) {
             this.metrics = this.computeMetrics();
