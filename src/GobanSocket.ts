@@ -193,10 +193,6 @@ export class GobanSocket<
     };
 
     private startPing(): void {
-        if (!this.connected) {
-            throw new Error("GobanSocket not connected");
-        }
-
         if (this.ping_timer) {
             clearInterval(this.ping_timer);
         }
@@ -372,11 +368,23 @@ export class GobanSocket<
             this.callbacks.set(this.last_request_id, cb);
         }
 
+        const serialized = JSON.stringify(request);
         if (this.connected) {
-            this.socket.send(JSON.stringify(request));
+            try {
+                this.socket.send(serialized);
+            } catch (e) {
+                // Sometimes we get a NS_ERROR_NOT_CONNECTED error here, I
+                // presume because the socket is closed while we are sending
+                // or something of the sort, I'm not sure. regardless, we'll
+                // just queue up the send and try again when we reconnect and
+                // see if that works.
+                this.send_queue.push(() => {
+                    this.socket.send(serialized);
+                });
+            }
         } else {
             this.send_queue.push(() => {
-                this.socket.send(JSON.stringify(request));
+                this.socket.send(serialized);
             });
         }
     }
