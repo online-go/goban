@@ -296,7 +296,17 @@ export class GobanSocket<
         });
 
         socket.addEventListener("message", (event: MessageEvent) => {
-            const payload: GobanSocketServerToClientMessage<RecvProtocol> = JSON.parse(event.data);
+            let payload: GobanSocketServerToClientMessage<RecvProtocol>;
+            try {
+                payload = JSON.parse(event.data);
+            } catch (e) {
+                console.error("Error parsing message", {
+                    event,
+                    data: event?.data,
+                    exception: e,
+                });
+                throw e;
+            }
             const [id_or_command, data, err] = payload;
 
             if (typeof id_or_command === "number") {
