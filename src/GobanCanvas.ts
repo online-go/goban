@@ -1150,7 +1150,7 @@ export class GobanCanvas extends GobanCore {
         }
     }
     public drawSquare(i: number, j: number): void {
-        if (i < 0 || j < 0 || !this.no_display) {
+        if (i < 0 || j < 0 || !this.drawing_enabled || this.no_display) {
             return;
         }
         if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
