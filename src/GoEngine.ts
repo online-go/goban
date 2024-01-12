@@ -2067,7 +2067,13 @@ export class GoEngine extends EventEmitter<Events> {
                 break;
 
             case "ing":
-                defaults.komi = 8;
+                // https://www.usgo-archive.org/sites/default/files/pdf/IngRules2006.pdf
+                //
+                // pg. 26:
+                //
+                // Fixed compensation: Mandatory eight points handicap, black
+                // wins in case of drawn games.
+                defaults.komi = 7.5;
                 defaults.score_prisoners = false;
                 defaults.allow_superko = false;
                 defaults.superko_algorithm = "ing";
