@@ -2637,11 +2637,13 @@ export class GoEngine extends EventEmitter<Events> {
                                  * is a number, the player id of who won.
                                  * Except this code, we need to work our way
                                  * through what to do here. */
-                                if (val[0].toLowerCase() === "b") {
-                                    (self as any).winner = "black";
-                                }
-                                if (val[0].toLowerCase() === "w") {
-                                    (self as any).winner = "white";
+                                if (val.length > 0) {
+                                    if (val[0].toLowerCase() === "b") {
+                                        (self as any).winner = "black";
+                                    }
+                                    if (val[0].toLowerCase() === "w") {
+                                        (self as any).winner = "white";
+                                    }
                                 }
 
                                 if (self.outcome === "") {
@@ -2657,6 +2659,9 @@ export class GoEngine extends EventEmitter<Events> {
                                         // There's a numeric score.
                                         self.outcome = result;
                                     } else {
+                                        if (!result) {
+                                            result = "V";
+                                        }
                                         switch (result[0].toUpperCase()) {
                                             case "0": // Draw.
                                             case "D": // Draw.
