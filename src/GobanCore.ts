@@ -335,6 +335,8 @@ export interface GobanHooks {
     plainBoardColor?: () => string;
     plainBoardLineColor?: () => string;
     plainBoardUrl?: () => string;
+    customBlackStoneUrl?: () => string;
+    customWhiteStoneUrl?: () => string;
 
     canvasAllocationErrorHandler?: (
         note: string | null,
@@ -3270,9 +3272,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     const elapsed: number = original_clock.start_mode
                         ? 0
                         : paused && original_clock.paused_since
-                          ? Math.max(original_clock.paused_since, original_clock.last_move) -
-                            original_clock.last_move
-                          : current_server_time - original_clock.last_move;
+                        ? Math.max(original_clock.paused_since, original_clock.last_move) -
+                          original_clock.last_move
+                        : current_server_time - original_clock.last_move;
 
                     const clock = this.computeNewPlayerClock(
                         original_clock[`${color}_time`] as any,

@@ -241,4 +241,58 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
     GoThemes["white"]["Anime"] = AnimeWhite;
+
+    class CustomBlack extends Common {
+        sort() {
+            return 400;
+        }
+        get theme_name(): string {
+            return "Custom";
+        }
+
+        preRenderBlack(
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): StoneTypeArray {
+            return preRenderImageStone(
+                radius,
+                GobanCore.hooks.customBlackStoneUrl ? GobanCore.hooks.customBlackStoneUrl() : "",
+                deferredRenderCallback,
+            );
+            //return preRenderImageStone(radius, anime_black_imagedata);
+        }
+        getBlackTextColor(_color: string): string {
+            return "#ffffff";
+        }
+    }
+
+    GoThemes["black"]["Custom"] = CustomBlack;
+
+    class CustomWhite extends Common {
+        sort() {
+            return 400;
+        }
+        get theme_name(): string {
+            return "Custom";
+        }
+
+        preRenderWhite(
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): StoneTypeArray {
+            return preRenderImageStone(
+                radius,
+                GobanCore.hooks.customWhiteStoneUrl ? GobanCore.hooks.customWhiteStoneUrl() : "",
+                deferredRenderCallback,
+            );
+            //return preRenderImageStone(radius, anime_white_imagedata);
+        }
+
+        getWhiteTextColor(_color: string): string {
+            return "#000000";
+        }
+    }
+    GoThemes["white"]["Custom"] = CustomWhite;
 }
