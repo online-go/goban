@@ -48,6 +48,7 @@ export function preRenderImageStone(
     radius: number,
     urls: string | string[],
     deferredRenderCallback: () => void,
+    show_shadow: boolean = true,
 ): StoneTypeArray {
     // cspell: words dcsr
     const dcsr = deviceCanvasScalingRatio();
@@ -86,7 +87,9 @@ export function preRenderImageStone(
         if (!shadow_ctx) {
             throw new Error("Error getting shadow context 2d");
         }
-        renderShadow(shadow_ctx, center, radius * 1.05, sss, 0.0, "rgba(60,60,40,0.4)");
+        if (show_shadow) {
+            renderShadow(shadow_ctx, center, radius * 1.05, sss, 0.0, "rgba(60,60,40,0.4)");
+        }
 
         stone_load_promise
             .then(() => {
@@ -259,6 +262,7 @@ export default function (GoThemes: GoThemesInterface) {
                 radius,
                 GobanCore.hooks.customBlackStoneUrl ? GobanCore.hooks.customBlackStoneUrl() : "",
                 deferredRenderCallback,
+                false /* show_shadow */,
             );
             //return preRenderImageStone(radius, anime_black_imagedata);
         }
@@ -286,6 +290,7 @@ export default function (GoThemes: GoThemesInterface) {
                 radius,
                 GobanCore.hooks.customWhiteStoneUrl ? GobanCore.hooks.customWhiteStoneUrl() : "",
                 deferredRenderCallback,
+                false /* show_shadow */,
             );
             //return preRenderImageStone(radius, anime_white_imagedata);
         }
