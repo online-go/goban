@@ -109,6 +109,7 @@ export interface GoEngineConfig {
     width?: number;
     height?: number;
     disable_analysis?: boolean;
+    handicap_rank_difference?: number;
     handicap?: number;
     komi?: number;
     rules?: GoEngineRules;
@@ -307,6 +308,7 @@ export class GoEngine extends EventEmitter<Events> {
     public board: Array<Array<JGOFNumericPlayerColor>>;
     //public cur_review_move?: MoveTree;
     public getState_callback?: () => any;
+    public handicap_rank_difference?: number;
     public handicap: number = NaN;
     public initial_state: GoEngineInitialState = { black: "", white: "" };
     public komi: number = NaN;
