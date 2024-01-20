@@ -55,6 +55,7 @@ export interface GobanStrings {
     "Night": string;
     "Persimmon": string;
     "Plain": string;
+    "Custom": string;
     "Red Oak": string;
     "Shell": string;
     "Slate": string;

@@ -22,7 +22,7 @@ import { _ } from "../translate";
 export default function (GoThemes: GoThemesInterface) {
     class Stone extends GoTheme {
         sort(): number {
-            return 0;
+            return 199; // second to last, in the "plain customizable" slot
         }
 
         placePlainStone(

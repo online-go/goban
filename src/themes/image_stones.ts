@@ -247,7 +247,7 @@ export default function (GoThemes: GoThemesInterface) {
 
     class CustomBlack extends Common {
         sort() {
-            return 400;
+            return 200; // last - in the "url customizable" slot.
         }
         get theme_name(): string {
             return "Custom";
@@ -275,7 +275,7 @@ export default function (GoThemes: GoThemesInterface) {
 
     class CustomWhite extends Common {
         sort() {
-            return 400;
+            return 200; //last - in the "url customizable" slot.
         }
         get theme_name(): string {
             return "Custom";
