@@ -1757,7 +1757,7 @@ export class GoEngine extends EventEmitter<Events> {
                 territory: 0,
                 prisoners: 0,
                 scoring_positions: "",
-                handicap: this.handicap,
+                handicap: this.getHandicapPointAdjustmentForWhite(),
                 komi: this.komi,
             },
             black: {
@@ -1770,10 +1770,6 @@ export class GoEngine extends EventEmitter<Events> {
                 komi: 0,
             },
         };
-
-        if (this.aga_handicap_scoring && ret.white.handicap > 0) {
-            ret.white.handicap -= 1;
-        }
 
         let removed_black = 0;
         let removed_white = 0;
@@ -1892,18 +1888,14 @@ export class GoEngine extends EventEmitter<Events> {
             ret["black"].stones +
             ret["black"].territory +
             ret["black"].prisoners +
+            ret["black"].handicap +
             ret["black"].komi;
-        if (this.score_handicap) {
-            ret["black"].total += ret["black"].handicap;
-        }
         ret["white"].total =
             ret["white"].stones +
             ret["white"].territory +
             ret["white"].prisoners +
+            ret["white"].handicap +
             ret["white"].komi;
-        if (this.score_handicap) {
-            ret["white"].total += ret["white"].handicap;
-        }
 
         try {
             if (this.outcome && this.aga_handicap_scoring) {
