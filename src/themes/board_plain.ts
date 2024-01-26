@@ -34,60 +34,34 @@ function hexToRgba(raw: string, alpha: number = 1): string {
 export default function (GoThemes: GoThemesInterface) {
     class Plain extends GoTheme {
         sort(): number {
-            return 199; // second to last, because this is the "customisable" one
+            return 1;
         }
         get theme_name(): string {
             return "Plain";
         }
         getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
-                "background-color": GobanCore.hooks.plainBoardColor
-                    ? GobanCore.hooks.plainBoardColor()
-                    : "#DCB35C",
-                "background-image": GobanCore.hooks.plainBoardUrl
-                    ? "url('" + GobanCore.hooks.plainBoardUrl() + "')"
-                    : "",
-                "background-size": "cover",
+                "background-color": "#DCB35C",
+                "background-image": "",
             };
         }
         getLineColor(): string {
-            return GobanCore.hooks.plainBoardLineColor
-                ? GobanCore.hooks.plainBoardLineColor()
-                : "#000000";
+            return "#000000";
         }
         getFadedLineColor(): string {
-            return hexToRgba(
-                GobanCore.hooks.plainBoardLineColor
-                    ? GobanCore.hooks.plainBoardLineColor()
-                    : "#000000",
-                0.5,
-            );
+            return hexToRgba("#000000", 0.5);
         }
         getStarColor(): string {
-            return GobanCore.hooks.plainBoardLineColor
-                ? GobanCore.hooks.plainBoardLineColor()
-                : "#000000";
+            return "#000000";
         }
         getFadedStarColor(): string {
-            return hexToRgba(
-                GobanCore.hooks.plainBoardLineColor
-                    ? GobanCore.hooks.plainBoardLineColor()
-                    : "#000000",
-                0.5,
-            );
+            return hexToRgba("#000000", 0.5);
         }
         getBlankTextColor(): string {
-            return GobanCore.hooks.plainBoardLineColor
-                ? GobanCore.hooks.plainBoardLineColor()
-                : "#000000";
+            return "#000000";
         }
         getLabelTextColor(): string {
-            return hexToRgba(
-                GobanCore.hooks.plainBoardLineColor
-                    ? GobanCore.hooks.plainBoardLineColor()
-                    : "#000000",
-                0.75,
-            );
+            return hexToRgba("#000000", 0.75);
         }
     }
 
@@ -103,50 +77,51 @@ export default function (GoThemes: GoThemesInterface) {
         }
         getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
-                "background-color": GobanCore.hooks.plainBoardColor
-                    ? GobanCore.hooks.plainBoardColor()
+                "background-color": GobanCore.hooks.customBoardColor
+                    ? GobanCore.hooks.customBoardColor()
                     : "#DCB35C",
-                "background-image": GobanCore.hooks.plainBoardUrl
-                    ? "url('" + GobanCore.hooks.plainBoardUrl() + "')"
-                    : "",
+                "background-image":
+                    GobanCore.hooks.customBoardUrl && GobanCore.hooks.customBoardUrl() !== ""
+                        ? "url('" + GobanCore.hooks.customBoardUrl() + "')"
+                        : "",
                 "background-size": "cover",
             };
         }
         getLineColor(): string {
-            return GobanCore.hooks.plainBoardLineColor
-                ? GobanCore.hooks.plainBoardLineColor()
+            return GobanCore.hooks.customBoardLineColor
+                ? GobanCore.hooks.customBoardLineColor()
                 : "#000000";
         }
         getFadedLineColor(): string {
             return hexToRgba(
-                GobanCore.hooks.plainBoardLineColor
-                    ? GobanCore.hooks.plainBoardLineColor()
+                GobanCore.hooks.customBoardLineColor
+                    ? GobanCore.hooks.customBoardLineColor()
                     : "#000000",
                 0.5,
             );
         }
         getStarColor(): string {
-            return GobanCore.hooks.plainBoardLineColor
-                ? GobanCore.hooks.plainBoardLineColor()
+            return GobanCore.hooks.customBoardLineColor
+                ? GobanCore.hooks.customBoardLineColor()
                 : "#000000";
         }
         getFadedStarColor(): string {
             return hexToRgba(
-                GobanCore.hooks.plainBoardLineColor
-                    ? GobanCore.hooks.plainBoardLineColor()
+                GobanCore.hooks.customBoardLineColor
+                    ? GobanCore.hooks.customBoardLineColor()
                     : "#000000",
                 0.5,
             );
         }
         getBlankTextColor(): string {
-            return GobanCore.hooks.plainBoardLineColor
-                ? GobanCore.hooks.plainBoardLineColor()
+            return GobanCore.hooks.customBoardLineColor
+                ? GobanCore.hooks.customBoardLineColor()
                 : "#000000";
         }
         getLabelTextColor(): string {
             return hexToRgba(
-                GobanCore.hooks.plainBoardLineColor
-                    ? GobanCore.hooks.plainBoardLineColor()
+                GobanCore.hooks.customBoardLineColor
+                    ? GobanCore.hooks.customBoardLineColor()
                     : "#000000",
                 0.75,
             );
@@ -302,40 +277,4 @@ export default function (GoThemes: GoThemesInterface) {
 
     _("Book"); // ensure translation exists
     GoThemes["board"]["Book"] = Book;
-
-    class GreyBook extends GoTheme {
-        sort(): number {
-            return 111;
-        }
-        get theme_name(): string {
-            return "Grey Book";
-        }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
-            return {
-                "background-color": "#dddddd",
-                "background-image": "",
-            };
-        }
-        getLineColor(): string {
-            return "#555555";
-        }
-        getFadedLineColor(): string {
-            return "#999999";
-        }
-        getStarColor(): string {
-            return "#555555";
-        }
-        getFadedStarColor(): string {
-            return "#999999";
-        }
-        getBlankTextColor(): string {
-            return "#000000";
-        }
-        getLabelTextColor(): string {
-            return "#555555";
-        }
-    }
-
-    _("Grey Book"); // ensure translation exists
-    GoThemes["board"]["Grey Book"] = GreyBook;
 }

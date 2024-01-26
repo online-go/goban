@@ -38,13 +38,13 @@ export const GoThemesSorted: { [n: string]: Array<GoTheme> } = {
 
 import init_board_plain from "./themes/board_plain";
 import init_board_woods from "./themes/board_woods";
-import init_disc from "./themes/disc";
+import init_plain_stones from "./themes/plain_stones";
 import init_rendered from "./themes/rendered_stones";
 import init_image_stones from "./themes/image_stones";
 
 init_board_plain(GoThemes);
 init_board_woods(GoThemes);
-init_disc(GoThemes);
+init_plain_stones(GoThemes);
 init_rendered(GoThemes);
 init_image_stones(GoThemes);
 

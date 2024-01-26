@@ -46,7 +46,6 @@ export interface GobanStrings {
 
     "Black Walnut": string;
     "Book": string;
-    "Grey Book": string;
     "Glass": string;
     "Granite": string;
     "HNG Night": string;
@@ -57,7 +56,6 @@ export interface GobanStrings {
     "Night": string;
     "Persimmon": string;
     "Plain": string;
-    "Coloured": string;
     "Custom": string;
     "Red Oak": string;
     "Shell": string;

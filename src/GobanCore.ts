@@ -328,13 +328,13 @@ export interface GobanHooks {
     watchSelectedThemes?: (cb: (themes: GobanSelectedThemes) => void) => { remove: () => any };
     getSelectedThemes?: () => GobanSelectedThemes;
 
-    discBlackStoneColor?: () => string;
-    discBlackTextColor?: () => string;
-    discWhiteStoneColor?: () => string;
-    discWhiteTextColor?: () => string;
-    plainBoardColor?: () => string;
-    plainBoardLineColor?: () => string;
-    plainBoardUrl?: () => string;
+    customBlackStoneColor?: () => string;
+    customBlackTextColor?: () => string;
+    customWhiteStoneColor?: () => string;
+    customWhiteTextColor?: () => string;
+    customBoardColor?: () => string;
+    customBoardLineColor?: () => string;
+    customBoardUrl?: () => string;
     customBlackStoneUrl?: () => string;
     customWhiteStoneUrl?: () => string;
 

@@ -170,6 +170,16 @@ export class GobanCanvas extends GobanCore {
         this.setThemes(this.getSelectedThemes(), true);
         let first_pass = true;
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
+            if (
+                themes.black === "Custom" ||
+                themes.white === "Custom" ||
+                themes.board === "Custom"
+            ) {
+                //first_pass = true;
+            }
+            delete __theme_cache.black?.["Custom"];
+            delete __theme_cache.white?.["Custom"];
+            delete __theme_cache.board?.["Custom"];
             this.setThemes(themes, first_pass ? true : false);
             first_pass = false;
         });
