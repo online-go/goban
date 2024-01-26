@@ -302,4 +302,40 @@ export default function (GoThemes: GoThemesInterface) {
 
     _("Book"); // ensure translation exists
     GoThemes["board"]["Book"] = Book;
+
+    class GreyBook extends GoTheme {
+        sort(): number {
+            return 111;
+        }
+        get theme_name(): string {
+            return "Grey Book";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
+            return {
+                "background-color": "#dddddd",
+                "background-image": "",
+            };
+        }
+        getLineColor(): string {
+            return "#555555";
+        }
+        getFadedLineColor(): string {
+            return "#999999";
+        }
+        getStarColor(): string {
+            return "#555555";
+        }
+        getFadedStarColor(): string {
+            return "#999999";
+        }
+        getBlankTextColor(): string {
+            return "#000000";
+        }
+        getLabelTextColor(): string {
+            return "#555555";
+        }
+    }
+
+    _("Grey Book"); // ensure translation exists
+    GoThemes["board"]["Grey Book"] = GreyBook;
 }

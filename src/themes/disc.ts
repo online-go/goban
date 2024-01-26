@@ -22,7 +22,7 @@ import { _ } from "../translate";
 export default function (GoThemes: GoThemesInterface) {
     class Stone extends GoTheme {
         sort(): number {
-            return 199; // second to last, in the "plain customizable" slot
+            return 1;
         }
 
         placePlainStone(
@@ -78,15 +78,11 @@ export default function (GoThemes: GoThemesInterface) {
         }
 
         public getBlackStoneColor(): string {
-            return GobanCore.hooks.discBlackStoneColor
-                ? GobanCore.hooks.discBlackStoneColor()
-                : "#000000";
+            return "#000000";
         }
 
         public getBlackTextColor(): string {
-            return GobanCore.hooks.discBlackTextColor
-                ? GobanCore.hooks.discBlackTextColor()
-                : "#FFFFFF";
+            return "#FFFFFF";
         }
     }
 
@@ -111,6 +107,22 @@ export default function (GoThemes: GoThemesInterface) {
         }
 
         public getWhiteStoneColor(): string {
+            return "#FFFFFF";
+        }
+
+        public getWhiteTextColor(): string {
+            return "#000000";
+        }
+    }
+
+    class ColouredWhite extends White {
+        get theme_name(): string {
+            return "Coloured";
+        }
+        sort(): number {
+            return 199; // second to last, in the "plain customizable" slot
+        }
+        public getWhiteStoneColor(): string {
             return GobanCore.hooks.discWhiteStoneColor
                 ? GobanCore.hooks.discWhiteStoneColor()
                 : "#FFFFFF";
@@ -123,6 +135,29 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
 
+    class ColouredBlack extends Black {
+        get theme_name(): string {
+            return "Coloured";
+        }
+        sort(): number {
+            return 199; // second to last, in the "plain customizable" slot
+        }
+
+        public getBlackStoneColor(): string {
+            return GobanCore.hooks.discBlackStoneColor
+                ? GobanCore.hooks.discBlackStoneColor()
+                : "#000000";
+        }
+
+        public getBlackTextColor(): string {
+            return GobanCore.hooks.discBlackTextColor
+                ? GobanCore.hooks.discBlackTextColor()
+                : "#FFFFFF";
+        }
+    }
+
     GoThemes["black"]["Plain"] = Black;
     GoThemes["white"]["Plain"] = White;
+    GoThemes["black"]["Coloured"] = ColouredBlack;
+    GoThemes["white"]["Coloured"] = ColouredWhite;
 }
