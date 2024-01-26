@@ -335,6 +335,8 @@ export interface GobanHooks {
     plainBoardColor?: () => string;
     plainBoardLineColor?: () => string;
     plainBoardUrl?: () => string;
+    customBlackStoneUrl?: () => string;
+    customWhiteStoneUrl?: () => string;
 
     canvasAllocationErrorHandler?: (
         note: string | null,

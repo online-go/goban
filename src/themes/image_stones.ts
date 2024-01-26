@@ -48,6 +48,7 @@ export function preRenderImageStone(
     radius: number,
     urls: string | string[],
     deferredRenderCallback: () => void,
+    show_shadow: boolean = true,
 ): StoneTypeArray {
     // cspell: words dcsr
     const dcsr = deviceCanvasScalingRatio();
@@ -86,7 +87,9 @@ export function preRenderImageStone(
         if (!shadow_ctx) {
             throw new Error("Error getting shadow context 2d");
         }
-        renderShadow(shadow_ctx, center, radius * 1.05, sss, 0.0, "rgba(60,60,40,0.4)");
+        if (show_shadow) {
+            renderShadow(shadow_ctx, center, radius * 1.05, sss, 0.0, "rgba(60,60,40,0.4)");
+        }
 
         stone_load_promise
             .then(() => {
@@ -241,4 +244,60 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
     GoThemes["white"]["Anime"] = AnimeWhite;
+
+    class CustomBlack extends Common {
+        sort() {
+            return 200; // last - in the "url customizable" slot.
+        }
+        get theme_name(): string {
+            return "Custom";
+        }
+
+        preRenderBlack(
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): StoneTypeArray {
+            return preRenderImageStone(
+                radius,
+                GobanCore.hooks.customBlackStoneUrl ? GobanCore.hooks.customBlackStoneUrl() : "",
+                deferredRenderCallback,
+                false /* show_shadow */,
+            );
+            //return preRenderImageStone(radius, anime_black_imagedata);
+        }
+        getBlackTextColor(_color: string): string {
+            return "#ffffff";
+        }
+    }
+
+    GoThemes["black"]["Custom"] = CustomBlack;
+
+    class CustomWhite extends Common {
+        sort() {
+            return 200; //last - in the "url customizable" slot.
+        }
+        get theme_name(): string {
+            return "Custom";
+        }
+
+        preRenderWhite(
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): StoneTypeArray {
+            return preRenderImageStone(
+                radius,
+                GobanCore.hooks.customWhiteStoneUrl ? GobanCore.hooks.customWhiteStoneUrl() : "",
+                deferredRenderCallback,
+                false /* show_shadow */,
+            );
+            //return preRenderImageStone(radius, anime_white_imagedata);
+        }
+
+        getWhiteTextColor(_color: string): string {
+            return "#000000";
+        }
+    }
+    GoThemes["white"]["Custom"] = CustomWhite;
 }

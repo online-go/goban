@@ -243,4 +243,40 @@ export default function (GoThemes: GoThemesInterface) {
 
     _("Anime"); // ensure translation
     GoThemes["board"]["Anime"] = Anime;
+
+    class BrightKaya extends GoTheme {
+        sort(): number {
+            return 15;
+        }
+        get theme_name(): string {
+            return "Bright Kaya";
+        }
+        getBackgroundCSS(): GoThemeBackgroundCSS {
+            return {
+                "background-color": "#DBB25B",
+                "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",
+            };
+        }
+        getLineColor(): string {
+            return "#FFFFFF";
+        }
+        getFadedLineColor(): string {
+            return "#FFFFFF";
+        }
+        getStarColor(): string {
+            return "#FFFFFF";
+        }
+        getFadedStarColor(): string {
+            return "#999999";
+        }
+        getBlankTextColor(): string {
+            return "#FFFFFF";
+        }
+        getLabelTextColor(): string {
+            return "#FFFFFF";
+        }
+    }
+
+    _("Bright Kaya"); // ensure translation
+    GoThemes["board"]["Bright Kaya"] = BrightKaya;
 }
