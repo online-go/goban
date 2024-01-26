@@ -1,6 +1,6 @@
 {
     "name": "goban",
-    "version": "0.7.37",
+    "version": "0.7.38",
     "description": "",
     "main": "lib/goban.js",
     "types": "lib/goban.d.ts",
