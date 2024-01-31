@@ -62,7 +62,33 @@ interface ViewPortInterface {
 
 const HOT_PINK = "#ff69b4";
 
-export class GobanCanvas extends GobanCore {
+interface GobanCanvasInterface {
+    engine: GoEngine;
+    move_tree_container?: HTMLElement;
+
+    clearAnalysisDrawing(): void;
+    drawPenMarks(pen_marks: MoveTreePenMarks): void;
+    enablePen(): void;
+    disablePen(): void;
+    setByoYomiLabel(label: string): void;
+
+    move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void;
+    move_tree_redraw(no_warp?: boolean): void;
+    setMoveTreeContainer(container: HTMLElement): void;
+
+    showMessage(
+        message_id_or_error: MessageID,
+        parameters?: { [key: string]: any },
+        timeout?: number,
+    ): void;
+    clearMessage(): void;
+
+    drawSquare(i: number, j: number): void;
+
+    destroy(): void;
+}
+
+export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     public engine: GoEngine;
     private parent: HTMLElement;
     //private board_div: HTMLElement;
