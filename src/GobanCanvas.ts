@@ -49,6 +49,7 @@ export interface GobanCanvasConfig extends GobanConfig {
     board_div?: HTMLElement;
     title_div?: HTMLElement;
     move_tree_container?: HTMLElement;
+    last_move_opacity?: number;
 }
 
 interface ViewPortInterface {
@@ -78,6 +79,7 @@ export class GobanCanvas extends GobanCore {
     private shadow_ctx?: CanvasRenderingContext2D;
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
+    private last_move_opacity: number = 1;
     public move_tree_container?: HTMLElement;
     private move_tree_inner_container?: HTMLDivElement;
     private move_tree_canvas?: HTMLCanvasElement;
@@ -136,6 +138,7 @@ export class GobanCanvas extends GobanCore {
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
+        this.last_move_opacity = config["last_move_opacity"] ?? 1;
         const ctx = this.board.getContext("2d", { willReadFrequently: true });
         if (ctx) {
             this.ctx = ctx;
@@ -191,6 +194,10 @@ export class GobanCanvas extends GobanCore {
         this.ready_to_draw = true;
         this.redraw(true);
     }
+    public setLastMoveOpacity(opacity: number): void {
+        this.last_move_opacity = opacity;
+    }
+
     public enablePen(): void {
         this.attachPenCanvas();
     }
@@ -2056,7 +2063,7 @@ export class GobanCanvas extends GobanCore {
                         ctx.save();
                         ctx.beginPath();
                         ctx.lineWidth = this.square_size * 0.075;
-                        //ctx.globalAlpha = 0.6;
+                        ctx.globalAlpha = this.last_move_opacity;
                         const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
                         ctx.moveTo(cx - r, cy);
                         ctx.lineTo(cx + r, cy);
@@ -2087,18 +2094,20 @@ export class GobanCanvas extends GobanCore {
                             draw_last_move = false;
                             ctx.restore();
                         } else {
+                            ctx.save();
                             ctx.beginPath();
                             ctx.strokeStyle = color;
                             ctx.lineWidth = this.square_size * 0.075;
+                            ctx.globalAlpha = this.last_move_opacity;
                             let r = this.square_size * this.last_move_radius;
                             if (this.submit_move) {
-                                //ctx.globalAlpha = 0.6;
                                 r = this.square_size * 0.3;
                             }
 
                             r = Math.max(0.1, r);
                             ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
                             ctx.stroke();
+                            ctx.restore();
                         }
                     }
                 }
