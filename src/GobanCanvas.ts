@@ -72,6 +72,7 @@ interface GobanCanvasInterface {
     enablePen(): void;
     disablePen(): void;
     setByoYomiLabel(label: string): void;
+    setLastMoveOpacity(opacity: number): void;
 
     move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void;
     move_tree_redraw(no_warp?: boolean): void;
