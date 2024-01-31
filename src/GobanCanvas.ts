@@ -1504,7 +1504,7 @@ export class GobanCanvas extends GobanCore {
             ) {
                 //let color = stone_color ? stone_color : (this.move_selected ? this.engine.otherPlayer() : this.engine.player);
                 let transparent = false;
-                let stoneAlphaTransparencyValue = 0.6;
+                let stoneAlphaValue = 0.6;
                 let color;
                 if (
                     this.scoring_mode &&
@@ -1559,7 +1559,7 @@ export class GobanCanvas extends GobanCore {
                 } else if (pos.black || pos.white) {
                     color = pos.black ? 1 : 2;
                     transparent = true;
-                    stoneAlphaTransparencyValue = this.variation_stone_transparency;
+                    stoneAlphaValue = this.variation_stone_opacity;
                 } else {
                     color = this.engine.player;
                 }
@@ -1594,7 +1594,7 @@ export class GobanCanvas extends GobanCore {
                     ctx.save();
                     let shadow_ctx: CanvasRenderingContext2D | null | undefined = this.shadow_ctx;
                     if (!stone_color || transparent) {
-                        ctx.globalAlpha = stoneAlphaTransparencyValue;
+                        ctx.globalAlpha = stoneAlphaValue;
                         shadow_ctx = null;
                     }
                     if (shadow_ctx === undefined) {

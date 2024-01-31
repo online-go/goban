@@ -144,7 +144,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
     circle_radius?: number;
     one_click_submit?: boolean;
     double_click_submit?: boolean;
-    variation_stone_transparency?: number;
+    variation_stone_opacity?: number;
     visual_undo_request_indicator?: boolean;
 
     //
@@ -367,7 +367,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;
-    public variation_stone_transparency: number;
+    public variation_stone_opacity: number;
     public draw_bottom_labels: boolean;
     public draw_left_labels: boolean;
     public draw_right_labels: boolean;
@@ -643,9 +643,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.one_click_submit = "one_click_submit" in config ? !!config.one_click_submit : false;
         this.double_click_submit =
             "double_click_submit" in config ? !!config.double_click_submit : true;
-        this.variation_stone_transparency =
-            typeof config.variation_stone_transparency !== "undefined"
-                ? config.variation_stone_transparency
+        this.variation_stone_opacity =
+            typeof config.variation_stone_opacity !== "undefined"
+                ? config.variation_stone_opacity
                 : 0.6;
         this.visual_undo_request_indicator =
             "visual_undo_request_indicator" in config
