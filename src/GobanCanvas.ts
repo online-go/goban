@@ -1361,10 +1361,14 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
             ctx.lineCap = "butt";
             ctx.beginPath();
-            ctx.moveTo(Math.floor(sx), my);
-            ctx.lineTo(Math.floor(ex), my);
-            ctx.moveTo(mx, Math.floor(sy));
-            ctx.lineTo(mx, Math.floor(ey));
+
+            const dpr = window.devicePixelRatio || 1;
+            let round = function(x: number): number { return Math.round(dpr * (x-0.5))/dpr + 0.5; }
+            console.log(round(my));
+            ctx.moveTo(round(sx), round(my));
+            ctx.lineTo(round(ex), round(my));
+            ctx.moveTo(round(mx), round(sy));
+            ctx.lineTo(round(mx), round(ey));
             ctx.stroke();
         }
 
