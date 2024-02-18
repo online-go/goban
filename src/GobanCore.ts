@@ -1928,7 +1928,11 @@ export abstract class GobanCore extends EventEmitter<Events> {
             n_squares = 19;
         }
 
-        this.setSquareSize(Math.floor(this.display_width / n_squares), suppress_redraw);
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const idealSquareSize = this.display_width / n_squares;
+        const deviceSquareSize = Math.floor(devicePixelRatio * idealSquareSize) / devicePixelRatio;
+        this.setSquareSize(deviceSquareSize, suppress_redraw);
+        console.log("Square size: " + deviceSquareSize);
     }
 
     public setCoordinates(label_position: LabelPosition) {
