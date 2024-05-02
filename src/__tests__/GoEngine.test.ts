@@ -88,7 +88,7 @@ describe("computeScore", () => {
                 total: 357,
             }),
             white: expect.objectContaining({
-                handicap: 4,
+                handicap: 0,
                 komi: 0.5,
                 territory: 0,
                 total: 0.5,
