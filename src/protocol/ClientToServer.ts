@@ -372,7 +372,7 @@ export interface ClientToServer extends ClientToServerBase {
     }) => number;
 
     /** Deletes a notification */
-    "notification/delete": (data: { notification_id: number }) => void;
+    "notification/delete": (data: { notification_id: string }) => void;
 
     /** Connects to the game list count.
      *  Once connected you'll start receiving `gamelist-count` or

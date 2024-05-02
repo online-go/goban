@@ -102,6 +102,8 @@ export interface ServerToClient {
      *  as a reference for what types there are and what data they contain
      */
     "notification": (data: {
+        /** The notification id */
+        id: string;
         /** The notification type */
         type: string;
         /** There are often more fields here */
