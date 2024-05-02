@@ -48,8 +48,8 @@ jobs:
       - name: Prettier
         run: npm run prettier:check
 
-      #- name: Test
-      #  run: npm run test
+      - name: Test
+        run: npm run test
 
       - name: Spell check
         uses: streetsidesoftware/cspell-action@v5
