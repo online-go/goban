@@ -41,4 +41,9 @@ export * as protocol from "./protocol";
 export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
 export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 
+import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
+import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
+export type GobanRenderer = GobanCanvas | GobanSVG;
+export type GobanRendererConfig = GobanCanvasConfig | GobanSVGConfig;
+
 (window as any)["goban"] = module.exports;

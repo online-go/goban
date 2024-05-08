@@ -93,7 +93,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     public engine: GoEngine;
     private parent: HTMLElement;
     //private board_div: HTMLElement;
-    private svg: SVGElement;
+    public svg: SVGElement; // public for our test framework, normal users should not access this directly
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
     private ready_to_draw: boolean = false;
@@ -2739,6 +2739,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
             this.svg.appendChild(this.coordinate_labels_layer);
         }
+    }
+
+    protected computeThemeStoneRadius(): number {
+        const r = this.square_size * 0.5;
+        return Math.max(1, r);
     }
 
     public redraw(force_clear?: boolean): void {

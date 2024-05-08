@@ -3265,6 +3265,18 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         });
     }
 
+    protected computeThemeStoneRadius(): number {
+        // Scale proportionally in general
+        let r = this.square_size * 0.488;
+
+        // Prevent pixel sharing in low-res
+        if (this.square_size % 2 === 0) {
+            r = Math.min(r, (this.square_size - 1) / 2);
+        }
+
+        return Math.max(1, r);
+    }
+
     move_tree_drawStone(
         ctx: CanvasRenderingContext2D,
         node: MoveTree,

@@ -216,6 +216,27 @@ export default function (GoThemes: GoThemesInterface) {
         getBlackTextColor(_color: string): string {
             return "#ffffff";
         }
+
+        public placeBlackStoneSVG(
+            cell: SVGGraphicsElement,
+            _stone: any,
+            cx: number,
+            cy: number,
+            radius: number,
+        ): void {
+            const stone_image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            stone_image.setAttribute("class", "stone black");
+            stone_image.setAttribute("x", `${cx - radius}`);
+            stone_image.setAttribute("y", `${cy - radius}`);
+            stone_image.setAttribute("width", `${radius * 2}`);
+            stone_image.setAttribute("height", `${radius * 2}`);
+            stone_image.setAttributeNS(
+                "http://www.w3.org/1999/xlink",
+                "href",
+                anime_black_imagedata,
+            );
+            cell.appendChild(stone_image);
+        }
     }
 
     GoThemes["black"]["Anime"] = AnimeBlack;
@@ -243,6 +264,27 @@ export default function (GoThemes: GoThemesInterface) {
 
         getWhiteTextColor(_color: string): string {
             return "#000000";
+        }
+
+        public placeWhiteStoneSVG(
+            cell: SVGGraphicsElement,
+            _stone: any,
+            cx: number,
+            cy: number,
+            radius: number,
+        ): void {
+            const stone_image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            stone_image.setAttribute("class", "stone white");
+            stone_image.setAttribute("x", `${cx - radius}`);
+            stone_image.setAttribute("y", `${cy - radius}`);
+            stone_image.setAttribute("width", `${radius * 2}`);
+            stone_image.setAttribute("height", `${radius * 2}`);
+            stone_image.setAttributeNS(
+                "http://www.w3.org/1999/xlink",
+                "href",
+                anime_white_imagedata,
+            );
+            cell.appendChild(stone_image);
         }
     }
     GoThemes["white"]["Anime"] = AnimeWhite;
