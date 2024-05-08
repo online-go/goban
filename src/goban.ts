@@ -16,6 +16,7 @@
 
 export * from "./GobanCore";
 export * from "./GobanCanvas";
+export * from "./GobanSVG";
 export * from "./GoConditionalMove";
 export * from "./GoEngine";
 export * from "./GobanError";

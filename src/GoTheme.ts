@@ -98,6 +98,38 @@ export class GoTheme {
         ctx.fill();
     }
 
+    public placeWhiteStoneSVG(
+        cell: SVGGraphicsElement,
+        _stone: any,
+        cx: number,
+        cy: number,
+        radius: number,
+    ) {
+        const stone = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        stone.setAttribute("class", "stone white");
+        stone.setAttribute("fill", this.getWhiteStoneColor());
+        stone.setAttribute("cx", cx.toString());
+        stone.setAttribute("cy", cy.toString());
+        stone.setAttribute("r", Math.max(0.1, radius).toString());
+        cell.appendChild(stone);
+    }
+
+    public placeBlackStoneSVG(
+        cell: SVGGraphicsElement,
+        _stone: any,
+        cx: number,
+        cy: number,
+        radius: number,
+    ) {
+        const stone = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        stone.setAttribute("class", "stone black");
+        stone.setAttribute("fill", this.getBlackStoneColor());
+        stone.setAttribute("cx", cx.toString());
+        stone.setAttribute("cy", cy.toString());
+        stone.setAttribute("r", Math.max(0.1, radius).toString());
+        cell.appendChild(stone);
+    }
+
     /* Resolve which stone graphic we should use. By default we just pick a
      * random one, if there are multiple images, otherwise whatever was
      * returned by the pre-render method */

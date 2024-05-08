@@ -192,11 +192,11 @@ let last_touch_x = -1000;
 let last_touch_y = -1000;
 
 /** Returns `{x,y}` of the event relative to the event target */
-export function getRelativeEventPosition(event: TouchEvent | MouseEvent) {
+export function getRelativeEventPosition(event: TouchEvent | MouseEvent, target?: HTMLElement) {
     let x = -1000;
     let y = -1000;
 
-    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    const rect = (target || (event.target as HTMLElement)).getBoundingClientRect();
 
     if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
         if (event.touches && event.touches.length) {

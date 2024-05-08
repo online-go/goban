@@ -13,10 +13,7 @@
         "lib": ["es2015", "dom"],
         "baseUrl": ".",
         "paths": {
-            "*": [
-                "src/*",
-                "*"
-            ]
+            "*": ["src/*", "*"]
         },
 
         "forceConsistentCasingInFileNames": true,
@@ -27,13 +24,10 @@
         "strictFunctionTypes": true,
         "strictNullChecks": true,
         "strictPropertyInitialization": true,
-        "noUnusedLocals": true,
+        "noUnusedLocals": false,
 
         "sourceMap": true,
         "jsx": "react"
     },
-    "files": [
-        "./src/goban.ts",
-        "./src/engine.ts"
-    ]
+    "files": ["./src/goban.ts", "./src/engine.ts"]
 }

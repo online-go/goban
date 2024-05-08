@@ -1,12 +1,16 @@
 <!doctype html>
 <html>
     <head>
-        <script src="https://online-go.com/OGSScoreEstimator/OGSScoreEstimator-0.7.0.asm.js" id="ogs_score_estimator_script"></script>
-        <script src='https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js'></script>
-        <script src='https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js'></script>
+        <script
+            src="https://online-go.com/OGSScoreEstimator/OGSScoreEstimator-0.7.0.asm.js"
+            id="ogs_score_estimator_script"
+        ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
 
         <style>
-            html, body {
+            html,
+            body {
                 margin: 0;
             }
             .Goban {
@@ -16,8 +20,10 @@
                 display: inline-block;
             }
 
-            .StoneLayer, .ShadowLayer, .PenLayer {
-                position: absolute; 
+            .StoneLayer,
+            .ShadowLayer,
+            .PenLayer {
+                position: absolute;
                 left: 0;
                 right: 0;
             }
@@ -31,7 +37,6 @@
             .PenLayer {
                 z-index: 20;
             }
-
 
             .inline-block {
                 display: inline-block;
@@ -51,10 +56,21 @@
                 resize: both;
                 overflow: scroll;
             }
+
+            svg text {
+                font-family: Verdana, Arial, sans-serif;
+                text-anchor: middle;
+                font-weight: bold;
+                user-select: none;
+            }
+            svg .white.stone,
+            svg .black.stone {
+                filter: drop-shadow(3px 5px 2px rgb(0 0 0 / 0.4));
+            }
         </style>
     </head>
     <body>
-        <div id='test-content' />
-        <script src='/test.js'></script>
+        <div id="test-content" />
+        <script src="/test.js"></script>
     </body>
 </html>
