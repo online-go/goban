@@ -67,6 +67,30 @@ export class GoTheme {
         return { white: "stone" };
     }
 
+    /* Returns an array of black stone objects. The structure
+     * of the array elements is up to the implementor, as they are passed
+     * verbatim to the placeBlackStone method */
+    public preRenderBlackSVG(
+        _defs: SVGDefsElement,
+        _radius: number,
+        _seed: number,
+        _deferredRenderCallback: () => void,
+    ): any {
+        return { black: "stone" };
+    }
+
+    /* Returns an array of white stone objects. The structure
+     * of the array elements is up to the implementor, as they are passed
+     * verbatim to the placeWhiteStone method */
+    public preRenderWhiteSVG(
+        _defs: SVGDefsElement,
+        _radius: number,
+        _seed: number,
+        _deferredRenderCallback: () => void,
+    ): any {
+        return { white: "stone" };
+    }
+
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
     public placeWhiteStone(
         ctx: CanvasRenderingContext2D,
@@ -98,13 +122,38 @@ export class GoTheme {
         ctx.fill();
     }
 
+    public placeStoneShadowSVG(
+        shadow_cell: SVGGraphicsElement | undefined,
+        cx: number,
+        cy: number,
+        radius: number,
+    ): SVGElement | undefined {
+        if (!shadow_cell) {
+            return;
+        }
+
+        const invisible_circle_to_cast_shadow = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle",
+        );
+        invisible_circle_to_cast_shadow.setAttribute("class", "shadow");
+        invisible_circle_to_cast_shadow.setAttribute("cx", cx.toString());
+        invisible_circle_to_cast_shadow.setAttribute("cy", cy.toString());
+        invisible_circle_to_cast_shadow.setAttribute("r", Math.max(0.1, radius).toString());
+        shadow_cell.appendChild(invisible_circle_to_cast_shadow);
+        return invisible_circle_to_cast_shadow;
+    }
+
     public placeWhiteStoneSVG(
         cell: SVGGraphicsElement,
+        shadow_cell: SVGGraphicsElement | undefined,
         _stone: any,
         cx: number,
         cy: number,
         radius: number,
-    ) {
+    ): [SVGElement, SVGElement | undefined] {
+        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
+
         const stone = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         stone.setAttribute("class", "stone white");
         stone.setAttribute("fill", this.getWhiteStoneColor());
@@ -112,15 +161,19 @@ export class GoTheme {
         stone.setAttribute("cy", cy.toString());
         stone.setAttribute("r", Math.max(0.1, radius).toString());
         cell.appendChild(stone);
+        return [stone, shadow];
     }
 
     public placeBlackStoneSVG(
         cell: SVGGraphicsElement,
+        shadow_cell: SVGGraphicsElement | undefined,
         _stone: any,
         cx: number,
         cy: number,
         radius: number,
-    ) {
+    ): [SVGElement, SVGElement | undefined] {
+        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
+
         const stone = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         stone.setAttribute("class", "stone black");
         stone.setAttribute("fill", this.getBlackStoneColor());
@@ -128,6 +181,7 @@ export class GoTheme {
         stone.setAttribute("cy", cy.toString());
         stone.setAttribute("r", Math.max(0.1, radius).toString());
         cell.appendChild(stone);
+        return [stone, shadow];
     }
 
     /* Resolve which stone graphic we should use. By default we just pick a

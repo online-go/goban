@@ -285,6 +285,7 @@ function ReactGoban<GobanClass extends GobanCore>(
     ctor: { new (x: GobanCanvasConfig | GobanSVGConfig): GobanClass },
     props: ReactGobanProps,
 ): JSX.Element {
+    const [elapsed, setElapsed] = React.useState(0);
     const container = React.useRef(null);
     const move_tree_container = React.useRef(null);
     let goban: GobanCore;
@@ -340,6 +341,7 @@ function ReactGoban<GobanClass extends GobanCore>(
                 if (i === NUM_MOVES) {
                     const end = Date.now();
                     console.log("Done in ", end - start);
+                    setElapsed(end - start);
 
                     // setup iso branch
                     const cur = goban.engine.cur_move;
@@ -463,6 +465,7 @@ function ReactGoban<GobanClass extends GobanCore>(
 
     return (
         <React.Fragment>
+            {elapsed > 0 && <div>Elapsed: {elapsed}ms</div>}
             <div className="Goban">
                 <div ref={container}></div>
             </div>

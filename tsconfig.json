@@ -24,7 +24,7 @@
         "strictFunctionTypes": true,
         "strictNullChecks": true,
         "strictPropertyInitialization": true,
-        "noUnusedLocals": false,
+        "noUnusedLocals": true,
 
         "sourceMap": true,
         "jsx": "react"

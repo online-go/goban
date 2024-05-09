@@ -93,7 +93,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     public engine: GoEngine;
     private parent: HTMLElement;
     //private board_div: HTMLElement;
-    public svg: SVGElement; // public for our test framework, normal users should not access this directly
+    private svg: SVGElement;
+    private svg_defs: SVGDefsElement;
+    public event_layer: HTMLDivElement;
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
     private ready_to_draw: boolean = false;
@@ -107,6 +109,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     private coordinate_labels_layer?: SVGGraphicsElement;
     private grid: Array<Array<SVGGraphicsElement>> = [];
     private grid_layer?: SVGGraphicsElement;
+    private shadow_grid: Array<Array<SVGElement | undefined>> = [];
+    private shadow_layer?: SVGGraphicsElement;
     private pen_layer?: SVGGraphicsElement;
 
     private last_move_opacity: number = 1;
@@ -153,18 +157,25 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.parent = config["board_div"];
         } else {
             this.no_display = true;
-            this.parent =
-                document.createElement(
-                    "div",
-                ); /* let a div dangle in no-mans land to prevent null pointer refs */
+            // unattached div dangle prevent null pointer refs
+            this.parent = document.createElement("div");
         }
 
         this.title_div = config["title_div"];
         this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        this.svg.appendChild(this.svg_defs);
         this.last_move_opacity = config["last_move_opacity"] ?? 1;
 
         this.parent.appendChild(this.svg);
-        this.bindPointerBindings(this.svg);
+        this.event_layer = document.createElement("div");
+        this.event_layer.style.position = "absolute";
+        this.event_layer.style.top = "0";
+        this.event_layer.style.right = "0";
+        this.event_layer.style.left = "0";
+        this.event_layer.style.bottom = "0";
+        this.parent.appendChild(this.event_layer);
+        this.bindPointerBindings(this.event_layer);
 
         this.move_tree_container = config.move_tree_container;
 
@@ -216,10 +227,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     }
 
     public enablePen(): void {
-        this.attachPenCanvas();
+        this.attachPenLayer();
     }
     public disablePen(): void {
-        this.detachPenCanvas();
+        this.detachPenLayer();
     }
 
     public destroy(): void {
@@ -231,7 +242,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         delete (this as any).board;
         delete (this as any).svg;
 
-        this.detachPenCanvas();
+        this.detachPenLayer();
 
         if (this.message_timeout) {
             clearTimeout(this.message_timeout);
@@ -254,29 +265,13 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         delete this.move_tree_svg;
         delete this.title_div;
     }
-    private detachPenCanvas(): void {
+    private detachPenLayer(): void {
         if (this.pen_layer) {
             this.pen_layer.remove();
             delete this.pen_layer;
         }
     }
-    private attachPenCanvas(): void {
-        /*
-        if (!this.pen_layer) {
-            this.pen_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
-            this.pen_layer.setAttribute("id", "pen-svg");
-            this.pen_layer.className = "PenLayer";
-            this.parent.appendChild(this.pen_layer);
-            const OLD_CONTEXT = this.pen_layer.getContext("2d", { willReadFrequently: true });
-            if (OLD_CONTEXT) {
-                this.pen_ctx = OLD_CONTEXT;
-            } else {
-                throw new Error(`Failed to obtain pen drawing context`);
-            }
-            this.bindPointerBindings(this.pen_layer);
-        }
-        */
-
+    private attachPenLayer(): void {
         if (!this.pen_layer) {
             this.pen_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
             this.pen_layer.setAttribute("id", "pen-svg");
@@ -284,19 +279,18 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.pen_layer.setAttribute("width", this.metrics.width.toString());
             this.pen_layer.setAttribute("height", this.metrics.height.toString());
             this.svg.appendChild(this.pen_layer);
-            this.bindPointerBindings(this.pen_layer);
         }
     }
-    private bindPointerBindings(svg: SVGElement): void {
+    private bindPointerBindings(div: HTMLDivElement): void {
         if (!this.interactive) {
             return;
         }
 
-        if (svg.getAttribute("data-pointers-bound") === "true") {
+        if (div.getAttribute("data-pointers-bound") === "true") {
             return;
         }
 
-        svg.setAttribute("data-pointers-bound", "true");
+        div.setAttribute("data-pointers-bound", "true");
 
         let dragging = false;
 
@@ -425,7 +419,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
         let mouse_disabled: any = 0;
 
-        svg.addEventListener("click", (ev) => {
+        div.addEventListener("click", (ev) => {
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, false);
@@ -433,7 +427,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             ev.preventDefault();
             return false;
         });
-        svg.addEventListener("dblclick", (ev) => {
+        div.addEventListener("dblclick", (ev) => {
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, true);
@@ -441,21 +435,21 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             ev.preventDefault();
             return false;
         });
-        svg.addEventListener("mousedown", (ev) => {
+        div.addEventListener("mousedown", (ev) => {
             if (!mouse_disabled) {
                 pointerDown(ev);
             }
             ev.preventDefault();
             return false;
         });
-        svg.addEventListener("mousemove", (ev) => {
+        div.addEventListener("mousemove", (ev) => {
             if (!mouse_disabled) {
                 pointerMove(ev);
             }
             ev.preventDefault();
             return false;
         });
-        svg.addEventListener("mouseout", (ev) => {
+        div.addEventListener("mouseout", (ev) => {
             if (!mouse_disabled) {
                 pointerOut(ev);
             } else {
@@ -463,7 +457,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             }
             return false;
         });
-        svg.addEventListener("contextmenu", (ev) => {
+        div.addEventListener("contextmenu", (ev) => {
             if (!mouse_disabled) {
                 pointerUp(ev, false);
             } else {
@@ -471,7 +465,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             }
             return false;
         });
-        svg.addEventListener("focus", (ev) => {
+        div.addEventListener("focus", (ev) => {
             ev.preventDefault();
             return false;
         });
@@ -491,7 +485,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 }, 5000);
                 getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === svg) {
+                if (ev.target === div) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     startX = ev.touches[0].clientX;
@@ -509,7 +503,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 // Stop a touch screen device always auto scrolling to the chat input box if it is active when you make a move
                 const currentElement = document.activeElement;
                 if (
-                    ev.target === svg &&
+                    ev.target === div &&
                     currentElement &&
                     currentElement instanceof HTMLElement &&
                     currentElement.tagName.toLowerCase() === "input"
@@ -524,7 +518,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     mouse_disabled = 0;
                 }, 5000);
 
-                if (ev.target === svg) {
+                if (ev.target === div) {
                     if (
                         Math.sqrt(
                             (startX - lastX) * (startX - lastX) +
@@ -552,7 +546,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 }, 5000);
                 getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === svg) {
+                if (ev.target === div) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     if (this.mode === "analyze" && this.analyze_tool === "draw") {
@@ -589,6 +583,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.pen_ctx.clearRect(0, 0, this.metrics.width, this.metrics.height);
         }
         */
+        if (this.pen_layer) {
+            this.pen_layer.innerHTML = "";
+        }
     }
     private xy2pen(x: number, y: number): [number, number] {
         const lx = this.draw_left_labels ? 0.0 : 1.0;
@@ -616,7 +613,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         */
     }
     private onPenStart(ev: MouseEvent | TouchEvent): void {
-        this.attachPenCanvas();
+        this.attachPenLayer();
 
         const pos = getRelativeEventPosition(ev, this.parent);
         this.last_pen_position = this.xy2pen(pos.x, pos.y);
@@ -627,11 +624,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         this.syncReviewMove({ pen: this.analyze_subtool, pp: this.xy2pen(pos.x, pos.y) });
     }
     private onPenMove(ev: MouseEvent | TouchEvent): void {
-        /*
-        if (!this.pen_ctx) {
-            throw new Error(`onPenMove called with null pen_ctx`);
-        }
-        */
         if (!this.last_pen_position || !this.current_pen_mark) {
             throw new Error(`onPenMove called with invalid last pen position or current pen mark`);
         }
@@ -653,13 +645,20 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         this.current_pen_mark.points.push(dx);
         this.current_pen_mark.points.push(dy);
 
-        console.log(s, e);
         /*
         this.pen_ctx.beginPath();
         this.pen_ctx.moveTo(s[0], s[1]);
         this.pen_ctx.lineTo(e[0], e[1]);
         this.pen_ctx.stroke();
         */
+
+        const path = `M ${s[0]} ${s[1]} L ${e[0]} ${e[1]}`;
+        const path_element = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path_element.setAttribute("d", path);
+        path_element.setAttribute("stroke", this.analyze_subtool);
+        path_element.setAttribute("stroke-width", "3");
+        path_element.setAttribute("fill", "none");
+        this.pen_layer?.appendChild(path_element);
 
         this.syncReviewMove({ pp: [dx, dy] });
     }
@@ -670,32 +669,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         if (!pen_marks.length) {
             return;
         }
-        /*
-        this.attachPenCanvas();
-        if (!this.pen_ctx) {
-            throw new Error(`onPenMove called with null pen_ctx`);
-        }
-        this.clearAnalysisDrawing();
-        this.pen_marks = pen_marks;
-        for (let i = 0; i < pen_marks.length; ++i) {
-            const stroke = pen_marks[i];
-            this.setPenStyle(stroke.color);
-
-            let px = stroke.points[0];
-            let py = stroke.points[1];
-            this.pen_ctx.beginPath();
-            const pt = this.pen2xy(px, py);
-            this.pen_ctx.moveTo(pt[0], pt[1]);
-            for (let j = 2; j < stroke.points.length; j += 2) {
-                px += stroke.points[j];
-                py += stroke.points[j + 1];
-                const pt = this.pen2xy(px, py);
-                this.pen_ctx.lineTo(pt[0], pt[1]);
-            }
-            this.pen_ctx.stroke();
-        }
-        */
-        this.attachPenCanvas();
+        this.attachPenLayer();
         this.clearAnalysisDrawing();
         this.pen_marks = pen_marks;
 
@@ -1204,9 +1178,13 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         }
 
         let cell = this.grid[j][i];
+        const shadow_cell = this.shadow_grid[j][i];
 
         if (cell) {
             cell.remove();
+        }
+        if (shadow_cell) {
+            shadow_cell.remove();
         }
 
         cell = this.grid[j][i] = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -1564,6 +1542,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         return;
                     }
 
+                    const stone_transparent = transparent || !stone_color;
+
                     if (color === 1) {
                         const stone = this.theme_black.getStone(
                             i,
@@ -1571,13 +1551,18 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                             this.theme_black_stones,
                             this,
                         );
-                        this.theme_black.placeBlackStoneSVG(
+                        const [elt, shadow] = this.theme_black.placeBlackStoneSVG(
                             cell,
+                            stone_transparent ? undefined : this.shadow_layer,
                             stone,
                             cx,
                             cy,
                             this.theme_stone_radius,
                         );
+                        this.shadow_grid[j][i] = shadow;
+                        if (stone_transparent) {
+                            elt.setAttribute("opacity", stoneAlphaValue.toString());
+                        }
                     } else {
                         const stone = this.theme_white.getStone(
                             i,
@@ -1585,13 +1570,18 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                             this.theme_white_stones,
                             this,
                         );
-                        this.theme_white.placeWhiteStoneSVG(
+                        const [elt, shadow] = this.theme_white.placeWhiteStoneSVG(
                             cell,
+                            stone_transparent ? undefined : this.shadow_layer,
                             stone,
                             cx,
                             cy,
                             this.theme_stone_radius,
                         );
+                        this.shadow_grid[j][i] = shadow;
+                        if (stone_transparent) {
+                            elt.setAttribute("opacity", stoneAlphaValue.toString());
+                        }
                     }
                 }
 
@@ -1666,27 +1656,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     color = "dame";
                 }
 
-                /*
-                if (color === "white") {
-                    OLD_CONTEXT.fillStyle = this.theme_black_text_color;
-                    OLD_CONTEXT.strokeStyle = "#777777";
-                } else if (color === "black") {
-                    OLD_CONTEXT.fillStyle = this.theme_white_text_color;
-                    OLD_CONTEXT.strokeStyle = "#888888";
-                } else if (color === "dame") {
-                    OLD_CONTEXT.fillStyle = "#ff0000";
-                    OLD_CONTEXT.strokeStyle = "#365FE6";
-                }
-                OLD_CONTEXT.lineWidth = Math.ceil(this.square_size * 0.065) - 0.5;
-
-                OLD_CONTEXT.rect(cx - r, cy - r, r * 2, r * 2);
-                if (color !== "dame") {
-                    OLD_CONTEXT.fill();
-                }
-                OLD_CONTEXT.stroke();
-                */
-
-                /* TODO: Need to test */
                 const r = this.square_size * 0.15;
                 const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 rect.setAttribute("x", (cx - r).toFixed(1));
@@ -1702,7 +1671,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     rect.setAttribute("stroke", "#888888");
                 }
                 if (color === "dame") {
-                    //rect.setAttribute("fill", "#ff0000");
+                    rect.setAttribute("fill-opacity", "0.2");
                     rect.setAttribute("stroke", "#365FE6");
                 }
                 rect.setAttribute(
@@ -1797,6 +1766,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     text.setAttribute("fill-opacity", "0.6");
                 }
                 cell.appendChild(text);
+                draw_last_move = false;
             }
 
             if (subscript) {
@@ -1816,6 +1786,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     text.setAttribute("fill-opacity", "0.6");
                 }
                 cell.appendChild(text);
+                draw_last_move = false;
             }
         }
 
@@ -1848,8 +1819,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             }
 
             if (pos.circle || hover_mark === "circle") {
-                draw_last_move = false;
-
                 const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 circ.setAttribute("class", "circle");
                 circ.setAttribute("fill", "none");
@@ -1865,6 +1834,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     circ.setAttribute("stroke-opacity", "0.6");
                 }
                 cell.appendChild(circ);
+                draw_last_move = false;
             }
             if (
                 pos.triangle ||
@@ -1880,7 +1850,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     oy = this.square_size * 0.3;
                     transparent = false;
                 }
-                draw_last_move = false;
 
                 const triangle = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
                 triangle.setAttribute("class", "triangle");
@@ -1905,6 +1874,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     triangle.setAttribute("stroke-opacity", "0.6");
                 }
                 cell.appendChild(triangle);
+                draw_last_move = false;
             }
             if (pos.cross || hover_mark === "cross") {
                 const r = Math.max(1, this.metrics.mid * 0.35);
@@ -1974,21 +1944,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                             : this.theme_white_text_color;
 
                     if (this.submit_move) {
-                        /* TODO: Test this */
-                        /*
-                        OLD_CONTEXT.lineCap = "square";
-                        OLD_CONTEXT.save();
-                        OLD_CONTEXT.beginPath();
-                        OLD_CONTEXT.lineWidth = this.square_size * 0.075;
-                        OLD_CONTEXT.globalAlpha = this.last_move_opacity;
-                        OLD_CONTEXT.moveTo(cx - r, cy);
-                        OLD_CONTEXT.lineTo(cx + r, cy);
-                        OLD_CONTEXT.moveTo(cx, cy - r);
-                        OLD_CONTEXT.lineTo(cx, cy + r);
-                        OLD_CONTEXT.strokeStyle = color;
-                        OLD_CONTEXT.stroke();
-                        OLD_CONTEXT.restore();
-                        */
                         draw_last_move = false;
 
                         const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
@@ -2000,13 +1955,14 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         cross.setAttribute("stroke", color);
                         cross.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
                         cross.setAttribute("fill", "none");
+                        cross.setAttribute("opacity", this.last_move_opacity.toString());
                         cross.setAttribute(
                             "d",
                             `
-                            M ${cx - r} ${cy - r}
-                            L ${cx + r} ${cy + r}
-                            M ${cx + r} ${cy - r}
-                            L ${cx - r} ${cy + r}
+                            M ${cx - r} ${cy}
+                            L ${cx + r} ${cy}
+                            M ${cx} ${cy - r}
+                            L ${cx} ${cy + r}
                         `,
                         );
                         cell.appendChild(cross);
@@ -2016,22 +1972,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                             this.visual_undo_request_indicator &&
                             this.engine.undo_requested === this.engine.cur_move.move_number
                         ) {
-                            /* TODO: Test this */
                             const letter = "?";
-                            /*
-                            OLD_CONTEXT.save();
-                            OLD_CONTEXT.fillStyle = color;
-                            const metrics = OLD_CONTEXT.measureText(letter);
-                            const xx = cx - metrics.width / 2;
-                            const yy =
-                                cy +
-                                (/WebKit|Trident/.test(navigator.userAgent)
-                                    ? this.square_size * -0.03
-                                    : 1); // middle centering is different on firefox
-                            OLD_CONTEXT.textBaseline = "middle";
-                            OLD_CONTEXT.fillText(letter, xx, yy);
-                            OLD_CONTEXT.restore();
-                            */
                             draw_last_move = false;
 
                             const text = document.createElementNS(
@@ -2053,16 +1994,20 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                                 "http://www.w3.org/2000/svg",
                                 "circle",
                             );
+                            let r = this.square_size * this.last_move_radius;
+                            if (this.submit_move) {
+                                r = this.square_size * 0.3;
+                            }
+
+                            r = Math.max(0.1, r);
                             circ.setAttribute("class", "last-move");
                             circ.setAttribute("fill", "none");
                             circ.setAttribute("stroke", color);
                             circ.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
                             circ.setAttribute("cx", cx.toString());
                             circ.setAttribute("cy", cy.toString());
-                            circ.setAttribute(
-                                "r",
-                                Math.max(0.1, this.square_size * this.last_move_radius).toString(),
-                            );
+                            circ.setAttribute("opacity", this.last_move_opacity.toString());
+                            circ.setAttribute("r", r.toString());
                             cell.appendChild(circ);
                         }
                     }
@@ -2071,31 +2016,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         }
 
         /* Score Estimation */
-
         if (this.scoring_mode && this.score_estimate) {
             const se = this.score_estimate;
             const est = se.ownership[j][i];
-
-            //OLD_CONTEXT.beginPath();
-
             const color = est < 0 ? "white" : "black";
 
-            /*
-            if (color === "white") {
-                OLD_CONTEXT.fillStyle = this.theme_black_text_color;
-                OLD_CONTEXT.strokeStyle = "#777777";
-            } else if (color === "black") {
-                OLD_CONTEXT.fillStyle = this.theme_white_text_color;
-                OLD_CONTEXT.strokeStyle = "#888888";
-            }
-            OLD_CONTEXT.lineWidth = Math.ceil(this.square_size * 0.035) - 0.5;
-            const r = this.square_size * 0.2 * Math.abs(est);
-            OLD_CONTEXT.rect(cx - r, cy - r, r * 2, r * 2);
-            OLD_CONTEXT.fill();
-            OLD_CONTEXT.stroke();
-            */
-
-            /* TODO: Test this */
             const r = this.square_size * 0.2 * Math.abs(est);
             const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             rect.setAttribute("x", (cx - r).toFixed(1));
@@ -2511,7 +2436,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 line.setAttribute("y1", (oy + y * ss).toString());
                 line.setAttribute("x2", (ox + (this.width - 1) * ss).toString());
                 line.setAttribute("y2", (oy + y * ss).toString());
-                line.setAttribute("stroke", this.theme_line_color);
+                line.setAttribute("stroke", this.theme_star_color);
                 line.setAttribute("stroke-width", "1");
                 this.lines_layer.appendChild(line);
             }
@@ -2792,7 +2717,12 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         this.drawLines(force_clear);
         this.drawCoordinateLabels(force_clear);
 
-        if (force_clear || !this.grid_layer) {
+        if (force_clear || !this.grid_layer || !this.shadow_layer) {
+            this.shadow_layer?.remove();
+            this.shadow_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            this.shadow_layer.setAttribute("class", "shadow-layer");
+            this.svg.appendChild(this.shadow_layer);
+
             this.grid_layer?.remove();
             this.grid_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
             this.grid_layer.setAttribute("class", "grid");
@@ -2800,6 +2730,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
             for (let j = 0; j < this.height; ++j) {
                 this.grid[j] = [];
+                this.shadow_grid[j] = [];
+                /*
                 for (let i = 0; i < this.width; ++i) {
                     const cell = document.createElementNS("http://www.w3.org/2000/svg", "g");
                     cell.setAttribute("x", (i * this.square_size).toString());
@@ -2807,8 +2739,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     cell.setAttribute("width", this.square_size.toString());
                     cell.setAttribute("height", this.square_size.toString());
                     this.grid_layer.appendChild(cell);
+
                     this.grid[j][i] = cell;
                 }
+                */
             }
         }
 
@@ -2830,7 +2764,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
         if (this.pen_marks) {
             if (force_clear) {
-                this.detachPenCanvas();
+                this.detachPenLayer();
             }
             this.drawPenMarks(this.pen_marks);
         }
@@ -2949,7 +2883,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         try {
             if (!(this.theme_stone_radius in __theme_cache.white[themes.white])) {
                 __theme_cache.white[themes.white][this.theme_stone_radius] =
-                    this.theme_white.preRenderWhite(
+                    this.theme_white.preRenderWhiteSVG(
+                        this.svg_defs,
                         this.theme_stone_radius,
                         23434,
                         deferredRenderCallback,
@@ -2958,7 +2893,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             }
             if (!(this.theme_stone_radius in __theme_cache.black[themes.black])) {
                 __theme_cache.black[themes.black][this.theme_stone_radius] =
-                    this.theme_black.preRenderBlack(
+                    this.theme_black.preRenderBlackSVG(
+                        this.svg_defs,
                         this.theme_stone_radius,
                         2081,
                         deferredRenderCallback,
@@ -2968,7 +2904,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
             if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
                 __theme_cache.white[themes.white][MoveTree.stone_radius] =
-                    this.theme_white.preRenderWhite(
+                    this.theme_white.preRenderWhiteSVG(
+                        this.svg_defs,
                         MoveTree.stone_radius,
                         23434,
                         deferredRenderCallback,
@@ -2977,7 +2914,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             }
             if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
                 __theme_cache.black[themes.black][MoveTree.stone_radius] =
-                    this.theme_black.preRenderBlack(
+                    this.theme_black.preRenderBlackSVG(
+                        this.svg_defs,
                         MoveTree.stone_radius,
                         2081,
                         deferredRenderCallback,
@@ -3265,14 +3203,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.move_tree_hilightNode(svg, engine.cur_review_move, "#6BDA6B", viewport);
         }
 
-        //OLD_CONTEXT.lineWidth = 1.0;
-        //OLD_CONTEXT.strokeStyle = this.theme_line_color;
         this.move_tree_recursiveDrawPath(svg, this.engine.move_tree, viewport);
 
-        //OLD_CONTEXT.globalCompositeOperation = "source-over";
-        const text_size = 10;
-        //OLD_CONTEXT.font = `bold ${text_size}px Verdana,Arial,sans-serif`;
-        //OLD_CONTEXT.textBaseline = "middle";
         this.move_tree_drawRecursive(
             svg,
             this.engine.move_tree,
@@ -3343,20 +3275,19 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         const cy = node.layout_cy - viewport.offset_y;
         const color = node.player;
         const on_path = node.active_path_number === active_path_number;
+        const r = MoveTree.stone_radius;
 
         const cell = document.createElementNS("http://www.w3.org/2000/svg", "g");
         svg.appendChild(cell);
         if (!on_path) {
-            /*
-            OLD_CONTEXT.globalAlpha = 0.4;
-            */
             cell.setAttribute("class", "move-tree-stone");
-            cell.setAttribute("fill-opacity", "0.4");
-            cell.setAttribute("stroke-opacity", "0.4");
+            cell.setAttribute("fill-opacity", "0.6");
+            cell.setAttribute("stroke-opacity", "0.6");
+            cell.setAttribute("opacity", "0.6");
         }
 
-        const theme_white_stones = __theme_cache.white[this.themes.white][MoveTree.stone_radius];
-        const theme_black_stones = __theme_cache.black[this.themes.black][MoveTree.stone_radius];
+        const theme_white_stones = __theme_cache.white[this.themes.white][r];
+        const theme_black_stones = __theme_cache.black[this.themes.black][r];
 
         if (!theme_white_stones || !theme_black_stones) {
             throw new Error(
@@ -3366,10 +3297,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
         if (color === 1) {
             const stone = theme_black_stones[stone_idx % theme_black_stones.length];
-            this.theme_black.placeBlackStoneSVG(cell, stone, cx, cy, MoveTree.stone_radius);
+            this.theme_black.placeBlackStoneSVG(cell, undefined, stone, cx, cy, r);
         } else if (color === 2) {
             const stone = theme_white_stones[stone_idx % theme_white_stones.length];
-            this.theme_white.placeWhiteStoneSVG(cell, stone, cx, cy, MoveTree.stone_radius);
+            this.theme_white.placeWhiteStoneSVG(cell, undefined, stone, cx, cy, r);
         } else {
             return;
         }
@@ -3405,17 +3336,21 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             delete node.label_metrics;
         }
 
-        /* TODO: Test correct answer / wrong answer stuff */
         const font_size = 10;
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", cx.toFixed(0));
-        text.setAttribute("y", (cy + font_size / 3).toFixed(1));
+        text.setAttribute("y", (cy + font_size / 8).toFixed(1));
+        text.setAttribute("width", MoveTree.stone_square_size.toFixed(1));
+        text.setAttribute("height", MoveTree.stone_square_size.toFixed(1));
         text.setAttribute("font-size", `${font_size}px`);
         text.setAttribute("font-weight", "bold");
+        text.setAttribute("alignment-baseline", "middle");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("fill", text_color);
         text.textContent = node.label;
 
-        svg.appendChild(text);
+        cell.appendChild(text);
 
         const ring_color = node.text
             ? "#3333ff"
@@ -3429,11 +3364,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             ring.setAttribute("cx", cx.toFixed(0));
             ring.setAttribute("cy", cy.toFixed(1));
-            ring.setAttribute("r", MoveTree.stone_radius.toFixed(0));
+            ring.setAttribute("r", r.toFixed(0));
             ring.setAttribute("fill", "none");
             ring.setAttribute("stroke", ring_color);
             ring.setAttribute("stroke-width", "2");
-            svg.appendChild(ring);
+            cell.appendChild(ring);
         }
     }
     move_tree_drawRecursive(

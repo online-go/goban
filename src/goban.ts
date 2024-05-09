@@ -39,10 +39,12 @@ export * from "./GobanSocket";
 export * as GoMath from "./GoMath";
 export * as protocol from "./protocol";
 export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
-export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
+//export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
+export { GobanSVG as Goban, GobanSVGConfig as GobanConfig } from "./GobanSVG";
 
 import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
 import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
+
 export type GobanRenderer = GobanCanvas | GobanSVG;
 export type GobanRendererConfig = GobanCanvasConfig | GobanSVGConfig;
 
