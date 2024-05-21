@@ -57,7 +57,7 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
 
-    class Black extends Stone {
+    class Plain extends Stone {
         get theme_name(): string {
             return "Plain";
         }
@@ -91,12 +91,6 @@ export default function (GoThemes: GoThemesInterface) {
         public getBlackTextColor(): string {
             return "#FFFFFF";
         }
-    }
-
-    class White extends Stone {
-        get theme_name(): string {
-            return "Plain";
-        }
 
         preRenderWhite(radius: number, seed: number): any {
             return true;
@@ -127,8 +121,92 @@ export default function (GoThemes: GoThemesInterface) {
         public getWhiteTextColor(): string {
             return "#000000";
         }
+
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const ret = [];
+            const key = `plain-black-${radius}`;
+            ret.push(key);
+
+            let color: string | undefined = this.getBlackStoneColor();
+            if (color === "#000000") {
+                color = undefined;
+            }
+
+            defs.appendChild(
+                this.renderSVG(
+                    {
+                        id: key,
+                        //fill: "hsl(8, 7%, 30%)",
+                        stroke: color ?? "hsl(8, 7%, 20%)",
+                        gradient: {
+                            type: "linear",
+                            x1: 0.4,
+                            y1: 0.1,
+                            x2: 0.7,
+                            y2: 0.7,
+                            stops: [
+                                {
+                                    offset: 0,
+                                    color: color ?? "hsl(8, 7%, 27%)",
+                                },
+                                {
+                                    offset: 100,
+                                    color: color ?? "hsl(8, 7%, 12%)",
+                                },
+                            ],
+                        },
+                    },
+                    radius,
+                ),
+            );
+            return ret;
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const ret = [];
+            const key = `plain-white-${radius}`;
+            ret.push(key);
+            defs.appendChild(
+                this.renderSVG(
+                    {
+                        id: key,
+                        //fill: "hsl(8, 7%, 30%)",
+                        stroke: "hsl(8, 7%, 20%)",
+                        gradient: {
+                            type: "linear",
+                            x1: 0.4,
+                            y1: 0.1,
+                            x2: 0.9,
+                            y2: 0.9,
+                            stops: [
+                                {
+                                    offset: 0,
+                                    color: "hsl(8, 7%, 95%)",
+                                },
+                                {
+                                    offset: 90,
+                                    color: "hsl(226, 7%, 75%)",
+                                },
+                            ],
+                        },
+                    },
+                    radius,
+                ),
+            );
+            return ret;
+        }
     }
 
-    GoThemes["black"]["Plain"] = Black;
-    GoThemes["white"]["Plain"] = White;
+    GoThemes["black"]["Plain"] = Plain;
+    GoThemes["white"]["Plain"] = Plain;
 }

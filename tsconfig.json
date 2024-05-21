@@ -13,10 +13,7 @@
         "lib": ["es2015", "dom"],
         "baseUrl": ".",
         "paths": {
-            "*": [
-                "src/*",
-                "*"
-            ]
+            "*": ["src/*", "*"]
         },
 
         "forceConsistentCasingInFileNames": true,
@@ -32,8 +29,5 @@
         "sourceMap": true,
         "jsx": "react"
     },
-    "files": [
-        "./src/goban.ts",
-        "./src/engine.ts"
-    ]
+    "files": ["./src/goban.ts", "./src/engine.ts"]
 }

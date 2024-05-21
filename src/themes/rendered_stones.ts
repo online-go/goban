@@ -31,6 +31,11 @@ interface RenderOptions {
     specular_light_distance: number;
 }
 
+function seedRandomFloat(seed: number, min: number, max: number): number {
+    const n = Math.abs(((seed * 9301 + 49297) % 233280) / 233280);
+    return min + n * (max - min);
+}
+
 /**
  * Converts an RGB color value to HSL. Conversion formula
  * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
@@ -521,6 +526,41 @@ export default function (GoThemes: GoThemesInterface) {
         getBlackTextColor(color: string): string {
             return "#ffffff";
         }
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const ret = [];
+            for (let i = 0; i < 10; ++i) {
+                const key = `black-${i}-${radius}`;
+                ret.push(key);
+                defs.appendChild(
+                    this.renderSVG(
+                        {
+                            id: key,
+                            //fill: "hsl(8, 7%, 10%)",
+                            stroke: "hsl(8, 7%, 10%)",
+                            gradient: {
+                                stops: [
+                                    {
+                                        offset: 0,
+                                        color: "hsl(8, 7%, 40%)",
+                                    },
+                                    {
+                                        offset: 1000,
+                                        color: "hsl(8, 7%, 10%)",
+                                    },
+                                ],
+                            },
+                        },
+                        radius,
+                    ),
+                );
+            }
+            return ret;
+        }
     }
 
     _("Slate"); // ensure translation
@@ -552,6 +592,122 @@ export default function (GoThemes: GoThemesInterface) {
             return ret;
         }
 
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const ret = [];
+            let s = seed;
+
+            for (let i = 0; i < 20; ++i) {
+                const key = `white-${i}-${radius}`;
+                ret.push(key);
+
+                const stone = this.renderSVG(
+                    {
+                        id: key,
+                        //stroke: "hsl(8, 7%, 80%)",
+                        gradient: {
+                            type: "radial",
+                            stops: [
+                                {
+                                    offset: 0,
+                                    color: "hsl(8, 7%, 100%)",
+                                },
+                                {
+                                    offset: 15,
+                                    color: "hsl(8, 7%, 95%)",
+                                },
+                                {
+                                    offset: 20,
+                                    color: "hsl(8, 7%, 95%)",
+                                },
+                                {
+                                    offset: 90,
+                                    color: "hsl(8, 7%, 90%)",
+                                },
+                                {
+                                    offset: 100,
+                                    color: "hsl(8, 7%, 90%)",
+                                },
+                            ],
+                        },
+                    },
+                    radius,
+                );
+
+                // draw clamshell lines
+                const n_lines = 8 + (Math.abs(s) % 8);
+                let path = "";
+
+                const lines_g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                const lines_radius = radius * 0.85;
+
+                const compactness = 1.0;
+                const shift = 0;
+
+                let unit_x = shift + 1 / n_lines - 0.5;
+                while (unit_x < 0.5 * 0.8) {
+                    const x_increment =
+                        seedRandomFloat(s, 1 / n_lines / 2, 1 / n_lines) * compactness;
+                    unit_x += x_increment;
+                    const x = shift + unit_x * lines_radius * compactness * 2 + radius;
+                    const start_y = Math.sqrt(unit_x * unit_x) * radius;
+                    const end_y = radius + lines_radius - start_y;
+
+                    // walk down the line and add a point every 1/N_SEGMENTS of the way with a random x perturbation
+                    let last_y = 0;
+                    const N_SEGMENTS = 4;
+                    for (let j = 0; j <= N_SEGMENTS; j++) {
+                        const x_perturb =
+                            j === 0 || j === N_SEGMENTS
+                                ? 0
+                                : seedRandomFloat(s, 0, 0.2) + (0.5 * radius) / n_lines;
+                        const y = start_y + (end_y - start_y) * (j / N_SEGMENTS);
+                        const y_perturb = 0;
+
+                        if (j) {
+                            if (j === N_SEGMENTS) {
+                                path += `L ${x + x_perturb} ${end_y}`;
+                            } else {
+                                path += `Q ${x + x_perturb} ${(y + last_y) / 2} ${x + x_perturb} ${
+                                    y + y_perturb
+                                }`;
+                            }
+                        } else {
+                            path += `M ${x + x_perturb} ${y + y_perturb}`;
+                        }
+
+                        s = (s * 51) >> 3;
+                        last_y = y + y_perturb;
+                    }
+
+                    s = (s * 7) >> 3;
+
+                    const clamshell_line_color = `hsl(8, 7%, 90%)`;
+                    const clamshell_line = document.createElementNS(
+                        "http://www.w3.org/2000/svg",
+                        "path",
+                    );
+                    clamshell_line.setAttribute("d", path);
+
+                    clamshell_line.setAttribute("fill", "none");
+                    clamshell_line.setAttribute("stroke", clamshell_line_color);
+                    clamshell_line.setAttribute("stroke-width", `${radius * x_increment * 0.3}`);
+                    lines_g.appendChild(clamshell_line);
+                }
+
+                const deg = seedRandomFloat(s, 0, 360);
+                lines_g.setAttribute("transform", `rotate(${deg}, ${radius}, ${radius})`);
+                stone.appendChild(lines_g);
+
+                defs.appendChild(stone);
+            }
+            return ret;
+        }
+
         getWhiteTextColor(color: string): string {
             return "#000000";
         }
@@ -561,7 +717,7 @@ export default function (GoThemes: GoThemesInterface) {
 
     /* Glass { */
 
-    class GlassBlack extends Common {
+    class Glass extends Common {
         sort() {
             return 20;
         }
@@ -582,18 +738,6 @@ export default function (GoThemes: GoThemesInterface) {
         getBlackTextColor(color: string): string {
             return "#ffffff";
         }
-    }
-
-    _("Glass"); // ensure translation
-    GoThemes["black"]["Glass"] = GlassBlack;
-
-    class GlassWhite extends Common {
-        sort() {
-            return 20;
-        }
-        get theme_name(): string {
-            return "Glass";
-        }
 
         preRenderWhite(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, (seed *= 13), {
@@ -609,13 +753,90 @@ export default function (GoThemes: GoThemesInterface) {
         getWhiteTextColor(color: string): string {
             return "#000000";
         }
+
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const key = `black-glass-${radius}`;
+            const stone = this.renderSVG(
+                {
+                    id: key,
+                    fill: "hsl(8, 7%, 95%)",
+                    stroke: "hsl(226, 10%, 10%)",
+                    gradient: {
+                        type: "radial",
+                        stops: [
+                            {
+                                offset: 0,
+                                color: "hsl(226, 7%, 100%)",
+                            },
+                            {
+                                offset: 20,
+                                color: "hsl(226, 7%, 30%)",
+                            },
+                            {
+                                offset: 100,
+                                color: "hsl(226, 7%, 10%)",
+                            },
+                        ],
+                    },
+                },
+                radius,
+            );
+            defs.appendChild(stone);
+            return [key];
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const key = `white-glass-${radius}`;
+            const stone = this.renderSVG(
+                {
+                    id: key,
+                    fill: "hsl(8, 7%, 95%)",
+                    gradient: {
+                        type: "radial",
+                        stops: [
+                            {
+                                offset: 0,
+                                color: "hsl(8, 7%, 100%)",
+                            },
+                            {
+                                offset: 20,
+                                color: "hsl(226, 7%, 100%)",
+                            },
+                            {
+                                offset: 90,
+                                color: "hsl(226, 7%, 75%)",
+                            },
+                            {
+                                offset: 100,
+                                color: "hsl(226, 7%, 75%)",
+                            },
+                        ],
+                    },
+                },
+                radius,
+            );
+            defs.appendChild(stone);
+            return [key];
+        }
     }
 
-    GoThemes["white"]["Glass"] = GlassWhite;
+    _("Glass"); // ensure translation
+    GoThemes["black"]["Glass"] = Glass;
+    GoThemes["white"]["Glass"] = Glass;
 
     /* Worn Glass { */
 
-    class WornGlassBlack extends Common {
+    class WornGlass extends Common {
         sort() {
             return 21;
         }
@@ -636,18 +857,6 @@ export default function (GoThemes: GoThemesInterface) {
         getBlackTextColor(color: string): string {
             return "#ffffff";
         }
-    }
-
-    _("Worn Glass"); // ensure translation
-    GoThemes["black"]["Worn Glass"] = WornGlassBlack;
-
-    class WornGlassWhite extends Common {
-        sort() {
-            return 21;
-        }
-        get theme_name(): string {
-            return "Worn Glass";
-        }
 
         preRenderWhite(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, (seed *= 13), {
@@ -663,11 +872,89 @@ export default function (GoThemes: GoThemesInterface) {
         getWhiteTextColor(color: string): string {
             return "#000000";
         }
+
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const key = `black-worn-glass-${radius}`;
+            const stone = this.renderSVG(
+                {
+                    id: key,
+                    fill: "hsl(8, 7%, 95%)",
+                    stroke: "hsl(47, 5%, 10%)",
+                    gradient: {
+                        type: "radial",
+                        stops: [
+                            {
+                                offset: 0,
+                                color: "hsl(47, 3%, 50%)",
+                            },
+                            {
+                                offset: 30,
+                                color: "hsl(47, 3%, 30%)",
+                            },
+                            {
+                                offset: 100,
+                                color: "hsl(47, 5%, 10%)",
+                            },
+                        ],
+                    },
+                },
+                radius,
+            );
+            defs.appendChild(stone);
+            return [key];
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const key = `white-worn-glass-${radius}`;
+            const stone = this.renderSVG(
+                {
+                    id: key,
+                    fill: "hsl(8, 7%, 95%)",
+                    gradient: {
+                        type: "radial",
+                        stops: [
+                            {
+                                offset: 0,
+                                color: "hsl(8, 7%, 100%)",
+                            },
+                            {
+                                offset: 20,
+                                color: "hsl(47, 7%, 100%)",
+                            },
+                            {
+                                offset: 90,
+                                color: "hsl(47, 7%, 75%)",
+                            },
+                            {
+                                offset: 100,
+                                color: "hsl(47, 7%, 75%)",
+                            },
+                        ],
+                    },
+                },
+                radius,
+            );
+            defs.appendChild(stone);
+            return [key];
+        }
     }
-    GoThemes["white"]["Worn Glass"] = WornGlassWhite;
+
+    _("Worn Glass"); // ensure translation
+    GoThemes["black"]["Worn Glass"] = WornGlass;
+    GoThemes["white"]["Worn Glass"] = WornGlass;
 
     /* Night { */
-    class NightBlack extends Common {
+    class Night extends Common {
         sort() {
             return 100;
         }
@@ -688,18 +975,6 @@ export default function (GoThemes: GoThemesInterface) {
         getBlackTextColor(color: string): string {
             return "#888888";
         }
-    }
-
-    _("Night"); // ensure translation
-    GoThemes["black"]["Night"] = NightBlack;
-
-    class NightWhite extends Common {
-        sort() {
-            return 100;
-        }
-        get theme_name(): string {
-            return "Night";
-        }
 
         preRenderWhite(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, (seed *= 13), {
@@ -715,6 +990,85 @@ export default function (GoThemes: GoThemesInterface) {
         getWhiteTextColor(color: string): string {
             return "#000000";
         }
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const key = `black-worn-glass-${radius}`;
+            const stone = this.renderSVG(
+                {
+                    id: key,
+                    //fill: "hsl(8, 7%, 95%)",
+                    stroke: "hsl(47, 5%, 10%)",
+                    gradient: {
+                        type: "radial",
+                        stops: [
+                            {
+                                offset: 0,
+                                color: "hsl(261, 7%, 30%)",
+                            },
+                            {
+                                offset: 30,
+                                color: "hsl(261, 7%, 20%)",
+                            },
+                            {
+                                offset: 100,
+                                color: "hsl(261, 7%, 10%)",
+                            },
+                        ],
+                    },
+                },
+                radius,
+            );
+            defs.appendChild(stone);
+            return [key];
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const key = `white-worn-glass-${radius}`;
+            const stone = this.renderSVG(
+                {
+                    id: key,
+                    //fill: "hsl(8, 7%, 95%)",
+                    gradient: {
+                        type: "radial",
+                        stops: [
+                            {
+                                offset: 0,
+                                color: "hsl(261, 7%, 60%)",
+                            },
+                            /*
+                            {
+                                offset: 20,
+                                color: "hsl(261, 7%, 60%)",
+                            },
+                            */
+                            {
+                                offset: 90,
+                                color: "hsl(261, 7%, 40%)",
+                            },
+                            {
+                                offset: 100,
+                                color: "hsl(261, 7%, 30%)",
+                            },
+                        ],
+                    },
+                },
+                radius,
+            );
+            defs.appendChild(stone);
+            return [key];
+        }
     }
-    GoThemes["white"]["Night"] = NightWhite;
+
+    _("Night"); // ensure translation
+    GoThemes["black"]["Night"] = Night;
+    GoThemes["white"]["Night"] = Night;
 }

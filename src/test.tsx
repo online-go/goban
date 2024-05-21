@@ -16,10 +16,13 @@
 
 import * as React from "react";
 import * as ReactDOM from "react-dom/client";
-import { GobanCore, GobanConfig, GobanHooks } from "./GobanCore";
+import { GobanCore, GobanConfig, GobanHooks, ColoredCircle } from "./GobanCore";
 //import { GobanPixi } from './GobanPixi';
 import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
+import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
 import { EventEmitter } from "eventemitter3";
+import { MoveTreePenMarks } from "./MoveTree";
+import { GoThemes } from "./GoThemes";
 
 let stored_config: GobanConfig = {};
 try {
@@ -27,13 +30,31 @@ try {
 } catch (e) {}
 
 GobanCore.hooks.getSelectedThemes = () => ({
+    board: "Kaya",
+    //board: "Anime",
+
+    white: "Plain",
+    black: "Plain",
+    //white: "Glass",
+    //black: "Glass",
+    //white: "Worn Glass",
+    //black: "Worn Glass",
+    //white: "Night",
+    //black: "Night",
     //white: "Shell",
     //black: "Slate",
-    //board: "Kaya",
-    white: "Anime",
-    black: "Anime",
-    board: "Anime",
+    //white: "Anime",
+    //black: "Anime",
+    //white: "Custom",
+    //black: "Custom",
 });
+
+GobanCore.hooks.customWhiteStoneUrl = () => {
+    return "https://cdn.online-go.com/goban/anime_white.svg";
+};
+GobanCore.hooks.customBlackStoneUrl = () => {
+    return "https://cdn.online-go.com/goban/anime_black.svg";
+};
 
 const base_config: GobanConfig = Object.assign(
     {
@@ -79,7 +100,7 @@ const base_config: GobanConfig = Object.assign(
 );
 
 const hooks: GobanHooks = {
-    //getCoordinateDisplaySystem: () => '1-1',
+    //getCoordinateDisplaySystem: () => "1-1",
     getCoordinateDisplaySystem: () => "A1",
     getCDNReleaseBase: () => "",
 };
@@ -103,6 +124,7 @@ const fiddler = new EventEmitter();
 
 function Main(): JSX.Element {
     const [_update, _setUpdate] = React.useState(1);
+    const [svg_or_canvas, setSVGOrCanvas] = React.useState("svg");
     function forceUpdate() {
         _setUpdate(_update + 1);
     }
@@ -116,6 +138,16 @@ function Main(): JSX.Element {
         <div>
             <div>
                 <div className="inline-block">
+                    <div className="setting">
+                        {svg_or_canvas} mode:{" "}
+                        <button
+                            onClick={() => {
+                                setSVGOrCanvas(svg_or_canvas === "svg" ? "canvas" : "svg");
+                                forceUpdate();
+                            }}
+                        >{`Switch to ${svg_or_canvas === "svg" ? "Canvas" : "SVG"}`}</button>
+                    </div>
+
                     <div className="setting">
                         <span>Square size:</span>
                         <input
@@ -180,7 +212,6 @@ function Main(): JSX.Element {
                         />
                     </div>
                 </div>
-
                 <div className="inline-block">
                     <div className="setting">
                         <span>Top bounds:</span>
@@ -250,13 +281,19 @@ function Main(): JSX.Element {
             </div>
 
             {/*false && <ReactGobanPixi /> */}
-            {[
-                //1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
-                //1,2,3,4,5,6,7,8,9,10,11,12
-            ].map((_, idx) => (
-                <ReactGobanCanvas key={idx} />
-            ))}
-            {true && <ReactGobanCanvas />}
+            {Array.from(
+                Array(
+                    // 20
+                    0,
+                ),
+            ).map((_, idx) =>
+                svg_or_canvas === "svg" ? (
+                    <ReactGobanSVG key={idx} />
+                ) : (
+                    <ReactGobanCanvas key={idx} />
+                ),
+            )}
+            {true && (svg_or_canvas === "svg" ? <ReactGobanSVG /> : <ReactGobanCanvas />)}
         </div>
     );
 }
@@ -264,20 +301,31 @@ function Main(): JSX.Element {
 interface ReactGobanProps {}
 
 function ReactGoban<GobanClass extends GobanCore>(
-    ctor: { new (x: GobanCanvasConfig): GobanClass },
+    ctor: { new (x: GobanCanvasConfig | GobanSVGConfig): GobanClass },
     props: ReactGobanProps,
 ): JSX.Element {
+    const [elapsed, setElapsed] = React.useState(0);
     const container = React.useRef(null);
     const move_tree_container = React.useRef(null);
     let goban: GobanCore;
 
     React.useEffect(() => {
-        const config: GobanCanvasConfig = Object.assign({}, base_config, {
+        const config: GobanCanvasConfig | GobanSVGConfig = Object.assign({}, base_config, {
             board_div: container.current || undefined,
             move_tree_container: move_tree_container.current || undefined,
         });
 
         goban = new ctor(config);
+
+        goban.showMessage("loading", { foo: "bar" }, 1000);
+
+        const heatmap: number[][] = [];
+        for (let i = 0; i < 19; i++) {
+            heatmap[i] = [];
+            for (let j = 0; j < 19; j++) {
+                heatmap[i][j] = 0.0;
+            }
+        }
 
         fiddler.on("setSquareSize", (ss) => {
             const start = Date.now();
@@ -306,17 +354,128 @@ function ReactGoban<GobanClass extends GobanCore>(
 
         let i = 0;
         const start = Date.now();
+        const NUM_MOVES = 300;
+        //const NUM_MOVES = 20;
         const interval = setInterval(() => {
             i++;
-            if (i >= 300) {
-                if (i === 300) {
+            if (i >= NUM_MOVES) {
+                if (i === NUM_MOVES) {
                     const end = Date.now();
                     console.log("Done in ", end - start);
+                    setElapsed(end - start);
+
+                    // setup iso branch
+                    const cur = goban.engine.cur_move;
+                    goban.engine.place(18, 16);
+                    goban.engine.place(18, 17);
+                    goban.engine.place(17, 16);
+                    goban.engine.place(17, 17);
+
+                    goban.engine.place(18, 2);
+                    goban.engine.place(18, 1);
+
+                    goban.engine.jumpTo(cur);
+                    goban.engine.place(17, 16);
+                    goban.engine.place(17, 17);
+                    goban.engine.place(18, 16);
+                    goban.engine.place(18, 17);
+
+                    goban.engine.place(18, 1);
+                    goban.engine.place(18, 2);
+
+                    /* test stuff for various features */
+                    {
+                        heatmap[18][18] = 1.0;
+                        heatmap[18][17] = 0.5;
+                        heatmap[18][16] = 0.1;
+                        goban.setHeatmap(heatmap, true);
+
+                        // blue move
+                        const circle: ColoredCircle = {
+                            //move: branch.moves[0],
+                            move: { x: 16, y: 17 },
+                            color: "rgba(0,0,0,0)",
+                        };
+                        const circle2: ColoredCircle = {
+                            //move: branch.moves[0],
+                            move: { x: 17, y: 17 },
+                            color: "rgba(0,0,0,0)",
+                        };
+
+                        goban.setMark(16, 17, "blue_move", true);
+                        goban.setMark(17, 17, "blue_move", true);
+                        circle.border_width = 0.2;
+                        circle.border_color = "rgb(0, 130, 255)";
+                        circle.color = "rgba(0, 130, 255, 0.7)";
+                        circle2.border_width = 0.2;
+                        circle2.border_color = "rgb(0, 130, 255)";
+                        circle2.color = "rgba(0, 130, 255, 0.7)";
+                        goban.setColoredCircles([circle, circle2], false);
+                    }
+
+                    // Shapes & labels
+                    goban.setMark(15, 16, "triangle", true);
+                    goban.setMark(15, 15, "square", true);
+                    goban.setMark(15, 14, "circle", true);
+                    goban.setMark(15, 13, "cross", true);
+                    goban.setMark(15, 12, "top", true);
+                    goban.setSubscriptMark(15, 12, "sub", true);
+                    goban.setMark(15, 11, "A", true);
+
+                    // pen marks
+                    const marks: MoveTreePenMarks = [];
+
+                    {
+                        const points: number[] = [];
+                        for (let i = 0; i < 50; ++i) {
+                            points.push(4 + i / 10);
+                            points.push(9 + Math.sin(i) * 19);
+                        }
+
+                        marks.push({
+                            color: "#ff8800",
+                            points,
+                        });
+                    }
+                    {
+                        const points: number[] = [];
+                        for (let i = 0; i < 50; ++i) {
+                            points.push(9 + i / 10);
+                            points.push(20 + Math.sin(i) * 19);
+                        }
+
+                        marks.push({
+                            color: "#3388ff",
+                            points,
+                        });
+                    }
+
+                    //goban.drawPenMarks(marks);
                 }
                 clearInterval(interval);
                 return;
             }
-            goban.engine.place(Math.floor(i / 19), Math.floor(i % 19));
+            const x = Math.floor(i / 19);
+            const y = Math.floor(i % 19);
+            goban.engine.place(x, y);
+            if (i === 3) {
+                /*
+                goban.setMark(x, y, "blue_move", true);
+
+                const circle: ColoredCircle = {
+                    //move: branch.moves[0],
+                    move: { x, y },
+                    color: "rgba(0,0,0,0)",
+                };
+
+                // blue move
+                goban.setMark(x, y, "blue_move", true);
+                circle.border_width = 0.5;
+                circle.border_color = "rgb(0, 130, 255)";
+                circle.color = "rgba(0, 130, 255, 0.7)";
+                goban.setColoredCircles([circle], false);
+                */
+            }
             //goban.redraw(true);
         }, 1);
 
@@ -327,10 +486,12 @@ function ReactGoban<GobanClass extends GobanCore>(
 
     return (
         <React.Fragment>
+            <StoneSamples />
+
+            {elapsed > 0 && <div>Elapsed: {elapsed}ms</div>}
             <div className="Goban">
                 <div ref={container}></div>
             </div>
-
             <div>
                 <div className="move-tree-container" ref={move_tree_container} />
             </div>
@@ -344,8 +505,184 @@ function ReactGobanPixi(props:ReactGobanProps):JSX.Element {
 }
 */
 
+function StoneSamples(): JSX.Element {
+    const div = React.useRef(null);
+
+    React.useEffect(() => {
+        if (!div.current) {
+            console.log("no current");
+            return;
+        }
+
+        {
+            const white_theme = "Shell";
+            const black_theme = "Slate";
+            //const white_theme = "Glass";
+            //const black_theme = "Glass";
+            //const white_theme = "Worn Glass";
+            //const black_theme = "Worn Glass";
+            //const white_theme = "Night";
+            //const black_theme = "Night";
+            //const white_theme = "Plain";
+            //const black_theme = "Plain";
+            const radius = 80;
+            const cx = radius;
+            const cy = radius;
+            const size = radius * 2;
+
+            const foo = document.createElement("div");
+
+            (div.current as any)?.appendChild(foo);
+
+            {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", size.toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                const theme = new GoThemes["black"][black_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svg.appendChild(defs);
+
+                const black_stones = theme.preRenderBlackSVG(defs, radius, 123, () => {});
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                //for (let i = 0; i < black_stones.length; i++) {
+                for (let i = 0; i < 1; i++) {
+                    theme.placeBlackStoneSVG(
+                        g,
+                        undefined,
+                        black_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                foo.appendChild(svg);
+            }
+
+            {
+                const theme = new GoThemes["white"][white_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                const white_stones = theme.preRenderWhiteSVG(defs, radius, 123, () => {});
+
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", (white_stones.length * size).toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                svg.appendChild(defs);
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                for (let i = 0; i < white_stones.length; i++) {
+                    //for (let i = 0; i < 1; i++) {
+                    theme.placeWhiteStoneSVG(
+                        g,
+                        undefined,
+                        white_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                foo.appendChild(svg);
+            }
+        }
+
+        {
+            const radius = 20;
+            const cx = radius;
+            const cy = radius;
+            const size = radius * 2;
+
+            for (const black_theme in GoThemes["black"]) {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", size.toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                const theme = new GoThemes["black"][black_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svg.appendChild(defs);
+
+                const black_stones = theme.preRenderBlackSVG(defs, radius, 123, () => {});
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                //for (let i = 0; i < black_stones.length; i++) {
+                for (let i = 0; i < 1; i++) {
+                    theme.placeBlackStoneSVG(
+                        g,
+                        undefined,
+                        black_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                const label = document.createElement("label");
+                label.textContent = black_theme;
+                label.setAttribute(
+                    "style",
+                    "display: inline-block; width: 100px; margin-right: 1rem; text-align: right;",
+                );
+                const d = document.createElement("span");
+                d.appendChild(label);
+                d.appendChild(svg);
+
+                (div.current as any)?.appendChild(d);
+            }
+
+            const br = document.createElement("br");
+            (div.current as any)?.appendChild(br);
+
+            for (const white_theme in GoThemes["white"]) {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", size.toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                const theme = new GoThemes["white"][white_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svg.appendChild(defs);
+
+                const white_stones = theme.preRenderWhiteSVG(defs, radius, 123, () => {});
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                //for (let i = 0; i < white_stones.length; i++) {
+                for (let i = 0; i < 1; i++) {
+                    theme.placeWhiteStoneSVG(
+                        g,
+                        undefined,
+                        white_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                const label = document.createElement("label");
+                label.textContent = white_theme;
+                label.setAttribute(
+                    "style",
+                    "display: inline-block; width: 100px; margin-right: 1rem; text-align: right;",
+                );
+                const d = document.createElement("span");
+                d.appendChild(label);
+                d.appendChild(svg);
+
+                (div.current as any)?.appendChild(d);
+            }
+        }
+    }, [div]);
+
+    return <div ref={div} />;
+}
+
 function ReactGobanCanvas(props: ReactGobanProps): JSX.Element {
     return ReactGoban<GobanCanvas>(GobanCanvas, props);
+}
+
+function ReactGobanSVG(props: ReactGobanProps): JSX.Element {
+    return ReactGoban<GobanSVG>(GobanSVG, props);
 }
 
 const react_root = ReactDOM.createRoot(document.getElementById("test-content") as Element);

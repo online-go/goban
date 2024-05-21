@@ -193,7 +193,7 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
 
-    class AnimeBlack extends Common {
+    class Anime extends Common {
         sort() {
             return 30;
         }
@@ -213,20 +213,6 @@ export default function (GoThemes: GoThemesInterface) {
             );
             //return preRenderImageStone(radius, anime_black_imagedata);
         }
-        getBlackTextColor(_color: string): string {
-            return "#ffffff";
-        }
-    }
-
-    GoThemes["black"]["Anime"] = AnimeBlack;
-
-    class AnimeWhite extends Common {
-        sort() {
-            return 30;
-        }
-        get theme_name(): string {
-            return "Anime";
-        }
 
         preRenderWhite(
             radius: number,
@@ -241,13 +227,83 @@ export default function (GoThemes: GoThemesInterface) {
             //return preRenderImageStone(radius, anime_white_imagedata);
         }
 
+        getBlackTextColor(_color: string): string {
+            return "#ffffff";
+        }
+
         getWhiteTextColor(_color: string): string {
             return "#000000";
         }
-    }
-    GoThemes["white"]["Anime"] = AnimeWhite;
 
-    class CustomBlack extends Common {
+        public placeStoneShadowSVG(
+            shadow_cell: SVGGraphicsElement | undefined,
+            cx: number,
+            cy: number,
+            radius: number,
+        ): SVGElement | undefined {
+            if (!shadow_cell) {
+                return;
+            }
+
+            const shadow = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            shadow.setAttribute("class", "stone");
+            shadow.setAttribute("x", `${cx - radius * 0.98}`);
+            shadow.setAttribute("y", `${cy - radius * 1.05}`);
+            shadow.setAttribute("width", `${radius * 2 * 1.05}`);
+            shadow.setAttribute("height", `${radius * 2 * 1.14}`);
+            shadow.setAttributeNS(
+                "http://www.w3.org/1999/xlink",
+                "href",
+                getCDNReleaseBase() + "/img/anime_shadow.svg",
+            );
+            shadow_cell.appendChild(shadow);
+
+            return shadow;
+        }
+
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `anime-black-${radius}`,
+                        url: getCDNReleaseBase() + "/img/anime_black.svg",
+                    },
+                    radius,
+                ),
+            );
+
+            return [`anime-black-${radius}`];
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `anime-white-${radius}`,
+                        url: getCDNReleaseBase() + "/img/anime_white.svg",
+                    },
+                    radius,
+                ),
+            );
+
+            return [`anime-white-${radius}`];
+        }
+    }
+
+    GoThemes["black"]["Anime"] = Anime;
+    GoThemes["white"]["Anime"] = Anime;
+
+    class Custom extends Common {
         sort() {
             return 200; // last - in the "url customizable" slot.
         }
@@ -312,17 +368,6 @@ export default function (GoThemes: GoThemesInterface) {
                 ? GobanCore.hooks.customBlackTextColor()
                 : "#FFFFFF";
         }
-    }
-
-    GoThemes["black"]["Custom"] = CustomBlack;
-
-    class CustomWhite extends Common {
-        sort() {
-            return 200; //last - in the "url customizable" slot.
-        }
-        get theme_name(): string {
-            return "Custom";
-        }
 
         placeWhiteStone(
             ctx: CanvasRenderingContext2D,
@@ -380,6 +425,60 @@ export default function (GoThemes: GoThemesInterface) {
                 ? GobanCore.hooks.customWhiteTextColor()
                 : "#000000";
         }
+
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            if (
+                !GobanCore.hooks.customBlackStoneUrl ||
+                GobanCore.hooks.customBlackStoneUrl() === ""
+            ) {
+                return super.preRenderBlackSVG(defs, radius, _seed, deferredRenderCallback);
+            }
+
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `custom-black-${radius}`,
+                        url: GobanCore.hooks.customBlackStoneUrl(),
+                    },
+                    radius,
+                ),
+            );
+
+            return [`custom-black-${radius}`];
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            if (
+                !GobanCore.hooks.customWhiteStoneUrl ||
+                GobanCore.hooks.customWhiteStoneUrl() === ""
+            ) {
+                return super.preRenderWhiteSVG(defs, radius, _seed, deferredRenderCallback);
+            }
+
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `custom-white-${radius}`,
+                        url: GobanCore.hooks.customWhiteStoneUrl(),
+                    },
+                    radius,
+                ),
+            );
+
+            return [`custom-white-${radius}`];
+        }
     }
-    GoThemes["white"]["Custom"] = CustomWhite;
+
+    GoThemes["black"]["Custom"] = Custom;
+    GoThemes["white"]["Custom"] = Custom;
 }
