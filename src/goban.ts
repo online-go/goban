@@ -40,7 +40,7 @@ export * as GoMath from "./GoMath";
 export * as protocol from "./protocol";
 export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
 //export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
-export { GobanSVG as Goban, GobanSVGConfig as GobanConfig } from "./GobanSVG";
+//export { GobanSVG as Goban, GobanSVGConfig as GobanConfig } from "./GobanSVG";
 
 import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
 import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
@@ -49,3 +49,23 @@ export type GobanRenderer = GobanCanvas | GobanSVG;
 export type GobanRendererConfig = GobanCanvasConfig | GobanSVGConfig;
 
 (window as any)["goban"] = module.exports;
+
+let renderer: "svg" | "canvas" = "canvas";
+
+export function setGobanRenderer(_renderer: "svg" | "canvas") {
+    renderer = _renderer;
+}
+
+import { AdHocFormat } from "./AdHocFormat";
+import { JGOF } from "./JGOF";
+
+export function createGoban(
+    config: GobanRendererConfig,
+    preloaded_data?: AdHocFormat | JGOF,
+): GobanRenderer {
+    if (renderer === "svg") {
+        return new GobanSVG(config, preloaded_data);
+    } else {
+        return new GobanCanvas(config, preloaded_data);
+    }
+}

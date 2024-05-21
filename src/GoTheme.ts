@@ -28,6 +28,31 @@ export interface GoThemeBackgroundReactStyles {
     backgroundSize?: string;
 }
 
+export interface SVGStop {
+    offset: number;
+    color: string;
+}
+
+export interface SVGStoneParameters {
+    id: string;
+    fill?: string;
+    stroke?: string;
+    gradient?: {
+        stops: SVGStop[];
+        type?: "radial" | "linear"; // default radial
+        x1?: number;
+        x2?: number;
+        y1?: number;
+        y2?: number;
+        cx?: number;
+        cy?: number;
+        r?: number;
+        fx?: number;
+        fy?: number;
+    };
+    url?: string;
+}
+
 export class GoTheme {
     public name: string;
     public styles: { [style_name: string]: string } = {};
@@ -71,24 +96,55 @@ export class GoTheme {
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeBlackStone method */
     public preRenderBlackSVG(
-        _defs: SVGDefsElement,
-        _radius: number,
+        defs: SVGDefsElement,
+        radius: number,
         _seed: number,
         _deferredRenderCallback: () => void,
-    ): any {
-        return { black: "stone" };
+    ): string[] {
+        const ret = [];
+        const key = `black-${radius}`;
+        ret.push(key);
+
+        defs.appendChild(
+            this.renderSVG(
+                {
+                    id: key,
+                    //fill: "hsl(8, 7%, 10%)",
+                    //stroke: "hsl(8, 7%, 10%)",
+                    fill: this.getBlackStoneColor(),
+                    stroke: this.getBlackStoneColor(),
+                },
+                radius,
+            ),
+        );
+        return ret;
     }
 
     /* Returns an array of white stone objects. The structure
      * of the array elements is up to the implementor, as they are passed
      * verbatim to the placeWhiteStone method */
     public preRenderWhiteSVG(
-        _defs: SVGDefsElement,
-        _radius: number,
+        defs: SVGDefsElement,
+        radius: number,
         _seed: number,
         _deferredRenderCallback: () => void,
-    ): any {
-        return { white: "stone" };
+    ): string[] {
+        const ret = [];
+        const key = `white-${radius}`;
+        ret.push(key);
+        defs.appendChild(
+            this.renderSVG(
+                {
+                    id: key,
+                    //fill: "hsl(8, 7%, 90%)",
+                    //stroke: "hsl(8, 7%, 30%)",
+                    fill: this.getWhiteStoneColor(),
+                    stroke: this.getBlackStoneColor(),
+                },
+                radius,
+            ),
+        );
+        return ret;
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
@@ -140,6 +196,14 @@ export class GoTheme {
         invisible_circle_to_cast_shadow.setAttribute("cx", cx.toString());
         invisible_circle_to_cast_shadow.setAttribute("cy", cy.toString());
         invisible_circle_to_cast_shadow.setAttribute("r", Math.max(0.1, radius).toString());
+        //invisible_circle_to_cast_shadow.setAttribute("fill", "rgba(0,0,0,0.4)");
+        const sx = radius * 0.1;
+        const sy = radius * 0.1;
+        const softness = radius * 0.05;
+        invisible_circle_to_cast_shadow.setAttribute(
+            "style",
+            `filter: drop-shadow(${sx}px ${sy}px ${softness}px rgba(0,0,0,0.4)`,
+        );
         shadow_cell.appendChild(invisible_circle_to_cast_shadow);
         return invisible_circle_to_cast_shadow;
     }
@@ -147,41 +211,39 @@ export class GoTheme {
     public placeWhiteStoneSVG(
         cell: SVGGraphicsElement,
         shadow_cell: SVGGraphicsElement | undefined,
-        _stone: any,
+        stone: string,
         cx: number,
         cy: number,
         radius: number,
     ): [SVGElement, SVGElement | undefined] {
         const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
 
-        const stone = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        stone.setAttribute("class", "stone white");
-        stone.setAttribute("fill", this.getWhiteStoneColor());
-        stone.setAttribute("cx", cx.toString());
-        stone.setAttribute("cy", cy.toString());
-        stone.setAttribute("r", Math.max(0.1, radius).toString());
-        cell.appendChild(stone);
-        return [stone, shadow];
+        const ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
+        ref.setAttribute("href", `#${stone}`);
+        ref.setAttribute("x", `${cx - radius}`);
+        ref.setAttribute("y", `${cy - radius}`);
+        cell.appendChild(ref);
+
+        return [ref, shadow];
     }
 
     public placeBlackStoneSVG(
         cell: SVGGraphicsElement,
         shadow_cell: SVGGraphicsElement | undefined,
-        _stone: any,
+        stone: string,
         cx: number,
         cy: number,
         radius: number,
     ): [SVGElement, SVGElement | undefined] {
         const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
 
-        const stone = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        stone.setAttribute("class", "stone black");
-        stone.setAttribute("fill", this.getBlackStoneColor());
-        stone.setAttribute("cx", cx.toString());
-        stone.setAttribute("cy", cy.toString());
-        stone.setAttribute("r", Math.max(0.1, radius).toString());
-        cell.appendChild(stone);
-        return [stone, shadow];
+        const ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
+        ref.setAttribute("href", `#${stone}`);
+        ref.setAttribute("x", `${cx - radius}`);
+        ref.setAttribute("y", `${cy - radius}`);
+        cell.appendChild(ref);
+
+        return [ref, shadow];
     }
 
     /* Resolve which stone graphic we should use. By default we just pick a
@@ -284,5 +346,82 @@ export class GoTheme {
     /** Returns the color that should be used for labels */
     public getLabelTextColor(): string {
         return "#000000";
+    }
+
+    public renderSVG(params: SVGStoneParameters, radius: number): SVGGraphicsElement {
+        const cx = radius;
+        const cy = radius;
+
+        const stone = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        stone.setAttribute("id", params.id);
+        stone.setAttribute("class", "stone");
+
+        if (params.fill || params.stroke || params.gradient) {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            stone.appendChild(circle);
+            if (params.fill) {
+                circle.setAttribute("fill", params.fill);
+            }
+            if (params.stroke) {
+                circle.setAttribute("stroke", params.stroke);
+                circle.setAttribute("stroke-width", `${radius / 20}`);
+            }
+            circle.setAttribute("cx", cx.toString());
+            circle.setAttribute("cy", cy.toString());
+            circle.setAttribute("r", radius.toString());
+
+            // gradient
+            if (params.gradient) {
+                const grad = params.gradient;
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+
+                let gradient;
+
+                if (grad.type === "linear") {
+                    gradient = document.createElementNS(
+                        "http://www.w3.org/2000/svg",
+                        "linearGradient",
+                    );
+                    gradient.setAttribute("x1", (grad.x1 ?? 0.0).toFixed(2));
+                    gradient.setAttribute("y1", (grad.y1 ?? 0.0).toFixed(2));
+                    gradient.setAttribute("x2", (grad.x2 ?? 1.0).toFixed(2));
+                    gradient.setAttribute("y2", (grad.y2 ?? 1.0).toFixed(2));
+                } else {
+                    gradient = document.createElementNS(
+                        "http://www.w3.org/2000/svg",
+                        params.gradient.type === "linear" ? "linearGradient" : "radialGradient",
+                    );
+                    gradient.setAttribute("cx", (grad.cx ?? 0.5).toFixed(2));
+                    gradient.setAttribute("cy", (grad.cy ?? 0.5).toFixed(2));
+                    gradient.setAttribute("r", (grad.r ?? 0.5).toFixed(2));
+                    gradient.setAttribute("fx", (grad.fx ?? 0.3).toFixed(2));
+                    gradient.setAttribute("fy", (grad.fy ?? 0.2).toFixed(2));
+                }
+                gradient.setAttribute("id", params.id + "-gradient");
+
+                for (const stop of params.gradient.stops) {
+                    const s = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+                    s.setAttribute("offset", `${stop.offset}%`);
+                    s.setAttribute("stop-color", stop.color);
+                    gradient.appendChild(s);
+                }
+                defs.appendChild(gradient);
+                stone.appendChild(defs);
+                circle.setAttribute("fill", `url(#${params.id}-gradient)`);
+            }
+        }
+
+        if (params.url) {
+            const stone_image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            stone_image.setAttribute("class", "stone");
+            stone_image.setAttribute("x", `${cx - radius}`);
+            stone_image.setAttribute("y", `${cy - radius}`);
+            stone_image.setAttribute("width", `${radius * 2}`);
+            stone_image.setAttribute("height", `${radius * 2}`);
+            stone_image.setAttributeNS("http://www.w3.org/1999/xlink", "href", params.url);
+            stone.appendChild(stone_image);
+        }
+
+        return stone;
     }
 }

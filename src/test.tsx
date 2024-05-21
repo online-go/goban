@@ -22,6 +22,7 @@ import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
 import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
 import { EventEmitter } from "eventemitter3";
 import { MoveTreePenMarks } from "./MoveTree";
+import { GoThemes } from "./GoThemes";
 
 let stored_config: GobanConfig = {};
 try {
@@ -29,13 +30,31 @@ try {
 } catch (e) {}
 
 GobanCore.hooks.getSelectedThemes = () => ({
+    board: "Kaya",
+    //board: "Anime",
+
+    white: "Plain",
+    black: "Plain",
+    //white: "Glass",
+    //black: "Glass",
+    //white: "Worn Glass",
+    //black: "Worn Glass",
+    //white: "Night",
+    //black: "Night",
     //white: "Shell",
     //black: "Slate",
-    //board: "Kaya",
-    white: "Anime",
-    black: "Anime",
-    board: "Anime",
+    //white: "Anime",
+    //black: "Anime",
+    //white: "Custom",
+    //black: "Custom",
 });
+
+GobanCore.hooks.customWhiteStoneUrl = () => {
+    return "https://cdn.online-go.com/goban/anime_white.svg";
+};
+GobanCore.hooks.customBlackStoneUrl = () => {
+    return "https://cdn.online-go.com/goban/anime_black.svg";
+};
 
 const base_config: GobanConfig = Object.assign(
     {
@@ -298,6 +317,8 @@ function ReactGoban<GobanClass extends GobanCore>(
 
         goban = new ctor(config);
 
+        goban.showMessage("loading", { foo: "bar" }, 1000);
+
         const heatmap: number[][] = [];
         for (let i = 0; i < 19; i++) {
             heatmap[i] = [];
@@ -429,7 +450,7 @@ function ReactGoban<GobanClass extends GobanCore>(
                         });
                     }
 
-                    goban.drawPenMarks(marks);
+                    //goban.drawPenMarks(marks);
                 }
                 clearInterval(interval);
                 return;
@@ -465,11 +486,12 @@ function ReactGoban<GobanClass extends GobanCore>(
 
     return (
         <React.Fragment>
+            <StoneSamples />
+
             {elapsed > 0 && <div>Elapsed: {elapsed}ms</div>}
             <div className="Goban">
                 <div ref={container}></div>
             </div>
-
             <div>
                 <div className="move-tree-container" ref={move_tree_container} />
             </div>
@@ -482,6 +504,178 @@ function ReactGobanPixi(props:ReactGobanProps):JSX.Element {
     return ReactGoban<GobanPixi>(GobanPixi, props);
 }
 */
+
+function StoneSamples(): JSX.Element {
+    const div = React.useRef(null);
+
+    React.useEffect(() => {
+        if (!div.current) {
+            console.log("no current");
+            return;
+        }
+
+        {
+            const white_theme = "Shell";
+            const black_theme = "Slate";
+            //const white_theme = "Glass";
+            //const black_theme = "Glass";
+            //const white_theme = "Worn Glass";
+            //const black_theme = "Worn Glass";
+            //const white_theme = "Night";
+            //const black_theme = "Night";
+            //const white_theme = "Plain";
+            //const black_theme = "Plain";
+            const radius = 80;
+            const cx = radius;
+            const cy = radius;
+            const size = radius * 2;
+
+            const foo = document.createElement("div");
+
+            (div.current as any)?.appendChild(foo);
+
+            {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", size.toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                const theme = new GoThemes["black"][black_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svg.appendChild(defs);
+
+                const black_stones = theme.preRenderBlackSVG(defs, radius, 123, () => {});
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                //for (let i = 0; i < black_stones.length; i++) {
+                for (let i = 0; i < 1; i++) {
+                    theme.placeBlackStoneSVG(
+                        g,
+                        undefined,
+                        black_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                foo.appendChild(svg);
+            }
+
+            {
+                const theme = new GoThemes["white"][white_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                const white_stones = theme.preRenderWhiteSVG(defs, radius, 123, () => {});
+
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", (white_stones.length * size).toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                svg.appendChild(defs);
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                for (let i = 0; i < white_stones.length; i++) {
+                    //for (let i = 0; i < 1; i++) {
+                    theme.placeWhiteStoneSVG(
+                        g,
+                        undefined,
+                        white_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                foo.appendChild(svg);
+            }
+        }
+
+        {
+            const radius = 20;
+            const cx = radius;
+            const cy = radius;
+            const size = radius * 2;
+
+            for (const black_theme in GoThemes["black"]) {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", size.toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                const theme = new GoThemes["black"][black_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svg.appendChild(defs);
+
+                const black_stones = theme.preRenderBlackSVG(defs, radius, 123, () => {});
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                //for (let i = 0; i < black_stones.length; i++) {
+                for (let i = 0; i < 1; i++) {
+                    theme.placeBlackStoneSVG(
+                        g,
+                        undefined,
+                        black_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                const label = document.createElement("label");
+                label.textContent = black_theme;
+                label.setAttribute(
+                    "style",
+                    "display: inline-block; width: 100px; margin-right: 1rem; text-align: right;",
+                );
+                const d = document.createElement("span");
+                d.appendChild(label);
+                d.appendChild(svg);
+
+                (div.current as any)?.appendChild(d);
+            }
+
+            const br = document.createElement("br");
+            (div.current as any)?.appendChild(br);
+
+            for (const white_theme in GoThemes["white"]) {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", size.toFixed(0));
+                svg.setAttribute("height", size.toFixed(0));
+                const theme = new GoThemes["white"][white_theme]();
+                const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svg.appendChild(defs);
+
+                const white_stones = theme.preRenderWhiteSVG(defs, radius, 123, () => {});
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                svg.appendChild(g);
+                //for (let i = 0; i < white_stones.length; i++) {
+                for (let i = 0; i < 1; i++) {
+                    theme.placeWhiteStoneSVG(
+                        g,
+                        undefined,
+                        white_stones[i],
+                        cx + i * radius * 2,
+                        cy,
+                        radius,
+                    );
+                }
+
+                const label = document.createElement("label");
+                label.textContent = white_theme;
+                label.setAttribute(
+                    "style",
+                    "display: inline-block; width: 100px; margin-right: 1rem; text-align: right;",
+                );
+                const d = document.createElement("span");
+                d.appendChild(label);
+                d.appendChild(svg);
+
+                (div.current as any)?.appendChild(d);
+            }
+        }
+    }, [div]);
+
+    return <div ref={div} />;
+}
 
 function ReactGobanCanvas(props: ReactGobanProps): JSX.Element {
     return ReactGoban<GobanCanvas>(GobanCanvas, props);

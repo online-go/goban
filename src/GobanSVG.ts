@@ -35,11 +35,12 @@ import { formatMessage, MessageID } from "./messages";
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
 const __theme_cache: {
-    [bw: string]: { [name: string]: { [size: string]: any } };
+    [color: string]: { [name: string]: { [size: string]: any } };
 } = {
     black: {},
     white: {},
 };
+//const __theme_defs_cache: { [radius: number]: SVGDefsElement } = {};
 
 declare let ResizeObserver: any;
 
@@ -95,6 +96,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     //private board_div: HTMLElement;
     private svg: SVGElement;
     private svg_defs: SVGDefsElement;
+    //private loaded_pre_rendered_stones: { [radius: number]: boolean } = {};
     public event_layer: HTMLDivElement;
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
@@ -152,6 +154,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     constructor(config: GobanSVGConfig, preloaded_data?: AdHocFormat | JGOF) {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
+        console.info("GobanSVG created");
 
         if (config.board_div) {
             this.parent = config["board_div"];
@@ -236,8 +239,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     public destroy(): void {
         super.destroy();
 
+        this.clearMessage();
+
         if (this.svg && this.svg.parentNode) {
-            this.svg.parentNode.removeChild(this.svg);
+            this.svg.remove();
         }
         delete (this as any).board;
         delete (this as any).svg;
@@ -2829,7 +2834,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     }
     public clearMessage(): void {
         if (this.message_div) {
-            this.message_div.parentNode?.removeChild(this.message_div);
+            this.message_div.remove();
             delete this.message_div;
         }
         if (this.message_timeout) {
@@ -2841,6 +2846,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     }
     protected setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
+            console.log("No display");
             return;
         }
 
@@ -2864,63 +2870,38 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             throw new Error("invalid stone radius computed");
         }
 
-        if (!(themes.white in __theme_cache.white)) {
-            __theme_cache.white[themes.white] = {
-                creation_order: [],
-            };
-        }
-        if (!(themes.black in __theme_cache.black)) {
-            __theme_cache.black[themes.black] = {
-                creation_order: [],
-            };
-        }
-
+        /*
         const deferredRenderCallback = () => {
             this.redraw(true);
             this.move_tree_redraw();
         };
+        */
 
         try {
-            if (!(this.theme_stone_radius in __theme_cache.white[themes.white])) {
-                __theme_cache.white[themes.white][this.theme_stone_radius] =
-                    this.theme_white.preRenderWhiteSVG(
-                        this.svg_defs,
-                        this.theme_stone_radius,
-                        23434,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.white[themes.white].creation_order.push(this.theme_stone_radius);
+            this.svg_defs?.remove();
+            this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            this.svg.appendChild(this.svg_defs);
+
+            if (!(themes.white in __theme_cache.white)) {
+                __theme_cache.white[themes.white] = {};
             }
-            if (!(this.theme_stone_radius in __theme_cache.black[themes.black])) {
-                __theme_cache.black[themes.black][this.theme_stone_radius] =
-                    this.theme_black.preRenderBlackSVG(
-                        this.svg_defs,
-                        this.theme_stone_radius,
-                        2081,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.black[themes.black].creation_order.push(this.theme_stone_radius);
+            if (!(themes.black in __theme_cache.black)) {
+                __theme_cache.black[themes.black] = {};
             }
 
-            if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
-                __theme_cache.white[themes.white][MoveTree.stone_radius] =
-                    this.theme_white.preRenderWhiteSVG(
-                        this.svg_defs,
-                        MoveTree.stone_radius,
-                        23434,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.white[themes.white].creation_order.push(MoveTree.stone_radius);
-            }
-            if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
-                __theme_cache.black[themes.black][MoveTree.stone_radius] =
-                    this.theme_black.preRenderBlackSVG(
-                        this.svg_defs,
-                        MoveTree.stone_radius,
-                        2081,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.black[themes.black].creation_order.push(MoveTree.stone_radius);
+            for (const radius of [this.theme_stone_radius, MoveTree.stone_radius]) {
+                __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
+                    this.svg_defs,
+                    radius,
+                    23434,
+                    () => {},
+                );
+                __theme_cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
+                    this.svg_defs,
+                    radius,
+                    2081,
+                    () => {},
+                );
             }
         } catch (e) {
             console.error(`Error pre-rendering stones.`, {
@@ -2928,41 +2909,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 move_tree_stone_radius: MoveTree.stone_radius,
             });
             throw e;
-        }
-
-        // We should only need a few sizes, like 6 in most cases, but when we resize a window slowly or
-        // have a bunch of weird sized boards, we'll need more. These are very small and there aren't
-        // any devices that should have a problem with them, except for an artificial limit on iOS devices
-        // which we'll handle below.
-        let max_cache_size = 500;
-        try {
-            /* ipads only allow a very small amount of memory to be allocated to canvases,
-             * so we will be more aggressive about cleaning up the cache on those devices */
-            if (
-                /iP(ad|hone|od).+(Version\/[\d.]|OS \d.*like mac os x)+.*Safari/i.test(
-                    navigator.userAgent,
-                )
-            ) {
-                console.log("iOS device detected, reducing cache size");
-                max_cache_size = 12; // mini goban, main boards, 9x9, 13x13, 19x19 should account for 6. We double that for good measure for odd sizes and resizing.
-            }
-        } catch (e) {
-            console.error(e);
-        }
-
-        if (__theme_cache.black[themes.black].creation_order.length > max_cache_size) {
-            const old_radius = __theme_cache.black[themes.black].creation_order.shift();
-            if (old_radius) {
-                console.log("deleting old radius [black]", old_radius);
-                delete __theme_cache.black[themes.black][old_radius];
-            }
-        }
-        if (__theme_cache.white[themes.white].creation_order.length > max_cache_size) {
-            const old_radius = __theme_cache.white[themes.white].creation_order.shift();
-            if (old_radius) {
-                console.log("deleting old radius [white]", old_radius);
-                delete __theme_cache.white[themes.white][old_radius];
-            }
         }
 
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];
@@ -2979,7 +2925,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
-        //this.parent.css(this.theme_board.getBackgroundCSS());
         const bg_css = this.theme_board.getBackgroundCSS();
         if (this.parent) {
             for (const key in bg_css) {

@@ -193,7 +193,7 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
 
-    class AnimeBlack extends Common {
+    class Anime extends Common {
         sort() {
             return 30;
         }
@@ -213,78 +213,6 @@ export default function (GoThemes: GoThemesInterface) {
             );
             //return preRenderImageStone(radius, anime_black_imagedata);
         }
-        getBlackTextColor(_color: string): string {
-            return "#ffffff";
-        }
-
-        public preRenderBlackSVG(
-            defs: SVGDefsElement,
-            radius: number,
-            _seed: number,
-            deferredRenderCallback: () => void,
-        ): string {
-            //const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
-
-            const stone_image = document.createElementNS("http://www.w3.org/2000/svg", "image");
-            stone_image.setAttribute("id", "anime-black-stone");
-            stone_image.setAttribute("class", "stone black");
-            stone_image.setAttribute("x", `0`);
-            stone_image.setAttribute("y", `0`);
-            stone_image.setAttribute("width", `${radius * 2}`);
-            stone_image.setAttribute("height", `${radius * 2}`);
-            stone_image.setAttributeNS(
-                "http://www.w3.org/1999/xlink",
-                "href",
-                anime_black_imagedata,
-            );
-            defs.appendChild(stone_image);
-            return "anime-black-stone";
-        }
-
-        public placeBlackStoneSVG(
-            cell: SVGGraphicsElement,
-            shadow_cell: SVGGraphicsElement | undefined,
-            _stone: any,
-            cx: number,
-            cy: number,
-            radius: number,
-        ): [SVGElement, SVGElement | undefined] {
-            const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
-
-            /*
-            const stone_image = document.createElementNS("http://www.w3.org/2000/svg", "use");
-            stone_image.setAttribute("href", "#anime-black-stone");
-            stone_image.setAttribute("x", `${cx - radius}`);
-            stone_image.setAttribute("y", `${cy - radius}`);
-            cell.appendChild(stone_image);
-            return [stone_image, shadow];
-            */
-
-            const stone_image = document.createElementNS("http://www.w3.org/2000/svg", "image");
-            stone_image.setAttribute("class", "stone black");
-            stone_image.setAttribute("x", `${cx - radius}`);
-            stone_image.setAttribute("y", `${cy - radius}`);
-            stone_image.setAttribute("width", `${radius * 2}`);
-            stone_image.setAttribute("height", `${radius * 2}`);
-            stone_image.setAttributeNS(
-                "http://www.w3.org/1999/xlink",
-                "href",
-                anime_black_imagedata,
-            );
-            cell.appendChild(stone_image);
-            return [stone_image, shadow];
-        }
-    }
-
-    GoThemes["black"]["Anime"] = AnimeBlack;
-
-    class AnimeWhite extends Common {
-        sort() {
-            return 30;
-        }
-        get theme_name(): string {
-            return "Anime";
-        }
 
         preRenderWhite(
             radius: number,
@@ -299,38 +227,83 @@ export default function (GoThemes: GoThemesInterface) {
             //return preRenderImageStone(radius, anime_white_imagedata);
         }
 
+        getBlackTextColor(_color: string): string {
+            return "#ffffff";
+        }
+
         getWhiteTextColor(_color: string): string {
             return "#000000";
         }
 
-        public placeWhiteStoneSVG(
-            cell: SVGGraphicsElement,
+        public placeStoneShadowSVG(
             shadow_cell: SVGGraphicsElement | undefined,
-            _stone: any,
             cx: number,
             cy: number,
             radius: number,
-        ): [SVGElement, SVGElement | undefined] {
-            const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
+        ): SVGElement | undefined {
+            if (!shadow_cell) {
+                return;
+            }
 
-            const stone_image = document.createElementNS("http://www.w3.org/2000/svg", "image");
-            stone_image.setAttribute("class", "stone white");
-            stone_image.setAttribute("x", `${cx - radius}`);
-            stone_image.setAttribute("y", `${cy - radius}`);
-            stone_image.setAttribute("width", `${radius * 2}`);
-            stone_image.setAttribute("height", `${radius * 2}`);
-            stone_image.setAttributeNS(
+            const shadow = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            shadow.setAttribute("class", "stone");
+            shadow.setAttribute("x", `${cx - radius * 0.98}`);
+            shadow.setAttribute("y", `${cy - radius * 1.05}`);
+            shadow.setAttribute("width", `${radius * 2 * 1.05}`);
+            shadow.setAttribute("height", `${radius * 2 * 1.14}`);
+            shadow.setAttributeNS(
                 "http://www.w3.org/1999/xlink",
                 "href",
-                anime_white_imagedata,
+                getCDNReleaseBase() + "/img/anime_shadow.svg",
             );
-            cell.appendChild(stone_image);
-            return [stone_image, shadow];
+            shadow_cell.appendChild(shadow);
+
+            return shadow;
+        }
+
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `anime-black-${radius}`,
+                        url: getCDNReleaseBase() + "/img/anime_black.svg",
+                    },
+                    radius,
+                ),
+            );
+
+            return [`anime-black-${radius}`];
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `anime-white-${radius}`,
+                        url: getCDNReleaseBase() + "/img/anime_white.svg",
+                    },
+                    radius,
+                ),
+            );
+
+            return [`anime-white-${radius}`];
         }
     }
-    GoThemes["white"]["Anime"] = AnimeWhite;
 
-    class CustomBlack extends Common {
+    GoThemes["black"]["Anime"] = Anime;
+    GoThemes["white"]["Anime"] = Anime;
+
+    class Custom extends Common {
         sort() {
             return 200; // last - in the "url customizable" slot.
         }
@@ -395,17 +368,6 @@ export default function (GoThemes: GoThemesInterface) {
                 ? GobanCore.hooks.customBlackTextColor()
                 : "#FFFFFF";
         }
-    }
-
-    GoThemes["black"]["Custom"] = CustomBlack;
-
-    class CustomWhite extends Common {
-        sort() {
-            return 200; //last - in the "url customizable" slot.
-        }
-        get theme_name(): string {
-            return "Custom";
-        }
 
         placeWhiteStone(
             ctx: CanvasRenderingContext2D,
@@ -463,6 +425,60 @@ export default function (GoThemes: GoThemesInterface) {
                 ? GobanCore.hooks.customWhiteTextColor()
                 : "#000000";
         }
+
+        public preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            if (
+                !GobanCore.hooks.customBlackStoneUrl ||
+                GobanCore.hooks.customBlackStoneUrl() === ""
+            ) {
+                return super.preRenderBlackSVG(defs, radius, _seed, deferredRenderCallback);
+            }
+
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `custom-black-${radius}`,
+                        url: GobanCore.hooks.customBlackStoneUrl(),
+                    },
+                    radius,
+                ),
+            );
+
+            return [`custom-black-${radius}`];
+        }
+
+        public preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            if (
+                !GobanCore.hooks.customWhiteStoneUrl ||
+                GobanCore.hooks.customWhiteStoneUrl() === ""
+            ) {
+                return super.preRenderWhiteSVG(defs, radius, _seed, deferredRenderCallback);
+            }
+
+            defs.append(
+                this.renderSVG(
+                    {
+                        id: `custom-white-${radius}`,
+                        url: GobanCore.hooks.customWhiteStoneUrl(),
+                    },
+                    radius,
+                ),
+            );
+
+            return [`custom-white-${radius}`];
+        }
     }
-    GoThemes["white"]["Custom"] = CustomWhite;
+
+    GoThemes["black"]["Custom"] = Custom;
+    GoThemes["white"]["Custom"] = Custom;
 }
