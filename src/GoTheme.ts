@@ -196,7 +196,7 @@ export class GoTheme {
         invisible_circle_to_cast_shadow.setAttribute("class", "shadow");
         invisible_circle_to_cast_shadow.setAttribute("cx", cx.toString());
         invisible_circle_to_cast_shadow.setAttribute("cy", cy.toString());
-        invisible_circle_to_cast_shadow.setAttribute("r", Math.max(0.1, radius).toString());
+        invisible_circle_to_cast_shadow.setAttribute("r", (radius * 0.97).toString());
         const sx = radius * 0.15;
         const sy = radius * 0.15;
         const softness = radius * 0.1;
@@ -373,6 +373,7 @@ export class GoTheme {
             circle.setAttribute("cx", cx.toString());
             circle.setAttribute("cy", cy.toString());
             circle.setAttribute("r", radius.toString());
+            circle.setAttribute("shape-rendering", "geometricPrecision");
 
             // gradient
             if (params.gradient) {
