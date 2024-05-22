@@ -37,6 +37,7 @@ export interface SVGStoneParameters {
     id: string;
     fill?: string;
     stroke?: string;
+    stroke_scale?: number; // scale the radius by this amount
     gradient?: {
         stops: SVGStop[];
         type?: "radial" | "linear"; // default radial
@@ -196,13 +197,12 @@ export class GoTheme {
         invisible_circle_to_cast_shadow.setAttribute("cx", cx.toString());
         invisible_circle_to_cast_shadow.setAttribute("cy", cy.toString());
         invisible_circle_to_cast_shadow.setAttribute("r", Math.max(0.1, radius).toString());
-        //invisible_circle_to_cast_shadow.setAttribute("fill", "rgba(0,0,0,0.4)");
         const sx = radius * 0.1;
         const sy = radius * 0.1;
-        const softness = radius * 0.05;
+        const softness = radius * 0.2;
         invisible_circle_to_cast_shadow.setAttribute(
             "style",
-            `filter: drop-shadow(${sx}px ${sy}px ${softness}px rgba(0,0,0,0.4)`,
+            `filter: drop-shadow(${sx}px ${sy}px ${softness}px rgba(0,0,0,0.7)`,
         );
         shadow_cell.appendChild(invisible_circle_to_cast_shadow);
         return invisible_circle_to_cast_shadow;
@@ -364,7 +364,11 @@ export class GoTheme {
             }
             if (params.stroke) {
                 circle.setAttribute("stroke", params.stroke);
-                circle.setAttribute("stroke-width", `${radius / 20}`);
+                if (params.stroke_scale) {
+                    circle.setAttribute("stroke-width", `${radius * params.stroke_scale}`);
+                } else {
+                    circle.setAttribute("stroke-width", `${radius / 20}`);
+                }
             }
             circle.setAttribute("cx", cx.toString());
             circle.setAttribute("cy", cy.toString());

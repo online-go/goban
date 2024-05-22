@@ -533,32 +533,30 @@ export default function (GoThemes: GoThemesInterface) {
             _deferredRenderCallback: () => void,
         ): string[] {
             const ret = [];
-            for (let i = 0; i < 10; ++i) {
-                const key = `black-${i}-${radius}`;
-                ret.push(key);
-                defs.appendChild(
-                    this.renderSVG(
-                        {
-                            id: key,
-                            //fill: "hsl(8, 7%, 10%)",
-                            stroke: "hsl(8, 7%, 10%)",
-                            gradient: {
-                                stops: [
-                                    {
-                                        offset: 0,
-                                        color: "hsl(8, 7%, 40%)",
-                                    },
-                                    {
-                                        offset: 1000,
-                                        color: "hsl(8, 7%, 10%)",
-                                    },
-                                ],
-                            },
+            const key = `black-slate-${radius}`;
+            ret.push(key);
+            defs.appendChild(
+                this.renderSVG(
+                    {
+                        id: key,
+                        //fill: "hsl(8, 7%, 10%)",
+                        stroke: "hsl(8, 7%, 10%)",
+                        gradient: {
+                            stops: [
+                                {
+                                    offset: 0,
+                                    color: "hsl(8, 7%, 40%)",
+                                },
+                                {
+                                    offset: 1000,
+                                    color: "hsl(8, 7%, 10%)",
+                                },
+                            ],
                         },
-                        radius,
-                    ),
-                );
-            }
+                    },
+                    radius,
+                ),
+            );
             return ret;
         }
     }
@@ -602,13 +600,14 @@ export default function (GoThemes: GoThemesInterface) {
             let s = seed;
 
             for (let i = 0; i < 20; ++i) {
-                const key = `white-${i}-${radius}`;
+                const key = `white-shell-${i}-${radius}`;
                 ret.push(key);
 
                 const stone = this.renderSVG(
                     {
                         id: key,
-                        //stroke: "hsl(8, 7%, 80%)",
+                        stroke: "hsl(8, 7%, 50%)",
+                        stroke_scale: 0.04,
                         gradient: {
                             type: "radial",
                             stops: [
@@ -996,7 +995,7 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `black-worn-glass-${radius}`;
+            const key = `black-night-${radius}`;
             const stone = this.renderSVG(
                 {
                     id: key,
@@ -1032,7 +1031,7 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `white-worn-glass-${radius}`;
+            const key = `white-night-${radius}`;
             const stone = this.renderSVG(
                 {
                     id: key,
