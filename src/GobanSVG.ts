@@ -2432,6 +2432,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 line.setAttribute("y2", (oy + (this.height - 1) * ss).toString());
                 line.setAttribute("stroke", this.theme_line_color);
                 line.setAttribute("stroke-width", "1");
+                line.setAttribute("stroke-linecap", "square");
                 this.lines_layer.appendChild(line);
             }
 
