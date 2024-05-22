@@ -2424,28 +2424,23 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             oy -= 0.5;
 
             this.lines_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            const lines_path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            let path_str = "";
             for (let x = 0; x < this.width; ++x) {
-                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                line.setAttribute("x1", (ox + x * ss).toString());
-                line.setAttribute("y1", oy.toString());
-                line.setAttribute("x2", (ox + x * ss).toString());
-                line.setAttribute("y2", (oy + (this.height - 1) * ss).toString());
-                line.setAttribute("stroke", this.theme_line_color);
-                line.setAttribute("stroke-width", "1");
-                line.setAttribute("stroke-linecap", "square");
-                this.lines_layer.appendChild(line);
+                path_str += `M ${ox + x * ss} ${oy} L ${ox + x * ss} ${
+                    oy + (this.height - 1) * ss
+                } `;
             }
-
             for (let y = 0; y < this.height; ++y) {
-                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                line.setAttribute("x1", ox.toString());
-                line.setAttribute("y1", (oy + y * ss).toString());
-                line.setAttribute("x2", (ox + (this.width - 1) * ss).toString());
-                line.setAttribute("y2", (oy + y * ss).toString());
-                line.setAttribute("stroke", this.theme_star_color);
-                line.setAttribute("stroke-width", "1");
-                this.lines_layer.appendChild(line);
+                path_str += `M ${ox} ${oy + y * ss} L ${ox + (this.width - 1) * ss} ${
+                    oy + y * ss
+                } `;
             }
+            lines_path.setAttribute("d", path_str);
+            lines_path.setAttribute("stroke", this.theme_line_color);
+            lines_path.setAttribute("stroke-width", "1");
+            lines_path.setAttribute("stroke-linecap", "square");
+            this.lines_layer.appendChild(lines_path);
 
             // Hoshi / star points
             let hoshi = null;
@@ -2491,11 +2486,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     circle.setAttribute("cx", (ox + hx * ss).toString());
                     circle.setAttribute("cy", (oy + hy * ss).toString());
                     circle.setAttribute("r", "2");
-                    circle.setAttribute("fill", this.theme_line_color);
+                    circle.setAttribute("fill", this.theme_star_color);
                     this.lines_layer.appendChild(circle);
                 }
             }
-
             this.svg.appendChild(this.lines_layer);
         }
     }
