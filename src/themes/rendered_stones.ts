@@ -606,8 +606,8 @@ export default function (GoThemes: GoThemesInterface) {
                 const stone = this.renderSVG(
                     {
                         id: key,
-                        stroke: "hsl(8, 7%, 50%)",
-                        stroke_scale: 0.04,
+                        //stroke: "hsl(8, 7%, 50%)",
+                        //stroke_scale: 0.04,
                         gradient: {
                             type: "radial",
                             stops: [
