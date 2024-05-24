@@ -1784,7 +1784,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 text.setAttribute("x", cx.toString());
                 let yy = cy;
                 yy -= this.square_size / 6;
-                yy += this.square_size * 0.6;
+                if (letter) {
+                    yy += this.square_size * 0.6;
+                } else {
+                    yy += this.square_size * 0.275;
+                }
                 text.setAttribute("y", yy.toString());
                 text.textContent = subscript;
                 if (transparent) {

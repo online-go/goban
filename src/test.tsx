@@ -354,8 +354,8 @@ function ReactGoban<GobanClass extends GobanCore>(
 
         let i = 0;
         const start = Date.now();
-        const NUM_MOVES = 300;
-        //const NUM_MOVES = 20;
+        //const NUM_MOVES = 300;
+        const NUM_MOVES = 20;
         const interval = setInterval(() => {
             i++;
             if (i >= NUM_MOVES) {
@@ -420,6 +420,7 @@ function ReactGoban<GobanClass extends GobanCore>(
                     goban.setMark(15, 13, "cross", true);
                     goban.setMark(15, 12, "top", true);
                     goban.setSubscriptMark(15, 12, "sub", true);
+                    goban.setSubscriptMark(16, 12, "sub", true);
                     goban.setMark(15, 11, "A", true);
 
                     // pen marks
