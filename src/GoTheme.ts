@@ -184,6 +184,7 @@ export class GoTheme {
         cx: number,
         cy: number,
         radius: number,
+        color: string,
     ): SVGElement | undefined {
         if (!shadow_cell) {
             return;
@@ -194,6 +195,7 @@ export class GoTheme {
             "circle",
         );
         invisible_circle_to_cast_shadow.setAttribute("class", "shadow");
+        invisible_circle_to_cast_shadow.setAttribute("fill", color);
         invisible_circle_to_cast_shadow.setAttribute("cx", cx.toString());
         invisible_circle_to_cast_shadow.setAttribute("cy", cy.toString());
         invisible_circle_to_cast_shadow.setAttribute("r", (radius * 0.97).toString());
@@ -216,7 +218,7 @@ export class GoTheme {
         cy: number,
         radius: number,
     ): [SVGElement, SVGElement | undefined] {
-        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
+        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius, "#eeeeee");
 
         const ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
         ref.setAttribute("href", `#${stone}`);
@@ -235,7 +237,7 @@ export class GoTheme {
         cy: number,
         radius: number,
     ): [SVGElement, SVGElement | undefined] {
-        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius);
+        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius, "#222222");
 
         const ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
         ref.setAttribute("href", `#${stone}`);
