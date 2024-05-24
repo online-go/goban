@@ -1787,7 +1787,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 if (letter) {
                     yy += this.square_size * 0.6;
                 } else {
-                    yy += this.square_size * 0.275;
+                    yy += this.square_size * 0.31;
                 }
                 text.setAttribute("y", yy.toString());
                 text.textContent = subscript;
