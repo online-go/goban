@@ -1425,7 +1425,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 }
                 circ.setAttribute("cx", cx.toString());
                 circ.setAttribute("cy", cy.toString());
-                circ.setAttribute("r", Math.max(0.1, radius).toString());
+                circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
                 cell.appendChild(circ);
             }
         }
@@ -1609,13 +1609,13 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         circ.setAttribute("stroke", circle.border_color || "#000000");
                     }
                     if (lineWidth > 0) {
-                        circ.setAttribute("stroke-width", lineWidth.toFixed(1));
+                        circ.setAttribute("stroke-width", `${lineWidth.toFixed(1)}px`);
                     } else {
                         circ.setAttribute("stroke-width", "1px");
                     }
                     circ.setAttribute("cx", cx.toString());
                     circ.setAttribute("cy", cy.toString());
-                    circ.setAttribute("r", Math.max(0.1, radius).toString());
+                    circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
                     cell.appendChild(circ);
                 }
             }

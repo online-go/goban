@@ -364,17 +364,19 @@ export class GoTheme {
             if (params.fill) {
                 circle.setAttribute("fill", params.fill);
             }
+            let stroke_width = 0.0;
             if (params.stroke) {
                 circle.setAttribute("stroke", params.stroke);
                 if (params.stroke_scale) {
-                    circle.setAttribute("stroke-width", `${radius * params.stroke_scale}`);
+                    stroke_width = radius * params.stroke_scale;
                 } else {
-                    circle.setAttribute("stroke-width", `${radius / 20}`);
+                    stroke_width = radius / 20;
                 }
+                circle.setAttribute("stroke-width", `${stroke_width.toFixed(1)}px`);
             }
             circle.setAttribute("cx", cx.toString());
             circle.setAttribute("cy", cy.toString());
-            circle.setAttribute("r", radius.toString());
+            circle.setAttribute("r", (radius - stroke_width * 0.5).toString());
             circle.setAttribute("shape-rendering", "geometricPrecision");
 
             // gradient
