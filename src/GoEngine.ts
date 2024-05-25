@@ -32,7 +32,7 @@ import {
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
 import { EventEmitter } from "eventemitter3";
-import { GameClock } from "./protocol";
+import { GameClock, StallingScoreEstimate } from "./protocol";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -162,15 +162,7 @@ export interface GoEngineConfig {
     aga_handicap_scoring?: boolean;
     opponent_plays_first_after_resume?: boolean;
     superko_algorithm?: GoEngineSuperKoAlgorithm;
-    stalling_score_estimate?: {
-        move_number: number;
-        predicted_winner: "black" | "white";
-        game_id: number;
-        removed: string;
-        score: number;
-        win_rate: number;
-        ownership: any[];
-    };
+    stalling_score_estimate?: StallingScoreEstimate;
 
     // This is used in gtp2ogs
     clock?: GameClock;
@@ -357,6 +349,7 @@ export class GoEngine extends EventEmitter<Events> {
         [colour: string]: Array<GoEnginePlayerEntry>; // TBD index this by PlayerColour
     };
     public rengo_casual_mode: boolean;
+    public stalling_score_estimate?: StallingScoreEstimate;
 
     /* Properties that emit change events */
     private _phase: GoEnginePhase = "play";

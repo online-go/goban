@@ -1466,6 +1466,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     console.log("Score estimate received: ", obj);
                     //obj.line.channel = obj.channel;
                     //this.chat_log.push(obj.line);
+                    this.engine.stalling_score_estimate = obj;
+                    this.engine.config.stalling_score_estimate = obj;
                     this.emit("stalling_score_estimate", obj);
                 },
             );
