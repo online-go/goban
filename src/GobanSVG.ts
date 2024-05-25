@@ -1789,6 +1789,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 } else {
                     yy += this.square_size * 0.31;
                 }
+                if (pos.sub_triangle) {
+                    yy -= this.square_size * 0.08;
+                }
                 text.setAttribute("y", yy.toString());
                 text.textContent = subscript;
                 if (transparent) {
@@ -1854,17 +1857,19 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             ) {
                 let scale = 1.0;
                 let oy = 0.0;
+                let line_width = this.square_size * 0.075;
                 if (pos.sub_triangle) {
                     scale = 0.5;
                     oy = this.square_size * 0.3;
                     transparent = false;
+                    line_width *= 0.5;
                 }
 
                 const triangle = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
                 triangle.setAttribute("class", "triangle");
                 triangle.setAttribute("fill", "none");
                 triangle.setAttribute("stroke", symbol_color);
-                triangle.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                triangle.setAttribute("stroke-width", `${line_width}px`);
                 const r = this.square_size * 0.3 * scale;
                 let theta = -(Math.PI * 2) / 4;
                 const points = [];
