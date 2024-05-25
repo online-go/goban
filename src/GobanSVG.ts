@@ -2450,9 +2450,22 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             ox += Math.round(ss / 2);
             oy += Math.round(ss / 2);
 
-            // half pixel offset for crisp lines
-            ox -= 0.5;
-            oy -= 0.5;
+            // Tiny square sizes, as in the ones used to display puzzle icons
+            const TINY_SQUARE_SIZE = 10;
+
+            // Compute a line width that is rounded to the nearest 0.5 so we
+            // get crisp lines
+            const line_width =
+                ss > TINY_SQUARE_SIZE
+                    ? Math.round(2 * Math.round(Math.max(1, ss * 0.02))) * 0.5
+                    : // for very small boards, like puzzle icons, have faint lines
+                      ss * 0.08;
+            ox -= line_width * 0.5;
+            oy -= line_width * 0.5;
+
+            // Round to half pixel offsets odd widths for crisp lines
+            ox = Math.round(ox * 2.0) * 0.5;
+            oy = Math.round(oy * 2.0) * 0.5;
 
             this.lines_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
             const lines_path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -2469,7 +2482,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             }
             lines_path.setAttribute("d", path_str);
             lines_path.setAttribute("stroke", this.theme_line_color);
-            lines_path.setAttribute("stroke-width", "1");
+            if (ss > TINY_SQUARE_SIZE) {
+                lines_path.setAttribute("stroke-width", `${line_width.toFixed(0)}px`);
+            } else {
+                lines_path.setAttribute("stroke-width", `${line_width.toFixed(1)}px`);
+            }
             lines_path.setAttribute("stroke-linecap", "square");
             this.lines_layer.appendChild(lines_path);
 
@@ -2511,12 +2528,13 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             }
 
             if (hoshi) {
+                const r = this.square_size * 0.075;
                 for (let i = 0; i < hoshi.length; ++i) {
                     const [hx, hy] = hoshi[i];
                     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                     circle.setAttribute("cx", (ox + hx * ss).toString());
                     circle.setAttribute("cy", (oy + hy * ss).toString());
-                    circle.setAttribute("r", "2");
+                    circle.setAttribute("r", `${r.toFixed(1)}px`);
                     circle.setAttribute("fill", this.theme_star_color);
                     this.lines_layer.appendChild(circle);
                 }
