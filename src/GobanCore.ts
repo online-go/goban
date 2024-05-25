@@ -48,7 +48,7 @@ import {
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
 import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
-import { ServerToClient, GameChatMessage, GameChatLine } from "./protocol";
+import { ServerToClient, GameChatMessage, GameChatLine, StallingScoreEstimate } from "./protocol";
 import { EventEmitter } from "eventemitter3";
 
 declare let swal: any;
@@ -384,6 +384,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     public readonly game_id: number;
     public readonly review_id: number;
     public showing_scores: boolean = false;
+    public stalling_score_estimate?: StallingScoreEstimate;
     public width: number;
 
     public pause_control?: AdHocPauseControl;
@@ -550,7 +551,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     protected puzzle_autoplace_delay: number;
     protected restrict_moves_to_movetree: boolean;
     protected review_had_gamedata: boolean;
-    protected scoring_mode: boolean;
+    protected scoring_mode: boolean | "stalling-scoring-mode";
     protected shift_key_is_down: boolean;
     protected show_move_numbers: boolean;
     protected show_variation_move_numbers: boolean;
@@ -2294,6 +2295,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 }
             }
         }
+    }
+    public showStallingScoreEstimate(sse: StallingScoreEstimate): void {
+        this.hideScores();
+        this.showing_scores = true;
+        this.scoring_mode = "stalling-scoring-mode";
+        this.stalling_score_estimate = sse;
+        this.redraw();
     }
 
     public updatePlayerToMoveTitle(): void {

@@ -2025,30 +2025,41 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         }
 
         /* Score Estimation */
-        if (this.scoring_mode && this.score_estimate) {
-            const se = this.score_estimate;
-            const est = se.ownership[j][i];
+        if (
+            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === "stalling-scoring-mode" &&
+                this.stalling_score_estimate &&
+                this.mode !== "analyze")
+        ) {
+            const se =
+                this.scoring_mode === "stalling-scoring-mode"
+                    ? this.stalling_score_estimate
+                    : this.score_estimate;
+            const est = se!.ownership[j][i];
             const color = est < 0 ? "white" : "black";
+            const color_num = color === "black" ? 1 : 2;
 
-            const r = this.square_size * 0.2 * Math.abs(est);
-            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            rect.setAttribute("x", (cx - r).toFixed(1));
-            rect.setAttribute("y", (cy - r).toFixed(1));
-            rect.setAttribute("width", (r * 2).toFixed(1));
-            rect.setAttribute("height", (r * 2).toFixed(1));
-            if (color === "white") {
-                rect.setAttribute("fill", this.theme_black_text_color);
-                rect.setAttribute("stroke", "#777777");
+            if (color_num !== stone_color) {
+                const r = this.square_size * 0.2 * Math.abs(est);
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", (cx - r).toFixed(1));
+                rect.setAttribute("y", (cy - r).toFixed(1));
+                rect.setAttribute("width", (r * 2).toFixed(1));
+                rect.setAttribute("height", (r * 2).toFixed(1));
+                if (color === "white") {
+                    rect.setAttribute("fill", this.theme_black_text_color);
+                    rect.setAttribute("stroke", "#777777");
+                }
+                if (color === "black") {
+                    rect.setAttribute("fill", this.theme_white_text_color);
+                    rect.setAttribute("stroke", "#888888");
+                }
+                rect.setAttribute(
+                    "stroke-width",
+                    (Math.ceil(this.square_size * 0.035) - 0.5).toFixed(1),
+                );
+                cell.appendChild(rect);
             }
-            if (color === "black") {
-                rect.setAttribute("fill", this.theme_white_text_color);
-                rect.setAttribute("stroke", "#888888");
-            }
-            rect.setAttribute(
-                "stroke-width",
-                (Math.ceil(this.square_size * 0.035) - 0.5).toFixed(1),
-            );
-            cell.appendChild(rect);
         }
 
         this.__draw_state[j][i] = this.drawingHash(i, j);
@@ -2394,6 +2405,22 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             ) {
                 ret += "last_move,";
             }
+        }
+
+        /* Score Estimation */
+        if (
+            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === "stalling-scoring-mode" &&
+                this.stalling_score_estimate &&
+                this.mode !== "analyze")
+        ) {
+            const se =
+                this.scoring_mode === "stalling-scoring-mode"
+                    ? this.stalling_score_estimate
+                    : this.score_estimate;
+            const est = se!.ownership[j][i];
+
+            ret += est.toFixed(5) + ",";
         }
 
         return ret;

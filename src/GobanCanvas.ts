@@ -2101,27 +2101,37 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         }
 
         /* Score Estimation */
-
-        if (this.scoring_mode && this.score_estimate) {
-            const se = this.score_estimate;
-            const est = se.ownership[j][i];
+        if (
+            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === "stalling-scoring-mode" &&
+                this.stalling_score_estimate &&
+                this.mode !== "analyze")
+        ) {
+            const se =
+                this.scoring_mode === "stalling-scoring-mode"
+                    ? this.stalling_score_estimate
+                    : this.score_estimate;
+            const est = se!.ownership[j][i];
 
             ctx.beginPath();
 
             const color = est < 0 ? "white" : "black";
+            const color_num = color === "black" ? 1 : 2;
 
-            if (color === "white") {
-                ctx.fillStyle = this.theme_black_text_color;
-                ctx.strokeStyle = "#777777";
-            } else if (color === "black") {
-                ctx.fillStyle = this.theme_white_text_color;
-                ctx.strokeStyle = "#888888";
+            if (color_num !== stone_color) {
+                if (color === "white") {
+                    ctx.fillStyle = this.theme_black_text_color;
+                    ctx.strokeStyle = "#777777";
+                } else if (color === "black") {
+                    ctx.fillStyle = this.theme_white_text_color;
+                    ctx.strokeStyle = "#888888";
+                }
+                ctx.lineWidth = Math.ceil(this.square_size * 0.035) - 0.5;
+                const r = this.square_size * 0.2 * Math.abs(est);
+                ctx.rect(cx - r, cy - r, r * 2, r * 2);
+                ctx.fill();
+                ctx.stroke();
             }
-            ctx.lineWidth = Math.ceil(this.square_size * 0.035) - 0.5;
-            const r = this.square_size * 0.2 * Math.abs(est);
-            ctx.rect(cx - r, cy - r, r * 2, r * 2);
-            ctx.fill();
-            ctx.stroke();
         }
 
         this.__draw_state[j][i] = this.drawingHash(i, j);
@@ -2466,6 +2476,22 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             ) {
                 ret += "last_move,";
             }
+        }
+
+        /* Score Estimation */
+        if (
+            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === "stalling-scoring-mode" &&
+                this.stalling_score_estimate &&
+                this.mode !== "analyze")
+        ) {
+            const se =
+                this.scoring_mode === "stalling-scoring-mode"
+                    ? this.stalling_score_estimate
+                    : this.score_estimate;
+            const est = se!.ownership[j][i];
+
+            ret += est.toFixed(5) + ",";
         }
 
         return ret;
