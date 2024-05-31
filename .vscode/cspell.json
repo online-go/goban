@@ -185,5 +185,6 @@
         "yomi",
         "zoomable"
     ],
-    "language": "en,en-GB"
+    "language": "en,en-GB",
+    "ignorePaths": ["test/autoscore_test_files"]
 }

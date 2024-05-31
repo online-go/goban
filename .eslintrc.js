@@ -19,7 +19,7 @@ module.exports = {
         "@typescript-eslint/no-this-alias": "off", // 11 errors
         "@typescript-eslint/no-unused-vars": "off", // 38 warnings
         "@typescript-eslint/no-empty-interface": "off", // 1 error
-        eqeqeq: "off", // 2 errors
+        "eqeqeq": "off", // 2 errors
         "no-case-declarations": "off", // 1 error
         "no-constant-condition": "off", // 2 errors
         "no-empty": "off", // 2 errors
@@ -44,9 +44,9 @@ module.exports = {
         "@typescript-eslint/semi": "error",
         "@typescript-eslint/type-annotation-spacing": "error",
         "computed-property-spacing": ["error", "never"],
-        curly: "error",
+        "curly": "error",
         "eol-last": "error",
-        eqeqeq: ["error", "smart"],
+        "eqeqeq": ["error", "smart"],
         "id-denylist": [
             "error",
             "any",
@@ -92,9 +92,12 @@ module.exports = {
             "error",
             {
                 rules: {
-                    "file-header": [true, "[Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com"], // cspell: disable-line
+                    "file-header": [
+                        true,
+                        "([Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com)|(bin/env)", // cspell: disable-line
+                    ],
                     "import-spacing": true,
-                    whitespace: [
+                    "whitespace": [
                         true,
                         "check-branch",
                         "check-decl",
