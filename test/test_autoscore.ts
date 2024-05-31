@@ -49,7 +49,9 @@ function run_autoscore_tests() {
             continue;
         }
 
-        if (!test_file(`${test_file_directory}/${file}`, !process.argv[2])) {
+        const quiet = process.argv.length < 3; // testing all files? be quieter
+
+        if (!test_file(`${test_file_directory}/${file}`, quiet)) {
             failures.push(file);
         } else {
             ++passed;
@@ -217,7 +219,7 @@ function test_file(path: string, quiet: boolean): boolean {
                 }
             }
 
-            return official_match;
+            match &&= official_match;
         }
 
         if (!match) {

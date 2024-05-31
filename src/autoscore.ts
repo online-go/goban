@@ -24,7 +24,6 @@
 import { GoStoneGroups } from "./GoStoneGroups";
 import { JGOFNumericPlayerColor } from "./JGOF";
 import { makeMatrix, num2char } from "./GoMath";
-import * as clc from "cli-color";
 
 interface AutoscoreResults {
     result: JGOFNumericPlayerColor[][];
@@ -580,15 +579,15 @@ function colorizeOwnership(ownership: number): string {
 
     if (mag < 7) {
         if (ownership > 0) {
-            return clc.blue(mag_str);
+            return blue(mag_str);
         } else {
-            return clc.cyan.bold(mag_str);
+            return cyanBright(mag_str);
         }
     }
     if (ownership > 0) {
-        return clc.black.bold(mag_str);
+        return blackBright(mag_str);
     } else {
-        return clc.white.bold(mag_str);
+        return whiteBright(mag_str);
     }
 }
 
@@ -633,17 +632,17 @@ function debug_board_output(board: JGOFNumericPlayerColor[][]) {
 
 function colorizeIntersection(c: string): string {
     if (c === "B" || c === "s") {
-        return clc.black(c);
+        return black(c);
     } else if (c === "W") {
-        return clc.white.bold(c);
+        return whiteBright(c);
     } else if (c === "?") {
-        return clc.red(c);
+        return red(c);
     } else if (c === ".") {
-        return clc.blue(c);
+        return blue(c);
     } else if (c === " " || c === "_") {
-        return clc.blue("_");
+        return blue("_");
     }
-    return clc.yellow(c);
+    return yellow(c);
 }
 
 function debug_print_settled(board: number[][]) {
@@ -685,29 +684,27 @@ function debug_groups(groups: GoStoneGroups) {
     let group_idx = 0;
 
     groups.foreachGroup((group) => {
-        let group_color = clc.red;
+        let group_color = red;
 
         if (group.color === JGOFNumericPlayerColor.EMPTY) {
             if (group.is_territory_in_seki) {
-                group_color = clc.yellow;
+                group_color = yellow;
             } else if (group.is_territory) {
                 if (group.territory_color) {
                     group_color =
-                        group.territory_color === JGOFNumericPlayerColor.BLACK
-                            ? clc.black
-                            : clc.white;
+                        group.territory_color === JGOFNumericPlayerColor.BLACK ? black : white;
                 } else {
-                    group_color = clc.blue;
+                    group_color = blue;
                 }
             } else {
-                group_color = clc.magenta;
+                group_color = magenta;
             }
         } else if (group.color === JGOFNumericPlayerColor.BLACK) {
-            group_color = clc.black;
+            group_color = black;
         } else if (group.color === JGOFNumericPlayerColor.WHITE) {
-            group_color = clc.white;
+            group_color = white;
         } else {
-            group_color = clc.red;
+            group_color = red;
         }
 
         const symbol = symbols[group_idx % symbols.length];
@@ -720,12 +717,12 @@ function debug_groups(groups: GoStoneGroups) {
 
     debug("Group map:");
     debug("Legend: ");
-    debug("  " + clc.black("Black") + " ");
-    debug("  " + clc.white("White") + " ");
-    debug("  " + clc.blue("Dame") + " ");
-    debug("  " + clc.yellow("Territory in Seki") + " ");
-    debug("  " + clc.magenta("Undecided territory") + " ");
-    debug("  " + clc.red("Error") + " ");
+    debug("  " + black("Black") + " ");
+    debug("  " + white("White") + " ");
+    debug("  " + blue("Dame") + " ");
+    debug("  " + yellow("Territory in Seki") + " ");
+    debug("  " + magenta("Undecided territory") + " ");
+    debug("  " + red("Error") + " ");
 
     debug_group_map(group_map);
 }
@@ -757,4 +754,42 @@ function debug_group_map(board: string[][]) {
 
     out += "\n";
     debug(out);
+}
+
+function white(str: string) {
+    return `\x1b[37m${str}\x1b[0m`;
+}
+function red(str: string) {
+    return `\x1b[31m${str}\x1b[0m`;
+}
+/*
+function green(str: string) {
+    return `\x1b[32m${str}\x1b[0m`;
+}
+*/
+function yellow(str: string) {
+    return `\x1b[33m${str}\x1b[0m`;
+}
+function blue(str: string) {
+    return `\x1b[34m${str}\x1b[0m`;
+}
+function magenta(str: string) {
+    return `\x1b[35m${str}\x1b[0m`;
+}
+/*
+function cyan(str: string) {
+    return `\x1b[36m${str}\x1b[0m`;
+}
+*/
+function black(str: string) {
+    return `\x1b[30m${str}\x1b[0m`;
+}
+function whiteBright(str: string) {
+    return `\x1b[97m${str}\x1b[0m`;
+}
+function cyanBright(str: string) {
+    return `\x1b[96m${str}\x1b[0m`;
+}
+function blackBright(str: string) {
+    return `\x1b[90m${str}\x1b[0m`;
 }
