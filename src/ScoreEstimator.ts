@@ -37,18 +37,34 @@ export interface ScoreEstimateRequest {
     player_to_move: "black" | "white";
     width: number;
     height: number;
-    board_state: Array<Array<number>>;
+    board_state: JGOFNumericPlayerColor[][];
     rules: GoEngineRules;
     black_prisoners?: number;
     white_prisoners?: number;
     komi?: number;
     jwt: string;
+
+    /** Whether to run autoscoring logic. If true, player_to_move is
+     * essentially ignored as we compute estimates with each player moving
+     * first in turn. */
+    autoscore?: boolean;
 }
 
 export interface ScoreEstimateResponse {
-    ownership: Array<Array<number>>;
+    /** Matrix of ownership estimates ranged from -1 (white) to 1 (black) */
+    ownership: number[][];
+
+    /** Estimated score */
     score?: number;
+
+    /** Estimated win rate */
     win_rate?: number;
+
+    /** Board state after autoscoring logic has been run. Only defined if autoscore was true in the request. */
+    autoscored_board_state?: JGOFNumericPlayerColor[][];
+
+    /** Intersections that are dead or dame.  Only defined if autoscore was true in the request. */
+    autoscored_removed?: string;
 }
 
 let remote_scorer: ((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined;
@@ -117,6 +133,8 @@ export class ScoreEstimator {
     estimated_hard_score: number;
     when_ready: Promise<void>;
     prefer_remote: boolean;
+    autoscored_state?: JGOFNumericPlayerColor[][];
+    autoscored_removed?: string;
 
     constructor(
         goban_callback: GobanCore | undefined,
@@ -184,6 +202,7 @@ export class ScoreEstimator {
                 height: this.engine.height,
                 rules: this.engine.rules,
                 board_state: board_state,
+                autoscore: true,
                 jwt: "", // this gets set by the remote_scorer method
             })
                 .then((res: ScoreEstimateResponse) => {
@@ -201,8 +220,26 @@ export class ScoreEstimator {
                     res.score += 7.5 - komi; // we always ask katago to use 7.5 komi, so correct if necessary
                     res.score += captures_delta;
                     res.score -= this.engine.getHandicapPointAdjustmentForWhite();
+                    this.autoscored_removed = res.autoscored_removed;
+                    this.autoscored_state = res.autoscored_board_state;
 
-                    this.updateEstimate(score_estimate, res.ownership, res.score);
+                    if (this.autoscored_state) {
+                        this.updateEstimate(
+                            score_estimate,
+                            this.autoscored_state.map((row) =>
+                                row.map((cell) => (cell === 2 ? -1 : cell)),
+                            ),
+                            res.score,
+                        );
+                    } else {
+                        console.error(
+                            "Remote scorer didn't have an autoscore board state, this should be unreachable",
+                        );
+                        // this was the old code, probably still works in case
+                        // we have messed something up. Eventually this should
+                        // be removed. - anoek 2024-06-01
+                        this.updateEstimate(score_estimate, res.ownership, res.score);
+                    }
                     resolve();
                 })
                 .catch((err: any) => {
@@ -260,6 +297,13 @@ export class ScoreEstimator {
     }
 
     getProbablyDead(): string {
+        if (this.autoscored_removed) {
+            console.info("Returning autoscored_removed for getProbablyDead");
+            return this.autoscored_removed;
+        } else {
+            console.warn("Not able to use autoscored_removed for getProbablyDead");
+        }
+
         let ret = "";
         const arr = [];
 
@@ -349,12 +393,15 @@ export class ScoreEstimator {
         }
     }
     setRemoved(x: number, y: number, removed: number): void {
+        this.clearAutoScore();
+
         this.removal[y][x] = removed;
         if (this.goban_callback) {
             this.goban_callback.setForRemoval(x, y, this.removal[y][x]);
         }
     }
     clearRemoved(): void {
+        this.clearAutoScore();
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
@@ -363,7 +410,22 @@ export class ScoreEstimator {
             }
         }
     }
+    clearAutoScore(): void {
+        if (this.autoscored_removed || this.autoscored_state) {
+            this.autoscored_removed = undefined;
+            this.autoscored_state = undefined;
+            console.warn("Clearing autoscored state");
+        }
+    }
+
     getStoneRemovalString(): string {
+        if (this.autoscored_removed) {
+            console.info("Returning autoscored_removed for getStoneRemovalString");
+            return this.autoscored_removed;
+        } else {
+            console.warn("Not able to use autoscored_removed for getStoneRemovalString");
+        }
+
         let ret = "";
         const arr = [];
         for (let y = 0; y < this.height; ++y) {

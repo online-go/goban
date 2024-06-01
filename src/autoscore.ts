@@ -97,6 +97,15 @@ export function autoscore(
     compute_final_ownership();
     final_dame_pass();
 
+    return [
+        {
+            result: final_ownership,
+            removed_string: removed.map((pt) => `${num2char(pt[0])}${num2char(pt[1])}`).join(""),
+            removed,
+        },
+        debug_output,
+    ];
+
     /** Marks a position as being removed (either dead stone or dame) */
     function remove(x: number, y: number, reason: string) {
         if (removal[y][x]) {
@@ -527,15 +536,6 @@ export function autoscore(
             }
         }
     }
-
-    return [
-        {
-            result: final_ownership,
-            removed_string: removed.map((pt) => `${num2char(pt[0])}${num2char(pt[1])}`).join(""),
-            removed,
-        },
-        debug_output,
-    ];
 }
 
 function debug_ownership_output(ownership: number[][]) {

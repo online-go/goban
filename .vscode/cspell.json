@@ -14,6 +14,7 @@
         "autoplace",
         "autoplaying",
         "autoscore",
+        "autoscored",
         "Autoscoring",
         "autoscroll",
         "autoscrolling",
@@ -186,5 +187,7 @@
         "zoomable"
     ],
     "language": "en,en-GB",
-    "ignorePaths": ["test/autoscore_test_files"]
+    "ignorePaths": [
+        "test/autoscore_test_files"
+    ]
 }
