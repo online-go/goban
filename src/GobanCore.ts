@@ -3207,12 +3207,16 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     this.clearMessage();
                 })
                 .catch((err) => {
-                    console.error(err);
+                    console.error(`Auto-scoring error: `, err);
                     this.clearMessage();
                     this.showMessage(
                         "error",
-                        { error: { message: "Auto-scoring error: " + err } },
-                        -1,
+                        {
+                            error: {
+                                message: "Auto-scoring failed, please manually score the game",
+                            },
+                        },
+                        3000,
                     );
                 });
         };
