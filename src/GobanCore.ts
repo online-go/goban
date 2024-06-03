@@ -271,6 +271,7 @@ export interface Events extends StateUpdateEvents {
     "captured-stones": (obj: { removed_stones: Array<JGOFIntersection> }) => void;
     "stone-removal.accepted": () => void;
     "stone-removal.updated": () => void;
+    "needs-sealing": (positions: undefined | [number, number][]) => void;
     "conditional-moves.updated": () => void;
     "puzzle-place": (obj: {
         x: number;
@@ -3189,7 +3190,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     for (let i = 0; i < moves.length; ++i) {
                         this.engine.setRemoved(moves[i].x, moves[i].y, true, false);
                     }
+
                     this.emit("stone-removal.updated");
+                    this.emit("needs-sealing", se.autoscored_needs_sealing);
 
                     this.updateTitleAndStonePlacement();
                     this.emit("update");

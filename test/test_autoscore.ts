@@ -111,7 +111,12 @@ function test_file(path: string, quiet: boolean): boolean {
     }
     for (const row of data.correct_ownership) {
         for (const cell of row) {
-            const is_w_or_b = cell === "W" || cell === "B" || cell === " " || cell === "*";
+            const is_w_or_b =
+                cell === "W" || // owned by white
+                cell === "B" || // owned by black
+                cell === " " || // dame
+                cell === "*" || // anything
+                cell === "s"; // marked for needing to seal
             if (!is_w_or_b) {
                 throw new Error(
                     `${path} correct_ownership field contains "${cell}" which is invalid`,
@@ -130,13 +135,33 @@ function test_file(path: string, quiet: boolean): boolean {
         matches[y] = [];
         for (let x = 0; x < res.result[0].length; ++x) {
             const v = res.result[y][x];
-            const m =
+            let m =
                 data.correct_ownership[y][x] === "*" ||
+                data.correct_ownership[y][x] === "s" || // seal
                 (v === 0 && data.correct_ownership[y][x] === " ") ||
                 (v === 1 && data.correct_ownership[y][x] === "B") ||
                 (v === 2 && data.correct_ownership[y][x] === "W");
+
+            if (data.correct_ownership[y][x] === "s") {
+                const has_needs_sealing =
+                    res.needs_sealing.find(([x2, y2]) => x2 === x && y2 === y) !== undefined;
+
+                m &&= has_needs_sealing;
+            }
+
             matches[y][x] = m;
             match &&= m;
+        }
+    }
+
+    /* Ensure all needs_sealing are marked as such */
+    for (const [x, y] of res.needs_sealing) {
+        if (data.correct_ownership[y][x] !== "s") {
+            console.error(
+                `Engine thought we needed sealing at ${x},${y} but the that spot wasn't flagged as needing it in the test file`,
+            );
+            match = false;
+            matches[y][x] = false;
         }
     }
 
@@ -206,15 +231,19 @@ function test_file(path: string, quiet: boolean): boolean {
             }
 
             if (!quiet) {
+                console.log("");
+                console.log("");
+                console.log("Final scored board");
+                print_expected(
+                    scored_board.map((row) =>
+                        row.map((v) => (v === 1 ? "B" : v === 2 ? "W" : " ")).join(""),
+                    ),
+                );
+
                 if (official_match) {
                     console.log("Final autoscore matches official scoring");
                 } else {
                     console.error("Official score did not match our expected scoring");
-                    print_expected(
-                        scored_board.map((row) =>
-                            row.map((v) => (v === 1 ? "B" : v === 2 ? "W" : " ")).join(""),
-                        ),
-                    );
                     print_mismatches(official_matches);
                 }
             }
@@ -317,6 +346,8 @@ function print_expected(board: string[]) {
                 out += clc.blue(".");
             } else if (c === "*") {
                 out += clc.yellow(" ");
+            } else if (c === "s") {
+                out += clc.magenta("s");
             } else {
                 out += clc.red(c);
             }

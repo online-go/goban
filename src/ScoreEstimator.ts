@@ -65,6 +65,9 @@ export interface ScoreEstimateResponse {
 
     /** Intersections that are dead or dame.  Only defined if autoscore was true in the request. */
     autoscored_removed?: string;
+
+    /** Coordinates that still need sealing */
+    autoscored_needs_sealing?: [number, number][];
 }
 
 let remote_scorer: ((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined;
@@ -136,6 +139,7 @@ export class ScoreEstimator {
     autoscored_state?: JGOFNumericPlayerColor[][];
     autoscored_removed?: string;
     autoscore: boolean = false;
+    public autoscored_needs_sealing?: [number, number][];
 
     constructor(
         goban_callback: GobanCore | undefined,
@@ -225,6 +229,7 @@ export class ScoreEstimator {
                     res.score -= this.engine.getHandicapPointAdjustmentForWhite();
                     this.autoscored_removed = res.autoscored_removed;
                     this.autoscored_state = res.autoscored_board_state;
+                    this.autoscored_needs_sealing = res.autoscored_needs_sealing;
 
                     if (this.autoscored_state) {
                         this.updateEstimate(

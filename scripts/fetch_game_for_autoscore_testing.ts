@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
 
-/* 
+/*
 
 This script fetches a game, scores it, and writes it to a test file.
 
@@ -30,9 +30,12 @@ if (!game_id) {
 }
 console.log(`Fetching game ${game_id}...`);
 
+const TERM_SERVER = process.env.TERM_SERVER || "https://online-go.com";
+const AI_SERVER = process.env.AI_SERVER || "https://ai.online-go.com";
+
 (async () => {
     //fetch(`https://online-go.com/termination-api/game/${game_id}/score`, {
-    const res = await fetch(`https://online-go.com/termination-api/game/${game_id}/state`);
+    const res = await fetch(`${TERM_SERVER}/termination-api/game/${game_id}/state`);
     const json = await res.json();
     const board_state = json.board;
 
@@ -49,7 +52,7 @@ console.log(`Fetching game ${game_id}...`);
     const estimate_responses = await Promise.all([
         // post to https://ai.online-go.com/api/score
 
-        fetch("https://ai.online-go.com/api/score", {
+        fetch(`${AI_SERVER}/api/score`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -57,7 +60,7 @@ console.log(`Fetching game ${game_id}...`);
             body: JSON.stringify(ser_black),
         }),
 
-        fetch("https://ai.online-go.com/api/score", {
+        fetch(`${AI_SERVER}/api/score`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

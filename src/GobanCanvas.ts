@@ -1746,6 +1746,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
+                    if (pos.needs_sealing) {
+                        color = "seal";
+                    }
                 }
 
                 if (color === "white") {
@@ -1757,6 +1760,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 } else if (color === "dame") {
                     ctx.fillStyle = "#ff0000";
                     ctx.strokeStyle = "#365FE6";
+                } else if (color === "seal") {
+                    ctx.fillStyle = "#ff0000";
+                    ctx.strokeStyle = "#E079CE";
                 }
                 ctx.lineWidth = Math.ceil(this.square_size * 0.065) - 0.5;
 
@@ -2364,6 +2370,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
+
+                    if (pos.needs_sealing) {
+                        color = "seal";
+                    }
                 }
 
                 if (

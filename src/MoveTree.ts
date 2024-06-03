@@ -40,6 +40,7 @@ export interface MarkInterface {
     black?: boolean;
     white?: boolean;
     color?: string;
+    needs_sealing?: boolean;
 
     [label: string]: string | boolean | undefined;
 }
