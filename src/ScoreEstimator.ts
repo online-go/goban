@@ -135,6 +135,7 @@ export class ScoreEstimator {
     prefer_remote: boolean;
     autoscored_state?: JGOFNumericPlayerColor[][];
     autoscored_removed?: string;
+    autoscore: boolean = false;
 
     constructor(
         goban_callback: GobanCore | undefined,
@@ -142,6 +143,7 @@ export class ScoreEstimator {
         trials: number,
         tolerance: number,
         prefer_remote: boolean = false,
+        autoscore: boolean = false,
     ) {
         this.goban_callback = goban_callback;
 
@@ -157,26 +159,27 @@ export class ScoreEstimator {
         this.trials = trials;
         this.tolerance = tolerance;
         this.prefer_remote = prefer_remote;
+        this.autoscore = autoscore;
 
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.groups = new GoStoneGroups(this);
 
-        this.when_ready = this.estimateScore(this.trials, this.tolerance);
+        this.when_ready = this.estimateScore(this.trials, this.tolerance, autoscore);
     }
 
-    public estimateScore(trials: number, tolerance: number): Promise<void> {
+    public estimateScore(trials: number, tolerance: number, autoscore: boolean): Promise<void> {
         if (!this.prefer_remote || this.height > 19 || this.width > 19) {
             return this.estimateScoreLocal(trials, tolerance);
         }
 
         if (remote_scorer) {
-            return this.estimateScoreRemote();
+            return this.estimateScoreRemote(autoscore);
         } else {
             return this.estimateScoreLocal(trials, tolerance);
         }
     }
 
-    private estimateScoreRemote(): Promise<void> {
+    private estimateScoreRemote(autoscore: boolean): Promise<void> {
         const komi = this.engine.komi;
         const captures_delta = this.engine.score_prisoners
             ? this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners()
@@ -202,7 +205,7 @@ export class ScoreEstimator {
                 height: this.engine.height,
                 rules: this.engine.rules,
                 board_state: board_state,
-                autoscore: true,
+                autoscore,
                 jwt: "", // this gets set by the remote_scorer method
             })
                 .then((res: ScoreEstimateResponse) => {
@@ -335,7 +338,7 @@ export class ScoreEstimator {
             this.toggleMetaGroupRemoval(i, j);
         }
 
-        this.estimateScore(this.trials, this.tolerance).catch(() => {
+        this.estimateScore(this.trials, this.tolerance, this.autoscore).catch(() => {
             /* empty */
         });
     }

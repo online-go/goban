@@ -3175,7 +3175,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 this.engine,
                 AUTOSCORE_TRIALS,
                 AUTOSCORE_TOLERANCE,
-                true,
+                true /* prefer remote */,
+                true /* autoscore */,
             );
 
             se.when_ready
@@ -3914,10 +3915,12 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this.showMessage("processing", undefined, -1);
             this.setMode("score estimation", true);
             this.clearMessage();
+            const autoscore = false;
             this.score_estimate = this.engine.estimateScore(
                 SCORE_ESTIMATION_TRIALS,
                 SCORE_ESTIMATION_TOLERANCE,
                 prefer_remote,
+                autoscore,
             );
             this.enableStonePlacement();
             this.redraw(true);
