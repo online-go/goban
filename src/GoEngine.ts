@@ -2800,8 +2800,16 @@ export class GoEngine extends EventEmitter<Events> {
         trials: number,
         tolerance: number,
         prefer_remote: boolean = false,
+        autoscore: boolean = false,
     ): ScoreEstimator {
-        const se = new ScoreEstimator(this.goban_callback, this, trials, tolerance, prefer_remote);
+        const se = new ScoreEstimator(
+            this.goban_callback,
+            this,
+            trials,
+            tolerance,
+            prefer_remote,
+            autoscore,
+        );
         return se.score();
     }
     public getMoveByLocation(x: number, y: number): MoveTree | null {
