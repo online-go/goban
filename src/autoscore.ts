@@ -190,17 +190,13 @@ export function autoscore(
                     isBlack(white_plays_first_ownership[y][x])
                 ) {
                     remove(x, y, "both players agree this is captured by black");
-                }
-
-                if (
+                } else if (
                     board[y][x] === JGOFNumericPlayerColor.BLACK &&
                     isWhite(black_plays_first_ownership[y][x]) &&
                     isWhite(white_plays_first_ownership[y][x])
                 ) {
                     remove(x, y, "both players agree this is captured by white");
-                }
-
-                if (
+                } else if (
                     board[y][x] === JGOFNumericPlayerColor.EMPTY &&
                     isDameOrUnknown(black_plays_first_ownership[y][x]) &&
                     isDameOrUnknown(white_plays_first_ownership[y][x])
@@ -235,15 +231,6 @@ export function autoscore(
                 ) {
                     is_settled[y][x] = 1;
                     settled[y][x] = JGOFNumericPlayerColor.BLACK;
-                }
-
-                if (
-                    isDameOrUnknown(black_plays_first_ownership[y][x]) &&
-                    isDameOrUnknown(white_plays_first_ownership[y][x])
-                ) {
-                    is_settled[y][x] = 1;
-                    settled[y][x] = JGOFNumericPlayerColor.EMPTY;
-                    remove(x, y, "both players agree this is dame");
                 }
             }
         }
