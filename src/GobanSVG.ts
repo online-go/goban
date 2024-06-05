@@ -1659,6 +1659,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
+
+                    if (pos.needs_sealing) {
+                        color = "seal";
+                    }
                 }
 
                 const r = this.square_size * 0.15;
@@ -1678,6 +1682,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 if (color === "dame") {
                     rect.setAttribute("fill-opacity", "0.2");
                     rect.setAttribute("stroke", "#365FE6");
+                }
+                if (color === "seal") {
+                    rect.setAttribute("fill-opacity", "0.8");
+                    rect.setAttribute("fill", "#ff4444");
+                    rect.setAttribute("stroke", "#E079CE");
                 }
                 rect.setAttribute(
                     "stroke-width",
@@ -2298,6 +2307,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
+
+                    if (pos.needs_sealing) {
+                        color = "seal";
+                    }
                 }
 
                 if (

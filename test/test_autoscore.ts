@@ -156,7 +156,7 @@ function test_file(path: string, quiet: boolean): boolean {
 
     /* Ensure all needs_sealing are marked as such */
     for (const [x, y] of res.needs_sealing) {
-        if (data.correct_ownership[y][x] !== "s") {
+        if (data.correct_ownership[y][x] !== "s" && data.correct_ownership[y][x] !== "*") {
             console.error(
                 `Engine thought we needed sealing at ${x},${y} but the that spot wasn't flagged as needing it in the test file`,
             );
@@ -222,6 +222,7 @@ function test_file(path: string, quiet: boolean): boolean {
                     const v = scored_board[y][x];
                     const m =
                         data.correct_ownership[y][x] === "*" ||
+                        (v === 0 && data.correct_ownership[y][x] === "s") ||
                         (v === 0 && data.correct_ownership[y][x] === " ") ||
                         (v === 1 && data.correct_ownership[y][x] === "B") ||
                         (v === 2 && data.correct_ownership[y][x] === "W");
@@ -266,12 +267,14 @@ function test_file(path: string, quiet: boolean): boolean {
             print_mismatches(matches);
             console.log("");
 
+            /*
             console.log("Removed");
             for (const [x, y, reason] of res.removed) {
                 console.log(
                     `  ${"ABCDEFGHJKLMNOPQRSTUVWXYZ"[x]}${data.board.length - y}: ${reason}`,
                 );
             }
+            */
 
             console.log(`<<< ${path} failed`);
             console.log(`<<< ${path} failed`);
@@ -345,7 +348,7 @@ function print_expected(board: string[]) {
             } else if (c === " ") {
                 out += clc.blue(".");
             } else if (c === "*") {
-                out += clc.yellow(" ");
+                out += clc.yellow("*");
             } else if (c === "s") {
                 out += clc.magenta("s");
             } else {
