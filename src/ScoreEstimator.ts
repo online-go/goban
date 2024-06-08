@@ -341,7 +341,6 @@ export class ScoreEstimator {
         return ret;
     }
     handleClick(i: number, j: number, mod_key: boolean, press_duration_ms: number): void {
-        console.log(i, j, mod_key, press_duration_ms);
         if (mod_key || press_duration_ms > 500) {
             this.toggleSingleGroupRemoval(i, j, true);
         } else {

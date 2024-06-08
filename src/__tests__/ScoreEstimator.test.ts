@@ -233,8 +233,8 @@ describe("ScoreEstimator", () => {
 
     test("score() with removed stones", async () => {
         const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
-        se.toggleMetaGroupRemoval(1, 0);
-        se.toggleMetaGroupRemoval(2, 0);
+        se.toggleSingleGroupRemoval(1, 0);
+        se.toggleSingleGroupRemoval(2, 0);
         await se.when_ready;
 
         se.score();
@@ -261,8 +261,8 @@ describe("ScoreEstimator", () => {
 
     test("getStoneRemovalString()", async () => {
         const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
-        se.toggleMetaGroupRemoval(1, 0);
-        se.toggleMetaGroupRemoval(2, 0);
+        se.toggleSingleGroupRemoval(1, 0);
+        se.toggleSingleGroupRemoval(2, 0);
         await se.when_ready;
 
         expect(se.getStoneRemovalString()).toBe("babbcacb");
@@ -354,8 +354,8 @@ describe("ScoreEstimator", () => {
         const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
         await se.when_ready;
 
-        se.handleClick(1, 0, false);
-        se.handleClick(2, 0, false);
+        se.handleClick(1, 0, false, 0);
+        se.handleClick(2, 0, false, 0);
         expect(se.removal).toEqual([
             [0, 1, 1, 0],
             [0, 1, 1, 0],
@@ -369,10 +369,22 @@ describe("ScoreEstimator", () => {
         const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
         await se.when_ready;
 
-        se.handleClick(1, 0, true);
+        se.handleClick(1, 0, true, 0);
         expect(se.removal).toEqual([
             [0, 1, 0, 0],
-            [0, 0, 0, 0],
+            [0, 1, 0, 0],
+        ]);
+    });
+
+    test("long press", async () => {
+        set_local_scorer(estimateScoreVoronoi);
+        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        await se.when_ready;
+
+        se.handleClick(1, 0, false, 1000);
+        expect(se.removal).toEqual([
+            [0, 1, 0, 0],
+            [0, 1, 0, 0],
         ]);
     });
 
