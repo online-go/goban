@@ -45,7 +45,7 @@
     "homepage": "https://github.com/online-go/goban#readme",
     "devDependencies": {
         "@types/cli-color": "^2.0.6",
-        "@types/jest": "^29.5.0",
+        "@types/jest": "^29.5.12",
         "@types/node": "^18.15.5",
         "@types/react": "^18.0.28",
         "@types/react-dom": "^18.0.11",
@@ -76,7 +76,7 @@
         "react-dom": "^18.2.0",
         "svg-inline-loader": "0.8.2",
         "thread-loader": "^3.0.4",
-        "ts-jest": "^29.1.1",
+        "ts-jest": "^29.1.4",
         "ts-loader": "^9.5.0",
         "ts-node": "^10.9.1",
         "tslint": "^6.1.3",
