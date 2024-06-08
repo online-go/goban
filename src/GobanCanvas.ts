@@ -149,7 +149,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     constructor(config: GobanCanvasConfig, preloaded_data?: AdHocFormat | JGOF) {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
-        console.info("GobanCanvas created");
 
         // console.log("Goban canvas v 0.5.74.debug 5"); // GaJ: I use this to be sure I have linked & loaded the updates
         if (config.board_div) {

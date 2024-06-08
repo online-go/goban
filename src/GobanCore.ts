@@ -4104,11 +4104,15 @@ class FocusTracker {
     constructor() {
         try {
             if (CLIENT) {
-                window.addEventListener("blur", this.onBlur);
-                window.addEventListener("focus", this.onFocus);
+                try {
+                    window.addEventListener("blur", this.onBlur);
+                    window.addEventListener("focus", this.onFocus);
+                } catch (e) {
+                    console.error(e);
+                }
             }
         } catch (e) {
-            console.error(e);
+            // no CLIENT defined, no problem
         }
     }
 

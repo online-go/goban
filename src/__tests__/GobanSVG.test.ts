@@ -312,20 +312,20 @@ describe("onTap", () => {
             [0, 1, 2, 0],
         ]);
 
-        simulateMouseClick(event_layer, { x: 0, y: 0 });
+        simulateMouseClick(event_layer, { x: 1, y: 0 });
 
         await expect(socket_server).toReceiveMessage(
             expect.arrayContaining([
                 "game/removed_stones/set",
                 expect.objectContaining({
                     removed: true,
-                    stones: "aaab",
+                    stones: "babb",
                 }),
             ]),
         );
     });
 
-    test("Shift-Clicking during stone removal toggles one stone", async () => {
+    test("Shift-Clicking during stone removal toggles the group ", async () => {
         const goban = new GobanSVG(basicScorableBoardConfig({ phase: "stone removal" }));
         const event_layer = goban.event_layer;
 
@@ -338,7 +338,7 @@ describe("onTap", () => {
 
         event_layer.dispatchEvent(
             new MouseEvent("click", {
-                clientX: 15,
+                clientX: 15 + TEST_SQUARE_SIZE,
                 clientY: 15,
                 shiftKey: true,
             }),
@@ -349,7 +349,7 @@ describe("onTap", () => {
                 "game/removed_stones/set",
                 expect.objectContaining({
                     removed: true,
-                    stones: "aa",
+                    stones: "babb",
                 }),
             ]),
         );
@@ -399,7 +399,7 @@ describe("onTap", () => {
                 "game/removed_stones/set",
                 expect.objectContaining({
                     removed: true,
-                    stones: "babbbabbbbba",
+                    stones: "babb",
                 }),
             ]),
         );
@@ -428,6 +428,7 @@ describe("onTap", () => {
         expect(goban.engine.estimateScore).toBeCalledWith(
             SCORE_ESTIMATION_TRIALS,
             SCORE_ESTIMATION_TOLERANCE,
+            false,
             false,
         );
         (goban.engine.estimateScore as jest.Mock).mockClear();

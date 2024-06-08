@@ -155,14 +155,14 @@ describe("computeScore", () => {
 
         expect(engine.computeScore()).toEqual({
             black: expect.objectContaining({
-                scoring_positions: "aaabacadbabbbcbd",
+                scoring_positions: "aabaabbbacbcadbd",
                 stones: 4,
                 territory: 4,
                 total: 8,
             }),
             white: expect.objectContaining({
                 komi: 7.5,
-                scoring_positions: "dadbdcddcacbcccd",
+                scoring_positions: "cadacbdbccdccddd",
                 stones: 4,
                 territory: 4,
                 total: 15.5,
@@ -188,7 +188,7 @@ describe("computeScore", () => {
         expect(engine.computeScore()).toEqual({
             black: expect.objectContaining({
                 prisoners: 0,
-                scoring_positions: "aaabacadbabbbcbd",
+                scoring_positions: "aabaabbbacbcadbd",
                 stones: 4,
                 territory: 4,
                 total: 8,
@@ -196,7 +196,7 @@ describe("computeScore", () => {
             white: expect.objectContaining({
                 prisoners: 0,
                 komi: 7.5,
-                scoring_positions: "dadbdcddcacbcccd",
+                scoring_positions: "cadacbdbccdccddd",
                 stones: 4,
                 territory: 4,
                 total: 15.5,
@@ -662,7 +662,7 @@ describe("groups", () => {
         expect(on_removal_updated).toBeCalledTimes(0);
     });
 
-    test("toggleMetagroupRemoval empty area", () => {
+    test("toggleMetagroupRemoval empty area doesn't do anything", () => {
         const engine = new GoEngine({
             width: 4,
             height: 2,
@@ -670,20 +670,15 @@ describe("groups", () => {
         });
 
         /*   A B C D
-         * 4 x . o .
-         * 3 . x o .
-         * 2 . . o .
-         * 1 . . o x
+         * 2 x . o .
+         * 1 . x o .
          */
 
         const on_removal_updated = jest.fn();
         engine.addListener("stone-removal.updated", on_removal_updated);
 
-        expect(engine.toggleMetaGroupRemoval(0, 1)).toEqual([
-            [1, [{ x: 0, y: 1 }]],
-            [0, []],
-        ]);
-        expect(on_removal_updated).toBeCalledTimes(1);
+        expect(engine.toggleMetaGroupRemoval(0, 1)).toEqual([[0, []]]);
+        expect(on_removal_updated).toBeCalledTimes(0);
     });
 
     test("clearRemoved", () => {

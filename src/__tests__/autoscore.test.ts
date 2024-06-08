@@ -30,7 +30,12 @@ describe("Auto-score tests ", () => {
             expect(data.correct_ownership).toBeDefined();
             for (const row of data.correct_ownership) {
                 for (const cell of row) {
-                    const is_w_or_b = cell === "W" || cell === "B" || cell === " " || cell === "*";
+                    const is_w_or_b =
+                        cell === "W" ||
+                        cell === "B" ||
+                        cell === " " ||
+                        cell === "*" ||
+                        cell === "s";
                     expect(is_w_or_b).toBe(true);
                 }
             }
@@ -49,9 +54,21 @@ describe("Auto-score tests ", () => {
                     const v = res.result[y][x];
                     match &&=
                         data.correct_ownership[y][x] === "*" ||
+                        data.correct_ownership[y][x] === "s" ||
                         (v === 0 && data.correct_ownership[y][x] === " ") ||
                         (v === 1 && data.correct_ownership[y][x] === "B") ||
                         (v === 2 && data.correct_ownership[y][x] === "W");
+                }
+            }
+
+            const needs_sealing = res.needs_sealing;
+            /* Ensure all needs_sealing are marked as such */
+            for (const { x, y } of needs_sealing) {
+                if (data.correct_ownership[y][x] !== "s" && data.correct_ownership[y][x] !== "*") {
+                    console.error(
+                        `Engine thought we needed sealing at ${x},${y} but the that spot wasn't flagged as needing it in the test file`,
+                    );
+                    match = false;
                 }
             }
 

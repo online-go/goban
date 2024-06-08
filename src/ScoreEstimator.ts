@@ -309,6 +309,9 @@ export class ScoreEstimator {
             console.info("Returning autoscored_removed for getProbablyDead");
             return this.autoscored_removed.map(encodeMove).join("");
         } else {
+            // This still happens with local scoring I believe, we should probably run the autoscore
+            // logic for local scoring and ensure the autoscore_removed field is always set, then
+            // remove this probably dead code all together.
             console.warn("Not able to use autoscored_removed for getProbablyDead");
         }
 

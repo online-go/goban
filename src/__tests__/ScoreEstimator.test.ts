@@ -66,7 +66,13 @@ describe("ScoreEstimator", () => {
 
     beforeEach(() => {
         set_remote_scorer(async () => {
-            return { ownership: OWNERSHIP, score: -7.5 };
+            return {
+                ownership: OWNERSHIP,
+                score: -7.5,
+                autoscored_board_state: OWNERSHIP,
+                autoscored_removed: [],
+                autoscored_needs_sealing: [],
+            };
         });
 
         set_local_scorer(estimateScoreVoronoi);
@@ -324,6 +330,9 @@ describe("ScoreEstimator", () => {
 
         set_remote_scorer(async () => ({
             ownership: OWNERSHIP,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
         }));
 
         const se = new ScoreEstimator(undefined, engine, 10, 0.5, true);

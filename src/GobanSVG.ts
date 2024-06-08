@@ -154,7 +154,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     constructor(config: GobanSVGConfig, preloaded_data?: AdHocFormat | JGOF) {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
-        console.info("GobanSVG created");
 
         if (config.board_div) {
             this.parent = config["board_div"];
@@ -1654,7 +1653,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     if (transparent) {
                         cross.setAttribute("stroke-opacity", "0.6");
                     }
-                    console.log("Drawing removal cross");
 
                     cell.appendChild(cross);
                 }
