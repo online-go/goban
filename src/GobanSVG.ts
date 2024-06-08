@@ -300,8 +300,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         let dragging = false;
 
         let last_click_square = this.xy2ij(0, 0);
+        let pointer_down_timestamp = 0;
 
         const pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
+            const press_duration_ms = performance.now() - pointer_down_timestamp;
             try {
                 if (!dragging) {
                     return;
@@ -361,7 +363,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         }
                     }
 
-                    this.onTap(ev, double_clicked, right_click);
+                    this.onTap(ev, double_clicked, right_click, press_duration_ms);
                     this.onMouseOut(ev);
                 }
             } catch (e) {
@@ -370,6 +372,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         };
 
         const pointerDown = (ev: MouseEvent | TouchEvent): void => {
+            pointer_down_timestamp = performance.now();
             try {
                 dragging = true;
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
@@ -700,7 +703,12 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.pen_layer?.appendChild(path_element);
         }
     }
-    private onTap(event: MouseEvent | TouchEvent, double_tap: boolean, right_click: boolean): void {
+    private onTap(
+        event: MouseEvent | TouchEvent,
+        double_tap: boolean,
+        right_click: boolean,
+        press_duration_ms: number,
+    ): void {
         if (
             !(
                 this.stone_placement_enabled &&
@@ -807,11 +815,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             ) {
                 let removed: 0 | 1;
                 let group: Group;
-                if (event.shiftKey) {
-                    removed = !this.engine.removal[y][x] ? 1 : 0;
-                    group = [{ x, y }];
+                if (event.shiftKey || press_duration_ms > 500) {
+                    //[[removed, group]] = this.engine.toggleMetaGroupRemoval(x, y);
+                    [[removed, group]] = this.engine.toggleSingleGroupRemoval(x, y, true);
                 } else {
-                    [[removed, group]] = this.engine.toggleMetaGroupRemoval(x, y);
+                    [[removed, group]] = this.engine.toggleSingleGroupRemoval(x, y);
                 }
 
                 if (group.length) {
@@ -1472,7 +1480,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     transparent = true;
                 } else if (
                     this.engine &&
-                    (this.engine.phase === "stone removal" ||
+                    ((this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move) ||
                         (this.engine.phase === "finished" && this.mode !== "analyze")) &&
                     this.engine.board &&
                     this.engine.removal &&
@@ -1618,6 +1627,37 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
                     cell.appendChild(circ);
                 }
+
+                /* Red X if the stone is marked for removal */
+                if (
+                    this.engine &&
+                    this.engine.phase === "stone removal" &&
+                    this.engine.last_official_move === this.engine.cur_move &&
+                    this.engine.board[j][i] &&
+                    this.engine.removal[j][i]
+                ) {
+                    const r = Math.max(1, this.metrics.mid * 0.75);
+                    const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    cross.setAttribute("class", "removal-cross");
+                    cross.setAttribute("stroke", "#ff0000");
+                    cross.setAttribute("stroke-width", `${this.square_size * 0.125}px`);
+                    cross.setAttribute("fill", "none");
+                    cross.setAttribute(
+                        "d",
+                        `
+                    M ${cx - r} ${cy - r}
+                    L ${cx + r} ${cy + r}
+                    M ${cx + r} ${cy - r}
+                    L ${cx - r} ${cy + r}
+                `,
+                    );
+                    if (transparent) {
+                        cross.setAttribute("stroke-opacity", "0.6");
+                    }
+                    console.log("Drawing removal cross");
+
+                    cell.appendChild(cross);
+                }
             }
         }
 
@@ -1633,7 +1673,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
-                    this.engine.removal[j][i])
+                    (this.engine.removal[j][i] || pos.needs_sealing))
             ) {
                 let color = pos.score;
                 if (
@@ -1659,10 +1699,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
+                }
 
-                    if (pos.needs_sealing) {
-                        color = "seal";
-                    }
+                if (pos.needs_sealing) {
+                    color = "seal";
                 }
 
                 const r = this.square_size * 0.15;
@@ -2281,7 +2321,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
-                    this.engine.removal[j][i])
+                    (this.engine.removal[j][i] || pos.needs_sealing))
             ) {
                 let color = pos.score;
                 if (
@@ -2307,10 +2347,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
+                }
 
-                    if (pos.needs_sealing) {
-                        color = "seal";
-                    }
+                if (pos.needs_sealing) {
+                    color = "seal";
                 }
 
                 if (

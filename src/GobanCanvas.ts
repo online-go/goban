@@ -343,8 +343,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         let dragging = false;
 
         let last_click_square = this.xy2ij(0, 0);
+        let pointer_down_timestamp = 0;
 
         const pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
+            const press_duration_ms = performance.now() - pointer_down_timestamp;
             try {
                 if (!dragging) {
                     /* if we didn't start the click in the canvas, don't respond to it */
@@ -405,7 +407,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         }
                     }
 
-                    this.onTap(ev, double_clicked, right_click);
+                    this.onTap(ev, double_clicked, right_click, press_duration_ms);
                     this.onMouseOut(ev);
                 }
             } catch (e) {
@@ -414,6 +416,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         };
 
         const pointerDown = (ev: MouseEvent | TouchEvent): void => {
+            pointer_down_timestamp = performance.now();
             try {
                 dragging = true;
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
@@ -728,7 +731,12 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             this.pen_ctx.stroke();
         }
     }
-    private onTap(event: MouseEvent | TouchEvent, double_tap: boolean, right_click: boolean): void {
+    private onTap(
+        event: MouseEvent | TouchEvent,
+        double_tap: boolean,
+        right_click: boolean,
+        press_duration_ms: number,
+    ): void {
         if (
             !(
                 this.stone_placement_enabled &&
@@ -835,11 +843,11 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             ) {
                 let removed: 0 | 1;
                 let group: Group;
-                if (event.shiftKey) {
-                    removed = !this.engine.removal[y][x] ? 1 : 0;
-                    group = [{ x, y }];
+                if (event.shiftKey || press_duration_ms > 500) {
+                    //[[removed, group]] = this.engine.toggleMetaGroupRemoval(x, y);
+                    [[removed, group]] = this.engine.toggleSingleGroupRemoval(x, y, true);
                 } else {
-                    [[removed, group]] = this.engine.toggleMetaGroupRemoval(x, y);
+                    [[removed, group]] = this.engine.toggleSingleGroupRemoval(x, y);
                 }
 
                 if (group.length) {
@@ -1551,7 +1559,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     transparent = true;
                 } else if (
                     this.engine &&
-                    (this.engine.phase === "stone removal" ||
+                    ((this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move) ||
                         (this.engine.phase === "finished" && this.mode !== "analyze")) &&
                     this.engine.board &&
                     this.engine.removal &&
@@ -1703,6 +1712,32 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     }
                     ctx.restore();
                 }
+
+                /* Red X if the stone is marked for removal */
+                if (
+                    this.engine &&
+                    this.engine.phase === "stone removal" &&
+                    this.engine.last_official_move === this.engine.cur_move &&
+                    this.engine.board[j][i] &&
+                    this.engine.removal[j][i]
+                ) {
+                    ctx.lineCap = "square";
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.lineWidth = this.square_size * 0.125;
+                    if (transparent) {
+                        ctx.globalAlpha = 0.6;
+                    }
+                    const r = Math.max(1, this.metrics.mid * 0.65);
+                    ctx.moveTo(cx - r, cy - r);
+                    ctx.lineTo(cx + r, cy + r);
+                    ctx.moveTo(cx + r, cy - r);
+                    ctx.lineTo(cx - r, cy + r);
+                    ctx.strokeStyle = "#ff0000";
+                    ctx.stroke();
+                    ctx.restore();
+                    draw_last_move = false;
+                }
             }
         }
 
@@ -1718,7 +1753,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
-                    this.engine.removal[j][i])
+                    (this.engine.removal[j][i] || pos.needs_sealing))
             ) {
                 ctx.beginPath();
 
@@ -1746,9 +1781,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
-                    if (pos.needs_sealing) {
-                        color = "seal";
-                    }
+                }
+
+                if (pos.needs_sealing) {
+                    color = "seal";
                 }
 
                 if (color === "white") {
@@ -2344,7 +2380,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
-                    this.engine.removal[j][i])
+                    (this.engine.removal[j][i] || pos.needs_sealing))
             ) {
                 let color = pos.score;
                 if (
@@ -2370,10 +2406,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = "dame";
+                }
 
-                    if (pos.needs_sealing) {
-                        color = "seal";
-                    }
+                if (pos.needs_sealing) {
+                    color = "seal";
                 }
 
                 if (

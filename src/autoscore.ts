@@ -22,15 +22,15 @@
  */
 
 import { GoStoneGroups } from "./GoStoneGroups";
-import { JGOFNumericPlayerColor } from "./JGOF";
+import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./JGOF";
 import { char2num, makeMatrix, num2char, pretty_coor_num2ch } from "./GoMath";
-import { GoEngine, GoEngineInitialState } from "./GoEngine";
+import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GoEngine";
 
 interface AutoscoreResults {
     result: JGOFNumericPlayerColor[][];
-    removed_string: string;
-    removed: [number, number, /* reason */ string][];
-    needs_sealing: [number, number][];
+    sealed_result: JGOFNumericPlayerColor[][];
+    removed: JGOFMove[];
+    needs_sealing: JGOFSealingIntersection[];
 }
 
 const REMOVAL_THRESHOLD = 0.7;
@@ -50,19 +50,21 @@ function isBlack(ownership: number): boolean {
 
 export function autoscore(
     board: JGOFNumericPlayerColor[][],
+    rules: GoEngineRules,
     black_plays_first_ownership: number[][],
     white_plays_first_ownership: number[][],
 ): [AutoscoreResults, DebugOutput] {
     const original_board = board.map((row) => row.slice()); // copy
     const width = board[0].length;
     const height = board.length;
-    const removed: [number, number, string][] = [];
+    const removed: JGOFMove[] = [];
     const removal = makeMatrix(width, height);
     const is_settled = makeMatrix(width, height);
     const settled = makeMatrix(width, height);
     const final_ownership = makeMatrix(board[0].length, board.length);
+    const final_sealed_ownership = makeMatrix(board[0].length, board.length);
     const sealed = makeMatrix(width, height);
-    const needs_sealing: [number, number][] = [];
+    const needs_sealing: JGOFSealingIntersection[] = [];
 
     const average_ownership = makeMatrix(width, height);
     for (let y = 0; y < height; ++y) {
@@ -89,17 +91,22 @@ export function autoscore(
     debug_groups("Groups", groups);
 
     // Perform our removal logic
+    settle_agreed_upon_stones();
     settle_agreed_upon_territory();
     remove_obviously_dead_stones();
-    settle_agreed_upon_territory();
     clear_unsettled_stones_from_territory();
     seal_territory();
     score_positions();
 
+    stage("Final state");
+    debug_board_output("Final ownership", final_ownership);
+    debug_boolean_board("Sealed", sealed, "s");
+    debug_board_output("Final sealed ownership", final_sealed_ownership);
+
     return [
         {
             result: final_ownership,
-            removed_string: removed.map((pt) => `${num2char(pt[0])}${num2char(pt[1])}`).join(""),
+            sealed_result: final_sealed_ownership,
             removed,
             needs_sealing,
         },
@@ -107,15 +114,15 @@ export function autoscore(
     ];
 
     /** Marks a position as being removed (either dead stone or dame) */
-    function remove(x: number, y: number, reason: string) {
+    function remove(x: number, y: number, removal_reason: string) {
         if (removal[y][x]) {
             return;
         }
 
-        removed.push([x, y, reason]);
+        removed.push({ x, y, removal_reason });
         board[y][x] = JGOFNumericPlayerColor.EMPTY;
         removal[y][x] = 1;
-        stage_log(`Removing ${pretty_coor_num2ch(x)}${height - y}: ${reason}`);
+        stage_log(`Removing ${pretty_coor_num2ch(x)}${height - y}: ${removal_reason}`);
     }
 
     /*
@@ -181,6 +188,38 @@ export function autoscore(
     }
 
     /*
+     * If both players agree on the ownership of certain stones,
+     * mark them as settled.
+     */
+    function settle_agreed_upon_stones() {
+        stage("Marking settled stones");
+        for (let y = 0; y < height; ++y) {
+            for (let x = 0; x < width; ++x) {
+                if (
+                    board[y][x] === JGOFNumericPlayerColor.WHITE &&
+                    isWhite(black_plays_first_ownership[y][x]) &&
+                    isWhite(white_plays_first_ownership[y][x])
+                ) {
+                    is_settled[y][x] = 1;
+                    settled[y][x] = JGOFNumericPlayerColor.WHITE;
+                }
+
+                if (
+                    board[y][x] === JGOFNumericPlayerColor.BLACK &&
+                    isBlack(black_plays_first_ownership[y][x]) &&
+                    isBlack(white_plays_first_ownership[y][x])
+                ) {
+                    is_settled[y][x] = 1;
+                    settled[y][x] = JGOFNumericPlayerColor.BLACK;
+                }
+            }
+        }
+
+        debug_boolean_board("Settled", is_settled);
+        debug_board_output("Resulting board", board);
+    }
+
+    /*
      * Remove obviously dead stones
      *
      * If we estimate that if either player moves first, yet a stone
@@ -188,7 +227,7 @@ export function autoscore(
      * function detects these cases and removes the stones.
      */
     function remove_obviously_dead_stones() {
-        stage("Removing stones both agree on:");
+        stage("Removing stones both estimates agree upon");
         for (let y = 0; y < height; ++y) {
             for (let x = 0; x < width; ++x) {
                 if (
@@ -204,15 +243,6 @@ export function autoscore(
                 ) {
                     remove(x, y, "both players agree this is captured by white");
                 }
-                /*
-                else if (
-                    board[y][x] === JGOFNumericPlayerColor.EMPTY &&
-                    isDameOrUnknown(black_plays_first_ownership[y][x]) &&
-                    isDameOrUnknown(white_plays_first_ownership[y][x])
-                ) {
-                    remove(x, y, "both players agree this is dame");
-                }
-                */
             }
         }
         debug_boolean_board("Removed", removal, "x");
@@ -406,6 +436,11 @@ export function autoscore(
                     const avg = total_ownership / group.points.length;
 
                     if (avg <= WHITE_SEAL_THRESHOLD || avg >= BLACK_SEAL_THRESHOLD) {
+                        const color =
+                            avg <= WHITE_SEAL_THRESHOLD
+                                ? JGOFNumericPlayerColor.WHITE
+                                : JGOFNumericPlayerColor.BLACK;
+
                         group.foreachStone((point) => {
                             const x = point.x;
                             const y = point.y;
@@ -422,11 +457,11 @@ export function autoscore(
                                 board[y][x - 1] === opposing_color;
 
                             if (adjacent_to_opposing_color) {
-                                remove(x, y, "sealing territory");
+                                //remove(x, y, "sealing territory");
                                 is_settled[y][x] = 1;
                                 settled[y][x] = JGOFNumericPlayerColor.EMPTY;
                                 sealed[y][x] = 1;
-                                needs_sealing.push([x, y]);
+                                needs_sealing.push({ x, y, color });
                             }
                         });
                     }
@@ -448,6 +483,7 @@ export function autoscore(
         }
     }
 
+    /** Compute our final ownership and scoring positions */
     function score_positions() {
         stage("Score positions");
         let black_state = "";
@@ -465,61 +501,124 @@ export function autoscore(
             }
         }
 
-        const initial_state: GoEngineInitialState = {
+        const sealed_black_state =
+            black_state +
+            needs_sealing
+                .filter((s) => s.color === JGOFNumericPlayerColor.BLACK)
+                .map((p) => num2char(p.x) + num2char(p.y))
+                .join("");
+        const sealed_white_state =
+            white_state +
+            needs_sealing
+                .filter((s) => s.color === JGOFNumericPlayerColor.WHITE)
+                .map((p) => num2char(p.x) + num2char(p.y))
+                .join("");
+
+        const real_initial_state: GoEngineInitialState = {
             black: black_state,
             white: white_state,
         };
+        const sealed_initial_state: GoEngineInitialState = {
+            black: sealed_black_state,
+            white: sealed_white_state,
+        };
 
-        const removed_string = removed.map((pt) => `${num2char(pt[0])}${num2char(pt[1])}`).join("");
+        for (const initial_state of [sealed_initial_state, real_initial_state]) {
+            const cur_ownership = makeMatrix(width, height);
 
-        const engine = new GoEngine({
-            width: original_board[0].length,
-            height: original_board.length,
-            initial_state,
-            rules: "japanese", // so we can test seki code
-            removed: removed_string,
-        });
+            const engine = new GoEngine({
+                width: original_board[0].length,
+                height: original_board.length,
+                initial_state,
+                rules,
+                removed,
+            });
 
-        const score = engine.computeScore();
-        const scoring_positions = makeMatrix(width, height);
+            const board = engine.board.map((row) => row.slice());
+            removed.map((pt) => (board[pt.y][pt.x] = 0));
 
-        for (let i = 0; i < score.black.scoring_positions.length; i += 2) {
-            const x = char2num(score.black.scoring_positions[i]);
-            const y = char2num(score.black.scoring_positions[i + 1]);
-            final_ownership[y][x] = JGOFNumericPlayerColor.BLACK;
-            scoring_positions[y][x] = JGOFNumericPlayerColor.BLACK;
-        }
-        for (let i = 0; i < score.white.scoring_positions.length; i += 2) {
-            const x = char2num(score.white.scoring_positions[i]);
-            const y = char2num(score.white.scoring_positions[i + 1]);
-            final_ownership[y][x] = JGOFNumericPlayerColor.WHITE;
-            scoring_positions[y][x] = JGOFNumericPlayerColor.WHITE;
-        }
+            const score = engine.computeScore();
+            const scoring_positions = makeMatrix(width, height);
 
-        for (let y = 0; y < board.length; ++y) {
-            for (let x = 0; x < board[y].length; ++x) {
-                if (board[y][x] !== JGOFNumericPlayerColor.EMPTY) {
-                    final_ownership[y][x] = board[y][x];
+            for (let i = 0; i < score.black.scoring_positions.length; i += 2) {
+                const x = char2num(score.black.scoring_positions[i]);
+                const y = char2num(score.black.scoring_positions[i + 1]);
+                cur_ownership[y][x] = JGOFNumericPlayerColor.BLACK;
+                scoring_positions[y][x] = JGOFNumericPlayerColor.BLACK;
+            }
+            for (let i = 0; i < score.white.scoring_positions.length; i += 2) {
+                const x = char2num(score.white.scoring_positions[i]);
+                const y = char2num(score.white.scoring_positions[i + 1]);
+                cur_ownership[y][x] = JGOFNumericPlayerColor.WHITE;
+                scoring_positions[y][x] = JGOFNumericPlayerColor.WHITE;
+            }
+
+            for (let y = 0; y < board.length; ++y) {
+                for (let x = 0; x < board[y].length; ++x) {
+                    if (board[y][x] !== JGOFNumericPlayerColor.EMPTY) {
+                        cur_ownership[y][x] = board[y][x];
+                    }
                 }
             }
+
+            const groups = new GoStoneGroups(
+                {
+                    width,
+                    height,
+                    board,
+                    removal,
+                },
+                engine.board,
+            );
+
+            if (initial_state === real_initial_state) {
+                substage("Unsealed");
+                for (let y = 0; y < cur_ownership.length; ++y) {
+                    final_ownership[y] = cur_ownership[y].slice();
+                }
+            } else {
+                substage("Sealed");
+                for (let y = 0; y < cur_ownership.length; ++y) {
+                    final_sealed_ownership[y] = cur_ownership[y].slice();
+                }
+            }
+
+            debug_groups("groups", groups);
+            debug_board_output(`Scoring positions (${rules})`, scoring_positions);
+            debug_board_output("Board", board);
+            debug_board_output("Ownership", cur_ownership);
         }
+        //debug_boolean_board("Sealed", sealed, "s");
 
-        const groups = new GoStoneGroups(
-            {
-                width,
-                height,
-                board,
-                removal,
-            },
-            original_board,
-        );
+        const print_final_ownership_string = false;
+        // aid while correcting and forming the test files
+        if (print_final_ownership_string) {
+            let ownership_string = '\n  "correct_ownership": [\n';
+            for (let y = 0; y < final_ownership.length; ++y) {
+                ownership_string += '    "';
+                for (let x = 0; x < final_ownership[y].length; ++x) {
+                    if (sealed[y][x]) {
+                        ownership_string += "s";
+                    } else {
+                        ownership_string +=
+                            final_ownership[y][x] === 1
+                                ? "B"
+                                : final_ownership[y][x] === 2
+                                  ? "W"
+                                  : " ";
+                    }
+                }
+                if (y !== final_ownership.length - 1) {
+                    ownership_string += '",\n';
+                } else {
+                    ownership_string += '"\n';
+                }
+            }
 
-        debug_groups("groups", groups);
+            ownership_string += "  ]\n";
 
-        debug_board_output("Scoring positions (JP)", scoring_positions);
-        debug_board_output("Board", board);
-        debug_board_output("Final ownership", final_ownership);
-        debug_boolean_board("Sealed", sealed, "s");
+            stage_log(ownership_string);
+        }
     }
 }
 
@@ -813,6 +912,17 @@ let current_stage_log = "";
 function stage(name: string) {
     end_stage();
     current_stage = name;
+    const title_line = `####   ${current_stage}   ####`;
+    const pounds = "#".repeat(title_line.length);
+    final_output += `\n\n${pounds}\n${title_line}\n${pounds}\n\n`;
+}
+
+function substage(name: string) {
+    end_stage();
+
+    current_stage = name;
+    const title_line = `====   ${current_stage}   ====`;
+    final_output += `${title_line}\n\n`;
 }
 
 function stage_log(str: string) {
@@ -826,54 +936,55 @@ function end_stage() {
         return;
     }
 
-    const title_line = `####   ${current_stage}   ####`;
-    const pounds = "#".repeat(title_line.length);
-    final_output += `\n\n${pounds}\n${title_line}\n${pounds}\n\n`;
     current_stage = "";
 
-    const wide_lines: string[] = [];
-    const str_grid: string[][] = [];
-    const segment_length = 30;
+    const boards_per_line = 5;
 
-    for (let x = 0; x < board_outputs.length; ++x) {
-        const lines = board_outputs[x].split("\n");
-        for (let y = 0; y < lines.length; ++y) {
-            if (!str_grid[y]) {
-                str_grid[y] = [];
+    while (board_outputs.length > 0) {
+        const wide_lines: string[] = [];
+        const str_grid: string[][] = [];
+        const segment_length = 30;
+
+        for (let x = 0; x < board_outputs.length && x < boards_per_line; ++x) {
+            const lines = board_outputs[x].split("\n");
+            for (let y = 0; y < lines.length; ++y) {
+                if (!str_grid[y]) {
+                    str_grid[y] = [];
+                }
+                str_grid[y][x] = lines[y];
             }
-            str_grid[y][x] = lines[y];
         }
-    }
 
-    for (let y = 0; y < str_grid.length; ++y) {
-        let line = "";
-        for (let x = 0; x < str_grid[y].length; ++x) {
-            //const segment = str_grid[y][x] ?? "";
-            /*
+        board_outputs = board_outputs.slice(boards_per_line);
+
+        for (let y = 0; y < str_grid.length; ++y) {
+            let line = "";
+            for (let x = 0; x < str_grid[y].length; ++x) {
+                //const segment = str_grid[y][x] ?? "";
+                /*
             const segment =
                 ((str_grid[y][x] ?? "") + " ".repeat(segment_length)).substr(segment_length) + " ";
             line += segment;
             */
-            const num_color_code_characters = count_color_code_characters(str_grid[y][x] ?? "");
-            const length_without_color_codes =
-                (str_grid[y][x]?.length ?? 0) - num_color_code_characters;
-            if (length_without_color_codes < 0) {
-                throw new Error("length_without_color_codes < 0");
+                const num_color_code_characters = count_color_code_characters(str_grid[y][x] ?? "");
+                const length_without_color_codes =
+                    (str_grid[y][x]?.length ?? 0) - num_color_code_characters;
+                if (length_without_color_codes < 0) {
+                    throw new Error("length_without_color_codes < 0");
+                }
+                line +=
+                    (str_grid[y][x] ?? "") +
+                    " ".repeat(Math.max(0, segment_length - length_without_color_codes)) +
+                    " ";
             }
-            line +=
-                (str_grid[y][x] ?? "") +
-                " ".repeat(Math.max(0, segment_length - length_without_color_codes)) +
-                " ";
+            final_output += line + "\n";
+            //wide_lines.push(line);
         }
-        final_output += line + "\n";
-        //wide_lines.push(line);
-    }
 
-    for (let i = 0; i < wide_lines.length; ++i) {
-        final_output += wide_lines[i] + "\n";
+        for (let i = 0; i < wide_lines.length; ++i) {
+            final_output += wide_lines[i] + "\n";
+        }
     }
-
-    board_outputs = [];
 
     if (current_stage_log) {
         final_output += "\n\nLog:\n" + current_stage_log + "\n";

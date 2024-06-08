@@ -21,7 +21,7 @@ import { GoStoneGroup } from "./GoStoneGroup";
 import { GoStoneGroups } from "./GoStoneGroups";
 import { GobanCore } from "./GobanCore";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
-import { JGOFNumericPlayerColor } from "./JGOF";
+import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./JGOF";
 import { _ } from "./translate";
 import { estimateScoreWasm } from "./local_estimators/wasm_estimator";
 
@@ -64,10 +64,10 @@ export interface ScoreEstimateResponse {
     autoscored_board_state?: JGOFNumericPlayerColor[][];
 
     /** Intersections that are dead or dame.  Only defined if autoscore was true in the request. */
-    autoscored_removed?: string;
+    autoscored_removed?: JGOFMove[];
 
     /** Coordinates that still need sealing */
-    autoscored_needs_sealing?: [number, number][];
+    autoscored_needs_sealing?: JGOFSealingIntersection[];
 }
 
 let remote_scorer: ((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined;
@@ -137,9 +137,9 @@ export class ScoreEstimator {
     when_ready: Promise<void>;
     prefer_remote: boolean;
     autoscored_state?: JGOFNumericPlayerColor[][];
-    autoscored_removed?: string;
+    autoscored_removed?: JGOFMove[];
     autoscore: boolean = false;
-    public autoscored_needs_sealing?: [number, number][];
+    public autoscored_needs_sealing?: JGOFSealingIntersection[];
 
     constructor(
         goban_callback: GobanCore | undefined,
@@ -307,7 +307,7 @@ export class ScoreEstimator {
     getProbablyDead(): string {
         if (this.autoscored_removed) {
             console.info("Returning autoscored_removed for getProbablyDead");
-            return this.autoscored_removed;
+            return this.autoscored_removed.map(encodeMove).join("");
         } else {
             console.warn("Not able to use autoscored_removed for getProbablyDead");
         }
@@ -429,7 +429,7 @@ export class ScoreEstimator {
     getStoneRemovalString(): string {
         if (this.autoscored_removed) {
             console.info("Returning autoscored_removed for getStoneRemovalString");
-            return this.autoscored_removed;
+            return this.autoscored_removed.map(encodeMove).join("");
         } else {
             console.warn("Not able to use autoscored_removed for getStoneRemovalString");
         }

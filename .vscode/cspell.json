@@ -61,6 +61,7 @@
         "goban",
         "Gobans",
         "goquest",
+        "goscorer",
         "groupify",
         "Gulpfile",
         "hane",
@@ -89,6 +90,7 @@
         "kyus",
         "Leela",
         "lerp",
+        "lightvector",
         "linebreak",
         "localstorage",
         "malk",
@@ -170,6 +172,7 @@
         "unhighlight",
         "unitify",
         "Unranked",
+        "unscorable",
         "unstarted",
         "uservoice",
         "usgc",
@@ -187,7 +190,5 @@
         "zoomable"
     ],
     "language": "en,en-GB",
-    "ignorePaths": [
-        "test/autoscore_test_files"
-    ]
+    "ignorePaths": ["test/autoscore_test_files", "src/goscorer"]
 }

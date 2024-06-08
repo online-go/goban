@@ -33,13 +33,24 @@
     [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
     [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]
   ],
-  "correct_ownership": [
+  "sealed_ownership": [
     "WWWBBBBBB",
     "WWWWBBBBB",
     "WWWBBBBBB",
     "WWWBBBBBB",
     "WWBBBBBBB",
     "WWWBBBBBB",
+    "WWWWBWWBs",
+    "WWWWWWWWW",
+    "WWWWWWWWW"
+  ],
+  "correct_ownership": [
+    "WWWBBB   ",
+    "WWWWB    ",
+    "WWWB     ",
+    "WWWB B   ",
+    "WWBB     ",
+    "WWWBBBBB ",
     "WWWWBWWBs",
     "WWWWWWWWW",
     "WWWWWWWWW"

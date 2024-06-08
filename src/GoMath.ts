@@ -370,14 +370,28 @@ export function trimJGOFMoves(arr: Array<JGOFMove>): Array<JGOFMove> {
 }
 
 /** Returns a sorted move string, this is used in our stone removal logic */
-export function sortMoves(move_string: string, width: number, height: number): string {
-    const moves = decodeMoves(move_string, width, height);
-    moves.sort((a, b) => {
-        const av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
-        const bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
-        return av - bv;
-    });
-    return encodeMoves(moves);
+export function sortMoves(moves: string, width: number, height: number): string;
+export function sortMoves(moves: JGOFMove[], width: number, height: number): JGOFMove[];
+export function sortMoves(
+    moves: string | JGOFMove[],
+    width: number,
+    height: number,
+): string | JGOFMove[] {
+    if (moves instanceof Array) {
+        return moves.sort((a, b) => {
+            const av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
+            const bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
+            return av - bv;
+        });
+    } else {
+        const arr = decodeMoves(moves, width, height);
+        arr.sort((a, b) => {
+            const av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
+            const bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
+            return av - bv;
+        });
+        return encodeMoves(arr);
+    }
 }
 
 // OJE Sequence format is '.root.K10.Q1'  ...

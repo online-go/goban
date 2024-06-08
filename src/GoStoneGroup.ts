@@ -154,13 +154,14 @@ export class GoStoneGroup {
             }
         }
     }
-    computeIsStrongString(): void {
+    computeIsStrongString(): boolean {
         /* A group is considered a strong string if it is adjacent to two strong eyes */
         let strong_eye_count = 0;
         this.foreachNeighborGroup((gr) => {
             strong_eye_count += gr.is_strong_eye ? 1 : 0;
         });
         this.is_strong_string = strong_eye_count >= 2;
+        return this.is_strong_string;
     }
     computeIsTerritory(): void {
         /* An empty group is considered territory if all of it's neighbors are of

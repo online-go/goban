@@ -28,11 +28,13 @@ import {
     JGOFMove,
     JGOFPlayerSummary,
     JGOFIntersection,
+    JGOFSealingIntersection,
 } from "./JGOF";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
 import { EventEmitter } from "eventemitter3";
 import { GameClock, StallingScoreEstimate } from "./protocol";
+import * as goscorer from "./goscorer/goscorer";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
@@ -173,8 +175,15 @@ export interface GoEngineConfig {
      */
     throw_all_errors?: boolean;
 
-    /** Removed stones in stone removal phase */
-    removed?: string;
+    /** Removed stones in stone removal phase
+     *  Passing an array of JGOFMove objects is preferred, the string
+     *  format exists for historical backwards compatibility. It is an
+     *  encoded move string, e.g. "aa" for A19
+     */
+    removed?: string | JGOFMove[];
+
+    /** Intersections that need to be sealed before scoring should happen */
+    needs_sealing?: JGOFSealingIntersection[];
 
     // this is weird, we should migrate away from this
     ogs?: {
@@ -476,6 +485,7 @@ export class GoEngine extends EventEmitter<Events> {
     private loading_sgf: boolean = false;
     private marks: Array<Array<number>>;
     private move_before_jump?: MoveTree;
+    public needs_sealing?: Array<JGOFSealingIntersection>;
     //private mv:Move;
     public score_prisoners: boolean = false;
     public score_stones: boolean = false;
@@ -681,6 +691,16 @@ export class GoEngine extends EventEmitter<Events> {
                 this.setRemoved(removed[i].x, removed[i].y, true, false);
             }
             this.emit("stone-removal.updated");
+        }
+        if (config.needs_sealing) {
+            this.needs_sealing = config.needs_sealing;
+            if (this.phase === "stone removal") {
+                for (const intersection of config.needs_sealing) {
+                    this.setNeedsSealing(intersection.x, intersection.y, true);
+                }
+            }
+
+            this.emit("stone-removal.needs-sealing", config.needs_sealing);
         }
 
         function unpackMoveTree(cur: MoveTree, tree: MoveTreeJson): void {
@@ -1585,50 +1605,118 @@ export class GoEngine extends EventEmitter<Events> {
         };
     }
 
+    public toggleSingleGroupRemoval(
+        x: number,
+        y: number,
+        force_removal: boolean = false,
+    ): Array<[0 | 1, Group]> {
+        try {
+            if (x >= 0 && y >= 0) {
+                const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
+
+                /* If we're clicking on a group, do a sanity check to see if we think
+                 * there is a very good chance that the group is actually definitely alive.
+                 * If so, refuse to remove it, unless a player has instructed us to forcefully
+                 * remove it. */
+                if (removing && !force_removal) {
+                    const scores = goscorer.territoryScoring(
+                        this.board,
+                        this.removal as any,
+                        false,
+                    );
+                    const groups = new GoStoneGroups(this, this.board);
+                    const selected_group = groups.getGroup(x, y);
+                    let total_territory_adjacency_count = 0;
+                    let total_territory_group_count = 0;
+                    selected_group.foreachNeighborSpaceGroup((gr) => {
+                        let is_territory_group = false;
+                        gr.foreachStone((pt) => {
+                            if (
+                                scores[pt.y][pt.x].isTerritoryFor === this.board[y][x] &&
+                                !scores[pt.y][pt.x].isFalseEye
+                            ) {
+                                is_territory_group = true;
+                            }
+                        });
+
+                        if (is_territory_group) {
+                            total_territory_group_count += 1;
+                            total_territory_adjacency_count += gr.points.length;
+                        }
+                    });
+                    if (total_territory_adjacency_count >= 5 || total_territory_group_count >= 2) {
+                        console.log("This group is almost assuredly alive, refusing to remove");
+                        GobanCore.hooks.toast?.("refusing_to_remove_group_is_alive", 4000);
+                        return [[0, []]];
+                    }
+                }
+
+                /* Otherwise, toggle the group */
+                const group_color = this.board[y][x];
+
+                if (group_color === JGOFNumericPlayerColor.EMPTY) {
+                    /* Disallow toggling of open area (old dame marking method that we no longer desire) */
+                    return [[0, []]];
+                }
+
+                const removed_stones = this.setGroupForRemoval(x, y, removing, false)[1];
+
+                this.emit("stone-removal.updated");
+                return [[removing, removed_stones]];
+            }
+        } catch (err) {
+            console.log(err.stack);
+        }
+
+        return [[0, []]];
+    }
+
     public toggleMetaGroupRemoval(x: number, y: number): Array<[0 | 1, Group]> {
         try {
             if (x >= 0 && y >= 0) {
                 const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
+                const group_color = this.board[y][x];
+
+                if (group_color === JGOFNumericPlayerColor.EMPTY) {
+                    /* Disallow toggling of open area (old dame marking method that we no longer desire) */
+                    return [[0, []]];
+                }
+
                 const group = this.getGroup(x, y, true);
                 let removed_stones = this.setGroupForRemoval(x, y, removing, false)[1];
                 const empty_spaces = [];
 
-                const group_color = this.board[y][x];
-                if (group_color === 0) {
-                    /* just toggle open area */
-                } else {
-                    /* for stones though, toggle the selected stone group any any stone
-                     * groups which are adjacent to it through open area */
-                    const already_done: { [str: string]: boolean } = {};
+                //if (group_color === 0) {
+                /* just toggle open area */
+                // This condition is historical and can be removed if we find we really don't need it - anoek 2024-06-08
+                //} else {
+                /* for stones though, toggle the selected stone group any any stone
+                 * groups which are adjacent to it through open area */
+                const already_done: { [str: string]: boolean } = {};
 
-                    let space = this.getConnectedOpenSpace(group);
-                    for (let i = 0; i < space.length; ++i) {
-                        const pt = space[i];
+                let space = this.getConnectedOpenSpace(group);
+                for (let i = 0; i < space.length; ++i) {
+                    const pt = space[i];
 
-                        if (already_done[pt.x + "," + pt.y]) {
-                            continue;
-                        }
-                        already_done[pt.x + "," + pt.y] = true;
+                    if (already_done[pt.x + "," + pt.y]) {
+                        continue;
+                    }
+                    already_done[pt.x + "," + pt.y] = true;
 
-                        if (this.board[pt.y][pt.x] === 0) {
-                            const far_neighbors = this.getConnectedGroups([space[i]]);
-                            for (let j = 0; j < far_neighbors.length; ++j) {
-                                const fpt = far_neighbors[j][0];
-                                if (this.board[fpt.y][fpt.x] === group_color) {
-                                    const res = this.setGroupForRemoval(
-                                        fpt.x,
-                                        fpt.y,
-                                        removing,
-                                        false,
-                                    );
-                                    removed_stones = removed_stones.concat(res[1]);
-                                    space = space.concat(this.getConnectedOpenSpace(res[1]));
-                                }
+                    if (this.board[pt.y][pt.x] === 0) {
+                        const far_neighbors = this.getConnectedGroups([space[i]]);
+                        for (let j = 0; j < far_neighbors.length; ++j) {
+                            const fpt = far_neighbors[j][0];
+                            if (this.board[fpt.y][fpt.x] === group_color) {
+                                const res = this.setGroupForRemoval(fpt.x, fpt.y, removing, false);
+                                removed_stones = removed_stones.concat(res[1]);
+                                space = space.concat(this.getConnectedOpenSpace(res[1]));
                             }
-                            empty_spaces.push(pt);
                         }
+                        empty_spaces.push(pt);
                     }
                 }
+                //}
 
                 this.emit("stone-removal.updated");
 
@@ -1718,6 +1806,11 @@ export class GoEngine extends EventEmitter<Events> {
             this.emit("stone-removal.updated");
         }
     }
+
+    public setNeedsSealing(x: number, y: number, needs_sealing?: boolean): void {
+        this.cur_move.getMarks(x, y).needs_sealing = needs_sealing;
+    }
+
     public getStoneRemovalString(): string {
         let ret = "";
         const arr = [];
@@ -1742,9 +1835,140 @@ export class GoEngine extends EventEmitter<Events> {
         return this.last_official_move.move_number;
     }
 
+    /**
+     * Computes the score of the current board state.
+     *
+     * If only_prisoners is true, we return the same data structure for convenience, but only
+     * the prisoners will be counted, other sources of points will be zero.
+     */
+    public computeScore(only_prisoners?: boolean): Score {
+        const ret = {
+            white: {
+                total: 0,
+                stones: 0,
+                territory: 0,
+                prisoners: 0,
+                scoring_positions: "",
+                handicap: this.getHandicapPointAdjustmentForWhite(),
+                komi: this.komi,
+            },
+            black: {
+                total: 0,
+                stones: 0,
+                territory: 0,
+                prisoners: 0,
+                scoring_positions: "",
+                handicap: 0,
+                komi: 0,
+            },
+        };
+
+        // Tally up prisoners when appropriate
+        if (only_prisoners || this.score_prisoners) {
+            ret.white.prisoners = this.white_prisoners;
+            ret.black.prisoners = this.black_prisoners;
+
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    if (this.removal[y][x]) {
+                        if (this.board[y][x] === JGOFNumericPlayerColor.BLACK) {
+                            ret.white.prisoners += 1;
+                        }
+                        if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
+                            ret.black.prisoners += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Tally everything else if we want that information
+        if (!only_prisoners) {
+            if (!this.score_territory) {
+                throw new Error("The score_territory flag should always be set to true");
+            }
+
+            if (this.score_stones) {
+                const scoring = goscorer.areaScoring(
+                    this.board,
+                    this.removal.map((row) => row.map((x) => !!x)),
+                );
+                for (let y = 0; y < this.height; ++y) {
+                    for (let x = 0; x < this.width; ++x) {
+                        if (scoring[y][x] === goscorer.BLACK) {
+                            if (this.board[y][x] === JGOFNumericPlayerColor.BLACK) {
+                                ret.black.stones += 1;
+                            } else {
+                                ret.black.territory += 1;
+                            }
+                            ret.black.scoring_positions += GoMath.encodeMove(x, y);
+                        } else if (scoring[y][x] === goscorer.WHITE) {
+                            if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
+                                ret.white.stones += 1;
+                            } else {
+                                ret.white.territory += 1;
+                            }
+                            ret.white.scoring_positions += GoMath.encodeMove(x, y);
+                        }
+                    }
+                }
+            } else {
+                const scoring = goscorer.territoryScoring(
+                    this.board,
+                    this.removal.map((row) => row.map((x) => !!x)),
+                );
+                for (let y = 0; y < this.height; ++y) {
+                    for (let x = 0; x < this.width; ++x) {
+                        if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
+                            ret.black.territory += 1;
+                            ret.black.scoring_positions += GoMath.encodeMove(x, y);
+                        } else if (scoring[y][x].isTerritoryFor === goscorer.WHITE) {
+                            ret.white.territory += 1;
+                            ret.white.scoring_positions += GoMath.encodeMove(x, y);
+                        }
+                    }
+                }
+            }
+        }
+
+        ret["black"].total =
+            ret["black"].stones +
+            ret["black"].territory +
+            ret["black"].prisoners +
+            ret["black"].handicap +
+            ret["black"].komi;
+        ret["white"].total =
+            ret["white"].stones +
+            ret["white"].territory +
+            ret["white"].prisoners +
+            ret["white"].handicap +
+            ret["white"].komi;
+
+        try {
+            if (this.outcome && this.aga_handicap_scoring) {
+                /* We used to have an AGA scoring bug where we'd give one point per
+                 * handicap stone instead of per handicap stone - 1, so this check
+                 * is for those games that we incorrectly scored so that our little
+                 * drop down box tallies up to be "correct" for those old games
+                 *   - anoek 2015-02-01
+                 */
+                const f = parseFloat(this.outcome);
+                if (f - 1 === Math.abs(ret.white.total - ret.black.total)) {
+                    ret.white.handicap += 1;
+                }
+            }
+        } catch (e) {
+            console.log(e);
+        }
+
+        this.jumpTo(this.cur_move);
+
+        return ret;
+    }
+
     /* Returns a details object containing the total score and the breakdown of the
      * scoring details */
-    public computeScore(only_prisoners?: boolean): Score {
+    public computeScoreOld(only_prisoners?: boolean): Score {
         const ret = {
             white: {
                 total: 0,

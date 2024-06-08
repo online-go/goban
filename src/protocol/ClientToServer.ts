@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { JGOFPlayerClock } from "../JGOF";
+import type { JGOFMove, JGOFPlayerClock, JGOFSealingIntersection } from "../JGOF";
 import type { ReviewMessage } from "../GoEngine";
 import type { ConditionalMoveResponse } from "../GoConditionalMove";
 
@@ -149,8 +149,15 @@ export interface ClientToServer extends ClientToServerBase {
          * not removed / open area. */
         removed: boolean;
 
-        /** String encoded list of intersections */
-        stones: string;
+        /** List of intersections that are to be removed. */
+        stones: JGOFMove[] | string;
+
+        /** List of intersections that need to be sealed before the game can be
+         *  correctly scored. Note, if this is undefined, the value will not
+         *  be changed on the server side. To specify there are no more intersections
+         *  that need to be cleared, set it to `[]` specifically.
+         */
+        needs_sealing?: JGOFSealingIntersection[];
 
         /** Japanese rules technically have some special scoring rules about
          * whether territory in seki should be counted or not. This is supported

@@ -44,6 +44,7 @@ import {
     JGOFNumericPlayerColor,
     JGOFPauseState,
     JGOFPlayerSummary,
+    JGOFSealingIntersection,
 } from "./JGOF";
 import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
 import { MessageID } from "./messages";
@@ -271,7 +272,7 @@ export interface Events extends StateUpdateEvents {
     "captured-stones": (obj: { removed_stones: Array<JGOFIntersection> }) => void;
     "stone-removal.accepted": () => void;
     "stone-removal.updated": () => void;
-    "needs-sealing": (positions: undefined | [number, number][]) => void;
+    "stone-removal.needs-sealing": (positions: undefined | JGOFSealingIntersection[]) => void;
     "conditional-moves.updated": () => void;
     "puzzle-place": (obj: {
         x: number;
@@ -355,6 +356,8 @@ export interface GobanHooks {
         est_winning_color: "black" | "white",
         number_of_points: number,
     ) => void;
+
+    toast?: (message_id: string, duration?: number) => void;
 }
 
 export interface GobanMetrics {
@@ -1944,6 +1947,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.redraw(true);
     }
 
+    /* DEPRECATED - this method should no longer be used and will likely be
+     * removed in the future, all Japanese games will start using strict seki
+     * scoring in the near future */
     public setStrictSekiMode(tf: boolean): void {
         if (this.engine.phase !== "stone removal") {
             throw "Not in stone removal phase";
@@ -3192,7 +3198,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     }
 
                     this.emit("stone-removal.updated");
-                    this.emit("needs-sealing", se.autoscored_needs_sealing);
+
+                    this.engine.needs_sealing = se.autoscored_needs_sealing;
+                    this.emit("stone-removal.needs-sealing", se.autoscored_needs_sealing);
 
                     this.updateTitleAndStonePlacement();
                     this.emit("update");
@@ -3200,11 +3208,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     this.socket.send("game/removed_stones/set", {
                         game_id: this.game_id,
                         removed: false,
+                        needs_sealing: se.autoscored_needs_sealing,
                         stones: current_removed,
                     });
                     this.socket.send("game/removed_stones/set", {
                         game_id: this.game_id,
                         removed: true,
+                        needs_sealing: se.autoscored_needs_sealing,
                         stones: new_removed,
                     });
 

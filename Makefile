@@ -3,6 +3,11 @@ SLACK_WEBHOOK=$(shell cat ../ogs/.slack-webhook)
 
 all dev: 
 	yarn run dev
+	
+build lib types:
+	yarn run build-debug
+	yarn run build-production
+	cp -Rp lib/src/* lib/
 
 lint:
 	yarn run lint
@@ -20,9 +25,7 @@ publish push: publish_npm upload_to_cdn notify
 
 beta: beta_npm upload_to_cdn
 
-beta_npm:
-	yarn run build-debug
-	yarn run build-production
+beta_npm: build
 	yarn publish --tag beta ./
 
 notify:
@@ -30,9 +33,7 @@ notify:
 	VERSION=`git describe --long`; \
 	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' $(SLACK_WEBHOOK)
 
-publish_npm: 
-	yarn run build-debug
-	yarn run build-production
+publish_npm: build
 	yarn publish ./
 
 upload_to_cdn:
@@ -44,4 +45,4 @@ upload_to_cdn:
 	cp lib/engine.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/`node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version'`/
 
-.PHONY: doc docs test clean all dev typedoc publich push
+.PHONY: doc build docs test clean all dev typedoc publich push lib types

@@ -166,11 +166,6 @@ module.exports = (env, argv) => {
                 filename: '[name].js'
             },
 
-            externals: {
-                "pixi.js": "PIXI",
-                "pixi.js-legacy": "PIXI",
-            },
-
             plugins: plugins.concat([
                 new webpack.DefinePlugin({
                     CLIENT: false,

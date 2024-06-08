@@ -138,4 +138,8 @@ export class GoStoneGroups {
             fn(this.groups[i]);
         }
     }
+
+    public getGroup(x: number, y: number): GoStoneGroup {
+        return this.groups[this.group_id_map[y][x]];
+    }
 }

@@ -63,7 +63,7 @@
     [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0, -1.0],
     [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0, -1.0]
   ],
-  "correct_ownership": [
+  "sealed_ownership": [
     "BBBWWWWWWWWBBBBBWWW",
     "BBBWWWWWWWWBBBBWWWW",
     "BBBBBBBBBBBWBBBBWWW",
@@ -83,5 +83,26 @@
     "WWWWWWWWBWBBBBBBBWW",
     "WWWWWWWBBBBBBBBBBBW",
     "WWWWWWWWBBBBBBBBBBW"
+  ],
+  "correct_ownership": [
+    "BBBWWWWWWWWBBBBBWWW",
+    "BBBWWWWWWWWBBBBWWWW",
+    "BBBBBBBBBBBWBBBBWWW",
+    "BBBBBBBBB WWW WWWWW",
+    "ssBBBBBBBWWWWWWBBWW",
+    "sBBBBBWBBWWWBBBBBBW",
+    " WWBWWWWWBBBBBBBBBB",
+    "  WBBBWWBBBBBBBBBBB",
+    "   WWWBWBBBBWWBBBBB",
+    "  WWWWBWWBWB WBBBBB",
+    "   WWBBWWWWB WWBBBB",
+    " W WBBBWBWWBBBWWBBB",
+    "   WBBBBBBWB WWWBWB",
+    "   WWBBBBWWBWWWWWWW",
+    " W WWWBBBBWWWBBWWWW",
+    "WW   WWBBWWWBBBBWWW",
+    "WWW  WWWBWBBBBBBBWW",
+    "WWW   WBBBBBBBBBBBW",
+    "WW    WWBBBBBBBBBBW"
   ]
 }

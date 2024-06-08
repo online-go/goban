@@ -36,7 +36,12 @@ describe("Auto-score tests ", () => {
             }
 
             // actual test
-            const [res, _debug_output] = autoscore(data.board, data.black, data.white);
+            const [res, _debug_output] = autoscore(
+                data.board,
+                data.rules ?? "chinese",
+                data.black,
+                data.white,
+            );
 
             let match = true;
             for (let y = 0; y < res.result.length; ++y) {

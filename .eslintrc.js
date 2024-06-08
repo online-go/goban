@@ -94,7 +94,7 @@ module.exports = {
                 rules: {
                     "file-header": [
                         true,
-                        "([Cc]opyright ([(][Cc][)])?\\s*[Oo]nline-[gG]o.com)|(bin/env)", // cspell: disable-line
+                        "([Cc]opyright ([(][Cc][)]))|(bin/env)", // cspell: disable-line
                     ],
                     "import-spacing": true,
                     "whitespace": [

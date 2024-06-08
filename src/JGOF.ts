@@ -50,6 +50,12 @@ export interface JGOFIntersection {
     y: number;
 }
 
+export interface JGOFSealingIntersection extends JGOFIntersection {
+    /** Color the intersection is probably presumed to be by the players, but
+     *  is in fact empty. */
+    color: JGOFNumericPlayerColor;
+}
+
 export interface JGOFPlayer {
     /** Name or username of the player */
     name: string;
@@ -90,6 +96,9 @@ export interface JGOFMove extends JGOFIntersection {
     // while it was their turn to make a move
     sgf_downloaded_by?: Array<number>; // Array of users who downloaded the
     // game SGF before this move was made
+
+    /** Stone removal reasoning, primarily for debugging */
+    removal_reason?: string;
 }
 
 /*********/
