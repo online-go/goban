@@ -136,17 +136,18 @@ describe("ScoreEstimator", () => {
         ]);
     });
 
-    test("score()", async () => {
+    test("score() territory", async () => {
         const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
         await se.when_ready;
 
         se.score();
 
+        // no score because all territory is in seki
         expect(se.white).toEqual({
             handicap: 0,
             komi: 0.5,
             prisoners: 0,
-            scoring_positions: "dadb",
+            scoring_positions: "",
             stones: 0,
             territory: 0,
             total: 0.5,
@@ -155,7 +156,7 @@ describe("ScoreEstimator", () => {
             handicap: 0,
             komi: 0,
             prisoners: 0,
-            scoring_positions: "aaab",
+            scoring_positions: "",
             stones: 0,
             territory: 0,
             total: 0,
@@ -178,19 +179,19 @@ describe("ScoreEstimator", () => {
             handicap: 0,
             komi: 0.5,
             prisoners: 0,
-            scoring_positions: "dadbcacb",
+            scoring_positions: "cadacbdb",
             stones: 2,
-            territory: 0,
-            total: 2.5,
+            territory: 2,
+            total: 4.5,
         });
         expect(se.black).toEqual({
             handicap: 0,
             komi: 0,
             prisoners: 0,
-            scoring_positions: "aaabbabb",
+            scoring_positions: "aabaabbb",
             stones: 2,
-            territory: 0,
-            total: 2,
+            territory: 2,
+            total: 4,
         });
     });
 
