@@ -24,6 +24,7 @@ import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./JGOF";
 import { _ } from "./translate";
 import { estimateScoreWasm } from "./local_estimators/wasm_estimator";
+import * as goscorer from "./goscorer/goscorer";
 
 export { init_score_estimator, estimateScoreWasm } from "./local_estimators/wasm_estimator";
 export { estimateScoreVoronoi } from "./local_estimators/voronoi";
@@ -457,9 +458,7 @@ export class ScoreEstimator {
     }
 
     /**
-     * This gets run after we've instructed the estimator how/when to fill dame,
-     * manually mark removed/dame, etc..  it does an official scoring from the
-     * remaining territory.
+     * Computes a rough estimation of ownership and score.
      */
     score(): ScoreEstimator {
         this.white = {
@@ -484,7 +483,7 @@ export class ScoreEstimator {
         let removed_black = 0;
         let removed_white = 0;
 
-        /* clear removed */
+        // clear removed
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (this.removal[y][x]) {
@@ -499,34 +498,48 @@ export class ScoreEstimator {
             }
         }
 
-        if (this.engine.score_territory) {
-            const groups = new GoStoneGroups(this);
-
-            groups.foreachGroup((gr) => {
-                if (gr.is_territory) {
-                    if (!this.engine.score_territory_in_seki && gr.is_territory_in_seki) {
-                        return;
-                    }
-                    if (gr.territory_color === 1) {
-                        this.black.scoring_positions += encodeMoves(gr.points);
-                    } else {
-                        this.white.scoring_positions += encodeMoves(gr.points);
-                    }
-                }
-            });
-        }
-
+        /* Note: this scoring just ensures our estimator is filled in with at least
+         * official territory and stones. Usually however, the estimation will already
+         * have all of this stuff marked, it's just to make sure we don't miss some
+         * obvious territory.
+         */
         if (this.engine.score_stones) {
+            const scoring = goscorer.areaScoring(
+                this.board,
+                this.removal.map((row) => row.map((x) => !!x)),
+            );
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
-                    if (this.board[y][x]) {
-                        if (this.board[y][x] === 1) {
-                            ++this.black.stones;
-                            this.black.scoring_positions += encodeMove(x, y);
+                    if (scoring[y][x] === goscorer.BLACK) {
+                        if (this.board[y][x] === JGOFNumericPlayerColor.BLACK) {
+                            this.black.stones += 1;
                         } else {
-                            ++this.white.stones;
-                            this.white.scoring_positions += encodeMove(x, y);
+                            this.black.territory += 1;
                         }
+                        this.black.scoring_positions += GoMath.encodeMove(x, y);
+                    } else if (scoring[y][x] === goscorer.WHITE) {
+                        if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
+                            this.white.stones += 1;
+                        } else {
+                            this.white.territory += 1;
+                        }
+                        this.white.scoring_positions += GoMath.encodeMove(x, y);
+                    }
+                }
+            }
+        } else {
+            const scoring = goscorer.territoryScoring(
+                this.board,
+                this.removal.map((row) => row.map((x) => !!x)),
+            );
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
+                        this.black.territory += 1;
+                        this.black.scoring_positions += GoMath.encodeMove(x, y);
+                    } else if (scoring[y][x].isTerritoryFor === goscorer.WHITE) {
+                        this.white.territory += 1;
+                        this.white.scoring_positions += GoMath.encodeMove(x, y);
                     }
                 }
             }
