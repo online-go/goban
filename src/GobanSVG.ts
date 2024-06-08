@@ -326,6 +326,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                                 pt.i,
                                 pt.j,
                                 ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey,
+                                press_duration_ms,
                             );
                         }
                         this.emit("update");
@@ -1629,11 +1630,15 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
                 /* Red X if the stone is marked for removal */
                 if (
-                    this.engine &&
-                    this.engine.phase === "stone removal" &&
-                    this.engine.last_official_move === this.engine.cur_move &&
-                    this.engine.board[j][i] &&
-                    this.engine.removal[j][i]
+                    (this.engine &&
+                        this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move &&
+                        this.engine.board[j][i] &&
+                        this.engine.removal[j][i]) ||
+                    (this.scoring_mode &&
+                        this.score_estimate &&
+                        this.score_estimate.board[j][i] &&
+                        this.score_estimate.removal[j][i])
                 ) {
                     const r = Math.max(1, this.metrics.mid * 0.75);
                     const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");

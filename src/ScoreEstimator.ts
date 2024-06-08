@@ -340,11 +340,12 @@ export class ScoreEstimator {
         }
         return ret;
     }
-    handleClick(i: number, j: number, mod_key: boolean) {
-        if (mod_key) {
-            this.setRemoved(i, j, !this.removal[j][i] ? 1 : 0);
+    handleClick(i: number, j: number, mod_key: boolean, press_duration_ms: number): void {
+        console.log(i, j, mod_key, press_duration_ms);
+        if (mod_key || press_duration_ms > 500) {
+            this.toggleSingleGroupRemoval(i, j, true);
         } else {
-            this.toggleMetaGroupRemoval(i, j);
+            this.toggleSingleGroupRemoval(i, j);
         }
 
         this.estimateScore(this.trials, this.tolerance, this.autoscore).catch(() => {
@@ -356,54 +357,64 @@ export class ScoreEstimator {
         g.foreachStone(({ x, y }) => this.setRemoved(x, y, removing ? 1 : 0));
     }
 
-    toggleMetaGroupRemoval(x: number, y: number): void {
-        const already_done: { [k: string]: boolean } = {};
-        const space_groups: Array<GoStoneGroup> = [];
-        let group_color: JGOFNumericPlayerColor;
-
+    public toggleSingleGroupRemoval(x: number, y: number, force_removal: boolean = false): void {
         try {
             if (x >= 0 && y >= 0) {
-                const removing = !this.removal[y][x];
-                const group = this.getGroup(x, y);
-                this.removeGroup(group, removing);
+                const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
 
-                group_color = this.board[y][x];
-                if (group_color === 0) {
-                    /* just toggle open area */
-                } else {
-                    /* for stones though, toggle the selected stone group any any stone
-                     * groups which are adjacent to it through open area */
-
-                    group.foreachNeighborSpaceGroup((g) => {
-                        if (!already_done[g.id]) {
-                            space_groups.push(g);
-                            already_done[g.id] = true;
-                        }
-                    });
-
-                    while (space_groups.length) {
-                        const cur_space_group = space_groups.pop();
-                        cur_space_group?.foreachNeighborEnemyGroup((g) => {
-                            if (!already_done[g.id]) {
-                                already_done[g.id] = true;
-                                if (g.color === group_color) {
-                                    this.removeGroup(g, removing);
-                                    g.foreachNeighborSpaceGroup((g_space) => {
-                                        if (!already_done[g_space.id]) {
-                                            space_groups.push(g_space);
-                                            already_done[g_space.id] = true;
-                                        }
-                                    });
-                                }
+                const groups = new GoStoneGroups(this, this.board);
+                const selected_group = groups.getGroup(x, y);
+                /* If we're clicking on a group, do a sanity check to see if we think
+                 * there is a very good chance that the group is actually definitely alive.
+                 * If so, refuse to remove it, unless a player has instructed us to forcefully
+                 * remove it. */
+                if (removing && !force_removal) {
+                    const scores = goscorer.territoryScoring(
+                        this.board,
+                        this.removal as any,
+                        false,
+                    );
+                    let total_territory_adjacency_count = 0;
+                    let total_territory_group_count = 0;
+                    selected_group.foreachNeighborSpaceGroup((gr) => {
+                        let is_territory_group = false;
+                        gr.foreachStone((pt) => {
+                            if (
+                                scores[pt.y][pt.x].isTerritoryFor === this.board[y][x] &&
+                                !scores[pt.y][pt.x].isFalseEye
+                            ) {
+                                is_territory_group = true;
                             }
                         });
+
+                        if (is_territory_group) {
+                            total_territory_group_count += 1;
+                            total_territory_adjacency_count += gr.points.length;
+                        }
+                    });
+                    if (total_territory_adjacency_count >= 5 || total_territory_group_count >= 2) {
+                        console.log("This group is almost assuredly alive, refusing to remove");
+                        GobanCore.hooks.toast?.("refusing_to_remove_group_is_alive", 4000);
+                        return;
                     }
                 }
+
+                /* Otherwise, toggle the group */
+                const group_color = this.board[y][x];
+
+                if (group_color === JGOFNumericPlayerColor.EMPTY) {
+                    /* Disallow toggling of open area (old dame marking method that we no longer desire) */
+                    return;
+                }
+
+                this.removeGroup(selected_group, !!removing);
+                return;
             }
-        } catch (e) {
-            console.log(e.stack);
+        } catch (err) {
+            console.log(err.stack);
         }
     }
+
     setRemoved(x: number, y: number, removed: number): void {
         this.clearAutoScore();
 

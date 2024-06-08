@@ -370,6 +370,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                                 pt.i,
                                 pt.j,
                                 ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey,
+                                press_duration_ms,
                             );
                         }
                         this.emit("update");
@@ -1714,11 +1715,15 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
                 /* Red X if the stone is marked for removal */
                 if (
-                    this.engine &&
-                    this.engine.phase === "stone removal" &&
-                    this.engine.last_official_move === this.engine.cur_move &&
-                    this.engine.board[j][i] &&
-                    this.engine.removal[j][i]
+                    (this.engine &&
+                        this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move &&
+                        this.engine.board[j][i] &&
+                        this.engine.removal[j][i]) ||
+                    (this.scoring_mode &&
+                        this.score_estimate &&
+                        this.score_estimate.board[j][i] &&
+                        this.score_estimate.removal[j][i])
                 ) {
                     ctx.lineCap = "square";
                     ctx.save();
