@@ -119,18 +119,6 @@ export class GoStoneGroups {
         this.foreachGroup((gr) => {
             gr.computeIsTerritory();
         });
-        this.foreachGroup((gr) => {
-            gr.computeIsTerritoryInSeki();
-        });
-        this.foreachGroup((gr) => {
-            gr.computeIsEye();
-        });
-        this.foreachGroup((gr) => {
-            gr.computeIsStrongEye();
-        });
-        this.foreachGroup((gr) => {
-            gr.computeIsStrongString();
-        });
     }
 
     public foreachGroup(fn: (gr: GoStoneGroup) => void) {

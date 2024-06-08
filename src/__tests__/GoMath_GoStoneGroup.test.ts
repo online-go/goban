@@ -47,42 +47,10 @@ test("Group ID Map", () => {
     ]);
 });
 
-test("Eyes", () => {
-    const gm = makeGoMathWithFeatureBoard();
-
-    const eyes = gm.groups.filter((g) => g.is_eye).map((g) => g.id);
-
-    expect(eyes).toEqual([4, 7, 8, 10]);
-});
-
-test("Strong eyes", () => {
-    const gm = makeGoMathWithFeatureBoard();
-
-    const strong_eyes = gm.groups.filter((g) => g.is_strong_eye).map((g) => g.id);
-
-    expect(strong_eyes).toEqual([4, 7, 10]);
-});
-
-test("Strong Strings", () => {
-    const gm = makeGoMathWithFeatureBoard();
-
-    const strong_strings = gm.groups.filter((g) => g.is_strong_string).map((g) => g.id);
-
-    expect(strong_strings).toEqual([3]);
-});
-
 test("Territory", () => {
     const gm = makeGoMathWithFeatureBoard();
 
     const territory = gm.groups.filter((g) => g.is_territory).map((g) => g.id);
 
     expect(territory).toEqual([1, 4, 7, 8, 10]);
-});
-
-test("Territory in seki", () => {
-    const gm = makeGoMathWithFeatureBoard();
-
-    const territory_in_seki = gm.groups.filter((g) => g.is_territory_in_seki).map((g) => g.id);
-
-    expect(territory_in_seki).not.toContain([1, 8]);
 });

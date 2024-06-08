@@ -15,7 +15,7 @@
  */
 
 import { dup } from "./GoUtil";
-import { encodeMove, encodeMoves } from "./GoMath";
+import { encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { GoStoneGroup } from "./GoStoneGroup";
 import { GoStoneGroups } from "./GoStoneGroups";

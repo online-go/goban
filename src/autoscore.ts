@@ -783,7 +783,8 @@ function debug_groups(title: string, groups: GoStoneGroups) {
         let group_color = red;
 
         if (group.color === JGOFNumericPlayerColor.EMPTY) {
-            if (group.is_territory_in_seki) {
+            //if (group.is_territory_in_seki) {
+            if (false) {
                 group_color = yellow;
             } else if (group.is_territory) {
                 if (group.territory_color) {

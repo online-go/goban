@@ -27,32 +27,25 @@ export interface BoardState {
 }
 
 export class GoStoneGroup {
-    corner_groups: { [y: string]: { [x: string]: GoStoneGroup } };
-    points: Array<Intersection>;
-    neighbors: Array<GoStoneGroup>;
-    is_territory: boolean = false;
-    color: JGOFNumericPlayerColor;
-    board_state: BoardState;
-    id: number;
-    is_strong_eye: boolean;
-    is_eye: boolean = false;
-    is_strong_string: boolean = false;
-    territory_color: JGOFNumericPlayerColor = 0;
-    is_territory_in_seki: boolean = false;
+    public readonly points: Array<Intersection>;
+    public readonly neighbors: Array<GoStoneGroup>;
+    public readonly color: JGOFNumericPlayerColor;
+    public readonly id: number;
+    public territory_color: JGOFNumericPlayerColor = 0;
+    public is_territory: boolean = false;
 
     private __added_neighbors: { [group_id: number]: boolean };
+    private corner_groups: { [y: string]: { [x: string]: GoStoneGroup } };
     private neighboring_space: GoStoneGroup[];
     private neighboring_enemy: GoStoneGroup[];
 
     constructor(board_state: BoardState, id: number, color: JGOFNumericPlayerColor) {
-        this.board_state = board_state;
         this.points = [];
         this.neighbors = [];
         this.neighboring_space = [];
         this.neighboring_enemy = [];
         this.id = id;
         this.color = color;
-        this.is_strong_eye = false;
 
         this.__added_neighbors = {};
         this.corner_groups = {};
@@ -100,68 +93,8 @@ export class GoStoneGroup {
             fn(this.neighboring_enemy[i]);
         }
     }
-    computeIsEye(): void {
-        this.is_eye = false;
-
-        if (this.points.length > 1) {
-            return;
-        }
-
-        this.is_eye = this.is_territory;
-    }
     size(): number {
         return this.points.length;
-    }
-    computeIsStrongEye(): void {
-        /* If a single eye is surrounded by 7+ stones of the same color, 5 stones
-         * for edges, and 3 stones for corners, or if any of those spots are
-         * territory owned by the same color, it is considered strong. */
-        this.is_strong_eye = false;
-        let color: JGOFNumericPlayerColor;
-        const board_state = this.board_state;
-        if (this.is_eye) {
-            const x = this.points[0].x;
-            const y = this.points[0].y;
-            color = board_state.board[y][x === 0 ? x + 1 : x - 1];
-            let not_color = 0;
-
-            const chk = (x: number, y: number): 0 | 1 => {
-                /* If there is a stone on the board and it's not our color,
-                 * or if the spot is part of some territory which is not our color,
-                 * then return true, else false. */
-                return color !== board_state.board[y][x] &&
-                    (!this.corner_groups[y][x].is_territory ||
-                        this.corner_groups[y][x].territory_color !== color)
-                    ? 1
-                    : 0;
-            };
-
-            not_color =
-                (x - 1 >= 0 && y - 1 >= 0 ? chk(x - 1, y - 1) : 0) +
-                (x + 1 < board_state.width && y - 1 >= 0 ? chk(x + 1, y - 1) : 0) +
-                (x - 1 >= 0 && y + 1 < board_state.height ? chk(x - 1, y + 1) : 0) +
-                (x + 1 < board_state.width && y + 1 < board_state.height ? chk(x + 1, y + 1) : 0);
-
-            if (
-                x - 1 >= 0 &&
-                x + 1 < board_state.width &&
-                y - 1 >= 0 &&
-                y + 1 < board_state.height
-            ) {
-                this.is_strong_eye = not_color <= 1;
-            } else {
-                this.is_strong_eye = not_color === 0;
-            }
-        }
-    }
-    computeIsStrongString(): boolean {
-        /* A group is considered a strong string if it is adjacent to two strong eyes */
-        let strong_eye_count = 0;
-        this.foreachNeighborGroup((gr) => {
-            strong_eye_count += gr.is_strong_eye ? 1 : 0;
-        });
-        this.is_strong_string = strong_eye_count >= 2;
-        return this.is_strong_string;
     }
     computeIsTerritory(): void {
         /* An empty group is considered territory if all of it's neighbors are of
@@ -189,32 +122,6 @@ export class GoStoneGroup {
         if (color) {
             this.is_territory = true;
             this.territory_color = color;
-        }
-    }
-    computeIsTerritoryInSeki(): void {
-        /* An empty group is considered territory if all of it's neighbors are of
-         * the same color */
-        this.is_territory_in_seki = false;
-        if (this.is_territory) {
-            this.foreachNeighborGroup((border_stones) => {
-                border_stones.foreachNeighborGroup((border_of_border) => {
-                    if (border_of_border.color === 0 && !border_of_border.is_territory) {
-                        /* only mark in seki if the neighboring would-be-blocking
-                         * territory hasn't been negated. */
-                        let is_not_negated = true;
-                        for (let i = 0; i < border_of_border.points.length; ++i) {
-                            const x = border_of_border.points[i].x;
-                            const y = border_of_border.points[i].y;
-                            if (!this.board_state.removal[y][x]) {
-                                is_not_negated = false;
-                            }
-                        }
-                        if (!is_not_negated) {
-                            this.is_territory_in_seki = true;
-                        }
-                    }
-                });
-            });
         }
     }
 }

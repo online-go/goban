@@ -357,7 +357,7 @@ export interface GobanHooks {
         number_of_points: number,
     ) => void;
 
-    toast?: (message_id: string, duration?: number) => void;
+    toast?: (message_id: string, duration: number) => void;
 }
 
 export interface GobanMetrics {
