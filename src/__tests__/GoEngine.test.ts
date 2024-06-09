@@ -608,7 +608,7 @@ describe("moves", () => {
 });
 
 describe("groups", () => {
-    test("toggleMetagroupRemoval", () => {
+    test("toggleSingleGroupRemoval", () => {
         const engine = new GoEngine({
             width: 4,
             height: 4,
@@ -625,23 +625,23 @@ describe("groups", () => {
         const on_removal_updated = jest.fn();
         engine.addListener("stone-removal.updated", on_removal_updated);
 
-        engine.toggleMetaGroupRemoval(0, 0);
+        engine.toggleSingleGroupRemoval(0, 0);
 
         expect(on_removal_updated).toBeCalledTimes(1);
 
         expect(engine.removal).toEqual([
             [1, 0, 0, 0],
-            [0, 1, 0, 0],
+            [0, 0, 0, 0],
             [0, 0, 0, 0],
             [0, 0, 0, 0],
         ]);
 
-        engine.toggleMetaGroupRemoval(0, 0);
+        engine.toggleSingleGroupRemoval(0, 0);
 
         expect(engine.removal).toEqual(makeMatrix(4, 4));
     });
 
-    test("toggleMetagroupRemoval out-of-bounds", () => {
+    test("toggleSingleGroupRemoval out-of-bounds", () => {
         const engine = new GoEngine({
             width: 4,
             height: 4,
@@ -658,11 +658,11 @@ describe("groups", () => {
         const on_removal_updated = jest.fn();
         engine.addListener("stone-removal.updated", on_removal_updated);
 
-        expect(engine.toggleMetaGroupRemoval(0, 4)).toEqual([[0, []]]);
+        expect(engine.toggleSingleGroupRemoval(0, 4)).toEqual([[0, []]]);
         expect(on_removal_updated).toBeCalledTimes(0);
     });
 
-    test("toggleMetagroupRemoval empty area doesn't do anything", () => {
+    test("toggleSingleGroupRemoval empty area doesn't do anything", () => {
         const engine = new GoEngine({
             width: 4,
             height: 2,
@@ -677,7 +677,7 @@ describe("groups", () => {
         const on_removal_updated = jest.fn();
         engine.addListener("stone-removal.updated", on_removal_updated);
 
-        expect(engine.toggleMetaGroupRemoval(0, 1)).toEqual([[0, []]]);
+        expect(engine.toggleSingleGroupRemoval(0, 1)).toEqual([[0, []]]);
         expect(on_removal_updated).toBeCalledTimes(0);
     });
 
