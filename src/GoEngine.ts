@@ -1189,31 +1189,6 @@ export class GoEngine extends EventEmitter<Events> {
         });
         return ret;
     }
-    private getConnectedOpenSpace(group: Group): Group {
-        const gr = group;
-        this.incrementCurrentMarker();
-        this.markGroup(group);
-        const ret: Group = [];
-        const included: { [s: string]: boolean } = {};
-
-        this.foreachNeighbor(group, (x, y) => {
-            if (!this.board[y][x]) {
-                this.incrementCurrentMarker();
-                this.markGroup(gr);
-                //for (let i = 0; i < ret.length; ++i) {
-                this.markGroup(ret);
-                //}
-                const g = this.getGroup(x, y, false);
-                for (let i = 0; i < g.length; ++i) {
-                    if (!included[g[i].x + "," + g[i].y]) {
-                        ret.push(g[i]);
-                        included[g[i].x + "," + g[i].y] = true;
-                    }
-                }
-            }
-        });
-        return ret;
-    }
     private countLiberties(group: Group): number {
         let ct = 0;
         const mat = GoMath.makeMatrix(this.width, this.height, 0);
@@ -1663,71 +1638,6 @@ export class GoEngine extends EventEmitter<Events> {
 
                 this.emit("stone-removal.updated");
                 return [[removing, removed_stones]];
-            }
-        } catch (err) {
-            console.log(err.stack);
-        }
-
-        return [[0, []]];
-    }
-
-    public toggleMetaGroupRemoval(x: number, y: number): Array<[0 | 1, Group]> {
-        try {
-            if (x >= 0 && y >= 0) {
-                const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
-                const group_color = this.board[y][x];
-
-                if (group_color === JGOFNumericPlayerColor.EMPTY) {
-                    /* Disallow toggling of open area (old dame marking method that we no longer desire) */
-                    return [[0, []]];
-                }
-
-                const group = this.getGroup(x, y, true);
-                let removed_stones = this.setGroupForRemoval(x, y, removing, false)[1];
-                const empty_spaces = [];
-
-                //if (group_color === 0) {
-                /* just toggle open area */
-                // This condition is historical and can be removed if we find we really don't need it - anoek 2024-06-08
-                //} else {
-                /* for stones though, toggle the selected stone group any any stone
-                 * groups which are adjacent to it through open area */
-                const already_done: { [str: string]: boolean } = {};
-
-                let space = this.getConnectedOpenSpace(group);
-                for (let i = 0; i < space.length; ++i) {
-                    const pt = space[i];
-
-                    if (already_done[pt.x + "," + pt.y]) {
-                        continue;
-                    }
-                    already_done[pt.x + "," + pt.y] = true;
-
-                    if (this.board[pt.y][pt.x] === 0) {
-                        const far_neighbors = this.getConnectedGroups([space[i]]);
-                        for (let j = 0; j < far_neighbors.length; ++j) {
-                            const fpt = far_neighbors[j][0];
-                            if (this.board[fpt.y][fpt.x] === group_color) {
-                                const res = this.setGroupForRemoval(fpt.x, fpt.y, removing, false);
-                                removed_stones = removed_stones.concat(res[1]);
-                                space = space.concat(this.getConnectedOpenSpace(res[1]));
-                            }
-                        }
-                        empty_spaces.push(pt);
-                    }
-                }
-                //}
-
-                this.emit("stone-removal.updated");
-
-                if (!removing) {
-                    return [[removing, removed_stones]];
-                } else {
-                    return [
-                        [removing, removed_stones],
-                        [!removing ? 1 : 0, empty_spaces],
-                    ];
-                }
             }
         } catch (err) {
             console.log(err.stack);
