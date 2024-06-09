@@ -544,12 +544,18 @@ export class ScoreEstimator {
             );
             for (let y = 0; y < this.height; ++y) {
                 for (let x = 0; x < this.width; ++x) {
-                    if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
-                        this.black.territory += 1;
-                        this.black.scoring_positions += GoMath.encodeMove(x, y);
-                    } else if (scoring[y][x].isTerritoryFor === goscorer.WHITE) {
-                        this.white.territory += 1;
-                        this.white.scoring_positions += GoMath.encodeMove(x, y);
+                    if (scoring[y][x].isUnscorableFalseEye) {
+                        this.board[y][x] = 0;
+                        this.territory[y][x] = 0;
+                        this.ownership[y][x] = 0;
+                    } else {
+                        if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
+                            this.black.territory += 1;
+                            this.black.scoring_positions += GoMath.encodeMove(x, y);
+                        } else if (scoring[y][x].isTerritoryFor === goscorer.WHITE) {
+                            this.white.territory += 1;
+                            this.white.scoring_positions += GoMath.encodeMove(x, y);
+                        }
                     }
                 }
             }
