@@ -30,7 +30,8 @@ export interface MarkInterface {
     letter?: string;
     subscript?: string;
     transient_letter?: string;
-    score?: string | boolean;
+    //score?: string | boolean;
+    score?: string;
     chat_triangle?: boolean;
     sub_triangle?: boolean;
     remove?: boolean;

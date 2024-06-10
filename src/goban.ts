@@ -35,6 +35,7 @@ export * from "./AdHocFormat";
 export * from "./TestGoban";
 export * from "./test_utils";
 export * from "./GobanSocket";
+export * from "./Misc";
 export * from "./autoscore";
 
 export * as GoMath from "./GoMath";

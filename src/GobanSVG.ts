@@ -31,6 +31,7 @@ import { getRelativeEventPosition } from "./canvas_utils";
 import { getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
+import { color_blend } from "Misc";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
@@ -127,6 +128,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     private last_label_position: { i: number; j: number } = { i: NaN, j: NaN };
     private last_pen_position?: [number, number];
     protected metrics: GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
+
+    private analysis_scoring_color?: "black" | "white" | string;
+    private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
 
     private drawing_enabled: boolean = true;
     protected title_div?: HTMLElement;
@@ -351,6 +355,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
                 if (this.mode === "analyze" && this.analyze_tool === "draw") {
                     /* might want to interpret this as a start/stop of a line segment */
+                } else if (this.mode === "analyze" && this.analyze_tool === "score") {
+                    // nothing to do here
                 } else {
                     const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
@@ -393,6 +399,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     }
 
                     this.onLabelingStart(ev);
+                } else if (this.mode === "analyze" && this.analyze_tool === "score") {
+                    this.onAnalysisScoringStart(ev);
                 }
             } catch (e) {
                 console.error(e);
@@ -408,6 +416,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.onPenMove(ev);
                 } else if (dragging && this.mode === "analyze" && this.analyze_tool === "label") {
                     this.onLabelingMove(ev);
+                } else if (dragging && this.mode === "analyze" && this.analyze_tool === "score") {
+                    this.onAnalysisScoringMove(ev);
                 } else {
                     this.onMouseMove(ev);
                 }
@@ -1676,9 +1686,15 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
-                    (this.engine.removal[j][i] || pos.needs_sealing))
+                    (this.engine.removal[j][i] || pos.needs_sealing)) ||
+                (this.mode === "analyze" &&
+                    this.analyze_tool === "score" &&
+                    this.last_hover_square &&
+                    this.last_hover_square.x === i &&
+                    this.last_hover_square.y === j)
             ) {
                 let color = pos.score;
+
                 if (
                     this.scoring_mode &&
                     this.score_estimate &&
@@ -1708,6 +1724,16 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     color = "seal";
                 }
 
+                if (
+                    this.mode === "analyze" &&
+                    this.analyze_tool === "score" &&
+                    this.last_hover_square &&
+                    this.last_hover_square.x === i &&
+                    this.last_hover_square.y === j
+                ) {
+                    color = this.analyze_subtool;
+                }
+
                 const r = this.square_size * 0.15;
                 const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 rect.setAttribute("x", (cx - r).toFixed(1));
@@ -1730,6 +1756,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     rect.setAttribute("fill-opacity", "0.8");
                     rect.setAttribute("fill", "#ff4444");
                     rect.setAttribute("stroke", "#E079CE");
+                }
+                if (color?.[0] === "#") {
+                    rect.setAttribute("fill", color);
+                    rect.setAttribute("stroke", color_blend("#888888", color));
                 }
                 rect.setAttribute(
                     "stroke-width",
@@ -2324,7 +2354,12 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
-                    (this.engine.removal[j][i] || pos.needs_sealing))
+                    (this.engine.removal[j][i] || pos.needs_sealing)) ||
+                (this.mode === "analyze" &&
+                    this.analyze_tool === "score" &&
+                    this.last_hover_square &&
+                    this.last_hover_square.x === i &&
+                    this.last_hover_square.y === j)
             ) {
                 let color = pos.score;
                 if (
@@ -2356,6 +2391,15 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     color = "seal";
                 }
 
+                if (
+                    this.mode === "analyze" &&
+                    this.analyze_tool === "score" &&
+                    this.last_hover_square &&
+                    this.last_hover_square.x === i &&
+                    this.last_hover_square.y === j
+                ) {
+                    color = this.analyze_subtool;
+                }
                 if (
                     this.scoring_mode &&
                     this.score_estimate &&
@@ -3044,7 +3088,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     }
     private onLabelingStart(ev: MouseEvent | TouchEvent) {
         const pos = getRelativeEventPosition(ev, this.parent);
-        this.last_label_position = this.xy2ij(pos.x, pos.y);
+        this.last_label_position = this.xy2ij(pos.x, pos.y, false);
 
         {
             const x = this.last_label_position.i;
@@ -3088,6 +3132,69 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.last_label_position = cur;
             this.putOrClearLabel(cur.i, cur.j, this.labeling_mode);
             this.setLabelCharacterFromMarks();
+        }
+    }
+    private onAnalysisScoringStart(ev: MouseEvent | TouchEvent) {
+        const pos = getRelativeEventPosition(ev, this.parent);
+        this.analysis_scoring_last_position = this.xy2ij(pos.x, pos.y, false);
+
+        {
+            const x = this.analysis_scoring_last_position.i;
+            const y = this.analysis_scoring_last_position.j;
+            if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+                return;
+            }
+        }
+
+        const existing_color = this.getAnalysisScoreColorAtLocation(
+            this.analysis_scoring_last_position.i,
+            this.analysis_scoring_last_position.j,
+        );
+
+        if (existing_color) {
+            this.analysis_scoring_color = undefined;
+        } else {
+            this.analysis_scoring_color = this.analyze_subtool;
+        }
+
+        this.putAnalysisScoreColorAtLocation(
+            this.analysis_scoring_last_position.i,
+            this.analysis_scoring_last_position.j,
+            this.analysis_scoring_color,
+        );
+
+        /* clear hover */
+        if (this.__last_pt.valid) {
+            const last_hover = this.last_hover_square;
+            delete this.last_hover_square;
+            if (last_hover) {
+                this.drawSquare(last_hover.x, last_hover.y);
+            }
+        }
+        this.__last_pt = this.xy2ij(-1, -1);
+        this.drawSquare(
+            this.analysis_scoring_last_position.i,
+            this.analysis_scoring_last_position.j,
+        );
+    }
+    private onAnalysisScoringMove(ev: MouseEvent | TouchEvent) {
+        const pos = getRelativeEventPosition(ev, this.parent);
+        const cur = this.xy2ij(pos.x, pos.y);
+
+        {
+            const x = cur.i;
+            const y = cur.j;
+            if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+                return;
+            }
+        }
+
+        if (
+            cur.i !== this.analysis_scoring_last_position.i ||
+            cur.j !== this.analysis_scoring_last_position.j
+        ) {
+            this.analysis_scoring_last_position = cur;
+            this.putAnalysisScoreColorAtLocation(cur.i, cur.j, this.analysis_scoring_color);
         }
     }
 

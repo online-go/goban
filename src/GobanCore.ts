@@ -68,6 +68,7 @@ export const MARK_TYPES: Array<keyof MarkInterface> = [
     "cross",
     "black",
     "white",
+    "score",
 ];
 export type LabelPosition =
     | "all"
@@ -85,7 +86,7 @@ interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
 
 export type GobanModes = "play" | "puzzle" | "score estimation" | "analyze" | "conditional";
 
-export type AnalysisTool = "stone" | "draw" | "label";
+export type AnalysisTool = "stone" | "draw" | "label" | "score";
 export type AnalysisSubTool =
     | "black"
     | "white"
@@ -1606,6 +1607,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
                         this.engine.cur_move = this.engine.cur_review_move;
                         this.setMarks(obj["k"], this.engine.cur_move.id !== t.id);
                         this.engine.cur_move = t;
+                        if (this.engine.cur_move.id === t.id) {
+                            this.redraw();
+                        }
                     }
                     if ("clearpen" in obj) {
                         this.engine.cur_review_move.pen_marks = [];
@@ -1828,7 +1832,11 @@ export abstract class GobanCore extends EventEmitter<Events> {
             (this.bounded_width + +this.draw_left_labels + +this.draw_right_labels) * square_size
         );
     }
-    protected xy2ij(x: number, y: number): { i: number; j: number; valid: boolean } {
+    protected xy2ij(
+        x: number,
+        y: number,
+        anti_slip: boolean = true,
+    ): { i: number; j: number; valid: boolean } {
         if (x > 0 && y > 0) {
             if (this.bounds.left > 0) {
                 x += this.bounds.left * this.square_size;
@@ -1848,7 +1856,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
         let i = Math.floor(ii);
         let j = Math.floor(jj);
         const border_distance = Math.min(ii - i, jj - j, 1 - (ii - i), 1 - (jj - j));
-        if (border_distance < 0.1) {
+        if (border_distance < 0.1 && anti_slip) {
             // have a "dead zone" in between squares to avoid misclicks
             i = -1;
             j = -1;
@@ -1904,6 +1912,22 @@ export abstract class GobanCore extends EventEmitter<Events> {
 
         this.syncReviewMove();
         return ret;
+    }
+    protected getAnalysisScoreColorAtLocation(
+        x: number,
+        y: number,
+    ): "black" | "white" | string | undefined {
+        return this.getMarks(x, y).score;
+    }
+    protected putAnalysisScoreColorAtLocation(
+        x: number,
+        y: number,
+        color?: "black" | "white" | string,
+    ): void {
+        const marks = this.getMarks(x, y);
+        marks.score = color;
+        this.drawSquare(x, y);
+        this.syncReviewMove();
     }
     public setSquareSize(new_ss: number, suppress_redraw = false): void {
         const redraw = this.square_size !== new_ss && !suppress_redraw;
@@ -2297,7 +2321,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
         for (let j = 0; j < this.height; ++j) {
             for (let i = 0; i < this.width; ++i) {
                 if (this.getMarks(i, j).score) {
-                    this.getMarks(i, j).score = false;
+                    delete this.getMarks(i, j).score;
+                    //this.getMarks(i, j).score = false;
                     this.drawSquare(i, j);
                 }
             }
@@ -2987,7 +3012,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     mark = "" + mark;
                 }
 
-                if (mark.length <= 3 || parseFloat(mark)) {
+                if (mark.startsWith("score-")) {
+                    const color = mark.split("-")[1];
+                    this.getMarks(x, y).score = color;
+                    if (!dont_draw) {
+                        this.drawSquare(x, y);
+                    }
+                } else if (mark.length <= 3 || parseFloat(mark)) {
                     this.setLetterMark(x, y, mark, !dont_draw);
                 } else {
                     this.setCustomMark(x, y, mark, !dont_draw);
@@ -3862,7 +3893,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
                                 const mark_key: keyof MarkInterface =
                                     MARK_TYPES[i] === "letter"
                                         ? pos.letter || "[ERR]"
-                                        : MARK_TYPES[i];
+                                        : MARK_TYPES[i] === "score"
+                                          ? `score-${pos.score}`
+                                          : MARK_TYPES[i];
                                 if (!(mark_key in marks)) {
                                     marks[mark_key] = "";
                                 }
