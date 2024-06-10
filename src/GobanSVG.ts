@@ -32,6 +32,7 @@ import { getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
 import { color_blend } from "Misc";
+import { GoStoneGroups } from "GoStoneGroups";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
@@ -131,6 +132,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
     private analysis_scoring_color?: "black" | "white" | string;
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
+    private analysis_removal_state?: boolean;
+    private analysis_removal_last_position: { i: number; j: number } = { i: NaN, j: NaN };
 
     private drawing_enabled: boolean = true;
     protected title_div?: HTMLElement;
@@ -357,6 +360,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     /* might want to interpret this as a start/stop of a line segment */
                 } else if (this.mode === "analyze" && this.analyze_tool === "score") {
                     // nothing to do here
+                } else if (this.mode === "analyze" && this.analyze_tool === "removal") {
+                    this.onAnalysisToggleStoneRemoval(ev);
                 } else {
                     const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
@@ -401,6 +406,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.onLabelingStart(ev);
                 } else if (this.mode === "analyze" && this.analyze_tool === "score") {
                     this.onAnalysisScoringStart(ev);
+                } else if (this.mode === "analyze" && this.analyze_tool === "removal") {
+                    // nothing to do here, we act on pointerUp
                 }
             } catch (e) {
                 console.error(e);
@@ -418,6 +425,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.onLabelingMove(ev);
                 } else if (dragging && this.mode === "analyze" && this.analyze_tool === "score") {
                     this.onAnalysisScoringMove(ev);
+                } else if (dragging && this.mode === "analyze" && this.analyze_tool === "removal") {
+                    // nothing for moving
                 } else {
                     this.onMouseMove(ev);
                 }
@@ -821,7 +830,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
             if (
                 this.engine.phase === "stone removal" &&
-                this.engine.isActivePlayer(this.player_id)
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move
             ) {
                 let removed: 0 | 1;
                 let group: Group;
@@ -1188,6 +1198,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         if (i < 0 || j < 0 || !this.drawing_enabled || this.no_display) {
             return;
         }
+
         if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
             this.__drawSquare(i, j);
         }
@@ -1449,6 +1460,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         }
 
         /* Draw stones & hovers */
+        let draw_red_x = false;
         {
             if (
                 stone_color /* if there is really a stone here */ ||
@@ -1477,7 +1489,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 pos.white
             ) {
                 //let color = stone_color ? stone_color : (this.move_selected ? this.engine.otherPlayer() : this.engine.player);
-                let transparent = false;
+                let translucent = false;
                 let stoneAlphaValue = 0.6;
                 let color;
                 if (
@@ -1487,7 +1499,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.score_estimate.removal[j][i]
                 ) {
                     color = this.score_estimate.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (
                     this.engine &&
                     ((this.engine.phase === "stone removal" &&
@@ -1499,7 +1511,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = this.engine.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (stone_color) {
                     color = stone_color;
                 } else if (
@@ -1533,10 +1545,15 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     }
                 } else if (pos.black || pos.white) {
                     color = pos.black ? 1 : 2;
-                    transparent = true;
+                    translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
                 } else {
                     color = this.engine.player;
+                }
+
+                //if (this.mode === "analyze" && pos.stone_removed) {
+                if (pos.stone_removed) {
+                    translucent = true;
                 }
 
                 if (!(this.autoplaying_puzzle_move && !stone_color)) {
@@ -1566,7 +1583,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         return;
                     }
 
-                    const stone_transparent = transparent || !stone_color;
+                    const stone_transparent = translucent || !stone_color;
 
                     if (color === 1) {
                         const stone = this.theme_black.getStone(
@@ -1648,30 +1665,48 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     (this.scoring_mode &&
                         this.score_estimate &&
                         this.score_estimate.board[j][i] &&
-                        this.score_estimate.removal[j][i])
+                        this.score_estimate.removal[j][i]) ||
+                    //(this.mode === "analyze" && pos.stone_removed)
+                    pos.stone_removed
                 ) {
-                    const r = Math.max(1, this.metrics.mid * 0.75);
-                    const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    cross.setAttribute("class", "removal-cross");
-                    cross.setAttribute("stroke", "#ff0000");
-                    cross.setAttribute("stroke-width", `${this.square_size * 0.125}px`);
-                    cross.setAttribute("fill", "none");
-                    cross.setAttribute(
-                        "d",
-                        `
+                    draw_red_x = true;
+                }
+            }
+        }
+
+        if (
+            draw_red_x ||
+            (this.mode === "analyze" &&
+                this.analyze_tool === "removal" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j) ||
+            (this.engine.phase === "stone removal" &&
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j)
+        ) {
+            const r = Math.max(1, this.metrics.mid * 0.75);
+            const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            cross.setAttribute("class", "removal-cross");
+            cross.setAttribute("stroke", "#ff0000");
+            cross.setAttribute("stroke-width", `${this.square_size * 0.125}px`);
+            cross.setAttribute("fill", "none");
+            cross.setAttribute(
+                "d",
+                `
                     M ${cx - r} ${cy - r}
                     L ${cx + r} ${cy + r}
                     M ${cx + r} ${cy - r}
                     L ${cx - r} ${cy + r}
                 `,
-                    );
-                    if (transparent) {
-                        cross.setAttribute("stroke-opacity", "0.6");
-                    }
+            );
+            const opacity = this.engine.board[j][i] ? 1.0 : 0.2;
+            cross.setAttribute("stroke-opacity", opacity?.toString());
 
-                    cell.appendChild(cross);
-                }
-            }
+            cell.appendChild(cross);
         }
 
         /* Draw Scores */
@@ -2217,6 +2252,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         }
 
         /* Draw stones & hovers */
+        let draw_red_x = false;
         {
             if (
                 stone_color /* if there is really a stone here */ ||
@@ -2233,6 +2269,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         movetree_contains_this_square ||
                         (this.getPuzzlePlacementSetting &&
                             this.getPuzzlePlacementSetting().mode !== "play"))) ||
+                (this.mode === "analyze" &&
+                    this.analyze_tool === "removal" &&
+                    this.last_hover_square &&
+                    this.last_hover_square.x === i &&
+                    this.last_hover_square.y === j) ||
                 (this.scoring_mode &&
                     this.score_estimate &&
                     this.score_estimate.board[j][i] &&
@@ -2244,7 +2285,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 pos.black ||
                 pos.white
             ) {
-                let transparent = false;
+                let translucent = false;
                 let color;
                 if (
                     this.scoring_mode &&
@@ -2253,7 +2294,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.score_estimate.removal[j][i]
                 ) {
                     color = this.score_estimate.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (
                     this.engine &&
                     this.engine.phase === "stone removal" &&
@@ -2263,7 +2304,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = this.engine.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (stone_color) {
                     color = stone_color;
                 } else if (
@@ -2280,9 +2321,14 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     }
                 } else if (pos.black || pos.white) {
                     color = pos.black ? 1 : 2;
-                    transparent = true;
+                    translucent = true;
                 } else {
                     color = this.engine.player;
+                }
+
+                //if (this.mode === "analyze" && pos.stone_removed) {
+                if (pos.stone_removed) {
+                    translucent = true;
                 }
 
                 if (color === 1) {
@@ -2292,8 +2338,50 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     ret += this.theme_white.getStoneHash(i, j, this.theme_white_stones, this);
                 }
 
-                ret += (transparent ? "T" : "") + color + ",";
+                if (
+                    pos.blue_move &&
+                    this.colored_circles &&
+                    this.colored_circles[j] &&
+                    this.colored_circles[j][i]
+                ) {
+                    ret += "blue";
+                }
+
+                if (
+                    (this.engine &&
+                        this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move &&
+                        this.engine.board[j][i] &&
+                        this.engine.removal[j][i]) ||
+                    (this.scoring_mode &&
+                        this.score_estimate &&
+                        this.score_estimate.board[j][i] &&
+                        this.score_estimate.removal[j][i]) ||
+                    //(this.mode === "analyze" && pos.stone_removed)
+                    pos.stone_removed
+                ) {
+                    draw_red_x = true;
+                }
+
+                ret += (translucent ? "T" : "") + color + ",";
             }
+        }
+
+        if (
+            draw_red_x ||
+            (this.mode === "analyze" &&
+                this.analyze_tool === "removal" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j) ||
+            (this.engine.phase === "stone removal" &&
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j)
+        ) {
+            ret += "redX";
         }
 
         /* Draw square highlights if any */
@@ -3197,7 +3285,47 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.putAnalysisScoreColorAtLocation(cur.i, cur.j, this.analysis_scoring_color);
         }
     }
+    private onAnalysisToggleStoneRemoval(ev: MouseEvent | TouchEvent) {
+        const pos = getRelativeEventPosition(ev, this.parent);
+        this.analysis_removal_last_position = this.xy2ij(pos.x, pos.y, false);
+        const { i, j } = this.analysis_removal_last_position;
+        const x = i;
+        const y = j;
 
+        if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+            return;
+        }
+
+        const existing_removal_state = this.getMarks(x, y).stone_removed;
+
+        if (existing_removal_state) {
+            this.analysis_removal_state = undefined;
+        } else {
+            this.analysis_removal_state = true;
+        }
+
+        const stone_group = new GoStoneGroups(this.engine).getGroup(x, y);
+
+        stone_group.foreachStone((loc) => {
+            this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);
+        });
+
+        /* clear hover */
+        /*
+        if (this.__last_pt.valid) {
+            const last_hover = this.last_hover_square;
+            delete this.last_hover_square;
+            if (last_hover) {
+                this.drawSquare(last_hover.x, last_hover.y);
+            }
+        }
+        this.__last_pt = this.xy2ij(-1, -1);
+        this.drawSquare(
+            this.analysis_removal_last_position.i,
+            this.analysis_removal_last_position.j,
+        );
+        */
+    }
     protected setTitle(title: string): void {
         this.title = title;
         if (this.title_div) {

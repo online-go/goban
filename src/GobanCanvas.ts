@@ -36,6 +36,7 @@ import { getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
 import { color_blend } from "Misc";
+import { GoStoneGroups } from "GoStoneGroups";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -124,6 +125,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
     private analysis_scoring_color?: "black" | "white" | string;
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
+    private analysis_removal_state?: boolean;
+    private analysis_removal_last_position: { i: number; j: number } = { i: NaN, j: NaN };
 
     private drawing_enabled: boolean = true;
     private pen_ctx?: CanvasRenderingContext2D;
@@ -401,6 +404,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     /* might want to interpret this as a start/stop of a line segment */
                 } else if (this.mode === "analyze" && this.analyze_tool === "score") {
                     // nothing to do here
+                } else if (this.mode === "analyze" && this.analyze_tool === "removal") {
+                    this.onAnalysisToggleStoneRemoval(ev);
                 } else {
                     const pos = getRelativeEventPosition(ev);
                     const pt = this.xy2ij(pos.x, pos.y);
@@ -445,6 +450,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.onLabelingStart(ev);
                 } else if (this.mode === "analyze" && this.analyze_tool === "score") {
                     this.onAnalysisScoringStart(ev);
+                } else if (this.mode === "analyze" && this.analyze_tool === "removal") {
+                    // nothing to do here, we act on pointerUp
                 }
             } catch (e) {
                 console.error(e);
@@ -462,6 +469,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.onLabelingMove(ev);
                 } else if (dragging && this.mode === "analyze" && this.analyze_tool === "score") {
                     this.onAnalysisScoringMove(ev);
+                } else if (dragging && this.mode === "analyze" && this.analyze_tool === "removal") {
+                    // nothing for moving
                 } else {
                     this.onMouseMove(ev);
                 }
@@ -849,7 +858,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
             if (
                 this.engine.phase === "stone removal" &&
-                this.engine.isActivePlayer(this.player_id)
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move
             ) {
                 let removed: 0 | 1;
                 let group: Group;
@@ -1528,6 +1538,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         }
 
         /* Draw stones & hovers */
+        let draw_red_x = false;
         {
             if (
                 stone_color /* if there is really a stone here */ ||
@@ -1556,7 +1567,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 pos.white
             ) {
                 //let color = stone_color ? stone_color : (this.move_selected ? this.engine.otherPlayer() : this.engine.player);
-                let transparent = false;
+                let translucent = false;
                 let stoneAlphaValue = 0.6;
                 let color;
                 if (
@@ -1566,7 +1577,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.score_estimate.removal[j][i]
                 ) {
                     color = this.score_estimate.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (
                     this.engine &&
                     ((this.engine.phase === "stone removal" &&
@@ -1578,7 +1589,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = this.engine.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (stone_color) {
                     color = stone_color;
                 } else if (
@@ -1612,10 +1623,14 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     }
                 } else if (pos.black || pos.white) {
                     color = pos.black ? 1 : 2;
-                    transparent = true;
+                    translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
                 } else {
                     color = this.engine.player;
+                }
+
+                if (pos.stone_removed) {
+                    translucent = true;
                 }
 
                 if (!(this.autoplaying_puzzle_move && !stone_color)) {
@@ -1647,7 +1662,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
                     ctx.save();
                     let shadow_ctx: CanvasRenderingContext2D | null | undefined = this.shadow_ctx;
-                    if (!stone_color || transparent) {
+                    if (!stone_color || translucent) {
                         ctx.globalAlpha = stoneAlphaValue;
                         shadow_ctx = null;
                     }
@@ -1733,26 +1748,43 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     (this.scoring_mode &&
                         this.score_estimate &&
                         this.score_estimate.board[j][i] &&
-                        this.score_estimate.removal[j][i])
+                        this.score_estimate.removal[j][i]) ||
+                    pos.stone_removed
                 ) {
-                    ctx.lineCap = "square";
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.lineWidth = this.square_size * 0.125;
-                    if (transparent) {
-                        ctx.globalAlpha = 0.6;
-                    }
-                    const r = Math.max(1, this.metrics.mid * 0.65);
-                    ctx.moveTo(cx - r, cy - r);
-                    ctx.lineTo(cx + r, cy + r);
-                    ctx.moveTo(cx + r, cy - r);
-                    ctx.lineTo(cx - r, cy + r);
-                    ctx.strokeStyle = "#ff0000";
-                    ctx.stroke();
-                    ctx.restore();
-                    draw_last_move = false;
+                    draw_red_x = true;
                 }
             }
+        }
+        if (
+            draw_red_x ||
+            (this.mode === "analyze" &&
+                this.analyze_tool === "removal" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j) ||
+            (this.engine.phase === "stone removal" &&
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j)
+        ) {
+            console.log("Should be drawing red x");
+            const opacity = this.engine.board[j][i] ? 1.0 : 0.2;
+            ctx.lineCap = "square";
+            ctx.save();
+            ctx.beginPath();
+            ctx.lineWidth = this.square_size * 0.125;
+            ctx.globalAlpha = opacity;
+            const r = Math.max(1, this.metrics.mid * 0.65);
+            ctx.moveTo(cx - r, cy - r);
+            ctx.lineTo(cx + r, cy + r);
+            ctx.moveTo(cx + r, cy - r);
+            ctx.lineTo(cx - r, cy + r);
+            ctx.strokeStyle = "#ff0000";
+            ctx.stroke();
+            ctx.restore();
+            draw_last_move = false;
         }
 
         /* Draw Scores */
@@ -2276,6 +2308,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         }
 
         /* Draw stones & hovers */
+        let draw_red_x = false;
         {
             if (
                 stone_color /* if there is really a stone here */ ||
@@ -2303,7 +2336,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 pos.black ||
                 pos.white
             ) {
-                let transparent = false;
+                let translucent = false;
                 let color;
                 if (
                     this.scoring_mode &&
@@ -2312,7 +2345,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.score_estimate.removal[j][i]
                 ) {
                     color = this.score_estimate.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (
                     this.engine &&
                     this.engine.phase === "stone removal" &&
@@ -2322,7 +2355,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.engine.removal[j][i]
                 ) {
                     color = this.engine.board[j][i];
-                    transparent = true;
+                    translucent = true;
                 } else if (stone_color) {
                     color = stone_color;
                 } else if (
@@ -2339,9 +2372,14 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     }
                 } else if (pos.black || pos.white) {
                     color = pos.black ? 1 : 2;
-                    transparent = true;
+                    translucent = true;
                 } else {
                     color = this.engine.player;
+                }
+
+                //if (this.mode === "analyze" && pos.stone_removed) {
+                if (pos.stone_removed) {
+                    translucent = true;
                 }
 
                 if (color === 1) {
@@ -2351,8 +2389,41 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     ret += this.theme_white.getStoneHash(i, j, this.theme_white_stones, this);
                 }
 
-                ret += (transparent ? "T" : "") + color + ",";
+                if (
+                    (this.engine &&
+                        this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move &&
+                        this.engine.board[j][i] &&
+                        this.engine.removal[j][i]) ||
+                    (this.scoring_mode &&
+                        this.score_estimate &&
+                        this.score_estimate.board[j][i] &&
+                        this.score_estimate.removal[j][i]) ||
+                    //(this.mode === "analyze" && pos.stone_removed)
+                    pos.stone_removed
+                ) {
+                    draw_red_x = true;
+                }
+
+                ret += (translucent ? "T" : "") + color + ",";
             }
+        }
+
+        if (
+            draw_red_x ||
+            (this.mode === "analyze" &&
+                this.analyze_tool === "removal" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j) ||
+            (this.engine.phase === "stone removal" &&
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j)
+        ) {
+            ret += "redX";
         }
 
         /* Draw square highlights if any */
@@ -3196,7 +3267,31 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             this.putAnalysisScoreColorAtLocation(cur.i, cur.j, this.analysis_scoring_color);
         }
     }
+    private onAnalysisToggleStoneRemoval(ev: MouseEvent | TouchEvent) {
+        const pos = getRelativeEventPosition(ev, this.parent);
+        this.analysis_removal_last_position = this.xy2ij(pos.x, pos.y, false);
+        const { i, j } = this.analysis_removal_last_position;
+        const x = i;
+        const y = j;
 
+        if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+            return;
+        }
+
+        const existing_removal_state = this.getMarks(x, y).stone_removed;
+
+        if (existing_removal_state) {
+            this.analysis_removal_state = undefined;
+        } else {
+            this.analysis_removal_state = true;
+        }
+
+        const stone_group = new GoStoneGroups(this.engine).getGroup(x, y);
+
+        stone_group.foreachStone((loc) => {
+            this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);
+        });
+    }
     protected setTitle(title: string): void {
         this.title = title;
         if (this.title_div) {

@@ -69,6 +69,7 @@ export const MARK_TYPES: Array<keyof MarkInterface> = [
     "black",
     "white",
     "score",
+    "stone_removed",
 ];
 export type LabelPosition =
     | "all"
@@ -86,7 +87,7 @@ interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
 
 export type GobanModes = "play" | "puzzle" | "score estimation" | "analyze" | "conditional";
 
-export type AnalysisTool = "stone" | "draw" | "label" | "score";
+export type AnalysisTool = "stone" | "draw" | "label" | "score" | "removal";
 export type AnalysisSubTool =
     | "black"
     | "white"
@@ -1926,6 +1927,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
     ): void {
         const marks = this.getMarks(x, y);
         marks.score = color;
+        this.drawSquare(x, y);
+        this.syncReviewMove();
+    }
+    protected putAnalysisRemovalAtLocation(x: number, y: number, removal?: boolean): void {
+        const marks = this.getMarks(x, y);
+        marks.remove = removal;
+        marks.stone_removed = removal;
         this.drawSquare(x, y);
         this.syncReviewMove();
     }
@@ -3915,6 +3923,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     m: diff.moves,
                     k: marks,
                 };
+                console.log("mARKS:", marks);
                 const tmp = dup(msg);
 
                 if (this.last_review_message.f === msg.f && this.last_review_message.m === msg.m) {
