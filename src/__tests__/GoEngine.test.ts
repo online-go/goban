@@ -630,15 +630,15 @@ describe("groups", () => {
         expect(on_removal_updated).toBeCalledTimes(1);
 
         expect(engine.removal).toEqual([
-            [1, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
+            [true, false, false, false],
+            [false, false, false, false],
+            [false, false, false, false],
+            [false, false, false, false],
         ]);
 
         engine.toggleSingleGroupRemoval(0, 0);
 
-        expect(engine.removal).toEqual(makeMatrix(4, 4));
+        expect(engine.removal).toEqual(makeMatrix(4, 4, false));
     });
 
     test("toggleSingleGroupRemoval out-of-bounds", () => {
@@ -658,7 +658,7 @@ describe("groups", () => {
         const on_removal_updated = jest.fn();
         engine.addListener("stone-removal.updated", on_removal_updated);
 
-        expect(engine.toggleSingleGroupRemoval(0, 4)).toEqual([[0, []]]);
+        expect(engine.toggleSingleGroupRemoval(0, 4)).toEqual({ removed: false, group: [] });
         expect(on_removal_updated).toBeCalledTimes(0);
     });
 
@@ -677,7 +677,7 @@ describe("groups", () => {
         const on_removal_updated = jest.fn();
         engine.addListener("stone-removal.updated", on_removal_updated);
 
-        expect(engine.toggleSingleGroupRemoval(0, 1)).toEqual([[0, []]]);
+        expect(engine.toggleSingleGroupRemoval(0, 1)).toEqual({ removed: false, group: [] });
         expect(on_removal_updated).toBeCalledTimes(0);
     });
 
@@ -699,7 +699,7 @@ describe("groups", () => {
         engine.clearRemoved();
 
         expect(on_removal_updated).toBeCalledTimes(1);
-        expect(engine.removal).toEqual(makeMatrix(4, 2));
+        expect(engine.removal).toEqual(makeMatrix(4, 2, false));
     });
 
     test("clearRemoved", () => {

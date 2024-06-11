@@ -2034,8 +2034,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.width = new_width;
         this.height = new_height;
 
-        console.log("New width and height", this.width, this.height);
-
         delete this.move_selected;
 
         this.bounds = config.bounds || {
@@ -2147,13 +2145,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
             // in case the constructor some side effects on `this`
             // (JM: which it currently does)
             this.engine = new GoEngine(config, this);
-            console.log(
-                "New engine: ",
-                config,
-                this.engine.width,
-                this.engine.height,
-                this.engine.board,
-            );
             this.emit("engine.updated", this.engine);
             this.engine.parentEventEmitter = this;
             this.engine.getState_callback = () => {

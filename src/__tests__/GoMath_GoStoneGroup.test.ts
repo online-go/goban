@@ -1,5 +1,6 @@
 import * as GoMath from "../GoMath";
-import { GoStoneGroups } from "../GoStoneGroups";
+import { StoneStringBuilder } from "../StoneStringBuilder";
+import { Board } from "../Board";
 
 // Here is a board displaying many of the features GoStoneGroup cares about.
 
@@ -24,15 +25,15 @@ const FEATURE_BOARD = [
     [2, 2, 1, 2, 0],
 ];
 
-const REMOVAL = GoMath.makeMatrix(5, 5);
+const REMOVAL = GoMath.makeMatrix(5, 5, false);
 
 function makeGoMathWithFeatureBoard() {
-    return new GoStoneGroups({
-        board: FEATURE_BOARD,
-        removal: REMOVAL,
-        width: 5,
-        height: 5,
-    });
+    return new StoneStringBuilder(
+        new Board({
+            board: FEATURE_BOARD,
+            removal: REMOVAL,
+        }),
+    );
 }
 
 test("Group ID Map", () => {

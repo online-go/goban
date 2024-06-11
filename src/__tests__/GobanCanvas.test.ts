@@ -7,7 +7,8 @@
 (global as any).CLIENT = true;
 
 import { GobanCanvas, GobanCanvasConfig } from "../GobanCanvas";
-import { GobanCore, SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../GobanCore";
+import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../GobanCore";
+import { setCallbacks } from "../callbacks";
 import { GobanSocket } from "../GobanSocket";
 import * as GoMath from "../GoMath";
 import WS from "jest-websocket-mock";
@@ -366,7 +367,7 @@ describe("onTap", () => {
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         const addCoordinatesToChatInput = jest.fn();
-        GobanCore.setHooks({ addCoordinatesToChatInput });
+        setCallbacks({ addCoordinatesToChatInput });
 
         canvas.dispatchEvent(
             new MouseEvent("click", {
@@ -416,10 +417,10 @@ describe("onTap", () => {
         const mock_score_estimate = {
             handleClick: jest.fn(),
             when_ready: Promise.resolve(),
-            board: GoMath.makeMatrix(4, 2),
-            removal: GoMath.makeMatrix(4, 2),
-            territory: GoMath.makeMatrix(4, 2),
-            ownership: GoMath.makeMatrix(4, 2),
+            board: GoMath.makeMatrix(4, 2, 0),
+            removal: GoMath.makeMatrix(4, 2, false),
+            territory: GoMath.makeMatrix(4, 2, 0),
+            ownership: GoMath.makeMatrix(4, 2, 0),
         };
         goban.engine.estimateScore = jest.fn().mockReturnValue(mock_score_estimate);
 

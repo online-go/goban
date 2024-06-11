@@ -283,8 +283,8 @@ describe("ScoreEstimator", () => {
 
         expect(fake_goban.updateScoreEstimation).toBeCalled();
 
-        se.setRemoved(1, 0, 1);
-        expect(fake_goban.setForRemoval).toBeCalledWith(1, 0, 1);
+        se.setRemoved(1, 0, true);
+        expect(fake_goban.setForRemoval).toBeCalledWith(1, 0, true, true);
     });
 
     test("getProbablyDead", async () => {
@@ -357,11 +357,11 @@ describe("ScoreEstimator", () => {
         se.handleClick(1, 0, false, 0);
         se.handleClick(2, 0, false, 0);
         expect(se.removal).toEqual([
-            [0, 1, 1, 0],
-            [0, 1, 1, 0],
+            [false, true, true, false],
+            [false, true, true, false],
         ]);
 
-        expect(se.ownership).toEqual(makeMatrix(4, 2));
+        expect(se.ownership).toEqual(makeMatrix(4, 2, 0));
     });
 
     test("modkey", async () => {
@@ -371,8 +371,8 @@ describe("ScoreEstimator", () => {
 
         se.handleClick(1, 0, true, 0);
         expect(se.removal).toEqual([
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
+            [false, true, false, false],
+            [false, true, false, false],
         ]);
     });
 
@@ -383,8 +383,8 @@ describe("ScoreEstimator", () => {
 
         se.handleClick(1, 0, false, 1000);
         expect(se.removal).toEqual([
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
+            [false, true, false, false],
+            [false, true, false, false],
         ]);
     });
 

@@ -1,53 +1,52 @@
 //cspell: disable
 
-import { BoardState } from "../GoStoneGroup";
-import { GoStoneGroups } from "../GoStoneGroups";
+import { StoneStringBuilder } from "../StoneStringBuilder";
 import { JGOFNumericPlayerColor } from "../JGOF";
 import * as GoMath from "../GoMath";
+import { Board } from "../Board";
 
 describe("GoStoneGroups constructor", () => {
     test("basic board state", () => {
-        const THREExTHREE_board: Array<Array<JGOFNumericPlayerColor>> = [
+        const THREExTHREE_board: JGOFNumericPlayerColor[][] = [
             [1, 0, 2],
             [2, 1, 1],
             [2, 0, 1],
         ];
-        const THREExTHREE_removal: Array<Array<number>> = [
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0],
+        const THREExTHREE_removal: boolean[][] = [
+            [false, false, false],
+            [false, false, false],
+            [false, false, false],
         ];
-        const board_state: BoardState = {
-            width: 3,
-            height: 3,
-            board: THREExTHREE_board,
-            removal: THREExTHREE_removal,
-        };
 
-        const board = new GoStoneGroups(board_state);
+        const stone_string_builder = new StoneStringBuilder(
+            new Board({
+                board: THREExTHREE_board,
+                removal: THREExTHREE_removal,
+            }),
+        );
 
         // TODO: examine usage in real code and flesh out expectations to reflect that usage
-        expect(board.groups.length).toBe(7);
-        expect(board.groups[0]).toBe(undefined); // what does this element represent?
-        expect(board.groups[1].points).toEqual([{ x: 0, y: 0 }]);
-        expect(board.groups[2].points).toEqual([{ x: 1, y: 0 }]);
-        expect(board.groups[3].points).toEqual([{ x: 2, y: 0 }]);
-        expect(board.groups[4].points).toEqual([
+        expect(stone_string_builder.groups.length).toBe(7);
+        expect(stone_string_builder.groups[0]).toBe(undefined); // what does this element represent?
+        expect(stone_string_builder.groups[1].points).toEqual([{ x: 0, y: 0 }]);
+        expect(stone_string_builder.groups[2].points).toEqual([{ x: 1, y: 0 }]);
+        expect(stone_string_builder.groups[3].points).toEqual([{ x: 2, y: 0 }]);
+        expect(stone_string_builder.groups[4].points).toEqual([
             { x: 0, y: 1 },
             { x: 0, y: 2 },
         ]);
-        expect(board.groups[5].points).toEqual([
+        expect(stone_string_builder.groups[5].points).toEqual([
             { x: 1, y: 1 },
             { x: 2, y: 1 },
             { x: 2, y: 2 },
         ]);
-        expect(board.groups[6].points).toEqual([{ x: 1, y: 2 }]);
+        expect(stone_string_builder.groups[6].points).toEqual([{ x: 1, y: 2 }]);
     });
 });
 
 describe("matrices", () => {
     test("makeMatrix", () => {
-        expect(GoMath.makeMatrix(3, 2)).toEqual([
+        expect(GoMath.makeMatrix(3, 2, 0)).toEqual([
             [0, 0, 0],
             [0, 0, 0],
         ]);
@@ -55,7 +54,7 @@ describe("matrices", () => {
             [1234, 1234, 1234],
             [1234, 1234, 1234],
         ]);
-        expect(GoMath.makeMatrix(0, 0)).toEqual([]);
+        expect(GoMath.makeMatrix(0, 0, 0)).toEqual([]);
     });
 
     test("makeStringMatrix", () => {

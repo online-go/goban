@@ -1,4 +1,4 @@
-import { escapeSGFText, newline2space } from "../util";
+import { escapeSGFText, newlines_to_spaces } from "../util";
 import * as AdHoc from "../AdHocFormat";
 
 // String.raw`...` is the real string
@@ -32,8 +32,8 @@ test("escapeSGFText handles colon iff need be", () => {
     expect(escapeSGFText("AC:AE", true)).toBe(String.raw`AC\:AE`);
 });
 
-test("newline2space replaces what it should", () => {
-    expect(newline2space("hello\nlucky\r\nboy")).toBe("hello lucky  boy");
+test("newlines_to_spaces replaces what it should", () => {
+    expect(newlines_to_spaces("hello\nlucky\r\nboy")).toBe("hello lucky  boy");
 });
 
 test("AdHoc is defined", () => {
