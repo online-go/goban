@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-import { Board } from "./Board";
 import { JGOFNumericPlayerColor, JGOFIntersection } from "./JGOF";
 
+/** A raw stone string is simply an array of intersections */
 export type RawStoneString = Array<JGOFIntersection>;
 
+/**
+ * A StoneString instance represents a group of intersections that
+ * are connected to each other and are all the same color.
+ */
 export class StoneString {
-    public readonly points: Array<JGOFIntersection>;
+    public readonly intersections: Array<JGOFIntersection>;
     public readonly neighbors: Array<StoneString>;
     public readonly color: JGOFNumericPlayerColor;
     public readonly id: number;
@@ -31,8 +35,8 @@ export class StoneString {
     private neighboring_space: StoneString[];
     private neighboring_enemy: StoneString[];
 
-    constructor(board_state: Board, id: number, color: JGOFNumericPlayerColor) {
-        this.points = [];
+    constructor(id: number, color: JGOFNumericPlayerColor) {
+        this.intersections = [];
         this.neighbors = [];
         this.neighboring_space = [];
         this.neighboring_enemy = [];
@@ -41,10 +45,37 @@ export class StoneString {
 
         this.__added_neighbors = {};
     }
-    addStone(x: number, y: number): void {
-        this.points.push({ x: x, y: y });
+    public map(fn: (loc: JGOFIntersection) => void): void {
+        for (let i = 0; i < this.intersections.length; ++i) {
+            fn(this.intersections[i]);
+        }
     }
-    addNeighborGroup(group: StoneString): void {
+    public foreachNeighboringString(fn: (stone_string: StoneString) => void): void {
+        for (let i = 0; i < this.neighbors.length; ++i) {
+            fn(this.neighbors[i]);
+        }
+    }
+    public foreachNeighboringEmptyString(fn: (stone_string: StoneString) => void): void {
+        for (let i = 0; i < this.neighboring_space.length; ++i) {
+            fn(this.neighboring_space[i]);
+        }
+    }
+    public foreachNeighboringStoneString(fn: (stone_string: StoneString) => void): void {
+        for (let i = 0; i < this.neighbors.length; ++i) {
+            fn(this.neighboring_enemy[i]);
+        }
+    }
+    public size(): number {
+        return this.intersections.length;
+    }
+
+    /** Add a stone to the group.  This should probably only be called by StoneStringBuilder. */
+    _addStone(x: number, y: number): void {
+        this.intersections.push({ x: x, y: y });
+    }
+
+    /** Adds a stone string to our neighbor list. This should probably only be called by StoneStringBuilder. */
+    _addNeighborGroup(group: StoneString): void {
         if (!(group.id in this.__added_neighbors)) {
             this.neighbors.push(group);
             this.__added_neighbors[group.id] = true;
@@ -58,31 +89,17 @@ export class StoneString {
             }
         }
     }
-    foreachStone(fn: (pt: JGOFIntersection) => void): void {
-        for (let i = 0; i < this.points.length; ++i) {
-            fn(this.points[i]);
-        }
-    }
-    foreachNeighborGroup(fn: (group: StoneString) => void): void {
-        for (let i = 0; i < this.neighbors.length; ++i) {
-            fn(this.neighbors[i]);
-        }
-    }
-    foreachNeighborSpaceGroup(fn: (group: StoneString) => void): void {
-        for (let i = 0; i < this.neighboring_space.length; ++i) {
-            fn(this.neighboring_space[i]);
-        }
-    }
-    foreachNeighborEnemyGroup(fn: (group: StoneString) => void): void {
-        for (let i = 0; i < this.neighbors.length; ++i) {
-            fn(this.neighboring_enemy[i]);
-        }
-    }
-    size(): number {
-        return this.points.length;
-    }
-    computeIsTerritory(): void {
-        /* An empty group is considered territory if all of it's neighbors are of
+
+    /**
+     * Compute if this string is considered potential territory (if all of it's
+     * neighbors are the same color). NOTE: This does not perform any advanced
+     * logic to determine seki status or anything like that, this only looks to
+     * see if the string contains EMPTY locations and that all of the
+     * surrounding neighboring are the same color.  This should probably only
+     * be called by StoneStringBuilder.
+     */
+    _computeIsTerritory(): void {
+        /* An empty group is considered territory if all of it's neighbors are
          * the same color */
         this.is_territory = false;
         this.territory_color = 0;
@@ -98,7 +115,7 @@ export class StoneString {
             }
         }
 
-        this.foreachNeighborGroup((gr) => {
+        this.foreachNeighboringString((gr) => {
             if (gr.color !== 0 && color !== gr.color) {
                 color = 0;
             }

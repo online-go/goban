@@ -3283,7 +3283,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         const stone_group = new StoneStringBuilder(this.engine).getGroup(x, y);
 
-        stone_group.foreachStone((loc) => {
+        stone_group.map((loc) => {
             this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);
         });
     }

@@ -3295,7 +3295,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
         const stone_group = new StoneStringBuilder(this.engine).getGroup(x, y);
 
-        stone_group.foreachStone((loc) => {
+        stone_group.map((loc) => {
             this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);
         });
     }

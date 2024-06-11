@@ -126,9 +126,9 @@ export class Board extends EventEmitter<Events> {
                     );
                     let total_territory_adjacency_count = 0;
                     let total_territory_group_count = 0;
-                    selected_group.foreachNeighborSpaceGroup((gr) => {
+                    selected_group.foreachNeighboringEmptyString((gr) => {
                         let is_territory_group = false;
-                        gr.foreachStone((pt) => {
+                        gr.map((pt) => {
                             if (
                                 scores[pt.y][pt.x].isTerritoryFor === this.board[y][x] &&
                                 !scores[pt.y][pt.x].isFalseEye
@@ -139,7 +139,7 @@ export class Board extends EventEmitter<Events> {
 
                         if (is_territory_group) {
                             total_territory_group_count += 1;
-                            total_territory_adjacency_count += gr.points.length;
+                            total_territory_adjacency_count += gr.intersections.length;
                         }
                     });
                     if (total_territory_adjacency_count >= 5 || total_territory_group_count >= 2) {
@@ -152,10 +152,10 @@ export class Board extends EventEmitter<Events> {
                 /* Otherwise, if it might be fine to mark as dead, or we are restoring the
                  * stone string, or we are forcefully removing the group, do the marking.
                  */
-                selected_group.foreachStone(({ x, y }) => this.setRemoved(x, y, removing, false));
+                selected_group.map(({ x, y }) => this.setRemoved(x, y, removing, false));
 
                 this.emit("stone-removal.updated");
-                return { removed: removing, group: selected_group.points };
+                return { removed: removing, group: selected_group.intersections };
             }
         } catch (err) {
             console.log(err.stack);

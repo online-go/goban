@@ -39,7 +39,7 @@ function makeGoMathWithFeatureBoard() {
 test("Group ID Map", () => {
     const gm = makeGoMathWithFeatureBoard();
 
-    expect(gm.group_id_map).toEqual([
+    expect(gm.stone_string_id_map).toEqual([
         [1, 1, 2, 3, 4],
         [2, 2, 2, 3, 3],
         [5, 6, 2, 3, 7],
@@ -51,7 +51,7 @@ test("Group ID Map", () => {
 test("Territory", () => {
     const gm = makeGoMathWithFeatureBoard();
 
-    const territory = gm.groups.filter((g) => g.is_territory).map((g) => g.id);
+    const territory = gm.stone_strings.filter((g) => g.is_territory).map((g) => g.id);
 
     expect(territory).toEqual([1, 4, 7, 8, 10]);
 });

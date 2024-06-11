@@ -383,7 +383,7 @@ export class ScoreEstimator extends Board {
         return ret;
     }
     getGroup(x: number, y: number): StoneString {
-        return this.groups.groups[this.groups.group_id_map[y][x]];
+        return this.groups.stone_strings[this.groups.stone_string_id_map[y][x]];
     }
 
     /**

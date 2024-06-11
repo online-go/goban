@@ -26,21 +26,21 @@ describe("GoStoneGroups constructor", () => {
         );
 
         // TODO: examine usage in real code and flesh out expectations to reflect that usage
-        expect(stone_string_builder.groups.length).toBe(7);
-        expect(stone_string_builder.groups[0]).toBe(undefined); // what does this element represent?
-        expect(stone_string_builder.groups[1].points).toEqual([{ x: 0, y: 0 }]);
-        expect(stone_string_builder.groups[2].points).toEqual([{ x: 1, y: 0 }]);
-        expect(stone_string_builder.groups[3].points).toEqual([{ x: 2, y: 0 }]);
-        expect(stone_string_builder.groups[4].points).toEqual([
+        expect(stone_string_builder.stone_strings.length).toBe(7);
+        expect(stone_string_builder.stone_strings[0]).toBe(undefined); // what does this element represent?
+        expect(stone_string_builder.stone_strings[1].intersections).toEqual([{ x: 0, y: 0 }]);
+        expect(stone_string_builder.stone_strings[2].intersections).toEqual([{ x: 1, y: 0 }]);
+        expect(stone_string_builder.stone_strings[3].intersections).toEqual([{ x: 2, y: 0 }]);
+        expect(stone_string_builder.stone_strings[4].intersections).toEqual([
             { x: 0, y: 1 },
             { x: 0, y: 2 },
         ]);
-        expect(stone_string_builder.groups[5].points).toEqual([
+        expect(stone_string_builder.stone_strings[5].intersections).toEqual([
             { x: 1, y: 1 },
             { x: 2, y: 1 },
             { x: 2, y: 2 },
         ]);
-        expect(stone_string_builder.groups[6].points).toEqual([{ x: 1, y: 2 }]);
+        expect(stone_string_builder.stone_strings[6].intersections).toEqual([{ x: 1, y: 2 }]);
     });
 });
 

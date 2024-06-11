@@ -152,26 +152,26 @@ export function autoscore(
             if (group.is_territory && color) {
                 let total_ownership = 0;
 
-                group.foreachStone((point) => {
+                group.map((point) => {
                     const x = point.x;
                     const y = point.y;
                     total_ownership += average_ownership[y][x];
                 });
 
-                const avg = total_ownership / group.points.length;
+                const avg = total_ownership / group.intersections.length;
 
                 if (
                     (color === JGOFNumericPlayerColor.BLACK && avg > BLACK_THRESHOLD) ||
                     (color === JGOFNumericPlayerColor.WHITE && avg < WHITE_THRESHOLD)
                 ) {
-                    group.foreachStone((point) => {
+                    group.map((point) => {
                         const x = point.x;
                         const y = point.y;
                         is_settled[y][x] = 1;
                         settled[y][x] = color;
                     });
                     group.neighbors.forEach((neighbor) => {
-                        neighbor.foreachStone((point) => {
+                        neighbor.map((point) => {
                             const x = point.x;
                             const y = point.y;
                             is_settled[y][x] = 1;
@@ -282,7 +282,7 @@ export function autoscore(
 
         groups.foreachGroup((group) => {
             // if this group is a settled group, ignore it, we don't care about those
-            const pt = group.points[0];
+            const pt = group.intersections[0];
             if (is_settled[pt.y][pt.x]) {
                 return;
             }
@@ -314,7 +314,7 @@ export function autoscore(
                 }
             }
 
-            group.foreachStone((point) => {
+            group.map((point) => {
                 const x = point.x;
                 const y = point.y;
                 contained[board[y][x]]++;
@@ -327,7 +327,7 @@ export function autoscore(
                     black_plays_first_ownership[y][x] + white_plays_first_ownership[y][x];
             });
 
-            const average_color_estimate = total_ownership_estimate / group.points.length;
+            const average_color_estimate = total_ownership_estimate / group.intersections.length;
 
             let color_judgement: JGOFNumericPlayerColor;
 
@@ -352,7 +352,7 @@ export function autoscore(
                 }
             }
 
-            group.foreachStone((point) => {
+            group.map((point) => {
                 const x = point.x;
                 const y = point.y;
                 if (board[y][x] && board[y][x] !== color_judgement) {
@@ -414,7 +414,7 @@ export function autoscore(
                 if (
                     group.color === JGOFNumericPlayerColor.EMPTY &&
                     !group.is_territory &&
-                    group.points.length > 3
+                    group.intersections.length > 3
                 ) {
                     // If it looks like our group is probably mostly owned by a player, but
                     // there are spots that are not sealed, mark those spots as dame so our
@@ -423,13 +423,13 @@ export function autoscore(
                     // so the players have to resume to finish the game.
                     let total_ownership = 0;
 
-                    group.foreachStone((point) => {
+                    group.map((point) => {
                         const x = point.x;
                         const y = point.y;
                         total_ownership += average_ownership[y][x];
                     });
 
-                    const avg = total_ownership / group.points.length;
+                    const avg = total_ownership / group.intersections.length;
 
                     if (avg <= WHITE_SEAL_THRESHOLD || avg >= BLACK_SEAL_THRESHOLD) {
                         const color =
@@ -437,7 +437,7 @@ export function autoscore(
                                 ? JGOFNumericPlayerColor.WHITE
                                 : JGOFNumericPlayerColor.BLACK;
 
-                        group.foreachStone((point) => {
+                        group.map((point) => {
                             const x = point.x;
                             const y = point.y;
 
@@ -764,8 +764,8 @@ function debug_boolean_board(title: string, board: (boolean | number)[][], mark 
 
 function debug_groups(title: string, groups: StoneStringBuilder) {
     const group_map: string[][] = makeMatrix(
-        groups.group_id_map[0].length,
-        groups.group_id_map.length,
+        groups.stone_string_id_map[0].length,
+        groups.stone_string_id_map.length,
         "",
     );
     const symbols = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -799,7 +799,7 @@ function debug_groups(title: string, groups: StoneStringBuilder) {
 
         const symbol = symbols[group_idx % symbols.length];
 
-        group.foreachStone((point) => {
+        group.map((point) => {
             group_map[point.y][point.x] = group_color(symbol);
         });
         group_idx++;
