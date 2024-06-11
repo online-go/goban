@@ -18,11 +18,11 @@ import { _, interpolate } from "./translate";
 import type { JGOFTimeControl } from "./JGOF";
 
 /** Returns a random integer between min (inclusive) and max (exclusive) */
-
 export function getRandomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
+/** Takes a number of seconds and returns a string like "1d 3h 2m 52s" */
 export function shortDurationString(seconds: number) {
     const weeks = Math.floor(seconds / (86400 * 7));
     seconds -= weeks * 86400 * 7;
@@ -42,6 +42,7 @@ export function shortDurationString(seconds: number) {
     );
 }
 
+/** Deep clones an object */
 export function dup(obj: any): any {
     let ret: any;
     if (typeof obj === "object") {
@@ -62,6 +63,7 @@ export function dup(obj: any): any {
     return ret;
 }
 
+/** Deep compares two objects */
 export function deepEqual(a: any, b: any) {
     if (typeof a !== typeof b) {
         return false;
@@ -102,11 +104,18 @@ export function deepEqual(a: any, b: any) {
     }
 }
 
+/**
+ * Rough estimate of the average number of moves in a game based on height on
+ * and width. See discussion here:
+ * https://forums.online-go.com/t/average-game-length-on-different-board-sizes/35042/11
+ */
 function averageMovesPerGame(w: number, h: number): number {
-    // Rough estimate based on discussion at https://forums.online-go.com/t/average-game-length-on-different-board-sizes/35042/11
     return Math.round(0.7 * w * h);
 }
 
+/**
+ * Compute the expected average time per move for a given time control.
+ */
 export function computeAverageMoveTime(
     time_control: JGOFTimeControl,
     w?: number,
@@ -152,9 +161,11 @@ export function computeAverageMoveTime(
     }
 }
 
-/* Like setInterval, but debounces catchups that happen
- * when tabs wake up on some browsers. Cleared with
- * the standard clearInterval. */
+/**
+ * Like setInterval, but debounces catchups (multiple invocation in rapid
+ * succession less than our desired interval) that happen in some browsers when
+ * tabs wake up from sleep. Cleared with the standard clearInterval.
+ * */
 export function niceInterval(
     callback: () => void,
     interval: number,
@@ -210,8 +221,11 @@ export function escapeSGFText(txt: string, escapeColon: boolean = false): string
     return txt;
 }
 
-// in SGF simple text, we also need to get rid of the newlines
-export function newline2space(txt: string): string {
+/**
+ * SGF "simple text", eg used in the LB property, we can't have newlines. This
+ * strips them and replaces them with spaces.
+ */
+export function newlines_to_spaces(txt: string): string {
     return txt.replace(/[\r\n]/g, " ");
 }
 
@@ -227,6 +241,7 @@ export function color_blend(c1: string, c2: string): string {
     );
 }
 
+/** Convert hex color to RGB */
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (!result) {
@@ -239,6 +254,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
     };
 }
 
+/** Convert RGB color to hex */
 function rgbToHex(r: number, g: number, b: number): string {
     return "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
 }

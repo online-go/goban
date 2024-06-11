@@ -19,7 +19,7 @@ import { GoEngine, GoEngineState } from "./GoEngine";
 import { encodeMove } from "./GoMath";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
-import { escapeSGFText, newline2space } from "./util";
+import { escapeSGFText, newlines_to_spaces } from "./util";
 
 export interface MarkInterface {
     triangle?: boolean;
@@ -714,7 +714,7 @@ export class MoveTree {
                         if (m.letter) {
                             // https://www.red-bean.com/sgf/properties.html
                             // LB is composed type of simple text (== no newlines, escaped colon)
-                            const body = newline2space(escapeSGFText(m.letter, true));
+                            const body = newlines_to_spaces(escapeSGFText(m.letter, true));
                             ret.push("LB[" + pos + ":" + body + "]");
                         }
                     }
