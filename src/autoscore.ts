@@ -25,6 +25,7 @@ import { GoStoneGroups } from "./GoStoneGroups";
 import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./JGOF";
 import { char2num, makeMatrix, num2char, pretty_coor_num2ch } from "./GoMath";
 import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GoEngine";
+import { Board } from "./Board";
 
 interface AutoscoreResults {
     result: JGOFNumericPlayerColor[][];
@@ -58,15 +59,15 @@ export function autoscore(
     const width = board[0].length;
     const height = board.length;
     const removed: JGOFMove[] = [];
-    const removal = makeMatrix(width, height);
-    const is_settled = makeMatrix(width, height);
-    const settled = makeMatrix(width, height);
-    const final_ownership = makeMatrix(board[0].length, board.length);
-    const final_sealed_ownership = makeMatrix(board[0].length, board.length);
-    const sealed = makeMatrix(width, height);
+    const removal = makeMatrix(width, height, false);
+    const is_settled = makeMatrix(width, height, 0);
+    const settled = makeMatrix(width, height, 0);
+    const final_ownership = makeMatrix(board[0].length, board.length, 0);
+    const final_sealed_ownership = makeMatrix(board[0].length, board.length, 0);
+    const sealed = makeMatrix(width, height, 0);
     const needs_sealing: JGOFSealingIntersection[] = [];
 
-    const average_ownership = makeMatrix(width, height);
+    const average_ownership = makeMatrix(width, height, 0);
     for (let y = 0; y < height; ++y) {
         for (let x = 0; x < width; ++x) {
             average_ownership[y][x] =
@@ -81,12 +82,12 @@ export function autoscore(
     debug_ownership_output("White plays first estimates", white_plays_first_ownership);
     debug_ownership_output("Average estimates", average_ownership);
 
-    const groups = new GoStoneGroups({
-        width,
-        height,
-        board,
-        removal: makeMatrix(width, height),
-    });
+    const groups = new GoStoneGroups(
+        new Board({
+            board,
+            removal: makeMatrix(width, height, false),
+        }),
+    );
 
     debug_groups("Groups", groups);
 
@@ -121,7 +122,7 @@ export function autoscore(
 
         removed.push({ x, y, removal_reason });
         board[y][x] = JGOFNumericPlayerColor.EMPTY;
-        removal[y][x] = 1;
+        removal[y][x] = true;
         stage_log(`Removing ${pretty_coor_num2ch(x)}${height - y}: ${removal_reason}`);
     }
 
@@ -137,12 +138,10 @@ export function autoscore(
         stage("Settling agreed upon territory");
 
         const groups = new GoStoneGroups(
-            {
-                width,
-                height,
+            new Board({
                 board,
                 removal,
-            },
+            }),
             original_board,
         );
 
@@ -274,12 +273,12 @@ export function autoscore(
          * Consider unsettled groups. Count the unsettled stones along with
          * their neighboring stones
          */
-        const groups = new GoStoneGroups({
-            width,
-            height,
-            board: is_settled,
-            removal: makeMatrix(width, height),
-        });
+        const groups = new GoStoneGroups(
+            new Board({
+                board: is_settled,
+                removal: makeMatrix(width, height, false),
+            }),
+        );
 
         groups.foreachGroup((group) => {
             // if this group is a settled group, ignore it, we don't care about those
@@ -301,7 +300,7 @@ export function autoscore(
             ];
             let total_ownership_estimate = 0;
 
-            const already_tallied = makeMatrix(width, height);
+            const already_tallied = makeMatrix(width, height, 0);
             function tally_edge(x: number, y: number) {
                 if (x < 0 || x >= width || y < 0 || y >= height) {
                     return;
@@ -399,15 +398,12 @@ export function autoscore(
 
     function seal_territory() {
         stage(`Sealing territory`);
-        //const dame_map = makeMatrix(width, height);
         {
             let groups = new GoStoneGroups(
-                {
-                    width,
-                    height,
+                new Board({
                     board,
                     removal,
-                },
+                }),
                 original_board,
             );
 
@@ -469,12 +465,10 @@ export function autoscore(
             });
 
             groups = new GoStoneGroups(
-                {
-                    width: board[0].length,
-                    height: board.length,
+                new Board({
                     board,
                     removal,
-                },
+                }),
                 original_board,
             );
 
@@ -524,7 +518,7 @@ export function autoscore(
         };
 
         for (const initial_state of [sealed_initial_state, real_initial_state]) {
-            const cur_ownership = makeMatrix(width, height);
+            const cur_ownership = makeMatrix(width, height, 0);
 
             const engine = new GoEngine({
                 width: original_board[0].length,
@@ -538,7 +532,7 @@ export function autoscore(
             removed.map((pt) => (board[pt.y][pt.x] = 0));
 
             const score = engine.computeScore();
-            const scoring_positions = makeMatrix(width, height);
+            const scoring_positions = makeMatrix(width, height, 0);
 
             for (let i = 0; i < score.black.scoring_positions.length; i += 2) {
                 const x = char2num(score.black.scoring_positions[i]);
@@ -562,12 +556,10 @@ export function autoscore(
             }
 
             const groups = new GoStoneGroups(
-                {
-                    width,
-                    height,
+                new Board({
                     board,
                     removal,
-                },
+                }),
                 engine.board,
             );
 
@@ -739,7 +731,7 @@ function colorizeIntersection(c: string): string {
     return yellow(c);
 }
 
-function debug_boolean_board(title: string, board: number[][], mark = "S") {
+function debug_boolean_board(title: string, board: (boolean | number)[][], mark = "S") {
     begin_board(title);
     let out = "   ";
     const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
@@ -774,7 +766,8 @@ function debug_groups(title: string, groups: GoStoneGroups) {
     const group_map: string[][] = makeMatrix(
         groups.group_id_map[0].length,
         groups.group_id_map.length,
-    ) as any;
+        "",
+    );
     const symbols = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     let group_idx = 0;

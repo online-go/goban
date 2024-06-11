@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import { GobanCore } from "../GobanCore";
 import { GoTheme } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 import { renderShadow } from "./rendered_stones";
 import { renderPlainStone } from "./plain_stones";
+import { callbacks } from "../callbacks";
 
 const anime_black_imagedata = makeSvgImageData(require("../../assets/img/anime_black.svg"));
 const anime_white_imagedata = makeSvgImageData(require("../../assets/img/anime_white.svg"));
 
 function getCDNReleaseBase() {
-    if (GobanCore.hooks.getCDNReleaseBase) {
-        return GobanCore.hooks.getCDNReleaseBase();
+    if (callbacks.getCDNReleaseBase) {
+        return callbacks.getCDNReleaseBase();
     }
     return "";
 }
@@ -320,10 +320,7 @@ export default function (GoThemes: GoThemesInterface) {
             cy: number,
             radius: number,
         ): void {
-            if (
-                GobanCore.hooks.customBlackStoneUrl &&
-                GobanCore.hooks.customBlackStoneUrl() !== ""
-            ) {
+            if (callbacks.customBlackStoneUrl && callbacks.customBlackStoneUrl() !== "") {
                 placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
             } else {
                 renderPlainStone(
@@ -342,15 +339,12 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): StoneTypeArray | boolean {
-            if (
-                !GobanCore.hooks.customBlackStoneUrl ||
-                GobanCore.hooks.customBlackStoneUrl() === ""
-            ) {
+            if (!callbacks.customBlackStoneUrl || callbacks.customBlackStoneUrl() === "") {
                 return true;
             }
             return preRenderImageStone(
                 radius,
-                GobanCore.hooks.customBlackStoneUrl ? GobanCore.hooks.customBlackStoneUrl() : "",
+                callbacks.customBlackStoneUrl ? callbacks.customBlackStoneUrl() : "",
                 deferredRenderCallback,
                 false /* show_shadow */,
             );
@@ -358,15 +352,11 @@ export default function (GoThemes: GoThemesInterface) {
         }
 
         public getBlackStoneColor(): string {
-            return GobanCore.hooks.customBlackStoneColor
-                ? GobanCore.hooks.customBlackStoneColor()
-                : "#000000";
+            return callbacks.customBlackStoneColor ? callbacks.customBlackStoneColor() : "#000000";
         }
 
         public getBlackTextColor(): string {
-            return GobanCore.hooks.customBlackTextColor
-                ? GobanCore.hooks.customBlackTextColor()
-                : "#FFFFFF";
+            return callbacks.customBlackTextColor ? callbacks.customBlackTextColor() : "#FFFFFF";
         }
 
         placeWhiteStone(
@@ -377,10 +367,7 @@ export default function (GoThemes: GoThemesInterface) {
             cy: number,
             radius: number,
         ): void {
-            if (
-                GobanCore.hooks.customWhiteStoneUrl &&
-                GobanCore.hooks.customWhiteStoneUrl() !== ""
-            ) {
+            if (callbacks.customWhiteStoneUrl && callbacks.customWhiteStoneUrl() !== "") {
                 placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
             } else {
                 renderPlainStone(
@@ -399,15 +386,12 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): StoneTypeArray | boolean {
-            if (
-                !GobanCore.hooks.customWhiteStoneUrl ||
-                GobanCore.hooks.customWhiteStoneUrl() === ""
-            ) {
+            if (!callbacks.customWhiteStoneUrl || callbacks.customWhiteStoneUrl() === "") {
                 return true;
             }
             return preRenderImageStone(
                 radius,
-                GobanCore.hooks.customWhiteStoneUrl ? GobanCore.hooks.customWhiteStoneUrl() : "",
+                callbacks.customWhiteStoneUrl ? callbacks.customWhiteStoneUrl() : "",
                 deferredRenderCallback,
                 false /* show_shadow */,
             );
@@ -415,15 +399,11 @@ export default function (GoThemes: GoThemesInterface) {
         }
 
         public getWhiteStoneColor(): string {
-            return GobanCore.hooks.customWhiteStoneColor
-                ? GobanCore.hooks.customWhiteStoneColor()
-                : "#FFFFFF";
+            return callbacks.customWhiteStoneColor ? callbacks.customWhiteStoneColor() : "#FFFFFF";
         }
 
         public getWhiteTextColor(): string {
-            return GobanCore.hooks.customWhiteTextColor
-                ? GobanCore.hooks.customWhiteTextColor()
-                : "#000000";
+            return callbacks.customWhiteTextColor ? callbacks.customWhiteTextColor() : "#000000";
         }
 
         public preRenderBlackSVG(
@@ -432,10 +412,7 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): string[] {
-            if (
-                !GobanCore.hooks.customBlackStoneUrl ||
-                GobanCore.hooks.customBlackStoneUrl() === ""
-            ) {
+            if (!callbacks.customBlackStoneUrl || callbacks.customBlackStoneUrl() === "") {
                 return super.preRenderBlackSVG(defs, radius, _seed, deferredRenderCallback);
             }
 
@@ -443,7 +420,7 @@ export default function (GoThemes: GoThemesInterface) {
                 this.renderSVG(
                     {
                         id: `custom-black-${radius}`,
-                        url: GobanCore.hooks.customBlackStoneUrl(),
+                        url: callbacks.customBlackStoneUrl(),
                     },
                     radius,
                 ),
@@ -458,10 +435,7 @@ export default function (GoThemes: GoThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): string[] {
-            if (
-                !GobanCore.hooks.customWhiteStoneUrl ||
-                GobanCore.hooks.customWhiteStoneUrl() === ""
-            ) {
+            if (!callbacks.customWhiteStoneUrl || callbacks.customWhiteStoneUrl() === "") {
                 return super.preRenderWhiteSVG(defs, radius, _seed, deferredRenderCallback);
             }
 
@@ -469,7 +443,7 @@ export default function (GoThemes: GoThemesInterface) {
                 this.renderSVG(
                     {
                         id: `custom-white-${radius}`,
-                        url: GobanCore.hooks.customWhiteStoneUrl(),
+                        url: callbacks.customWhiteStoneUrl(),
                     },
                     radius,
                 ),

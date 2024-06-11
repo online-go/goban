@@ -51,6 +51,7 @@ import { MessageID } from "./messages";
 import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
 import { ServerToClient, GameChatMessage, GameChatLine, StallingScoreEstimate } from "./protocol";
 import { EventEmitter } from "eventemitter3";
+import { callbacks } from "./callbacks";
 
 declare let swal: any;
 
@@ -314,54 +315,6 @@ export interface Events extends StateUpdateEvents {
     "audio-undo-granted": () => void;
 }
 
-export interface GobanHooks {
-    defaultConfig?: () => any;
-    getCoordinateDisplaySystem?: () => "A1" | "1-1";
-    isAnalysisDisabled?: (goban: GobanCore, perGameSettingAppliesToNonPlayers: boolean) => boolean;
-
-    getClockDrift?: () => number;
-    getNetworkLatency?: () => number;
-    getLocation?: () => string;
-    getShowMoveNumbers?: () => boolean;
-    getShowVariationMoveNumbers?: () => boolean;
-    getMoveTreeNumbering?: () => "move-coordinates" | "none" | "move-number";
-    getCDNReleaseBase?: () => string;
-    getSoundEnabled?: () => boolean;
-    getSoundVolume?: () => number;
-
-    watchSelectedThemes?: (cb: (themes: GobanSelectedThemes) => void) => { remove: () => any };
-    getSelectedThemes?: () => GobanSelectedThemes;
-
-    customBlackStoneColor?: () => string;
-    customBlackTextColor?: () => string;
-    customWhiteStoneColor?: () => string;
-    customWhiteTextColor?: () => string;
-    customBoardColor?: () => string;
-    customBoardLineColor?: () => string;
-    customBoardUrl?: () => string;
-    customBlackStoneUrl?: () => string;
-    customWhiteStoneUrl?: () => string;
-
-    canvasAllocationErrorHandler?: (
-        note: string | null,
-        error: Error,
-        extra: {
-            total_allocations_made: number;
-            total_pixels_allocated: number;
-            width?: number | string;
-            height?: number | string;
-        },
-    ) => void;
-
-    addCoordinatesToChatInput?: (coordinates: string) => void;
-    updateScoreEstimation?: (
-        est_winning_color: "black" | "white",
-        number_of_points: number,
-    ) => void;
-
-    toast?: (message_id: string, duration: number) => void;
-}
-
 export interface GobanMetrics {
     width: number;
     height: number;
@@ -597,10 +550,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
     protected abstract enableDrawing(): void;
     protected abstract disableDrawing(): void;
 
-    public static hooks: GobanHooks = {
-        getClockDrift: () => 0,
-    };
-
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super();
 
@@ -790,90 +739,84 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.socket_event_bindings.push([event, cb]);
     }
 
-    public static setHooks(hooks: GobanHooks): void {
-        for (const name in hooks) {
-            (GobanCore.hooks as any)[name] = (hooks as any)[name];
-        }
-    }
-
     protected getClockDrift(): number {
-        if (GobanCore.hooks.getClockDrift) {
-            return GobanCore.hooks.getClockDrift();
+        if (callbacks.getClockDrift) {
+            return callbacks.getClockDrift();
         }
         console.warn("getClockDrift not provided for Goban instance");
         return 0;
     }
     protected getNetworkLatency(): number {
-        if (GobanCore.hooks.getNetworkLatency) {
-            return GobanCore.hooks.getNetworkLatency();
+        if (callbacks.getNetworkLatency) {
+            return callbacks.getNetworkLatency();
         }
         console.warn("getNetworkLatency not provided for Goban instance");
         return 0;
     }
     protected getCoordinateDisplaySystem(): "A1" | "1-1" {
-        if (GobanCore.hooks.getCoordinateDisplaySystem) {
-            return GobanCore.hooks.getCoordinateDisplaySystem();
+        if (callbacks.getCoordinateDisplaySystem) {
+            return callbacks.getCoordinateDisplaySystem();
         }
         return "A1";
     }
     protected getShowMoveNumbers(): boolean {
-        if (GobanCore.hooks.getShowMoveNumbers) {
-            return GobanCore.hooks.getShowMoveNumbers();
+        if (callbacks.getShowMoveNumbers) {
+            return callbacks.getShowMoveNumbers();
         }
         return false;
     }
     protected getShowVariationMoveNumbers(): boolean {
-        if (GobanCore.hooks.getShowVariationMoveNumbers) {
-            return GobanCore.hooks.getShowVariationMoveNumbers();
+        if (callbacks.getShowVariationMoveNumbers) {
+            return callbacks.getShowVariationMoveNumbers();
         }
         return false;
     }
     public static getMoveTreeNumbering(): string {
-        if (GobanCore.hooks.getMoveTreeNumbering) {
-            return GobanCore.hooks.getMoveTreeNumbering();
+        if (callbacks.getMoveTreeNumbering) {
+            return callbacks.getMoveTreeNumbering();
         }
         return "move-number";
     }
     public static getCDNReleaseBase(): string {
-        if (GobanCore.hooks.getCDNReleaseBase) {
-            return GobanCore.hooks.getCDNReleaseBase();
+        if (callbacks.getCDNReleaseBase) {
+            return callbacks.getCDNReleaseBase();
         }
         return "";
     }
     public static getSoundEnabled(): boolean {
-        if (GobanCore.hooks.getSoundEnabled) {
-            return GobanCore.hooks.getSoundEnabled();
+        if (callbacks.getSoundEnabled) {
+            return callbacks.getSoundEnabled();
         }
         return true;
     }
     public static getSoundVolume(): number {
-        if (GobanCore.hooks.getSoundVolume) {
-            return GobanCore.hooks.getSoundVolume();
+        if (callbacks.getSoundVolume) {
+            return callbacks.getSoundVolume();
         }
         return 0.5;
     }
     protected defaultConfig(): any {
-        if (GobanCore.hooks.defaultConfig) {
-            return GobanCore.hooks.defaultConfig();
+        if (callbacks.defaultConfig) {
+            return callbacks.defaultConfig();
         }
         return {};
     }
     public isAnalysisDisabled(perGameSettingAppliesToNonPlayers: boolean = false): boolean {
-        if (GobanCore.hooks.isAnalysisDisabled) {
-            return GobanCore.hooks.isAnalysisDisabled(this, perGameSettingAppliesToNonPlayers);
+        if (callbacks.isAnalysisDisabled) {
+            return callbacks.isAnalysisDisabled(this, perGameSettingAppliesToNonPlayers);
         }
         return false;
     }
 
     protected getLocation(): string {
-        if (GobanCore.hooks.getLocation) {
-            return GobanCore.hooks.getLocation();
+        if (callbacks.getLocation) {
+            return callbacks.getLocation();
         }
         return window.location.pathname;
     }
     protected getSelectedThemes(): GobanSelectedThemes {
-        if (GobanCore.hooks.getSelectedThemes) {
-            return GobanCore.hooks.getSelectedThemes();
+        if (callbacks.getSelectedThemes) {
+            return callbacks.getSelectedThemes();
         }
         //return {white:'Plain', black:'Plain', board:'Plain'};
         //return {white:'Plain', black:'Plain', board:'Kaya'};
@@ -917,10 +860,10 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     if (!this.isCurrentUserAPlayer()) {
                         return;
                     }
-                    if (!GobanCore.hooks.getNetworkLatency) {
+                    if (!callbacks.getNetworkLatency) {
                         return;
                     }
-                    const latency = GobanCore.hooks.getNetworkLatency();
+                    const latency = callbacks.getNetworkLatency();
                     if (!latency) {
                         return;
                     }
@@ -2091,6 +2034,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.width = new_width;
         this.height = new_height;
 
+        console.log("New width and height", this.width, this.height);
+
         delete this.move_selected;
 
         this.bounds = config.bounds || {
@@ -2202,6 +2147,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
             // in case the constructor some side effects on `this`
             // (JM: which it currently does)
             this.engine = new GoEngine(config, this);
+            console.log(
+                "New engine: ",
+                config,
+                this.engine.width,
+                this.engine.height,
+                this.engine.board,
+            );
             this.emit("engine.updated", this.engine);
             this.engine.parentEventEmitter = this;
             this.engine.getState_callback = () => {
@@ -2274,7 +2226,10 @@ export abstract class GobanCore extends EventEmitter<Events> {
             (this as any).autoScore();
         }
 
+        console.log("Keeping old config?", keep_old_engine);
+
         this.emit("load", config);
+
         return this.engine;
     }
     public set(x: number, y: number, player: JGOFNumericPlayerColor): void {
@@ -2283,7 +2238,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     public setForRemoval(
         x: number,
         y: number,
-        removed: number,
+        removed: boolean,
         emit_stone_removal_updated: boolean = true,
     ) {
         if (removed) {
@@ -2294,7 +2249,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this.getMarks(x, y).remove = false;
         }
         this.drawSquare(x, y);
-        this.emit("set-for-removal", { x, y, removed: !!removed });
+        this.emit("set-for-removal", { x, y, removed });
         if (emit_stone_removal_updated) {
             this.emit("stone-removal.updated");
         }
@@ -3187,8 +3142,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
     public updateScoreEstimation(): void {
         if (this.score_estimate) {
             const est = this.score_estimate.estimated_hard_score - this.engine.komi;
-            if (GobanCore.hooks.updateScoreEstimation) {
-                GobanCore.hooks.updateScoreEstimation(est > 0 ? "black" : "white", Math.abs(est));
+            if (callbacks.updateScoreEstimation) {
+                callbacks.updateScoreEstimation(est > 0 ? "black" : "white", Math.abs(est));
             }
             if (this.config.onScoreEstimationUpdated) {
                 this.config.onScoreEstimationUpdated(est > 0 ? "black" : "white", Math.abs(est));
@@ -3312,9 +3267,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 }
 
                 if (color) {
-                    const clock_drift = GobanCore.hooks?.getClockDrift
-                        ? GobanCore.hooks?.getClockDrift()
-                        : 0;
+                    const clock_drift = callbacks?.getClockDrift ? callbacks?.getClockDrift() : 0;
 
                     const current_server_time = Date.now() - clock_drift;
 
@@ -3418,8 +3371,8 @@ export abstract class GobanCore extends EventEmitter<Events> {
 
         let current_server_time = 0;
         function update_current_server_time() {
-            if (GobanCore.hooks.getClockDrift) {
-                const server_time_offset = GobanCore.hooks.getClockDrift();
+            if (callbacks.getClockDrift) {
+                const server_time_offset = callbacks.getClockDrift();
                 current_server_time = Date.now() - server_time_offset;
             }
         }

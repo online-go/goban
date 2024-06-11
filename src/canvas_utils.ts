@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GobanCore } from "./GobanCore";
+import { callbacks } from "./callbacks";
 
 let __deviceCanvasScalingRatio = 0;
 let canvases_allocated = 0;
@@ -95,8 +95,8 @@ export function validateCanvas(
     }
 
     if (err) {
-        if (GobanCore.hooks.canvasAllocationErrorHandler) {
-            GobanCore.hooks.canvasAllocationErrorHandler(err_string, err, {
+        if (callbacks.canvasAllocationErrorHandler) {
+            callbacks.canvasAllocationErrorHandler(err_string, err, {
                 total_pixels_allocated,
                 total_allocations_made: canvases_allocated,
                 width,

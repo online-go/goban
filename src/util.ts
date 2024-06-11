@@ -22,6 +22,11 @@ export function getRandomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
+/** Returns a cloned copy of the provided matrix */
+export function cloneMatrix<T>(matrix: T[][]): T[][] {
+    return matrix.map((row) => row.slice());
+}
+
 /** Takes a number of seconds and returns a string like "1d 3h 2m 52s" */
 export function shortDurationString(seconds: number) {
     const weeks = Math.floor(seconds / (86400 * 7));

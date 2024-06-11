@@ -17,11 +17,11 @@
 import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
 import { _ } from "../translate";
-import { GobanCore } from "../GobanCore";
+import { callbacks } from "../callbacks";
 
 function getCDNReleaseBase() {
-    if (GobanCore.hooks.getCDNReleaseBase) {
-        return GobanCore.hooks.getCDNReleaseBase();
+    if (callbacks.getCDNReleaseBase) {
+        return callbacks.getCDNReleaseBase();
     }
     return "";
 }

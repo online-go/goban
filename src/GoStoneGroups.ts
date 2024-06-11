@@ -15,17 +15,18 @@
  */
 
 import * as GoMath from "./GoMath";
-import { GoStoneGroup, BoardState } from "./GoStoneGroup";
+import { GoStoneGroup } from "./GoStoneGroup";
+import { Board } from "./Board";
 import { JGOFNumericPlayerColor } from "./JGOF";
 
 export class GoStoneGroups {
-    private state: BoardState;
-    public group_id_map: Array<Array<number>>;
+    private state: Board;
+    public group_id_map: number[][];
     public groups: Array<GoStoneGroup>;
 
-    constructor(state: BoardState, original_board?: Array<Array<number>>) {
+    constructor(state: Board, original_board?: Array<Array<number>>) {
         const groups: Array<GoStoneGroup> = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
-        const group_id_map: Array<Array<number>> = GoMath.makeMatrix(state.width, state.height);
+        const group_id_map = GoMath.makeMatrix(state.width, state.height, 0);
 
         this.state = state;
         this.group_id_map = group_id_map;

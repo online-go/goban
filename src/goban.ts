@@ -36,6 +36,7 @@ export * from "./TestGoban";
 export * from "./test_utils";
 export * from "./GobanSocket";
 export * from "./util";
+export * from "./callbacks";
 export * from "./autoscore";
 
 export * as GoMath from "./GoMath";

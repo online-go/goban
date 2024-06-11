@@ -16,7 +16,7 @@
 
 import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
-import { GobanCore } from "../GobanCore";
+import { callbacks } from "../callbacks";
 import { _ } from "../translate";
 
 // Converts a six-digit hex string to rgba() notation
@@ -77,52 +77,40 @@ export default function (GoThemes: GoThemesInterface) {
         }
         getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
-                "background-color": GobanCore.hooks.customBoardColor
-                    ? GobanCore.hooks.customBoardColor()
+                "background-color": callbacks.customBoardColor
+                    ? callbacks.customBoardColor()
                     : "#DCB35C",
                 "background-image":
-                    GobanCore.hooks.customBoardUrl && GobanCore.hooks.customBoardUrl() !== ""
-                        ? "url('" + GobanCore.hooks.customBoardUrl() + "')"
+                    callbacks.customBoardUrl && callbacks.customBoardUrl() !== ""
+                        ? "url('" + callbacks.customBoardUrl() + "')"
                         : "",
                 "background-size": "cover",
             };
         }
         getLineColor(): string {
-            return GobanCore.hooks.customBoardLineColor
-                ? GobanCore.hooks.customBoardLineColor()
-                : "#000000";
+            return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
         getFadedLineColor(): string {
             return hexToRgba(
-                GobanCore.hooks.customBoardLineColor
-                    ? GobanCore.hooks.customBoardLineColor()
-                    : "#000000",
+                callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.5,
             );
         }
         getStarColor(): string {
-            return GobanCore.hooks.customBoardLineColor
-                ? GobanCore.hooks.customBoardLineColor()
-                : "#000000";
+            return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
         getFadedStarColor(): string {
             return hexToRgba(
-                GobanCore.hooks.customBoardLineColor
-                    ? GobanCore.hooks.customBoardLineColor()
-                    : "#000000",
+                callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.5,
             );
         }
         getBlankTextColor(): string {
-            return GobanCore.hooks.customBoardLineColor
-                ? GobanCore.hooks.customBoardLineColor()
-                : "#000000";
+            return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
         getLabelTextColor(): string {
             return hexToRgba(
-                GobanCore.hooks.customBoardLineColor
-                    ? GobanCore.hooks.customBoardLineColor()
-                    : "#000000",
+                callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.75,
             );
         }

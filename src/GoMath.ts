@@ -19,11 +19,12 @@ import { AdHocPackedMove } from "./AdHocFormat";
 
 export type Move = JGOFMove;
 export type Intersection = JGOFIntersection;
-export type NumberMatrix = Array<Array<number>>;
-export type StringMatrix = Array<Array<string>>;
+export type Matrix<T> = T[][];
+export type NumberMatrix = Matrix<number>;
+export type StringMatrix = Matrix<string>;
 
-export function makeMatrix(width: number, height: number, initialValue: number = 0): NumberMatrix {
-    const ret: NumberMatrix = [];
+export function makeMatrix<T = number>(width: number, height: number, initialValue: T): Matrix<T> {
+    const ret: Matrix<T> = [];
     for (let y = 0; y < height; ++y) {
         ret.push([]);
         for (let x = 0; x < width; ++x) {

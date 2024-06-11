@@ -21,7 +21,6 @@ import { AdHocFormat } from "./AdHocFormat";
 import { GobanCore, GobanConfig, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
 import { GoEngine } from "./GoEngine";
 import * as GoMath from "./GoMath";
-import { Group } from "./GoStoneGroup";
 import { MoveTree } from "./MoveTree";
 import { GoTheme } from "./GoTheme";
 import { GoThemes } from "./GoThemes";
@@ -36,6 +35,7 @@ import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
 import { color_blend, getRandomInt } from "./util";
 import { GoStoneGroups } from "./GoStoneGroups";
+import { callbacks } from "./callbacks";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -388,8 +388,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     try {
                         const pos = getRelativeEventPosition(ev);
                         const pt = this.xy2ij(pos.x, pos.y);
-                        if (GobanCore.hooks.addCoordinatesToChatInput) {
-                            GobanCore.hooks.addCoordinatesToChatInput(
+                        if (callbacks.addCoordinatesToChatInput) {
+                            callbacks.addCoordinatesToChatInput(
                                 this.engine.prettyCoords(pt.i, pt.j),
                             );
                         }
@@ -860,19 +860,16 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 this.engine.isActivePlayer(this.player_id) &&
                 this.engine.cur_move === this.engine.last_official_move
             ) {
-                let removed: 0 | 1;
-                let group: Group;
-                if (event.shiftKey || press_duration_ms > 500) {
-                    //[[removed, group]] = this.engine.toggleMetaGroupRemoval(x, y);
-                    [[removed, group]] = this.engine.toggleSingleGroupRemoval(x, y, true);
-                } else {
-                    [[removed, group]] = this.engine.toggleSingleGroupRemoval(x, y);
-                }
+                const { removed, group } = this.engine.toggleSingleGroupRemoval(
+                    x,
+                    y,
+                    event.shiftKey || press_duration_ms > 500,
+                );
 
                 if (group.length) {
                     this.socket.send("game/removed_stones/set", {
                         game_id: this.game_id,
-                        removed: !!removed,
+                        removed: removed,
                         stones: GoMath.encodeMoves(group),
                     });
                 }
@@ -3299,8 +3296,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     protected watchSelectedThemes(cb: (themes: GobanSelectedThemes) => void): {
         remove: () => any;
     } {
-        if (GobanCore.hooks.watchSelectedThemes) {
-            return GobanCore.hooks.watchSelectedThemes(cb);
+        if (callbacks.watchSelectedThemes) {
+            return callbacks.watchSelectedThemes(cb);
         }
         return { remove: () => {} };
     }
@@ -3594,11 +3591,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         const text_color = color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
 
         let label = "";
-        switch (
-            GobanCore.hooks.getMoveTreeNumbering
-                ? GobanCore.hooks.getMoveTreeNumbering()
-                : "move-number"
-        ) {
+        switch (callbacks.getMoveTreeNumbering ? callbacks.getMoveTreeNumbering() : "move-number") {
             case "move-coordinates":
                 label = node.pretty_coordinates;
                 break;

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { dup } from "./util";
 import { encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { GoStoneGroup } from "./GoStoneGroup";
@@ -25,6 +24,7 @@ import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./JGO
 import { _ } from "./translate";
 import { estimateScoreWasm } from "./local_estimators/wasm_estimator";
 import * as goscorer from "./goscorer/goscorer";
+import { Board } from "./Board";
 
 export { init_score_estimator, estimateScoreWasm } from "./local_estimators/wasm_estimator";
 export { estimateScoreVoronoi } from "./local_estimators/voronoi";
@@ -100,10 +100,7 @@ export function set_local_scorer(scorer: LocalEstimator) {
     local_scorer = scorer;
 }
 
-export class ScoreEstimator {
-    width: number;
-    height: number;
-    board: Array<Array<JGOFNumericPlayerColor>>;
+export class ScoreEstimator extends Board {
     white: PlayerScore = {
         total: 0,
         stones: 0,
@@ -125,8 +122,6 @@ export class ScoreEstimator {
 
     engine: GoEngine;
     private groups: GoStoneGroups;
-    removal: Array<Array<number>>;
-    goban_callback?: GobanCore;
     tolerance: number;
     amount: number = NaN;
     ownership: Array<Array<number>>;
@@ -143,6 +138,7 @@ export class ScoreEstimator {
     public autoscored_needs_sealing?: JGOFSealingIntersection[];
 
     constructor(
+        /* REFACTOR TODO: Engine puts config first before callback, this should be the same */
         goban_callback: GobanCore | undefined,
         engine: GoEngine,
         trials: number,
@@ -150,14 +146,11 @@ export class ScoreEstimator {
         prefer_remote: boolean = false,
         autoscore: boolean = false,
     ) {
-        this.goban_callback = goban_callback;
+        super(engine, goban_callback);
 
         this.engine = engine;
-        this.width = engine.width;
-        this.height = engine.height;
         this.color_to_move = engine.colorToMove();
-        this.board = dup(engine.board);
-        this.removal = GoMath.makeMatrix(this.width, this.height, 0);
+        this.board = engine.cloneBoard();
         this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
         this.estimated_hard_score = 0.0;
@@ -267,7 +260,7 @@ export class ScoreEstimator {
             tolerance = 0.25;
         }
 
-        const board = GoMath.makeMatrix(this.width, this.height);
+        const board = GoMath.makeMatrix(this.width, this.height, 0);
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 board[y][x] = this.board[y][x] === 2 ? -1 : this.board[y][x];
@@ -341,97 +334,23 @@ export class ScoreEstimator {
         return ret;
     }
     handleClick(i: number, j: number, mod_key: boolean, press_duration_ms: number): void {
-        if (mod_key || press_duration_ms > 500) {
-            this.toggleSingleGroupRemoval(i, j, true);
-        } else {
-            this.toggleSingleGroupRemoval(i, j);
-        }
+        this.toggleSingleGroupRemoval(i, j, mod_key || press_duration_ms > 500);
 
         this.estimateScore(this.trials, this.tolerance, this.autoscore).catch(() => {
             /* empty */
         });
     }
 
-    private removeGroup(g: GoStoneGroup, removing: boolean) {
-        g.foreachStone(({ x, y }) => this.setRemoved(x, y, removing ? 1 : 0));
-    }
-
-    public toggleSingleGroupRemoval(x: number, y: number, force_removal: boolean = false): void {
-        try {
-            if (x >= 0 && y >= 0) {
-                const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
-
-                const groups = new GoStoneGroups(this, this.board);
-                const selected_group = groups.getGroup(x, y);
-                /* If we're clicking on a group, do a sanity check to see if we think
-                 * there is a very good chance that the group is actually definitely alive.
-                 * If so, refuse to remove it, unless a player has instructed us to forcefully
-                 * remove it. */
-                if (removing && !force_removal) {
-                    const scores = goscorer.territoryScoring(
-                        this.board,
-                        this.removal as any,
-                        false,
-                    );
-                    let total_territory_adjacency_count = 0;
-                    let total_territory_group_count = 0;
-                    selected_group.foreachNeighborSpaceGroup((gr) => {
-                        let is_territory_group = false;
-                        gr.foreachStone((pt) => {
-                            if (
-                                scores[pt.y][pt.x].isTerritoryFor === this.board[y][x] &&
-                                !scores[pt.y][pt.x].isFalseEye
-                            ) {
-                                is_territory_group = true;
-                            }
-                        });
-
-                        if (is_territory_group) {
-                            total_territory_group_count += 1;
-                            total_territory_adjacency_count += gr.points.length;
-                        }
-                    });
-                    if (total_territory_adjacency_count >= 5 || total_territory_group_count >= 2) {
-                        console.log("This group is almost assuredly alive, refusing to remove");
-                        GobanCore.hooks.toast?.("refusing_to_remove_group_is_alive", 4000);
-                        return;
-                    }
-                }
-
-                /* Otherwise, toggle the group */
-                const group_color = this.board[y][x];
-
-                if (group_color === JGOFNumericPlayerColor.EMPTY) {
-                    /* Disallow toggling of open area (old dame marking method that we no longer desire) */
-                    return;
-                }
-
-                this.removeGroup(selected_group, !!removing);
-                return;
-            }
-        } catch (err) {
-            console.log(err.stack);
-        }
-    }
-
-    setRemoved(x: number, y: number, removed: number): void {
+    setRemoved(x: number, y: number, removed: boolean): void {
         this.clearAutoScore();
-
-        this.removal[y][x] = removed;
-        if (this.goban_callback) {
-            this.goban_callback.setForRemoval(x, y, this.removal[y][x]);
-        }
+        super.setRemoved(x, y, removed);
     }
+
     clearRemoved(): void {
         this.clearAutoScore();
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (this.removal[y][x]) {
-                    this.setRemoved(x, y, 0);
-                }
-            }
-        }
+        super.clearRemoved();
     }
+
     clearAutoScore(): void {
         if (this.autoscored_removed || this.autoscored_state) {
             this.autoscored_removed = undefined;
@@ -595,7 +514,7 @@ export function adjust_estimate(
 ) {
     let adjusted_score = score - engine.getHandicapPointAdjustmentForWhite();
     const { width, height } = get_dimensions(board);
-    const ownership = GoMath.makeMatrix(width, height);
+    const ownership = GoMath.makeMatrix(width, height, 0);
 
     // For Japanese rules we use territory counting.  Don't even
     // attempt to handle rules with score_stones and not

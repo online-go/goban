@@ -15,16 +15,10 @@
  */
 
 import { Intersection } from "./GoMath";
+import { Board } from "./Board";
 import { JGOFNumericPlayerColor, JGOFIntersection } from "./JGOF";
 
 export type Group = Array<JGOFIntersection>;
-
-export interface BoardState {
-    width: number;
-    height: number;
-    board: Array<Array<JGOFNumericPlayerColor>>;
-    removal: Array<Array<number>>;
-}
 
 export class GoStoneGroup {
     public readonly points: Array<Intersection>;
@@ -39,7 +33,7 @@ export class GoStoneGroup {
     private neighboring_space: GoStoneGroup[];
     private neighboring_enemy: GoStoneGroup[];
 
-    constructor(board_state: BoardState, id: number, color: JGOFNumericPlayerColor) {
+    constructor(board_state: Board, id: number, color: JGOFNumericPlayerColor) {
         this.points = [];
         this.neighbors = [];
         this.neighboring_space = [];

@@ -16,20 +16,21 @@
 
 import * as React from "react";
 import * as ReactDOM from "react-dom/client";
-import { GobanCore, GobanConfig, GobanHooks, ColoredCircle } from "./GobanCore";
+import { GobanCore, GobanConfig, ColoredCircle } from "./GobanCore";
 //import { GobanPixi } from './GobanPixi';
 import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
 import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
 import { EventEmitter } from "eventemitter3";
 import { MoveTreePenMarks } from "./MoveTree";
 import { GoThemes } from "./GoThemes";
+import { callbacks, setCallbacks } from "./callbacks";
 
 let stored_config: GobanConfig = {};
 try {
     stored_config = JSON.parse(localStorage.getItem("config") || "{}");
 } catch (e) {}
 
-GobanCore.hooks.getSelectedThemes = () => ({
+callbacks.getSelectedThemes = () => ({
     board: "Kaya",
     //board: "Anime",
 
@@ -49,10 +50,10 @@ GobanCore.hooks.getSelectedThemes = () => ({
     //black: "Custom",
 });
 
-GobanCore.hooks.customWhiteStoneUrl = () => {
+callbacks.customWhiteStoneUrl = () => {
     return "https://cdn.online-go.com/goban/anime_white.svg";
 };
-GobanCore.hooks.customBlackStoneUrl = () => {
+callbacks.customBlackStoneUrl = () => {
     return "https://cdn.online-go.com/goban/anime_black.svg";
 };
 
@@ -99,12 +100,11 @@ const base_config: GobanConfig = Object.assign(
     stored_config,
 );
 
-const hooks: GobanHooks = {
+setCallbacks({
     //getCoordinateDisplaySystem: () => "1-1",
     getCoordinateDisplaySystem: () => "A1",
     getCDNReleaseBase: () => "",
-};
-GobanCore.setHooks(hooks);
+});
 
 function save() {
     localStorage.setItem("config", JSON.stringify(base_config));

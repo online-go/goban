@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
+import { Board, BoardConfig } from "./Board";
 import { GobanMoveError } from "./GobanError";
 import { MoveTree, MoveTreeJson } from "./MoveTree";
-import { Move, Intersection, encodeMove } from "./GoMath";
+import { Move, Intersection, encodeMove, makeMatrix } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { Group } from "./GoStoneGroup";
-import { GoStoneGroups } from "./GoStoneGroups";
 import { ScoreEstimator } from "./ScoreEstimator";
 import { GobanCore, Events } from "./GobanCore";
 import {
@@ -99,7 +99,7 @@ export interface GoEnginePlayerEntry {
 // The word "array" is deliberately included in the type name to differentiate from a move tree.
 export type GobanMovesArray = Array<AdHocPackedMove> | Array<JGOFMove>;
 
-export interface GoEngineConfig {
+export interface GoEngineConfig extends BoardConfig {
     game_id?: number | string;
     review_id?: number;
     game_name?: string;
@@ -271,13 +271,11 @@ export interface ReviewMessage {
     "player_update"?: JGOFPlayerSummary;
 }
 
-export interface PuzzleConfig {
+export interface PuzzleConfig extends BoardConfig {
     //mode: "puzzle";
     mode?: string;
     name?: string;
     puzzle_type?: string;
-    width?: number;
-    height?: number;
     initial_state?: GoEngineInitialState;
     marks?: { [mark: string]: string };
     puzzle_autoplace_delay?: number;
@@ -302,11 +300,10 @@ let __currentMarker = 0;
 
 export type PlayerColor = "black" | "white";
 
-export class GoEngine extends EventEmitter<Events> {
+export class GoEngine extends Board {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
-    public board: Array<Array<JGOFNumericPlayerColor>>;
     //public cur_review_move?: MoveTree;
     public getState_callback?: () => any;
     public handicap_rank_difference?: number;
@@ -338,10 +335,7 @@ export class GoEngine extends EventEmitter<Events> {
     public puzzle_type: string = "[missing puzzle type]";
     public readonly config: GoEngineConfig;
     public readonly disable_analysis: boolean = false;
-    public readonly height: number = 19;
     //public readonly rules:GoEngineRules = 'japanese';
-    public readonly width: number = 19;
-    public removal: Array<Array<-1 | 0 | 1>>;
     public setState_callback?: (state: any) => void;
     public time_control: JGOFTimeControl = {
         system: "none",
@@ -479,7 +473,6 @@ export class GoEngine extends EventEmitter<Events> {
     private black_prisoners: number = 0;
     private white_prisoners: number = 0;
     private board_is_repeating: boolean;
-    private goban_callback?: GobanCore;
     private dontStoreBoardHistory: boolean;
     public free_handicap_placement: boolean = false;
     private loading_sgf: boolean = false;
@@ -499,19 +492,27 @@ export class GoEngine extends EventEmitter<Events> {
         goban_callback?: GobanCore,
         dontStoreBoardHistory?: boolean,
     ) {
-        super();
-        try {
-            /* We had a bug where we were filling in some initial state data incorrectly when we were dealing with
-             * sgfs, so this code exists for sgf 'games' < 800k in the database.. -anoek 2014-08-13 */
-            if ("original_sgf" in config) {
-                config.initial_state = { black: "", white: "" };
-            }
-        } catch (e) {
-            console.log(e);
-        }
-
-        GoEngine.normalizeConfig(config);
-        GoEngine.fillDefaults(config);
+        super(
+            GoEngine.fillDefaults(
+                GoEngine.normalizeConfig(
+                    ((config: GoEngineConfig): GoEngineConfig => {
+                        /* We had a bug where we were filling in some initial state
+                         * data incorrectly when we were dealing with sgfs, so this
+                         * code exists for sgf 'games' < 800k in the database..
+                         * -anoek 2014-08-13 */
+                        try {
+                            if ("original_sgf" in config) {
+                                config.initial_state = { black: "", white: "" };
+                            }
+                        } catch (e) {
+                            console.log(e);
+                        }
+                        return config;
+                    })(config),
+                ),
+            ),
+            goban_callback,
+        );
 
         for (const k in config) {
             if (k !== "move_tree") {
@@ -528,8 +529,6 @@ export class GoEngine extends EventEmitter<Events> {
             this.goban_callback = goban_callback;
             this.goban_callback.engine = this;
         }
-        this.board = [];
-        this.removal = [];
         this.marks = [];
         this.white_prisoners = 0;
         this.black_prisoners = 0;
@@ -542,19 +541,7 @@ export class GoEngine extends EventEmitter<Events> {
 
         this.rengo_casual_mode = config.rengo_casual_mode || false;
 
-        for (let y = 0; y < this.height; ++y) {
-            const row: Array<JGOFNumericPlayerColor> = [];
-            const mark_row = [];
-            const removal_row: Array<-1 | 0 | 1> = [];
-            for (let x = 0; x < this.width; ++x) {
-                row.push(0);
-                mark_row.push(0);
-                removal_row.push(0);
-            }
-            this.board.push(row);
-            this.marks.push(mark_row);
-            this.removal.push(removal_row);
-        }
+        this.marks = makeMatrix(this.width, this.height, 0);
 
         try {
             this.config.original_disable_analysis = this.config.disable_analysis;
@@ -1580,143 +1567,6 @@ export class GoEngine extends EventEmitter<Events> {
         };
     }
 
-    public toggleSingleGroupRemoval(
-        x: number,
-        y: number,
-        force_removal: boolean = false,
-    ): Array<[0 | 1, Group]> {
-        try {
-            if (x >= 0 && y >= 0) {
-                const removing: 0 | 1 = !this.removal[y][x] ? 1 : 0;
-
-                /* If we're clicking on a group, do a sanity check to see if we think
-                 * there is a very good chance that the group is actually definitely alive.
-                 * If so, refuse to remove it, unless a player has instructed us to forcefully
-                 * remove it. */
-                if (removing && !force_removal) {
-                    const scores = goscorer.territoryScoring(
-                        this.board,
-                        this.removal as any,
-                        false,
-                    );
-                    const groups = new GoStoneGroups(this, this.board);
-                    const selected_group = groups.getGroup(x, y);
-                    let total_territory_adjacency_count = 0;
-                    let total_territory_group_count = 0;
-                    selected_group.foreachNeighborSpaceGroup((gr) => {
-                        let is_territory_group = false;
-                        gr.foreachStone((pt) => {
-                            if (
-                                scores[pt.y][pt.x].isTerritoryFor === this.board[y][x] &&
-                                !scores[pt.y][pt.x].isFalseEye
-                            ) {
-                                is_territory_group = true;
-                            }
-                        });
-
-                        if (is_territory_group) {
-                            total_territory_group_count += 1;
-                            total_territory_adjacency_count += gr.points.length;
-                        }
-                    });
-                    if (total_territory_adjacency_count >= 5 || total_territory_group_count >= 2) {
-                        console.log("This group is almost assuredly alive, refusing to remove");
-                        GobanCore.hooks.toast?.("refusing_to_remove_group_is_alive", 4000);
-                        return [[0, []]];
-                    }
-                }
-
-                /* Otherwise, toggle the group */
-                const group_color = this.board[y][x];
-
-                if (group_color === JGOFNumericPlayerColor.EMPTY) {
-                    /* Disallow toggling of open area (old dame marking method that we no longer desire) */
-                    return [[0, []]];
-                }
-
-                const removed_stones = this.setGroupForRemoval(x, y, removing, false)[1];
-
-                this.emit("stone-removal.updated");
-                return [[removing, removed_stones]];
-            }
-        } catch (err) {
-            console.log(err.stack);
-        }
-
-        return [[0, []]];
-    }
-
-    /** Sets an entire group as being removed or not removed. If `emit_stone_removal_updated`
-     *  is set to false, the "stone-removal.updated" event will not be emitted, and it is up
-     *  to the caller to emit this event appropriately.
-     */
-    private setGroupForRemoval(
-        x: number,
-        y: number,
-        toggle_set: -1 | 0 | 1,
-        emit_stone_removal_updated: boolean = true,
-    ): [-1 | 0 | 1, Group] {
-        /*
-           If toggle_set === -1, toggle the selection from marked / unmarked.
-           If toggle_set === 0, unmark the group for removal
-           If toggle_set === 1, mark the group for removal
-
-           returns [removing 0/1, [group removed]];
-         */
-
-        if (x >= 0 && y >= 0) {
-            const group = this.getGroup(x, y, true);
-            const removing = toggle_set === -1 ? (!this.removal[y][x] ? 1 : 0) : toggle_set;
-
-            for (let i = 0; i < group.length; ++i) {
-                const x = group[i].x;
-                const y = group[i].y;
-                this.setRemoved(x, y, removing, emit_stone_removal_updated);
-            }
-
-            return [removing, group];
-        }
-        return [0, []];
-    }
-
-    /** Sets a position as being removed or not removed. If `emit_stone_removal_updated` is set to
-     *  false, the "stone-removal.updated" event will not be emitted, and it is up to the caller
-     *  to emit this event appropriately.
-     */
-    public setRemoved(
-        x: number,
-        y: number,
-        removed: boolean | 0 | 1,
-        emit_stone_removal_updated: boolean = true,
-    ): void {
-        if (x < 0 || y < 0) {
-            return;
-        }
-        if (x > this.width || y > this.height) {
-            return;
-        }
-        this.removal[y][x] = removed ? 1 : 0;
-        if (this.goban_callback) {
-            this.goban_callback.setForRemoval(x, y, this.removal[y][x], emit_stone_removal_updated);
-        }
-    }
-    public clearRemoved(): void {
-        let updated = false;
-
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (this.removal[y][x]) {
-                    updated = true;
-                    this.setRemoved(x, y, 0, false);
-                }
-            }
-        }
-
-        if (updated) {
-            this.emit("stone-removal.updated");
-        }
-    }
-
     public setNeedsSealing(x: number, y: number, needs_sealing?: boolean): void {
         this.cur_move.getMarks(x, y).needs_sealing = needs_sealing;
     }
@@ -1799,10 +1649,7 @@ export class GoEngine extends EventEmitter<Events> {
             }
 
             if (this.score_stones) {
-                const scoring = goscorer.areaScoring(
-                    this.board,
-                    this.removal.map((row) => row.map((x) => !!x)),
-                );
+                const scoring = goscorer.areaScoring(this.board, this.removal);
                 for (let y = 0; y < this.height; ++y) {
                     for (let x = 0; x < this.width; ++x) {
                         if (scoring[y][x] === goscorer.BLACK) {
@@ -1823,10 +1670,7 @@ export class GoEngine extends EventEmitter<Events> {
                     }
                 }
             } else {
-                const scoring = goscorer.territoryScoring(
-                    this.board,
-                    this.removal.map((row) => row.map((x) => !!x)),
-                );
+                const scoring = goscorer.territoryScoring(this.board, this.removal);
                 for (let y = 0; y < this.height; ++y) {
                     for (let x = 0; x < this.width; ++x) {
                         if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
@@ -1883,7 +1727,7 @@ export class GoEngine extends EventEmitter<Events> {
         return 0;
     }
 
-    private static normalizeConfig(config: GoEngineConfig): void {
+    private static normalizeConfig(config: GoEngineConfig): GoEngineConfig {
         if (config.ladder !== config.ladder_id) {
             config.ladder_id = config.ladder;
         }
@@ -1928,6 +1772,8 @@ export class GoEngine extends EventEmitter<Events> {
                 );
             }
         }
+
+        return config;
     }
     public static fillDefaults(game_obj: GoEngineConfig): GoEngineConfig {
         if (!("phase" in game_obj)) {
