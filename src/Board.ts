@@ -187,7 +187,8 @@ export class Board extends EventEmitter<Events> {
         }
     }
 
-    clearRemoved(): void {
+    /** Clear all stone removals */
+    public clearRemoved(): void {
         let updated = false;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {

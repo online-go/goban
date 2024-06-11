@@ -296,7 +296,8 @@ export type PuzzlePlacementSetting =
     | { mode: "setup"; color: JGOFNumericPlayerColor }
     | { mode: "place"; color: 0 };
 
-let __currentMarker = 0;
+/* When flood filling we use this to keep track of locations we've visited */
+let __current_flood_fill_value = 0;
 
 export type PlayerColor = "black" | "white";
 
@@ -476,7 +477,7 @@ export class GoEngine extends Board {
     private dontStoreBoardHistory: boolean;
     public free_handicap_placement: boolean = false;
     private loading_sgf: boolean = false;
-    private marks: Array<Array<number>>;
+    private _flood_fill_scratch_pad: number[][];
     private move_before_jump?: MoveTree;
     public needs_sealing?: Array<JGOFSealingIntersection>;
     //private mv:Move;
@@ -529,7 +530,6 @@ export class GoEngine extends Board {
             this.goban_callback = goban_callback;
             this.goban_callback.engine = this;
         }
-        this.marks = [];
         this.white_prisoners = 0;
         this.black_prisoners = 0;
         this.board_is_repeating = false;
@@ -541,7 +541,7 @@ export class GoEngine extends Board {
 
         this.rengo_casual_mode = config.rengo_casual_mode || false;
 
-        this.marks = makeMatrix(this.width, this.height, 0);
+        this._flood_fill_scratch_pad = makeMatrix(this.width, this.height, 0);
 
         try {
             this.config.original_disable_analysis = this.config.disable_analysis;
@@ -1058,137 +1058,58 @@ export class GoEngine extends Board {
     public prettyCoords(x: number, y: number): string {
         return GoMath.prettyCoords(x, y, this.height);
     }
-    private incrementCurrentMarker(): void {
-        ++__currentMarker;
-    }
-    private markGroup(group: RawStoneString): void {
-        for (let i = 0; i < group.length; ++i) {
-            this.marks[group[i].y][group[i].x] = __currentMarker;
-        }
-    }
-
-    private foreachNeighbor_checkAndDo(
-        x: number,
-        y: number,
-        done_array: Array<boolean>,
-        fn_of_neighbor_pt: (x: number, y: number) => void,
-    ): void {
-        const idx = x + y * this.width;
-        if (done_array[idx]) {
-            return;
-        }
-        done_array[idx] = true;
-        fn_of_neighbor_pt(x, y);
-    }
 
     public foreachNeighbor(
-        pt_or_group: Intersection | RawStoneString,
-        fn_of_neighbor_pt: (x: number, y: number) => void,
+        pt_or_raw_stone_string: Intersection | RawStoneString,
+        callback: (x: number, y: number) => void,
     ): void {
-        if (pt_or_group instanceof Array) {
-            const group = pt_or_group;
-            const done_array = new Array(this.height * this.width);
+        if (pt_or_raw_stone_string instanceof Array) {
+            const group = pt_or_raw_stone_string;
+            const callback_done = new Array(this.height * this.width);
             for (let i = 0; i < group.length; ++i) {
-                done_array[group[i].x + group[i].y * this.width] = true;
+                callback_done[group[i].x + group[i].y * this.width] = true;
             }
+
+            /* We only want to call the callback once per point */
+            const callback_one_time = (x: number, y: number) => {
+                const idx = x + y * this.width;
+                if (callback_done[idx]) {
+                    return;
+                }
+                callback_done[idx] = true;
+                callback(x, y);
+            };
 
             for (let i = 0; i < group.length; ++i) {
                 const pt = group[i];
                 if (pt.x - 1 >= 0) {
-                    this.foreachNeighbor_checkAndDo(pt.x - 1, pt.y, done_array, fn_of_neighbor_pt);
+                    callback_one_time(pt.x - 1, pt.y);
                 }
                 if (pt.x + 1 !== this.width) {
-                    this.foreachNeighbor_checkAndDo(pt.x + 1, pt.y, done_array, fn_of_neighbor_pt);
+                    callback_one_time(pt.x + 1, pt.y);
                 }
                 if (pt.y - 1 >= 0) {
-                    this.foreachNeighbor_checkAndDo(pt.x, pt.y - 1, done_array, fn_of_neighbor_pt);
+                    callback_one_time(pt.x, pt.y - 1);
                 }
                 if (pt.y + 1 !== this.height) {
-                    this.foreachNeighbor_checkAndDo(pt.x, pt.y + 1, done_array, fn_of_neighbor_pt);
+                    callback_one_time(pt.x, pt.y + 1);
                 }
             }
         } else {
-            const pt = pt_or_group;
+            const pt = pt_or_raw_stone_string;
             if (pt.x - 1 >= 0) {
-                fn_of_neighbor_pt(pt.x - 1, pt.y);
+                callback(pt.x - 1, pt.y);
             }
             if (pt.x + 1 !== this.width) {
-                fn_of_neighbor_pt(pt.x + 1, pt.y);
+                callback(pt.x + 1, pt.y);
             }
             if (pt.y - 1 >= 0) {
-                fn_of_neighbor_pt(pt.x, pt.y - 1);
+                callback(pt.x, pt.y - 1);
             }
             if (pt.y + 1 !== this.height) {
-                fn_of_neighbor_pt(pt.x, pt.y + 1);
+                callback(pt.x, pt.y + 1);
             }
         }
-    }
-    /** Returns an array of x/y pairs of all the same color */
-    private getGroup(x: number, y: number, clearMarks: boolean): RawStoneString {
-        const color = this.board[y][x];
-        if (clearMarks) {
-            this.incrementCurrentMarker();
-        }
-        const toCheckX = [x];
-        const toCheckY = [y];
-        const ret = [];
-        while (toCheckX.length) {
-            x = toCheckX.pop() || 0;
-            y = toCheckY.pop() || 0;
-
-            if (this.marks[y][x] === __currentMarker) {
-                continue;
-            }
-            this.marks[y][x] = __currentMarker;
-
-            if (this.board[y][x] === color) {
-                const pt = { x: x, y: y };
-                ret.push(pt);
-                this.foreachNeighbor(pt, addToCheck);
-            }
-        }
-        function addToCheck(x: number, y: number): void {
-            toCheckX.push(x);
-            toCheckY.push(y);
-        }
-
-        return ret;
-    }
-    /** Returns an array of groups connected to the given group */
-    private getConnectedGroups(group: RawStoneString): Array<RawStoneString> {
-        const gr = group;
-        this.incrementCurrentMarker();
-        this.markGroup(group);
-        const ret: Array<RawStoneString> = [];
-        this.foreachNeighbor(group, (x, y) => {
-            if (this.board[y][x]) {
-                this.incrementCurrentMarker();
-                this.markGroup(gr);
-                for (let i = 0; i < ret.length; ++i) {
-                    this.markGroup(ret[i]);
-                }
-                const g = this.getGroup(x, y, false);
-                if (g.length) {
-                    /* can be zero if the piece has already been marked */
-                    ret.push(g);
-                }
-            }
-        });
-        return ret;
-    }
-    private countLiberties(group: RawStoneString): number {
-        let ct = 0;
-        const mat = GoMath.makeMatrix(this.width, this.height, 0);
-        const counter = (x: number, y: number) => {
-            if (this.board[y][x] === 0 && mat[y][x] === 0) {
-                mat[y][x] = 1;
-                ct += 1;
-            }
-        };
-        for (let i = 0; i < group.length; ++i) {
-            this.foreachNeighbor(group[i], counter);
-        }
-        return ct;
     }
     private captureGroup(group: RawStoneString): number {
         for (let i = 0; i < group.length; ++i) {
@@ -1206,27 +1127,6 @@ export class GoEngine extends Board {
             }
         }
         return group.length;
-    }
-
-    public computeLibertyMap(): Array<Array<number>> {
-        const liberties = GoMath.makeMatrix(this.width, this.height, 0);
-        if (!this.board) {
-            return liberties;
-        }
-
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (this.board[y][x] && !liberties[y][x]) {
-                    const group = this.getGroup(x, y, true);
-                    const count = this.countLiberties(group);
-                    for (const e of group) {
-                        liberties[e.y][e.x] = count;
-                    }
-                }
-            }
-        }
-
-        return liberties;
     }
 
     public isParticipant(player_id: number): boolean {
@@ -1333,8 +1233,8 @@ export class GoEngine extends Board {
                 this.board[y][x] = this.player;
 
                 let suicide_move = false;
-                const player_group = this.getGroup(x, y, true);
-                const opponent_groups = this.getConnectedGroups(player_group);
+                const player_group = this.getRawStoneString(x, y, true);
+                const opponent_groups = this.getNeighboringRawStoneStrings(player_group);
 
                 for (let i = 0; i < opponent_groups.length; ++i) {
                     if (this.countLiberties(opponent_groups[i]) === 0) {
@@ -2684,5 +2584,84 @@ export class GoEngine extends Board {
             ret = this.parentEventEmitter.emit(event, ...args) || ret;
         }
         return ret;
+    }
+
+    /**
+     * Returns an array of groups connected to the given group. This is a bit
+     * faster than using StoneGroupBuilder because we only compute the values
+     * we need.
+     */
+    private getNeighboringRawStoneStrings(raw_stone_string: RawStoneString): RawStoneString[] {
+        const gr = raw_stone_string;
+        ++__current_flood_fill_value;
+        this._floodFillMarkFilled(raw_stone_string);
+        const ret: Array<RawStoneString> = [];
+        this.foreachNeighbor(raw_stone_string, (x, y) => {
+            if (this.board[y][x]) {
+                ++__current_flood_fill_value;
+                this._floodFillMarkFilled(gr);
+                for (let i = 0; i < ret.length; ++i) {
+                    this._floodFillMarkFilled(ret[i]);
+                }
+                const g = this.getRawStoneString(x, y, false);
+                if (g.length) {
+                    /* can be zero if the piece has already been marked */
+                    ret.push(g);
+                }
+            }
+        });
+        return ret;
+    }
+
+    /** Returns an array of x/y pairs of all the same color */
+    private getRawStoneString(x: number, y: number, clearMarks: boolean): RawStoneString {
+        const color = this.board[y][x];
+        if (clearMarks) {
+            ++__current_flood_fill_value;
+        }
+        const toCheckX = [x];
+        const toCheckY = [y];
+        const ret = [];
+        while (toCheckX.length) {
+            x = toCheckX.pop() || 0;
+            y = toCheckY.pop() || 0;
+
+            if (this._flood_fill_scratch_pad[y][x] === __current_flood_fill_value) {
+                continue;
+            }
+            this._flood_fill_scratch_pad[y][x] = __current_flood_fill_value;
+
+            if (this.board[y][x] === color) {
+                const pt = { x: x, y: y };
+                ret.push(pt);
+                this.foreachNeighbor(pt, addToCheck);
+            }
+        }
+        function addToCheck(x: number, y: number): void {
+            toCheckX.push(x);
+            toCheckY.push(y);
+        }
+
+        return ret;
+    }
+
+    private _floodFillMarkFilled(group: RawStoneString): void {
+        for (let i = 0; i < group.length; ++i) {
+            this._flood_fill_scratch_pad[group[i].y][group[i].x] = __current_flood_fill_value;
+        }
+    }
+    private countLiberties(raw_stone_string: RawStoneString): number {
+        let ct = 0;
+        const mat = GoMath.makeMatrix(this.width, this.height, 0);
+        const counter = (x: number, y: number) => {
+            if (this.board[y][x] === 0 && mat[y][x] === 0) {
+                mat[y][x] = 1;
+                ct += 1;
+            }
+        };
+        for (let i = 0; i < raw_stone_string.length; ++i) {
+            this.foreachNeighbor(raw_stone_string[i], counter);
+        }
+        return ct;
     }
 }
