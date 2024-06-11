@@ -19,7 +19,7 @@ import { GobanMoveError } from "./GobanError";
 import { MoveTree, MoveTreeJson } from "./MoveTree";
 import { Move, Intersection, encodeMove, makeMatrix } from "./GoMath";
 import * as GoMath from "./GoMath";
-import { Group } from "./GoStoneGroup";
+import { RawStoneString } from "./StoneString";
 import { ScoreEstimator } from "./ScoreEstimator";
 import { GobanCore, Events } from "./GobanCore";
 import {
@@ -1061,7 +1061,7 @@ export class GoEngine extends Board {
     private incrementCurrentMarker(): void {
         ++__currentMarker;
     }
-    private markGroup(group: Group): void {
+    private markGroup(group: RawStoneString): void {
         for (let i = 0; i < group.length; ++i) {
             this.marks[group[i].y][group[i].x] = __currentMarker;
         }
@@ -1082,7 +1082,7 @@ export class GoEngine extends Board {
     }
 
     public foreachNeighbor(
-        pt_or_group: Intersection | Group,
+        pt_or_group: Intersection | RawStoneString,
         fn_of_neighbor_pt: (x: number, y: number) => void,
     ): void {
         if (pt_or_group instanceof Array) {
@@ -1124,7 +1124,7 @@ export class GoEngine extends Board {
         }
     }
     /** Returns an array of x/y pairs of all the same color */
-    private getGroup(x: number, y: number, clearMarks: boolean): Group {
+    private getGroup(x: number, y: number, clearMarks: boolean): RawStoneString {
         const color = this.board[y][x];
         if (clearMarks) {
             this.incrementCurrentMarker();
@@ -1155,11 +1155,11 @@ export class GoEngine extends Board {
         return ret;
     }
     /** Returns an array of groups connected to the given group */
-    private getConnectedGroups(group: Group): Array<Group> {
+    private getConnectedGroups(group: RawStoneString): Array<RawStoneString> {
         const gr = group;
         this.incrementCurrentMarker();
         this.markGroup(group);
-        const ret: Array<Group> = [];
+        const ret: Array<RawStoneString> = [];
         this.foreachNeighbor(group, (x, y) => {
             if (this.board[y][x]) {
                 this.incrementCurrentMarker();
@@ -1176,7 +1176,7 @@ export class GoEngine extends Board {
         });
         return ret;
     }
-    private countLiberties(group: Group): number {
+    private countLiberties(group: RawStoneString): number {
         let ct = 0;
         const mat = GoMath.makeMatrix(this.width, this.height, 0);
         const counter = (x: number, y: number) => {
@@ -1190,7 +1190,7 @@ export class GoEngine extends Board {
         }
         return ct;
     }
-    private captureGroup(group: Group): number {
+    private captureGroup(group: RawStoneString): number {
         for (let i = 0; i < group.length; ++i) {
             const x = group[i].x;
             const y = group[i].y;

@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-import { Intersection } from "./GoMath";
 import { Board } from "./Board";
 import { JGOFNumericPlayerColor, JGOFIntersection } from "./JGOF";
 
-export type Group = Array<JGOFIntersection>;
+export type RawStoneString = Array<JGOFIntersection>;
 
-export class GoStoneGroup {
-    public readonly points: Array<Intersection>;
-    public readonly neighbors: Array<GoStoneGroup>;
+export class StoneString {
+    public readonly points: Array<JGOFIntersection>;
+    public readonly neighbors: Array<StoneString>;
     public readonly color: JGOFNumericPlayerColor;
     public readonly id: number;
     public territory_color: JGOFNumericPlayerColor = 0;
     public is_territory: boolean = false;
 
     private __added_neighbors: { [group_id: number]: boolean };
-    private corner_groups: { [y: string]: { [x: string]: GoStoneGroup } };
-    private neighboring_space: GoStoneGroup[];
-    private neighboring_enemy: GoStoneGroup[];
+    private neighboring_space: StoneString[];
+    private neighboring_enemy: StoneString[];
 
     constructor(board_state: Board, id: number, color: JGOFNumericPlayerColor) {
         this.points = [];
@@ -42,12 +40,11 @@ export class GoStoneGroup {
         this.color = color;
 
         this.__added_neighbors = {};
-        this.corner_groups = {};
     }
     addStone(x: number, y: number): void {
         this.points.push({ x: x, y: y });
     }
-    addNeighborGroup(group: GoStoneGroup): void {
+    addNeighborGroup(group: StoneString): void {
         if (!(group.id in this.__added_neighbors)) {
             this.neighbors.push(group);
             this.__added_neighbors[group.id] = true;
@@ -61,28 +58,22 @@ export class GoStoneGroup {
             }
         }
     }
-    addCornerGroup(x: number, y: number, group: GoStoneGroup): void {
-        if (!(y in this.corner_groups)) {
-            this.corner_groups[y] = {};
-        }
-        this.corner_groups[y][x] = group;
-    }
-    foreachStone(fn: (pt: Intersection) => void): void {
+    foreachStone(fn: (pt: JGOFIntersection) => void): void {
         for (let i = 0; i < this.points.length; ++i) {
             fn(this.points[i]);
         }
     }
-    foreachNeighborGroup(fn: (group: GoStoneGroup) => void): void {
+    foreachNeighborGroup(fn: (group: StoneString) => void): void {
         for (let i = 0; i < this.neighbors.length; ++i) {
             fn(this.neighbors[i]);
         }
     }
-    foreachNeighborSpaceGroup(fn: (group: GoStoneGroup) => void): void {
+    foreachNeighborSpaceGroup(fn: (group: StoneString) => void): void {
         for (let i = 0; i < this.neighboring_space.length; ++i) {
             fn(this.neighboring_space[i]);
         }
     }
-    foreachNeighborEnemyGroup(fn: (group: GoStoneGroup) => void): void {
+    foreachNeighborEnemyGroup(fn: (group: StoneString) => void): void {
         for (let i = 0; i < this.neighbors.length; ++i) {
             fn(this.neighboring_enemy[i]);
         }

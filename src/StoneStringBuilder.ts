@@ -15,17 +15,17 @@
  */
 
 import * as GoMath from "./GoMath";
-import { GoStoneGroup } from "./GoStoneGroup";
+import { StoneString } from "./StoneString";
 import { Board } from "./Board";
 import { JGOFNumericPlayerColor } from "./JGOF";
 
-export class GoStoneGroups {
+export class StoneStringBuilder {
     private state: Board;
     public group_id_map: number[][];
-    public groups: Array<GoStoneGroup>;
+    public groups: Array<StoneString>;
 
     constructor(state: Board, original_board?: Array<Array<number>>) {
-        const groups: Array<GoStoneGroup> = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
+        const groups: Array<StoneString> = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
         const group_id_map = GoMath.makeMatrix(state.width, state.height, 0);
 
         this.state = state;
@@ -78,7 +78,7 @@ export class GoStoneGroups {
 
                 if (!(group_id_map[y][x] in groups)) {
                     groups.push(
-                        new GoStoneGroup(this.state, group_id_map[y][x], this.state.board[y][x]),
+                        new StoneString(this.state, group_id_map[y][x], this.state.board[y][x]),
                     );
                 }
                 groups[group_id_map[y][x]].addStone(x, y);
@@ -102,18 +102,6 @@ export class GoStoneGroups {
                 if (y + 1 < this.state.height && group_id_map[y + 1][x] !== gr.id) {
                     gr.addNeighborGroup(groups[group_id_map[y + 1][x]]);
                 }
-                for (let Y = -1; Y <= 1; ++Y) {
-                    for (let X = -1; X <= 1; ++X) {
-                        if (
-                            x + X >= 0 &&
-                            x + X < this.state.width &&
-                            y + Y >= 0 &&
-                            y + Y < this.state.height
-                        ) {
-                            gr.addCornerGroup(x + X, y + Y, groups[group_id_map[y + Y][x + X]]);
-                        }
-                    }
-                }
             });
         });
 
@@ -122,13 +110,13 @@ export class GoStoneGroups {
         });
     }
 
-    public foreachGroup(fn: (gr: GoStoneGroup) => void) {
+    public foreachGroup(fn: (gr: StoneString) => void) {
         for (let i = 1; i < this.groups.length; ++i) {
             fn(this.groups[i]);
         }
     }
 
-    public getGroup(x: number, y: number): GoStoneGroup {
+    public getGroup(x: number, y: number): StoneString {
         return this.groups[this.group_id_map[y][x]];
     }
 }

@@ -34,7 +34,7 @@ import {
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
 import { color_blend, getRandomInt } from "./util";
-import { GoStoneGroups } from "./GoStoneGroups";
+import { StoneStringBuilder } from "./StoneStringBuilder";
 import { callbacks } from "./callbacks";
 
 const __theme_cache: {
@@ -3281,7 +3281,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             this.analysis_removal_state = true;
         }
 
-        const stone_group = new GoStoneGroups(this.engine).getGroup(x, y);
+        const stone_group = new StoneStringBuilder(this.engine).getGroup(x, y);
 
         stone_group.foreachStone((loc) => {
             this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);

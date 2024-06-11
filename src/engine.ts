@@ -15,7 +15,7 @@
  */
 
 export * from "./GobanError";
-export * from "./GoStoneGroup";
+export * from "./StoneString";
 export * from "./GoEngine";
 export * from "./GoConditionalMove";
 export * from "./MoveTree";

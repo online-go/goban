@@ -16,8 +16,8 @@
 
 import { encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
-import { GoStoneGroup } from "./GoStoneGroup";
-import { GoStoneGroups } from "./GoStoneGroups";
+import { StoneString } from "./StoneString";
+import { StoneStringBuilder } from "./StoneStringBuilder";
 import { GobanCore } from "./GobanCore";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./JGOF";
@@ -121,7 +121,7 @@ export class ScoreEstimator extends Board {
     };
 
     engine: GoEngine;
-    private groups: GoStoneGroups;
+    private groups: StoneStringBuilder;
     tolerance: number;
     amount: number = NaN;
     ownership: Array<Array<number>>;
@@ -160,7 +160,7 @@ export class ScoreEstimator extends Board {
         this.autoscore = autoscore;
 
         this.territory = GoMath.makeMatrix(this.width, this.height, 0);
-        this.groups = new GoStoneGroups(this);
+        this.groups = new StoneStringBuilder(this);
 
         this.when_ready = this.estimateScore(this.trials, this.tolerance, autoscore);
     }
@@ -382,7 +382,7 @@ export class ScoreEstimator extends Board {
         }
         return ret;
     }
-    getGroup(x: number, y: number): GoStoneGroup {
+    getGroup(x: number, y: number): StoneString {
         return this.groups.groups[this.groups.group_id_map[y][x]];
     }
 

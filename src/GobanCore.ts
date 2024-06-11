@@ -2226,8 +2226,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
             (this as any).autoScore();
         }
 
-        console.log("Keeping old config?", keep_old_engine);
-
         this.emit("load", config);
 
         return this.engine;

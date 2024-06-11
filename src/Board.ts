@@ -19,9 +19,9 @@ import { EventEmitter } from "eventemitter3";
 import { JGOFNumericPlayerColor } from "./JGOF";
 import { makeMatrix } from "./GoMath";
 import * as goscorer from "./goscorer/goscorer";
-import { GoStoneGroups } from "./GoStoneGroups";
+import { StoneStringBuilder } from "./StoneStringBuilder";
 import { GobanCore } from "./GobanCore";
-import { Group } from "./GoStoneGroup";
+import { RawStoneString } from "./StoneString";
 import { cloneMatrix } from "./util";
 import { callbacks } from "./callbacks";
 
@@ -91,7 +91,7 @@ export class Board extends EventEmitter<Events> {
         force_removal: boolean = false,
     ): {
         removed: boolean;
-        group: Group;
+        group: RawStoneString;
     } {
         const empty = { removed: false, group: [] };
         if (x < 0 || y < 0) {
@@ -111,7 +111,7 @@ export class Board extends EventEmitter<Events> {
                     return empty;
                 }
 
-                const groups = new GoStoneGroups(this, this.board);
+                const groups = new StoneStringBuilder(this, this.board);
                 const selected_group = groups.getGroup(x, y);
 
                 /* If we're clicking on a group, do a sanity check to see if we think

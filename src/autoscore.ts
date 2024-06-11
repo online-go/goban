@@ -21,7 +21,7 @@
  * should be left alone.
  */
 
-import { GoStoneGroups } from "./GoStoneGroups";
+import { StoneStringBuilder } from "./StoneStringBuilder";
 import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./JGOF";
 import { char2num, makeMatrix, num2char, pretty_coor_num2ch } from "./GoMath";
 import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GoEngine";
@@ -82,7 +82,7 @@ export function autoscore(
     debug_ownership_output("White plays first estimates", white_plays_first_ownership);
     debug_ownership_output("Average estimates", average_ownership);
 
-    const groups = new GoStoneGroups(
+    const groups = new StoneStringBuilder(
         new Board({
             board,
             removal: makeMatrix(width, height, false),
@@ -137,7 +137,7 @@ export function autoscore(
     function settle_agreed_upon_territory() {
         stage("Settling agreed upon territory");
 
-        const groups = new GoStoneGroups(
+        const groups = new StoneStringBuilder(
             new Board({
                 board,
                 removal,
@@ -273,7 +273,7 @@ export function autoscore(
          * Consider unsettled groups. Count the unsettled stones along with
          * their neighboring stones
          */
-        const groups = new GoStoneGroups(
+        const groups = new StoneStringBuilder(
             new Board({
                 board: is_settled,
                 removal: makeMatrix(width, height, false),
@@ -399,7 +399,7 @@ export function autoscore(
     function seal_territory() {
         stage(`Sealing territory`);
         {
-            let groups = new GoStoneGroups(
+            let groups = new StoneStringBuilder(
                 new Board({
                     board,
                     removal,
@@ -464,7 +464,7 @@ export function autoscore(
                 }
             });
 
-            groups = new GoStoneGroups(
+            groups = new StoneStringBuilder(
                 new Board({
                     board,
                     removal,
@@ -555,7 +555,7 @@ export function autoscore(
                 }
             }
 
-            const groups = new GoStoneGroups(
+            const groups = new StoneStringBuilder(
                 new Board({
                     board,
                     removal,
@@ -762,7 +762,7 @@ function debug_boolean_board(title: string, board: (boolean | number)[][], mark 
     end_board();
 }
 
-function debug_groups(title: string, groups: GoStoneGroups) {
+function debug_groups(title: string, groups: StoneStringBuilder) {
     const group_map: string[][] = makeMatrix(
         groups.group_id_map[0].length,
         groups.group_id_map.length,
