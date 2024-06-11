@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { dup } from "./GoUtil";
+import { dup } from "./util";
 import { encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { GoStoneGroup } from "./GoStoneGroup";

@@ -32,11 +32,10 @@ import {
     allocateCanvasOrError,
     getRelativeEventPosition,
 } from "./canvas_utils";
-import { getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
-import { color_blend } from "Misc";
-import { GoStoneGroups } from "GoStoneGroups";
+import { color_blend, getRandomInt } from "./util";
+import { GoStoneGroups } from "./GoStoneGroups";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -1769,7 +1768,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j)
         ) {
-            console.log("Should be drawing red x");
             const opacity = this.engine.board[j][i] ? 1.0 : 0.2;
             ctx.lineCap = "square";
             ctx.save();

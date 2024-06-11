@@ -1,4 +1,4 @@
-import { escapeSGFText, newline2space } from "../Misc";
+import { escapeSGFText, newline2space } from "../util";
 import * as AdHoc from "../AdHocFormat";
 
 // String.raw`...` is the real string

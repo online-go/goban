@@ -28,11 +28,10 @@ import { GoTheme } from "./GoTheme";
 import { GoThemes } from "./GoThemes";
 import { MoveTreePenMarks } from "./MoveTree";
 import { getRelativeEventPosition } from "./canvas_utils";
-import { getRandomInt } from "./GoUtil";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
-import { color_blend } from "Misc";
-import { GoStoneGroups } from "GoStoneGroups";
+import { color_blend, getRandomInt } from "./util";
+import { GoStoneGroups } from "./GoStoneGroups";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
@@ -1198,7 +1197,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         if (i < 0 || j < 0 || !this.drawing_enabled || this.no_display) {
             return;
         }
-
         if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
             this.__drawSquare(i, j);
         }
@@ -1551,7 +1549,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     color = this.engine.player;
                 }
 
-                //if (this.mode === "analyze" && pos.stone_removed) {
                 if (pos.stone_removed) {
                     translucent = true;
                 }
@@ -2269,11 +2266,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         movetree_contains_this_square ||
                         (this.getPuzzlePlacementSetting &&
                             this.getPuzzlePlacementSetting().mode !== "play"))) ||
-                (this.mode === "analyze" &&
-                    this.analyze_tool === "removal" &&
-                    this.last_hover_square &&
-                    this.last_hover_square.x === i &&
-                    this.last_hover_square.y === j) ||
                 (this.scoring_mode &&
                     this.score_estimate &&
                     this.score_estimate.board[j][i] &&
@@ -3309,22 +3301,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         stone_group.foreachStone((loc) => {
             this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);
         });
-
-        /* clear hover */
-        /*
-        if (this.__last_pt.valid) {
-            const last_hover = this.last_hover_square;
-            delete this.last_hover_square;
-            if (last_hover) {
-                this.drawSquare(last_hover.x, last_hover.y);
-            }
-        }
-        this.__last_pt = this.xy2ij(-1, -1);
-        this.drawSquare(
-            this.analysis_removal_last_position.i,
-            this.analysis_removal_last_position.j,
-        );
-        */
     }
     protected setTitle(title: string): void {
         this.title = title;

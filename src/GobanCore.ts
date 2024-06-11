@@ -33,7 +33,7 @@ import * as GoMath from "./GoMath";
 import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
 import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
 import { init_score_estimator, ScoreEstimator } from "./ScoreEstimator";
-import { deepEqual, dup, computeAverageMoveTime, niceInterval } from "./GoUtil";
+import { deepEqual, dup, computeAverageMoveTime, niceInterval } from "./util";
 import { _, interpolate } from "./translate";
 import {
     JGOFClock,

@@ -15,7 +15,7 @@
  */
 
 import { EventEmitter } from "eventemitter3";
-import { niceInterval } from "./GoUtil";
+import { niceInterval } from "./util";
 import { ClientToServer, ClientToServerBase, ServerToClient } from "./protocol";
 
 type GobanSocketClientToServerMessage<SendProtocol> = [keyof SendProtocol, any?, number?];

@@ -19,7 +19,7 @@ import { GoEngine, GoEngineState } from "./GoEngine";
 import { encodeMove } from "./GoMath";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
-import { escapeSGFText, newline2space } from "./Misc";
+import { escapeSGFText, newline2space } from "./util";
 
 export interface MarkInterface {
     triangle?: boolean;

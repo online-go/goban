@@ -24,7 +24,7 @@ export * from "./GoStoneGroup";
 export * from "./GoStoneGroups";
 export * from "./GoTheme";
 export * from "./GoThemes";
-export * from "./GoUtil";
+export * from "./util";
 export * from "./canvas_utils";
 export * from "./MoveTree";
 export * from "./ScoreEstimator";
@@ -35,7 +35,7 @@ export * from "./AdHocFormat";
 export * from "./TestGoban";
 export * from "./test_utils";
 export * from "./GobanSocket";
-export * from "./Misc";
+export * from "./util";
 export * from "./autoscore";
 
 export * as GoMath from "./GoMath";

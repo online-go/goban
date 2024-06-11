@@ -16,7 +16,6 @@
 
 export * from "./GobanError";
 export * from "./GoStoneGroup";
-export * from "./GoUtil";
 export * from "./GoEngine";
 export * from "./GoConditionalMove";
 export * from "./MoveTree";
@@ -25,7 +24,7 @@ export * from "./ScoreEstimator";
 export * from "./JGOF";
 export * from "./AdHocFormat";
 export * from "./AIReview";
-export * from "./Misc";
+export * from "./util";
 export * from "./test_utils";
 export * from "./autoscore";
 
