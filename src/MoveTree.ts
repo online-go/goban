@@ -15,7 +15,8 @@
  */
 
 import * as GoMath from "./GoMath";
-import { GoEngine, GoEngineState } from "./GoEngine";
+import { GoEngine } from "./GoEngine";
+import { BoardState } from "./BoardState";
 import { encodeMove } from "./GoMath";
 import { AdHocPackedMove } from "./AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
@@ -103,7 +104,7 @@ export class MoveTree {
     public x: number;
     public y: number;
     public edited: boolean;
-    public state: GoEngineState;
+    public state: BoardState;
     public pen_marks: MoveTreePenMarks = [];
     public player_update: JGOFPlayerSummary | undefined;
     public played_by: number | undefined;
@@ -134,7 +135,7 @@ export class MoveTree {
         player: JGOFNumericPlayerColor,
         move_number: number,
         parent: MoveTree | null,
-        state: GoEngineState,
+        state: BoardState,
     ) {
         this.id = ++__move_tree_id;
         this.x = x;

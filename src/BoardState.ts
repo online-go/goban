@@ -30,19 +30,37 @@ export interface BoardConfig {
     height?: number;
     board?: JGOFNumericPlayerColor[][];
     removal?: boolean[][];
+    player?: JGOFNumericPlayerColor;
+    board_is_repeating?: boolean;
+    white_prisoners?: number;
+    black_prisoners?: number;
+    isobranch_hash?: string;
+    //udata_state?: any;
 }
 
 /* When flood filling we use these to keep track of locations we've visited */
 let __current_flood_fill_value = 0;
 const __flood_fill_scratch_pad: number[] = Array(25 * 25).fill(0);
 
-export class Board extends EventEmitter<Events> {
+export class BoardState extends EventEmitter<Events> implements BoardConfig {
     public readonly height: number = 19;
     //public readonly rules:GoEngineRules = 'japanese';
     public readonly width: number = 19;
     public board: JGOFNumericPlayerColor[][];
     public removal: boolean[][];
     protected goban_callback?: GobanCore;
+
+    public player: JGOFNumericPlayerColor;
+    public board_is_repeating: boolean;
+    public white_prisoners: number;
+    public black_prisoners: number;
+
+    /**
+     * The isobranch hash is a hash of the board state. This field is used by
+     * the move tree to detect isomorphic branches. This field is not automatically
+     * populated, MoveTree uses it to store hash information as needed.
+     * */
+    public isobranch_hash?: string;
 
     /**
      * Constructs a new board with the given configuration. If height/width
@@ -75,6 +93,17 @@ export class Board extends EventEmitter<Events> {
         if (this.height !== this.removal.length || this.width !== this.removal[0].length) {
             throw new Error("Removal size mismatch");
         }
+
+        this.player = config.player ?? JGOFNumericPlayerColor.EMPTY;
+        this.board_is_repeating = config.board_is_repeating ?? false;
+        this.white_prisoners = config.white_prisoners ?? 0;
+        this.black_prisoners = config.black_prisoners ?? 0;
+        this.isobranch_hash = config.isobranch_hash;
+    }
+
+    /** Clone the entire BoardState */
+    public cloneBoardState(): BoardState {
+        return new BoardState(this, this.goban_callback);
     }
 
     /** Returns a clone of .board */

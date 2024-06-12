@@ -3,7 +3,7 @@
 import { StoneStringBuilder } from "../StoneStringBuilder";
 import { JGOFNumericPlayerColor } from "../JGOF";
 import * as GoMath from "../GoMath";
-import { Board } from "../Board";
+import { BoardState } from "../BoardState";
 
 describe("GoStoneGroups constructor", () => {
     test("basic board state", () => {
@@ -19,7 +19,7 @@ describe("GoStoneGroups constructor", () => {
         ];
 
         const stone_string_builder = new StoneStringBuilder(
-            new Board({
+            new BoardState({
                 board: THREExTHREE_board,
                 removal: THREExTHREE_removal,
             }),

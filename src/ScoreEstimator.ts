@@ -24,7 +24,7 @@ import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./JGO
 import { _ } from "./translate";
 import { estimateScoreWasm } from "./local_estimators/wasm_estimator";
 import * as goscorer from "./goscorer/goscorer";
-import { Board } from "./Board";
+import { BoardState } from "./BoardState";
 
 export { init_score_estimator, estimateScoreWasm } from "./local_estimators/wasm_estimator";
 export { estimateScoreVoronoi } from "./local_estimators/voronoi";
@@ -100,7 +100,7 @@ export function set_local_scorer(scorer: LocalEstimator) {
     local_scorer = scorer;
 }
 
-export class ScoreEstimator extends Board {
+export class ScoreEstimator extends BoardState {
     white: PlayerScore = {
         total: 0,
         stones: 0,

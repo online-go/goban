@@ -25,7 +25,7 @@ import { StoneStringBuilder } from "./StoneStringBuilder";
 import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./JGOF";
 import { char2num, makeMatrix, num2char, pretty_coor_num2ch } from "./GoMath";
 import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GoEngine";
-import { Board } from "./Board";
+import { BoardState } from "./BoardState";
 
 interface AutoscoreResults {
     result: JGOFNumericPlayerColor[][];
@@ -83,7 +83,7 @@ export function autoscore(
     debug_ownership_output("Average estimates", average_ownership);
 
     const groups = new StoneStringBuilder(
-        new Board({
+        new BoardState({
             board,
             removal: makeMatrix(width, height, false),
         }),
@@ -138,7 +138,7 @@ export function autoscore(
         stage("Settling agreed upon territory");
 
         const groups = new StoneStringBuilder(
-            new Board({
+            new BoardState({
                 board,
                 removal,
             }),
@@ -274,7 +274,7 @@ export function autoscore(
          * their neighboring stones
          */
         const groups = new StoneStringBuilder(
-            new Board({
+            new BoardState({
                 board: is_settled,
                 removal: makeMatrix(width, height, false),
             }),
@@ -400,7 +400,7 @@ export function autoscore(
         stage(`Sealing territory`);
         {
             let groups = new StoneStringBuilder(
-                new Board({
+                new BoardState({
                     board,
                     removal,
                 }),
@@ -465,7 +465,7 @@ export function autoscore(
             });
 
             groups = new StoneStringBuilder(
-                new Board({
+                new BoardState({
                     board,
                     removal,
                 }),
@@ -556,7 +556,7 @@ export function autoscore(
             }
 
             const groups = new StoneStringBuilder(
-                new Board({
+                new BoardState({
                     board,
                     removal,
                 }),

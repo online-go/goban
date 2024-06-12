@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Board, BoardConfig } from "./Board";
+import { BoardState, BoardConfig } from "./BoardState";
 import { GobanMoveError } from "./GobanError";
 import { MoveTree, MoveTreeJson } from "./MoveTree";
 import { Move, encodeMove } from "./GoMath";
@@ -63,20 +63,6 @@ export interface PlayerScore {
 export interface Score {
     white: PlayerScore;
     black: PlayerScore;
-}
-
-export interface GoEngineState {
-    player: JGOFNumericPlayerColor;
-    board_is_repeating: boolean;
-    white_prisoners: number;
-    black_prisoners: number;
-    board: Array<Array<JGOFNumericPlayerColor>>;
-    isobranch_hash?: string;
-
-    /** User data state, the Goban's usually want to store some state in here, which is
-     *  obtained and set by calling the getState_callback
-     */
-    udata_state: any;
 }
 
 export interface GoEnginePlayerEntry {
@@ -298,12 +284,11 @@ export type PuzzlePlacementSetting =
 
 export type PlayerColor = "black" | "white";
 
-export class GoEngine extends Board {
+export class GoEngine extends BoardState {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
     //public cur_review_move?: MoveTree;
-    public getState_callback?: () => any;
     public handicap_rank_difference?: number;
     public handicap: number = NaN;
     public initial_state: GoEngineInitialState = { black: "", white: "" };
@@ -334,7 +319,6 @@ export class GoEngine extends Board {
     public readonly config: GoEngineConfig;
     public readonly disable_analysis: boolean = false;
     //public readonly rules:GoEngineRules = 'japanese';
-    public setState_callback?: (state: any) => void;
     public time_control: JGOFTimeControl = {
         system: "none",
         speed: "correspondence",
@@ -468,9 +452,9 @@ export class GoEngine extends Board {
     private allow_self_capture: boolean = false;
     private allow_superko: boolean = false;
     private superko_algorithm: GoEngineSuperKoAlgorithm = "psk";
-    private black_prisoners: number = 0;
-    private white_prisoners: number = 0;
-    private board_is_repeating: boolean;
+    public black_prisoners: number = 0;
+    public white_prisoners: number = 0;
+    public board_is_repeating: boolean;
     private dontStoreBoardHistory: boolean;
     public free_handicap_placement: boolean = false;
     private loading_sgf: boolean = false;
@@ -709,35 +693,17 @@ export class GoEngine extends Board {
     ): Array<JGOFMove> {
         return GoMath.decodeMoves(move_obj, this.width, this.height);
     }
-    private getState(): GoEngineState {
-        const state: GoEngineState = {
-            player: this.player,
-            board_is_repeating: this.board_is_repeating,
-            white_prisoners: this.white_prisoners,
-            black_prisoners: this.black_prisoners,
-            udata_state: this.getState_callback ? this.getState_callback() : null,
-            board: new Array(this.height),
-        };
-
-        for (let y = 0; y < this.height; ++y) {
-            const row = new Array(this.width);
-            for (let x = 0; x < this.width; ++x) {
-                row[x] = this.board[y][x];
-            }
-            state.board[y] = row;
-        }
-
-        return state;
+    private getState(): BoardState {
+        return this.cloneBoardState();
     }
-    private setState(state: GoEngineState): GoEngineState {
+    private setState(state: BoardState): BoardState {
         this.player = state.player;
         this.white_prisoners = state.white_prisoners;
         this.black_prisoners = state.black_prisoners;
         this.board_is_repeating = state.board_is_repeating;
 
-        if (this.setState_callback) {
-            this.setState_callback(state.udata_state);
-        }
+        //this.goban_callback?.setState(state.udata_state);
+        this.goban_callback?.setState?.();
 
         const redrawn: { [s: string]: boolean } = {};
 
@@ -775,7 +741,7 @@ export class GoEngine extends Board {
         }
         return true;
     }
-    private boardStatesAreTheSame(state1: GoEngineState, state2: GoEngineState): boolean {
+    private boardsAreEqual(state1: BoardState, state2: BoardState): boolean {
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 if (state1.board[y][x] !== state2.board[y][x]) {
@@ -1207,7 +1173,7 @@ export class GoEngine extends Board {
                     const current_state = this.getState();
                     if (
                         !this.cur_move.edited &&
-                        this.boardStatesAreTheSame(current_state, this.cur_move.index(-1).state)
+                        this.boardsAreEqual(current_state, this.cur_move.index(-1).state)
                     ) {
                         throw new GobanMoveError(
                             this.game_id || this.review_id || 0,
@@ -1282,7 +1248,7 @@ export class GoEngine extends Board {
         ) {
             if (t) {
                 if (!check_situational || t.player === current_player_to_move) {
-                    if (this.boardStatesAreTheSame(t.state, current_state)) {
+                    if (this.boardsAreEqual(t.state, current_state)) {
                         return true;
                     }
                 }

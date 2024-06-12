@@ -2147,12 +2147,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this.engine = new GoEngine(config, this);
             this.emit("engine.updated", this.engine);
             this.engine.parentEventEmitter = this;
-            this.engine.getState_callback = () => {
-                return this.getState();
-            };
-            this.engine.setState_callback = (state) => {
-                return this.setState(state);
-            };
         }
 
         this.paused_since = config.paused_since;
@@ -2827,7 +2821,20 @@ export abstract class GobanCore extends EventEmitter<Events> {
             });
         }
     }
-    protected setState(state: any): void {
+    /** This is a callback that gets called by GoEngine.getState to save and
+     * board state as it pushes and pops state. Our renderers can override this
+     * to save state they need. */
+    /*
+    public getState(): any {
+        const ret = null;
+        return ret;
+    }
+    */
+
+    /** This is a callback that gets called by GoEngine.setState to load
+     * previously saved board state. */
+    //public setState(state: any): void {
+    public setState(): void {
         if ((this.game_type === "review" || this.game_type === "demo") && this.engine) {
             this.drawPenMarks(this.engine.cur_move.pen_marks);
             if (this.isPlayerController() && this.connectToReviewSent) {
@@ -2837,11 +2844,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
 
         this.setLabelCharacterFromMarks();
         this.markDirty();
-    }
-    protected getState(): {} {
-        /* This is a callback that gets called by GoEngine.getState to store board state in its state stack */
-        const ret = {};
-        return ret;
     }
     public giveReviewControl(player_id: number): void {
         this.syncReviewMove({ controller: player_id });

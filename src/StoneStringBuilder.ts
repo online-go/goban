@@ -16,15 +16,15 @@
 
 import * as GoMath from "./GoMath";
 import { StoneString } from "./StoneString";
-import { Board } from "./Board";
+import { BoardState } from "./BoardState";
 import { JGOFNumericPlayerColor } from "./JGOF";
 
 export class StoneStringBuilder {
-    private state: Board;
+    private state: BoardState;
     public readonly stone_string_id_map: number[][];
     public readonly stone_strings: StoneString[];
 
-    constructor(state: Board, original_board?: JGOFNumericPlayerColor[][]) {
+    constructor(state: BoardState, original_board?: JGOFNumericPlayerColor[][]) {
         const stone_strings: StoneString[] = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
         const group_id_map = GoMath.makeMatrix(state.width, state.height, 0);
 
