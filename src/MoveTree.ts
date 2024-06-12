@@ -79,6 +79,15 @@ let __move_tree_id = 0;
 let __isobranches_state_hash: { [hash: string]: Array<MoveTree> } =
     {}; /* used while finding isobranches */
 
+interface BoardStateWithIsobranchHash extends BoardState {
+    /**
+     * The isobranch hash is a hash of the board state. This field is used by
+     * the move tree to detect isomorphic branches. This field is populated
+     * when recomputeIsoBranches is called.
+     * */
+    isobranch_hash?: string;
+}
+
 /* TODO: If we're on the server side, we shouldn't be doing anything with marks */
 export class MoveTree {
     public static readonly stone_radius = 11;
@@ -104,7 +113,7 @@ export class MoveTree {
     public x: number;
     public y: number;
     public edited: boolean;
-    public state: BoardState;
+    public state: BoardStateWithIsobranchHash;
     public pen_marks: MoveTreePenMarks = [];
     public player_update: JGOFPlayerSummary | undefined;
     public played_by: number | undefined;

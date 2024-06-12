@@ -33,7 +33,7 @@ import * as GoMath from "./GoMath";
 import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
 import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
 import { init_score_estimator, ScoreEstimator } from "./ScoreEstimator";
-import { deepEqual, dup, computeAverageMoveTime, niceInterval } from "./util";
+import { deepEqual, dup, computeAverageMoveTime, niceInterval, matricesAreEqual } from "./util";
 import { _, interpolate } from "./translate";
 import {
     JGOFClock,
@@ -2179,9 +2179,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
             }
         }
 
-        if (
-            !(old_engine && old_engine.boardMatricesAreTheSame(old_engine.board, this.engine.board))
-        ) {
+        if (!(old_engine && matricesAreEqual(old_engine.board, this.engine.board))) {
             this.redraw(true);
         }
 
@@ -3867,7 +3865,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     m: diff.moves,
                     k: marks,
                 };
-                console.log("mARKS:", marks);
                 const tmp = dup(msg);
 
                 if (this.last_review_message.f === msg.f && this.last_review_message.m === msg.m) {

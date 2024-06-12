@@ -724,34 +724,6 @@ export class GoEngine extends BoardState {
 
         return state;
     }
-    public boardMatricesAreTheSame(
-        m1: Array<Array<JGOFNumericPlayerColor>>,
-        m2: Array<Array<JGOFNumericPlayerColor>>,
-    ): boolean {
-        if (m1.length !== m2.length || m1[0].length !== m2[0].length) {
-            return false;
-        }
-
-        for (let y = 0; y < m1.length; ++y) {
-            for (let x = 0; x < m1[0].length; ++x) {
-                if (m1[y][x] !== m2[y][x]) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-    private boardsAreEqual(state1: BoardState, state2: BoardState): boolean {
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                if (state1.board[y][x] !== state2.board[y][x]) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
 
     public currentPositionId(): string {
         return GoMath.positionId(this.board, this.height, this.width);
@@ -1170,11 +1142,7 @@ export class GoEngine extends BoardState {
                 }
 
                 if (checkForKo && !this.allow_ko) {
-                    const current_state = this.getState();
-                    if (
-                        !this.cur_move.edited &&
-                        this.boardsAreEqual(current_state, this.cur_move.index(-1).state)
-                    ) {
+                    if (!this.cur_move.edited && this.boardEquals(this.cur_move.index(-1).state)) {
                         throw new GobanMoveError(
                             this.game_id || this.review_id || 0,
                             this.cur_move?.move_number ?? -1,
@@ -1235,8 +1203,6 @@ export class GoEngine extends BoardState {
     }
     public isBoardRepeating(superko_rule: GoEngineSuperKoAlgorithm): boolean {
         const MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
-        const current_state = this.getState();
-        //var current_state = this.cur_move.state;
         const current_player_to_move = this.player;
         const check_situational = superko_rule === "ssk";
 
@@ -1248,7 +1214,7 @@ export class GoEngine extends BoardState {
         ) {
             if (t) {
                 if (!check_situational || t.player === current_player_to_move) {
-                    if (this.boardsAreEqual(t.state, current_state)) {
+                    if (this.boardEquals(t.state)) {
                         return true;
                     }
                 }

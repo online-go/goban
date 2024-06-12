@@ -22,7 +22,7 @@ import * as goscorer from "./goscorer/goscorer";
 import { StoneStringBuilder } from "./StoneStringBuilder";
 import { GobanCore } from "./GobanCore";
 import { RawStoneString } from "./StoneString";
-import { cloneMatrix } from "./util";
+import { cloneMatrix, matricesAreEqual } from "./util";
 import { callbacks } from "./callbacks";
 
 export interface BoardConfig {
@@ -54,13 +54,6 @@ export class BoardState extends EventEmitter<Events> implements BoardConfig {
     public board_is_repeating: boolean;
     public white_prisoners: number;
     public black_prisoners: number;
-
-    /**
-     * The isobranch hash is a hash of the board state. This field is used by
-     * the move tree to detect isomorphic branches. This field is not automatically
-     * populated, MoveTree uses it to store hash information as needed.
-     * */
-    public isobranch_hash?: string;
 
     /**
      * Constructs a new board with the given configuration. If height/width
@@ -98,7 +91,6 @@ export class BoardState extends EventEmitter<Events> implements BoardConfig {
         this.board_is_repeating = config.board_is_repeating ?? false;
         this.white_prisoners = config.white_prisoners ?? 0;
         this.black_prisoners = config.black_prisoners ?? 0;
-        this.isobranch_hash = config.isobranch_hash;
     }
 
     /** Clone the entire BoardState */
@@ -367,5 +359,9 @@ export class BoardState extends EventEmitter<Events> implements BoardConfig {
                 callback(pt.x, pt.y + 1);
             }
         }
+    }
+
+    public boardEquals(other: BoardState): boolean {
+        return matricesAreEqual(this.board, other.board);
     }
 }

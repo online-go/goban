@@ -24,7 +24,34 @@ export function getRandomInt(min: number, max: number) {
 
 /** Returns a cloned copy of the provided matrix */
 export function cloneMatrix<T>(matrix: T[][]): T[][] {
-    return matrix.map((row) => row.slice());
+    const ret = new Array(matrix.length);
+    for (let i = 0; i < matrix.length; ++i) {
+        ret[i] = matrix[i].slice();
+    }
+    return ret;
+}
+
+/**
+ * Returns true if the contents of the two 2d matrices are equal when the
+ * cells are compared with ===
+ */
+export function matricesAreEqual<T>(m1: T[][], m2: T[][]): boolean {
+    if (m1.length !== m2.length) {
+        return false;
+    }
+
+    for (let y = 0; y < m1.length; ++y) {
+        if (m1[y].length !== m2[y].length) {
+            return false;
+        }
+
+        for (let x = 0; x < m1[0].length; ++x) {
+            if (m1[y][x] !== m2[y][x]) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 /** Takes a number of seconds and returns a string like "1d 3h 2m 52s" */
