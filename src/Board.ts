@@ -32,9 +32,9 @@ export interface BoardConfig {
     removal?: boolean[][];
 }
 
-/* When flood filling we use this to keep track of locations we've visited */
+/* When flood filling we use these to keep track of locations we've visited */
 let __current_flood_fill_value = 0;
-const __flood_fill_scratch_pad: number[] = [];
+const __flood_fill_scratch_pad: number[] = Array(25 * 25).fill(0);
 
 export class Board extends EventEmitter<Events> {
     public readonly height: number = 19;

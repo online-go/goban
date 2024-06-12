@@ -491,7 +491,7 @@ export class GoEngine extends Board {
     ) {
         super(
             GoEngine.fillDefaults(
-                GoEngine.normalizeConfig(
+                GoEngine.migrateConfig(
                     ((config: GoEngineConfig): GoEngineConfig => {
                         /* We had a bug where we were filling in some initial state
                          * data incorrectly when we were dealing with sgfs, so this
@@ -1569,7 +1569,11 @@ export class GoEngine extends Board {
         return 0;
     }
 
-    private static normalizeConfig(config: GoEngineConfig): GoEngineConfig {
+    /**
+     * This function migrates old config's to whatever our current standard is
+     * for configs.
+     */
+    private static migrateConfig(config: GoEngineConfig): GoEngineConfig {
         if (config.ladder !== config.ladder_id) {
             config.ladder_id = config.ladder;
         }
@@ -1617,6 +1621,10 @@ export class GoEngine extends Board {
 
         return config;
     }
+    /**
+     * This function fills in default values for any missing fields in the
+     * config.
+     */
     public static fillDefaults(game_obj: GoEngineConfig): GoEngineConfig {
         if (!("phase" in game_obj)) {
             game_obj.phase = "play";
