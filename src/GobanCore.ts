@@ -32,7 +32,8 @@ import { Move, NumberMatrix, Intersection, encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
 import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
-import { init_score_estimator, ScoreEstimator } from "./ScoreEstimator";
+import { init_wasm_ownership_estimator } from "./ownership_estimators";
+import { ScoreEstimator } from "./ScoreEstimator";
 import { deepEqual, dup, computeAverageMoveTime, niceInterval, matricesAreEqual } from "./util";
 import { _, interpolate } from "./translate";
 import {
@@ -415,19 +416,19 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.emit("analyze_subtool", this.analyze_subtool);
     }
 
-    private _score_estimate: ScoreEstimator | null = null;
-    public get score_estimate(): ScoreEstimator | null {
-        return this._score_estimate;
+    private _score_estimator: ScoreEstimator | null = null;
+    public get score_estimator(): ScoreEstimator | null {
+        return this._score_estimator;
     }
-    public set score_estimate(score_estimate: ScoreEstimator | null) {
-        if (this._score_estimate === score_estimate) {
+    public set score_estimator(score_estimate: ScoreEstimator | null) {
+        if (this._score_estimator === score_estimate) {
             return;
         }
-        this._score_estimate = score_estimate;
-        this.emit("score_estimate", this.score_estimate);
-        this._score_estimate?.when_ready
+        this._score_estimator = score_estimate;
+        this.emit("score_estimate", this.score_estimator);
+        this._score_estimator?.when_ready
             .then(() => {
-                this.emit("score_estimate", this.score_estimate);
+                this.emit("score_estimate", this.score_estimator);
             })
             .catch(() => {
                 return;
@@ -464,7 +465,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     protected __last_pt: { i: number; j: number; valid: boolean } = { i: -1, j: -1, valid: false };
     protected __update_move_tree: any = null; /* timer */
     protected analysis_move_counter: number;
-    protected auto_scoring_done?: boolean = false;
+    protected stone_removal_auto_scoring_done?: boolean = false;
     protected bounded_height: number;
     protected bounded_width: number;
     protected bounds: GobanBounds;
@@ -1061,7 +1062,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     if (this.engine.phase === "stone removal") {
                         this.performStoneRemovalAutoScoring();
                     } else {
-                        delete this.auto_scoring_done;
+                        delete this.stone_removal_auto_scoring_done;
                     }
 
                     this.updateTitleAndStonePlacement();
@@ -2206,7 +2207,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
             !("auto_scoring_done" in this) &&
             !("auto_scoring_done" in (this as any).engine)
         ) {
-            (this as any).autoScore();
+            this.performStoneRemovalAutoScoring();
         }
 
         this.emit("load", config);
@@ -3129,15 +3130,15 @@ export abstract class GobanCore extends EventEmitter<Events> {
         }
     }
     public updateScoreEstimation(): void {
-        if (this.score_estimate) {
-            const est = this.score_estimate.estimated_hard_score - this.engine.komi;
+        if (this.score_estimator) {
+            const est = this.score_estimator.estimated_hard_score - this.engine.komi;
             if (callbacks.updateScoreEstimation) {
                 callbacks.updateScoreEstimation(est > 0 ? "black" : "white", Math.abs(est));
             }
             if (this.config.onScoreEstimationUpdated) {
                 this.config.onScoreEstimationUpdated(est > 0 ? "black" : "white", Math.abs(est));
             }
-            this.emit("score_estimate", this.score_estimate);
+            this.emit("score_estimate", this.score_estimator);
         }
     }
     public performStoneRemovalAutoScoring(): void {
@@ -3156,13 +3157,13 @@ export abstract class GobanCore extends EventEmitter<Events> {
             return;
         }
 
-        this.auto_scoring_done = true;
+        this.stone_removal_auto_scoring_done = true;
 
         this.showMessage("processing", undefined, -1);
         const do_score_estimation = () => {
             const se = new ScoreEstimator(
-                this,
                 this.engine,
+                this,
                 AUTOSCORE_TRIALS,
                 AUTOSCORE_TOLERANCE,
                 true /* prefer remote */,
@@ -3219,7 +3220,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
         };
 
         setTimeout(() => {
-            init_score_estimator()
+            init_wasm_ownership_estimator()
                 .then(do_score_estimation)
                 .catch((err) => console.error(err));
         }, 10);
@@ -3911,12 +3912,12 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this.showMessage("processing", undefined, -1);
             this.setMode("score estimation", true);
             this.clearMessage();
-            const autoscore = false;
-            this.score_estimate = this.engine.estimateScore(
+            const should_autoscore = false;
+            this.score_estimator = this.engine.estimateScore(
                 SCORE_ESTIMATION_TRIALS,
                 SCORE_ESTIMATION_TOLERANCE,
                 prefer_remote,
-                autoscore,
+                should_autoscore,
             );
             this.enableStonePlacement();
             this.redraw(true);

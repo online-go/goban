@@ -327,8 +327,8 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                     const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
                     if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
-                        if (this.score_estimate) {
-                            this.score_estimate.handleClick(
+                        if (this.score_estimator) {
+                            this.score_estimator.handleClick(
                                 pt.i,
                                 pt.j,
                                 ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey,
@@ -1473,9 +1473,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         (this.getPuzzlePlacementSetting &&
                             this.getPuzzlePlacementSetting().mode === "play"))) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]) ||
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]) ||
                 (this.engine &&
                     this.engine.phase === "stone removal" &&
                     this.engine.board[j][i] &&
@@ -1489,11 +1489,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 let color;
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]
                 ) {
-                    color = this.score_estimate.board[j][i];
+                    color = this.score_estimator.board[j][i];
                     translucent = true;
                 } else if (
                     this.engine &&
@@ -1657,9 +1657,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         this.engine.board[j][i] &&
                         this.engine.removal[j][i]) ||
                     (this.scoring_mode &&
-                        this.score_estimate &&
-                        this.score_estimate.board[j][i] &&
-                        this.score_estimate.removal[j][i]) ||
+                        this.score_estimator &&
+                        this.score_estimator.board[j][i] &&
+                        this.score_estimator.removal[j][i]) ||
                     //(this.mode === "analyze" && pos.stone_removed)
                     pos.stone_removed
                 ) {
@@ -1708,10 +1708,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             if (
                 (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))) ||
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))) ||
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
@@ -1726,15 +1726,15 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))
                 ) {
-                    color = this.score_estimate.territory[j][i] === 1 ? "black" : "white";
+                    color = this.score_estimator.territory[j][i] === 1 ? "black" : "white";
                     if (
-                        this.score_estimate.board[j][i] === 0 &&
-                        this.score_estimate.removal[j][i]
+                        this.score_estimator.board[j][i] === 0 &&
+                        this.score_estimator.removal[j][i]
                     ) {
                         color = "dame";
                     }
@@ -2142,7 +2142,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
         /* Score Estimation */
         if (
-            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === true && this.score_estimator) ||
             (this.scoring_mode === "stalling-scoring-mode" &&
                 this.stalling_score_estimate &&
                 this.mode !== "analyze")
@@ -2150,7 +2150,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             const se =
                 this.scoring_mode === "stalling-scoring-mode"
                     ? this.stalling_score_estimate
-                    : this.score_estimate;
+                    : this.score_estimator;
             const est = se!.ownership[j][i];
             const color = est < 0 ? "white" : "black";
             const color_num = color === "black" ? 1 : 2;
@@ -2264,9 +2264,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         (this.getPuzzlePlacementSetting &&
                             this.getPuzzlePlacementSetting().mode !== "play"))) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]) ||
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]) ||
                 (this.engine &&
                     this.engine.phase === "stone removal" &&
                     this.engine.board[j][i] &&
@@ -2278,11 +2278,11 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 let color;
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]
                 ) {
-                    color = this.score_estimate.board[j][i];
+                    color = this.score_estimator.board[j][i];
                     translucent = true;
                 } else if (
                     this.engine &&
@@ -2343,9 +2343,9 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                         this.engine.board[j][i] &&
                         this.engine.removal[j][i]) ||
                     (this.scoring_mode &&
-                        this.score_estimate &&
-                        this.score_estimate.board[j][i] &&
-                        this.score_estimate.removal[j][i]) ||
+                        this.score_estimator &&
+                        this.score_estimator.board[j][i] &&
+                        this.score_estimator.removal[j][i]) ||
                     //(this.mode === "analyze" && pos.stone_removed)
                     pos.stone_removed
                 ) {
@@ -2406,7 +2406,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 transparent = false;
             }
 
-            if (this.scoring_mode && this.score_estimate && this.score_estimate.removal[j][i]) {
+            if (this.scoring_mode && this.score_estimator && this.score_estimator.removal[j][i]) {
                 draw_x = true;
                 transparent = false;
             }
@@ -2424,10 +2424,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             if (
                 (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))) ||
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))) ||
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
@@ -2441,15 +2441,15 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 let color = pos.score;
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))
                 ) {
-                    color = this.score_estimate.territory[j][i] === 1 ? "black" : "white";
+                    color = this.score_estimator.territory[j][i] === 1 ? "black" : "white";
                     if (
-                        this.score_estimate.board[j][i] === 0 &&
-                        this.score_estimate.removal[j][i]
+                        this.score_estimator.board[j][i] === 0 &&
+                        this.score_estimator.removal[j][i]
                     ) {
                         color = "dame";
                     }
@@ -2479,10 +2479,10 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
                 }
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.territory[j][i]
+                    this.score_estimator &&
+                    this.score_estimator.territory[j][i]
                 ) {
-                    color = this.score_estimate.territory[j][i] === 1 ? "black" : "white";
+                    color = this.score_estimator.territory[j][i] === 1 ? "black" : "white";
                 }
                 ret += "score " + color + ",";
             }
@@ -2591,7 +2591,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
         /* Score Estimation */
         if (
-            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === true && this.score_estimator) ||
             (this.scoring_mode === "stalling-scoring-mode" &&
                 this.stalling_score_estimate &&
                 this.mode !== "analyze")
@@ -2599,7 +2599,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             const se =
                 this.scoring_mode === "stalling-scoring-mode"
                     ? this.stalling_score_estimate
-                    : this.score_estimate;
+                    : this.score_estimator;
             const est = se!.ownership[j][i];
 
             ret += est.toFixed(5) + ",";

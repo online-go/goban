@@ -2,13 +2,11 @@
 
 import { GoEngine } from "../GoEngine";
 import { makeMatrix } from "../GoMath";
+import { ScoreEstimator, adjust_estimate, set_local_ownership_estimator } from "../ScoreEstimator";
 import {
-    ScoreEstimator,
-    adjust_estimate,
-    set_local_scorer,
-    set_remote_scorer,
-} from "../ScoreEstimator";
-import { estimateScoreVoronoi } from "../local_estimators/voronoi";
+    init_remote_ownership_estimator,
+    voronoi_estimate_ownership,
+} from "../ownership_estimators";
 
 describe("adjust_estimate", () => {
     const BOARD = [
@@ -65,7 +63,7 @@ describe("ScoreEstimator", () => {
     const tolerance = 0.25;
 
     beforeEach(() => {
-        set_remote_scorer(async () => {
+        init_remote_ownership_estimator(async () => {
             return {
                 ownership: OWNERSHIP,
                 score: -7.5,
@@ -75,15 +73,15 @@ describe("ScoreEstimator", () => {
             };
         });
 
-        set_local_scorer(estimateScoreVoronoi);
+        set_local_ownership_estimator(voronoi_estimate_ownership);
     });
 
     afterEach(() => {
-        set_remote_scorer(undefined as any);
+        init_remote_ownership_estimator(undefined as any);
     });
 
     test("amount and winner", async () => {
-        const se = new ScoreEstimator(undefined, engine, trials, tolerance, false);
+        const se = new ScoreEstimator(engine, undefined, trials, tolerance, false);
 
         await se.when_ready;
 
@@ -94,7 +92,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("local", async () => {
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
 
         await se.when_ready;
 
@@ -121,7 +119,7 @@ describe("ScoreEstimator", () => {
         for (const [x, y] of moves) {
             engine.place(x, y);
         }
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
 
         expect(se.ownership).toEqual([
             [1, 0, -1, -1, 1, 1, 1, 1, 1],
@@ -137,7 +135,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("score() territory", async () => {
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         se.score();
@@ -170,7 +168,7 @@ describe("ScoreEstimator", () => {
         engine.place(1, 1);
         engine.place(2, 1);
 
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         se.score();
@@ -206,7 +204,7 @@ describe("ScoreEstimator", () => {
         engine.place(3, 1);
         engine.place(0, 1);
 
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         se.score();
@@ -232,7 +230,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("score() with removed stones", async () => {
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         se.toggleSingleGroupRemoval(1, 0);
         se.toggleSingleGroupRemoval(2, 0);
         await se.when_ready;
@@ -260,7 +258,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("getStoneRemovalString()", async () => {
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         se.toggleSingleGroupRemoval(1, 0);
         se.toggleSingleGroupRemoval(2, 0);
         await se.when_ready;
@@ -278,7 +276,7 @@ describe("ScoreEstimator", () => {
             setForRemoval: jest.fn(),
         };
 
-        const se = new ScoreEstimator(fake_goban as any, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, fake_goban as any, 10, 0.5, false);
         await se.when_ready;
 
         expect(fake_goban.updateScoreEstimation).toBeCalled();
@@ -292,9 +290,9 @@ describe("ScoreEstimator", () => {
             [1, 1, 1, 1],
             [1, 1, 1, 1],
         ];
-        set_local_scorer(markBoardAllBlack);
+        set_local_ownership_estimator(markBoardAllBlack);
 
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         // Note (bpj): I think this might be a bug
@@ -304,15 +302,15 @@ describe("ScoreEstimator", () => {
     });
 
     test("Falls back to local scorer if remote scorer is not set", async () => {
-        set_remote_scorer(undefined as any);
+        init_remote_ownership_estimator(undefined as any);
         const mock_local_scorer = jest.fn();
         mock_local_scorer.mockReturnValue([
             [1, 1, -1, -1],
             [1, 1, -1, -1],
         ]);
-        set_local_scorer(mock_local_scorer);
+        set_local_ownership_estimator(mock_local_scorer);
 
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, true);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
         await se.when_ready;
 
         expect(mock_local_scorer).toBeCalled();
@@ -329,14 +327,14 @@ describe("ScoreEstimator", () => {
         engine.place(1, 1);
         engine.place(2, 1);
 
-        set_remote_scorer(async () => ({
+        init_remote_ownership_estimator(async () => ({
             ownership: OWNERSHIP,
             autoscored_board_state: OWNERSHIP,
             autoscored_removed: [],
             autoscored_needs_sealing: [],
         }));
 
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, true);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
         await se.when_ready;
 
         expect(se.ownership).toEqual(OWNERSHIP);
@@ -350,8 +348,8 @@ describe("ScoreEstimator", () => {
     });
 
     test("local scorer with stones removed", async () => {
-        set_local_scorer(estimateScoreVoronoi);
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        set_local_ownership_estimator(voronoi_estimate_ownership);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         se.handleClick(1, 0, false, 0);
@@ -365,8 +363,8 @@ describe("ScoreEstimator", () => {
     });
 
     test("modkey", async () => {
-        set_local_scorer(estimateScoreVoronoi);
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        set_local_ownership_estimator(voronoi_estimate_ownership);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         se.handleClick(1, 0, true, 0);
@@ -377,8 +375,8 @@ describe("ScoreEstimator", () => {
     });
 
     test("long press", async () => {
-        set_local_scorer(estimateScoreVoronoi);
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        set_local_ownership_estimator(voronoi_estimate_ownership);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         se.handleClick(1, 0, false, 1000);
@@ -413,7 +411,7 @@ describe("ScoreEstimator", () => {
         // 2 . . . X O . . .
         // 1 . . . X O . . .
 
-        const se = new ScoreEstimator(undefined, engine, 10, 0.5, false);
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
         await se.when_ready;
 
         se.score();

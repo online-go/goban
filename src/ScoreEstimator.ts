@@ -22,12 +22,9 @@ import { GobanCore } from "./GobanCore";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./JGOF";
 import { _ } from "./translate";
-import { estimateScoreWasm } from "./local_estimators/wasm_estimator";
+import { wasm_estimate_ownership, remote_estimate_ownership } from "./ownership_estimators";
 import * as goscorer from "./goscorer/goscorer";
 import { BoardState } from "./BoardState";
-
-export { init_score_estimator, estimateScoreWasm } from "./local_estimators/wasm_estimator";
-export { estimateScoreVoronoi } from "./local_estimators/voronoi";
 
 /* In addition to the local estimators, we have a RemoteScoring system
  * which needs to be initialized by either the client or the server if we want
@@ -71,14 +68,6 @@ export interface ScoreEstimateResponse {
     autoscored_needs_sealing?: JGOFSealingIntersection[];
 }
 
-let remote_scorer: ((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>) | undefined;
-/* This is used on both the client and server side */
-export function set_remote_scorer(
-    scorer: (req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>,
-): void {
-    remote_scorer = scorer;
-}
-
 /**
  * The interface that local estimators should follow.
  *
@@ -95,9 +84,9 @@ type LocalEstimator = (
     trials: number,
     tolerance: number,
 ) => GoMath.NumberMatrix;
-let local_scorer = estimateScoreWasm;
-export function set_local_scorer(scorer: LocalEstimator) {
-    local_scorer = scorer;
+let local_ownership_estimator = wasm_estimate_ownership;
+export function set_local_ownership_estimator(estimator: LocalEstimator) {
+    local_ownership_estimator = estimator;
 }
 
 export class ScoreEstimator extends BoardState {
@@ -138,9 +127,8 @@ export class ScoreEstimator extends BoardState {
     public autoscored_needs_sealing?: JGOFSealingIntersection[];
 
     constructor(
-        /* REFACTOR TODO: Engine puts config first before callback, this should be the same */
-        goban_callback: GobanCore | undefined,
         engine: GoEngine,
+        goban_callback: GobanCore | undefined,
         trials: number,
         tolerance: number,
         prefer_remote: boolean = false,
@@ -170,7 +158,7 @@ export class ScoreEstimator extends BoardState {
             return this.estimateScoreLocal(trials, tolerance);
         }
 
-        if (remote_scorer) {
+        if (remote_estimate_ownership) {
             return this.estimateScoreRemote(autoscore);
         } else {
             return this.estimateScoreLocal(trials, tolerance);
@@ -184,7 +172,7 @@ export class ScoreEstimator extends BoardState {
             : 0;
 
         return new Promise<void>((resolve, reject) => {
-            if (!remote_scorer) {
+            if (!remote_estimate_ownership) {
                 throw new Error("Remote scoring not setup");
             }
 
@@ -197,13 +185,13 @@ export class ScoreEstimator extends BoardState {
                 board_state.push(row);
             }
 
-            remote_scorer({
+            remote_estimate_ownership({
                 player_to_move: this.engine.colorToMove(),
                 width: this.engine.width,
                 height: this.engine.height,
                 rules: this.engine.rules,
                 board_state: board_state,
-                autoscore,
+                autoscore: autoscore,
                 jwt: "", // this gets set by the remote_scorer method
             })
                 .then((res: ScoreEstimateResponse) => {
@@ -270,7 +258,12 @@ export class ScoreEstimator extends BoardState {
             }
         }
 
-        const ownership = local_scorer(board, this.engine.colorToMove(), trials, tolerance);
+        const ownership = local_ownership_estimator(
+            board,
+            this.engine.colorToMove(),
+            trials,
+            tolerance,
+        );
 
         const estimated_score = sum_board(ownership);
         const adjusted = adjust_estimate(this.engine, this.board, ownership, estimated_score);

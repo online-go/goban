@@ -371,8 +371,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     const pos = getRelativeEventPosition(ev);
                     const pt = this.xy2ij(pos.x, pos.y);
                     if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
-                        if (this.score_estimate) {
-                            this.score_estimate.handleClick(
+                        if (this.score_estimator) {
+                            this.score_estimator.handleClick(
                                 pt.i,
                                 pt.j,
                                 ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey,
@@ -1552,9 +1552,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         (this.getPuzzlePlacementSetting &&
                             this.getPuzzlePlacementSetting().mode === "play"))) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]) ||
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]) ||
                 (this.engine &&
                     this.engine.phase === "stone removal" &&
                     this.engine.board[j][i] &&
@@ -1568,11 +1568,11 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 let color;
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]
                 ) {
-                    color = this.score_estimate.board[j][i];
+                    color = this.score_estimator.board[j][i];
                     translucent = true;
                 } else if (
                     this.engine &&
@@ -1742,9 +1742,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         this.engine.board[j][i] &&
                         this.engine.removal[j][i]) ||
                     (this.scoring_mode &&
-                        this.score_estimate &&
-                        this.score_estimate.board[j][i] &&
-                        this.score_estimate.removal[j][i]) ||
+                        this.score_estimator &&
+                        this.score_estimator.board[j][i] &&
+                        this.score_estimator.removal[j][i]) ||
                     pos.stone_removed
                 ) {
                     draw_red_x = true;
@@ -1787,10 +1787,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             if (
                 (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))) ||
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))) ||
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
@@ -1806,15 +1806,15 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 let color = pos.score;
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))
                 ) {
-                    color = this.score_estimate.territory[j][i] === 1 ? "black" : "white";
+                    color = this.score_estimator.territory[j][i] === 1 ? "black" : "white";
                     if (
-                        this.score_estimate.board[j][i] === 0 &&
-                        this.score_estimate.removal[j][i]
+                        this.score_estimator.board[j][i] === 0 &&
+                        this.score_estimator.removal[j][i]
                     ) {
                         color = "dame";
                     }
@@ -2204,7 +2204,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         /* Score Estimation */
         if (
-            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === true && this.score_estimator) ||
             (this.scoring_mode === "stalling-scoring-mode" &&
                 this.stalling_score_estimate &&
                 this.mode !== "analyze")
@@ -2212,7 +2212,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             const se =
                 this.scoring_mode === "stalling-scoring-mode"
                     ? this.stalling_score_estimate
-                    : this.score_estimate;
+                    : this.score_estimator;
             const est = se!.ownership[j][i];
 
             ctx.beginPath();
@@ -2321,9 +2321,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         (this.getPuzzlePlacementSetting &&
                             this.getPuzzlePlacementSetting().mode !== "play"))) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]) ||
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]) ||
                 (this.engine &&
                     this.engine.phase === "stone removal" &&
                     this.engine.board[j][i] &&
@@ -2335,11 +2335,11 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 let color;
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.board[j][i] &&
-                    this.score_estimate.removal[j][i]
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]
                 ) {
-                    color = this.score_estimate.board[j][i];
+                    color = this.score_estimator.board[j][i];
                     translucent = true;
                 } else if (
                     this.engine &&
@@ -2391,9 +2391,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         this.engine.board[j][i] &&
                         this.engine.removal[j][i]) ||
                     (this.scoring_mode &&
-                        this.score_estimate &&
-                        this.score_estimate.board[j][i] &&
-                        this.score_estimate.removal[j][i]) ||
+                        this.score_estimator &&
+                        this.score_estimator.board[j][i] &&
+                        this.score_estimator.removal[j][i]) ||
                     //(this.mode === "analyze" && pos.stone_removed)
                     pos.stone_removed
                 ) {
@@ -2454,7 +2454,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 transparent = false;
             }
 
-            if (this.scoring_mode && this.score_estimate && this.score_estimate.removal[j][i]) {
+            if (this.scoring_mode && this.score_estimator && this.score_estimator.removal[j][i]) {
                 draw_x = true;
                 transparent = false;
             }
@@ -2472,10 +2472,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             if (
                 (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
                 (this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))) ||
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))) ||
                 ((this.engine.phase === "stone removal" ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
@@ -2489,15 +2489,15 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 let color = pos.score;
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    (this.score_estimate.territory[j][i] ||
-                        (this.score_estimate.removal[j][i] &&
-                            this.score_estimate.board[j][i] === 0))
+                    this.score_estimator &&
+                    (this.score_estimator.territory[j][i] ||
+                        (this.score_estimator.removal[j][i] &&
+                            this.score_estimator.board[j][i] === 0))
                 ) {
-                    color = this.score_estimate.territory[j][i] === 1 ? "black" : "white";
+                    color = this.score_estimator.territory[j][i] === 1 ? "black" : "white";
                     if (
-                        this.score_estimate.board[j][i] === 0 &&
-                        this.score_estimate.removal[j][i]
+                        this.score_estimator.board[j][i] === 0 &&
+                        this.score_estimator.removal[j][i]
                     ) {
                         color = "dame";
                     }
@@ -2528,10 +2528,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
                 if (
                     this.scoring_mode &&
-                    this.score_estimate &&
-                    this.score_estimate.territory[j][i]
+                    this.score_estimator &&
+                    this.score_estimator.territory[j][i]
                 ) {
-                    color = this.score_estimate.territory[j][i] === 1 ? "black" : "white";
+                    color = this.score_estimator.territory[j][i] === 1 ? "black" : "white";
                 }
                 ret += "score " + color + ",";
             }
@@ -2640,7 +2640,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         /* Score Estimation */
         if (
-            (this.scoring_mode === true && this.score_estimate) ||
+            (this.scoring_mode === true && this.score_estimator) ||
             (this.scoring_mode === "stalling-scoring-mode" &&
                 this.stalling_score_estimate &&
                 this.mode !== "analyze")
@@ -2648,7 +2648,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             const se =
                 this.scoring_mode === "stalling-scoring-mode"
                     ? this.stalling_score_estimate
-                    : this.score_estimate;
+                    : this.score_estimator;
             const est = se!.ownership[j][i];
 
             ret += est.toFixed(5) + ",";

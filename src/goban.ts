@@ -37,7 +37,9 @@ export * from "./test_utils";
 export * from "./GobanSocket";
 export * from "./util";
 export * from "./callbacks";
+export * from "./BoardState";
 export * from "./autoscore";
+export * from "./ownership_estimators";
 
 export * as GoMath from "./GoMath";
 export * as protocol from "./protocol";

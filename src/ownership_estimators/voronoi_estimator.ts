@@ -21,7 +21,7 @@ import { dup } from "../util";
  * closer stone (Manhattan distance).  See discussion at
  * https://forums.online-go.com/t/weak-score-estimator-and-japanese-rules/41041/70
  */
-export function estimateScoreVoronoi(board: number[][]) {
+export function voronoi_estimate_ownership(board: number[][]) {
     const { width, height } = get_dims(board);
     const ownership: number[][] = dup(board);
     let points = getPoints(board, (pt) => pt !== 0);

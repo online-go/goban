@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { estimateScoreVoronoi } from "../voronoi";
+import { voronoi_estimate_ownership } from "../voronoi_estimator";
 
 test("one color only scores board for that color", () => {
     const board = [
@@ -23,7 +23,7 @@ test("one color only scores board for that color", () => {
         [0, 0, 0],
     ];
 
-    expect(estimateScoreVoronoi(board)).toEqual([
+    expect(voronoi_estimate_ownership(board)).toEqual([
         [1, 1, 1],
         [1, 1, 1],
         [1, 1, 1],
@@ -40,7 +40,7 @@ test("border is one stone wide", () => {
         [0, 0, 0, 0, 0, 0],
     ];
 
-    expect(estimateScoreVoronoi(board)).toEqual([
+    expect(voronoi_estimate_ownership(board)).toEqual([
         [1, 1, 1, 1, 1, 0],
         [1, 1, 1, 1, 0, -1],
         [1, 1, 1, 0, -1, -1],

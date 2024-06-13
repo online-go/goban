@@ -2391,15 +2391,15 @@ export class GoEngine extends BoardState {
         trials: number,
         tolerance: number,
         prefer_remote: boolean = false,
-        autoscore: boolean = false,
+        should_autoscore: boolean = false,
     ): ScoreEstimator {
         const se = new ScoreEstimator(
-            this.goban_callback,
             this,
+            this.goban_callback,
             trials,
             tolerance,
             prefer_remote,
-            autoscore,
+            should_autoscore,
         );
         return se.score();
     }

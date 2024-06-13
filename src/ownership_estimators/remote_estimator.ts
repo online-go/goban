@@ -14,20 +14,15 @@
  * limitations under the License.
  */
 
-export * from "./GobanError";
-export * from "./StoneString";
-export * from "./GoEngine";
-export * from "./GoConditionalMove";
-export * from "./MoveTree";
-export * from "./translate";
-export * from "./ScoreEstimator";
-export * from "./JGOF";
-export * from "./AdHocFormat";
-export * from "./AIReview";
-export * from "./util";
-export * from "./test_utils";
-export * from "./BoardState";
-export * from "./autoscore";
+import type { ScoreEstimateRequest, ScoreEstimateResponse } from "../ScoreEstimator";
 
-export * from "./GoMath";
-export * as GoMath from "./GoMath";
+export let remote_estimate_ownership:
+    | ((req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>)
+    | undefined;
+
+/* Sets the callback to use to preform an ownership estimate */
+export function init_remote_ownership_estimator(
+    scorer: (req: ScoreEstimateRequest) => Promise<ScoreEstimateResponse>,
+): void {
+    remote_estimate_ownership = scorer;
+}

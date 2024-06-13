@@ -30,7 +30,7 @@ let OGSScoreEstimatorModule: any;
 
 let init_promise: Promise<boolean>;
 
-export function init_score_estimator(): Promise<boolean> {
+export function init_wasm_ownership_estimator(): Promise<boolean> {
     if (!CLIENT) {
         throw new Error("Only initialize WASM library on the client side");
     }
@@ -90,7 +90,7 @@ export function init_score_estimator(): Promise<boolean> {
     }
 }
 
-export function estimateScoreWasm(
+export function wasm_estimate_ownership(
     board: number[][],
     color_to_move: "black" | "white",
     trials: number,
@@ -116,21 +116,21 @@ export function estimateScoreWasm(
                 ++i;
             }
         }
-        const _estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", [
+
+        const estimate = OGSScoreEstimatorModule.cwrap("estimate", "number", [
             "number",
             "number",
             "number",
             "number",
             "number",
             "number",
-        ]);
-        const estimate = _estimate as (
-            w: number,
-            h: number,
-            p: number,
-            c: number,
-            tr: number,
-            to: number,
+        ]) as (
+            width: number,
+            height: number,
+            ptr: number,
+            color_to_move: number,
+            trials: number,
+            tolerance: number,
         ) => number;
         estimate(width, height, ptr, color_to_move === "black" ? 1 : -1, trials, tolerance);
 
