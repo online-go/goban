@@ -361,6 +361,7 @@ export class BoardState extends EventEmitter<Events> implements BoardConfig {
         }
     }
 
+    /** Returns true if the `.board` field from the other board is equal to this one */
     public boardEquals(other: BoardState): boolean {
         return matricesAreEqual(this.board, other.board);
     }

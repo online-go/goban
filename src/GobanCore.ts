@@ -1059,7 +1059,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
                     this.engine.phase = new_phase;
 
                     if (this.engine.phase === "stone removal") {
-                        this.autoScore();
+                        this.performStoneRemovalAutoScoring();
                     } else {
                         delete this.auto_scoring_done;
                     }
@@ -3140,7 +3140,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
             this.emit("score_estimate", this.score_estimate);
         }
     }
-    public autoScore(): void {
+    public performStoneRemovalAutoScoring(): void {
         try {
             if (
                 !(window as any)["user"] ||
