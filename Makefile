@@ -7,8 +7,7 @@ all dev:
 build lib types:
 	yarn run build-debug
 	yarn run build-production
-	npx dts-bundle-generator -o lib/goban.d.ts src/goban/index.ts
-	# npx dts-bundle-generator -o lib/engine.d.ts src/engine/index.ts
+	yarn run dts
 
 
 lint:

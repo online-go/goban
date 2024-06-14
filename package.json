@@ -2,7 +2,10 @@
     "name": "goban",
     "version": "0.7.50",
     "description": "",
-    "main": "lib/goban.js",
+    "main": "node/goban-engine.js",
+    "browser": {
+        "goban": "lib/goban-browser.js"
+    },
     "types": "lib/goban.d.ts",
     "files": [
         "lib/",
@@ -22,6 +25,7 @@
         "dev": "webpack-cli serve",
         "build-debug": "webpack",
         "build-production": "webpack --mode production",
+        "dts": "dts-bundle-generator -o lib/goban.d.ts  src/goban/index.ts",
         "lint": "eslint src/ --ext=.ts,.tsx",
         "lint:fix": "eslint --fix src/ --ext=.ts,.tsx",
         "typedoc": "typedoc src/goban.ts",

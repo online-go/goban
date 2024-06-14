@@ -66,7 +66,7 @@ module.exports = (env, argv) => {
         Object.assign({}, common, {
             target: "web",
             entry: {
-                goban: "./src/goban/index.ts",
+                "goban-browser": "./src/goban/index.ts",
                 //engine: "./src/engine/index.ts",
             },
 
@@ -77,6 +77,7 @@ module.exports = (env, argv) => {
                     name: "goban",
                     type: "umd",
                 },
+                globalObject: "this",
             },
 
             module: {
@@ -132,7 +133,6 @@ module.exports = (env, argv) => {
         }),
     ];
 
-    /*
     if (production) {
         ret.push(
             // node
@@ -140,7 +140,7 @@ module.exports = (env, argv) => {
                 target: "node",
 
                 entry: {
-                    engine: "./src/engine/index.ts",
+                    "goban-engine": "./src/engine/index.ts",
                 },
 
                 module: {
@@ -181,7 +181,6 @@ module.exports = (env, argv) => {
             }),
         );
     }
-    */
 
     return ret;
 };
