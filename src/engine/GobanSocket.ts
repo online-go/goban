@@ -65,7 +65,7 @@ const RECONNECTION_INTERVALS = [
 const DEFAULT_PING_INTERVAL = 10000;
 
 export type DataArgument<Entry> = Entry extends (...args: infer A) => void ? A[0] : never;
-export type ResponseType<Entry> = Entry extends (...args: any[]) => infer R ? R : never;
+export type ProtocolResponseType<Entry> = Entry extends (...args: any[]) => infer R ? R : never;
 
 /**
  * This is a simple wrapper around the WebSocket API that provides a
@@ -352,7 +352,7 @@ export class GobanSocket<
     public send<Command extends keyof SendProtocol>(
         command: Command,
         data: DataArgument<SendProtocol[Command]>,
-        cb?: (data: ResponseType<SendProtocol[Command]>, error?: any) => void,
+        cb?: (data: ProtocolResponseType<SendProtocol[Command]>, error?: any) => void,
     ): void {
         const request: GobanSocketClientToServerMessage<SendProtocol> = cb
             ? [command, data, ++this.last_request_id]
@@ -388,7 +388,7 @@ export class GobanSocket<
     public sendPromise<Command extends keyof SendProtocol>(
         command: Command,
         data: DataArgument<SendProtocol[Command]>,
-    ): Promise<ResponseType<SendProtocol[Command]>> {
+    ): Promise<ProtocolResponseType<SendProtocol[Command]>> {
         return new Promise((resolve, reject) => {
             this.send(command, data, (data, error) => {
                 if (error) {

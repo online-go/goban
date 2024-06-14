@@ -4,7 +4,7 @@
     "description": "",
     "main": "node/goban-engine.js",
     "browser": {
-        "goban": "lib/goban-browser.js"
+        "goban": "lib/goban.js"
     },
     "types": "lib/goban.d.ts",
     "files": [

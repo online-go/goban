@@ -51,7 +51,7 @@ export interface GobanSVGConfig extends GobanConfig {
     last_move_opacity?: number;
 }
 
-interface ViewPortInterface {
+interface MoveTreeViewPortInterface {
     offset_x: number;
     offset_y: number;
     minx: number;
@@ -3497,7 +3497,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         svg: SVGElement,
         node: MoveTree,
         active_path_number: number,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         const stone_idx = node.move_number * 31;
         const cx = node.layout_cx - viewport.offset_x;
@@ -3600,7 +3600,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         svg: SVGElement,
         node: MoveTree,
         active_path_number: number,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         if (node.trunk_next) {
             this.move_tree_drawRecursive(svg, node.trunk_next, active_path_number, viewport);
@@ -3623,7 +3623,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         svg: SVGElement,
         node: MoveTree,
         color: string,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         const sx =
@@ -3638,7 +3638,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         svg.appendChild(rect);
     }
 
-    move_tree_drawPath(svg: SVGElement, node: MoveTree, viewport: ViewPortInterface): void {
+    move_tree_drawPath(svg: SVGElement, node: MoveTree, viewport: MoveTreeViewPortInterface): void {
         if (node.parent) {
             if (node.parent.layout_cx < viewport.minx && node.layout_cx < viewport.minx) {
                 return;
@@ -3675,7 +3675,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
         svg: SVGElement,
         from_node: MoveTree,
         to_node: MoveTree,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         let A: MoveTree = from_node;
         let B: MoveTree = to_node;
@@ -3729,7 +3729,7 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
     move_tree_recursiveDrawPath(
         svg: SVGElement,
         node: MoveTree,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         if (node.trunk_next) {
             this.move_tree_recursiveDrawPath(svg, node.trunk_next, viewport);

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
+export * from "./BoardState";
+export * from "./GoEngine";
 export * from "./AdHocFormat";
 export * from "./AIReview";
 export * from "./autoscore";
-export * from "./BoardState";
 export * from "../goban/GobanCore";
 export * from "./GobanError";
 export * from "./GobanSocket";
 export * from "./GoConditionalMove";
-export * from "./GoEngine";
 export * from "./GoMath";
 export * from "./JGOF";
 export * from "./MoveTree";

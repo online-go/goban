@@ -66,7 +66,7 @@ module.exports = (env, argv) => {
         Object.assign({}, common, {
             target: "web",
             entry: {
-                "goban-browser": "./src/goban/index.ts",
+                goban: "./src/goban/index.ts",
                 //engine: "./src/engine/index.ts",
             },
 
@@ -77,7 +77,6 @@ module.exports = (env, argv) => {
                     name: "goban",
                     type: "umd",
                 },
-                globalObject: "this",
             },
 
             module: {
@@ -160,6 +159,11 @@ module.exports = (env, argv) => {
                 output: {
                     path: __dirname + "/node",
                     filename: "[name].js",
+                    globalObject: "this",
+                    library: {
+                        name: "goban",
+                        type: "umd",
+                    },
                 },
 
                 plugins: plugins.concat([
