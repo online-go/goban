@@ -31,8 +31,8 @@ export default {
     // ],
     coveragePathIgnorePatterns: [
         "/src/test.tsx",
-        "/src/goban.ts",
-        "/src/engine.ts",
+        "/src/goban/index.ts",
+        "/src/engine/index.ts",
         ".d.ts",
         "wasm_estimator.ts",
     ],

@@ -13,10 +13,7 @@
         "lib": ["es2017", "dom"],
         "baseUrl": ".",
         "paths": {
-            "*": [
-                "src/*",
-                "*"
-            ]
+            "*": ["src/*", "*"]
         },
         "noImplicitAny": true,
         "noImplicitReturns": true,
@@ -24,7 +21,5 @@
         "sourceMap": true,
         "jsx": "react"
     },
-    "files": [
-        "./src/engine.ts"
-    ]
+    "files": ["./src/engine/index.ts"]
 }

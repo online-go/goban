@@ -14,41 +14,23 @@
  * limitations under the License.
  */
 
-export * from "./GobanCore";
-export * from "./GobanCanvas";
-export * from "./GobanSVG";
-export * from "./GoConditionalMove";
-export * from "./GoEngine";
-export * from "./GobanError";
-export * from "./StoneString";
-export * from "./StoneStringBuilder";
-export * from "./GoTheme";
-export * from "./GoThemes";
-export * from "./util";
-export * from "./canvas_utils";
-export * from "./MoveTree";
-export * from "./ScoreEstimator";
-export * from "./translate";
-export * from "./JGOF";
-export * from "./AIReview";
-export * from "./AdHocFormat";
-export * from "./TestGoban";
-export * from "./test_utils";
-export * from "./GobanSocket";
-export * from "./util";
-export * from "./callbacks";
-export * from "./BoardState";
-export * from "./autoscore";
-export * from "./ownership_estimators";
+export * from "../engine";
+export * from "../callbacks";
+export * from "../canvas_utils";
+export * from "../GobanCanvas";
+export * from "../GobanCore";
+export * from "../GobanSVG";
+export * from "../GoTheme";
+export * from "../GoThemes";
+export * from "../TestGoban";
 
-export * as GoMath from "./GoMath";
-export * as protocol from "./protocol";
-export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
+export * as protocol from "../protocol";
+export { placeRenderedImageStone, preRenderImageStone } from "../themes/image_stones";
 //export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 //export { GobanSVG as Goban, GobanSVGConfig as GobanConfig } from "./GobanSVG";
 
-import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
-import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
+import { GobanCanvas, GobanCanvasConfig } from "../GobanCanvas";
+import { GobanSVG, GobanSVGConfig } from "../GobanSVG";
 
 export type GobanRenderer = GobanCanvas | GobanSVG;
 export type GobanRendererConfig = GobanCanvasConfig | GobanSVGConfig;
@@ -61,8 +43,8 @@ export function setGobanRenderer(_renderer: "svg" | "canvas") {
     renderer = _renderer;
 }
 
-import { AdHocFormat } from "./AdHocFormat";
-import { JGOF } from "./JGOF";
+import { AdHocFormat } from "../AdHocFormat";
+import { JGOF } from "../JGOF";
 
 export function createGoban(
     config: GobanRendererConfig,
