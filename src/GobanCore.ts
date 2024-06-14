@@ -28,7 +28,7 @@ import {
     Score,
 } from "./GoEngine";
 import { GobanMoveError } from "./GobanError";
-import { Move, NumberMatrix, Intersection, encodeMove } from "./GoMath";
+import { Move, NumberMatrix, Intersection, encodeMove, makeMatrix } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
 import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
@@ -53,6 +53,8 @@ import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
 import { ServerToClient, GameChatMessage, GameChatLine, StallingScoreEstimate } from "./protocol";
 import { EventEmitter } from "eventemitter3";
 import { callbacks } from "./callbacks";
+import { StoneStringBuilder } from "./StoneStringBuilder";
+import { getRelativeEventPosition } from "./canvas_utils";
 
 declare let swal: any;
 
@@ -324,6 +326,7 @@ export interface GobanMetrics {
 }
 
 export abstract class GobanCore extends EventEmitter<Events> {
+    protected parent!: HTMLElement;
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;
@@ -354,6 +357,9 @@ export abstract class GobanCore extends EventEmitter<Events> {
 
     private last_paused_state: boolean | null = null;
     private last_paused_by_player_state: boolean | null = null;
+    private analysis_removal_state?: boolean;
+    private analysis_removal_last_position: { i: number; j: number } = { i: NaN, j: NaN };
+    private marked_analysis_score?: boolean[][];
 
     /* Properties that emit change events */
     private _mode: GobanModes = "play";
@@ -1868,11 +1874,14 @@ export abstract class GobanCore extends EventEmitter<Events> {
         x: number,
         y: number,
         color?: "black" | "white" | string,
+        sync_review_move: boolean = true,
     ): void {
         const marks = this.getMarks(x, y);
         marks.score = color;
         this.drawSquare(x, y);
-        this.syncReviewMove();
+        if (sync_review_move) {
+            this.syncReviewMove();
+        }
     }
     protected putAnalysisRemovalAtLocation(x: number, y: number, removal?: boolean): void {
         const marks = this.getMarks(x, y);
@@ -1881,6 +1890,98 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.drawSquare(x, y);
         this.syncReviewMove();
     }
+
+    /** Marks scores on the board when in analysis mode. Note: this will not
+     * clear existing scores, this is intentional as I think it's the expected
+     * behavior of reviewers */
+    public markAnalysisScores() {
+        if (this.mode !== "analyze") {
+            console.error("markAnalysisScores called when not in analyze mode");
+            return;
+        }
+
+        /* Clear any previous auto-markings */
+        if (this.marked_analysis_score) {
+            for (let x = 0; x < this.width; ++x) {
+                for (let y = 0; y < this.height; ++y) {
+                    if (this.marked_analysis_score[y][x]) {
+                        this.putAnalysisScoreColorAtLocation(x, y, undefined, false);
+                    }
+                }
+            }
+        }
+
+        this.marked_analysis_score = makeMatrix(this.width, this.height, false);
+
+        const board_state = this.engine.cloneBoardState();
+
+        for (let x = 0; x < this.width; ++x) {
+            for (let y = 0; y < this.height; ++y) {
+                board_state.removal[y][x] ||= !!this.getMarks(x, y).stone_removed;
+            }
+        }
+
+        const territory_scoring =
+            this.engine.rules === "japanese" || this.engine.rules === "korean";
+        const scores = board_state.computeScoringLocations(!territory_scoring);
+        for (const color of ["black", "white"] as ("black" | "white")[]) {
+            for (const loc of scores[color].locations) {
+                this.putAnalysisScoreColorAtLocation(loc.x, loc.y, color, false);
+                this.marked_analysis_score[loc.y][loc.x] = true;
+            }
+        }
+        this.syncReviewMove();
+    }
+    protected onAnalysisToggleStoneRemoval(ev: MouseEvent | TouchEvent) {
+        const pos = getRelativeEventPosition(ev, this.parent);
+        this.analysis_removal_last_position = this.xy2ij(pos.x, pos.y, false);
+        const { i, j } = this.analysis_removal_last_position;
+        const x = i;
+        const y = j;
+
+        if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+            return;
+        }
+
+        const existing_removal_state = this.getMarks(x, y).stone_removed;
+
+        if (existing_removal_state) {
+            this.analysis_removal_state = undefined;
+        } else {
+            this.analysis_removal_state = true;
+        }
+
+        const all_strings = new StoneStringBuilder(this.engine);
+        const stone_string = all_strings.getGroup(x, y);
+
+        stone_string.map((loc) => {
+            this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);
+        });
+
+        // If we have any scores on the board, we assume we are interested in those
+        // and we recompute scores, updating
+        const have_any_scores = this.marked_analysis_score?.some((row) => row.includes(true));
+
+        if (have_any_scores) {
+            this.markAnalysisScores();
+        }
+    }
+
+    /** Clears any analysis scores on the board */
+    public clearAnalysisScores() {
+        delete this.marked_analysis_score;
+        if (this.mode !== "analyze") {
+            console.error("clearAnalysisScores called when not in analyze mode");
+            return;
+        }
+        for (let x = 0; x < this.width; ++x) {
+            for (let y = 0; y < this.height; ++y) {
+                this.putAnalysisScoreColorAtLocation(x, y, undefined, false);
+            }
+        }
+        this.syncReviewMove();
+    }
+
     public setSquareSize(new_ss: number, suppress_redraw = false): void {
         const redraw = this.square_size !== new_ss && !suppress_redraw;
         this.square_size = Math.max(new_ss, 1);

@@ -38,6 +38,19 @@ export interface BoardConfig {
     //udata_state?: any;
 }
 
+export interface ScoringLocations {
+    black: {
+        territory: number;
+        stones: number;
+        locations: JGOFIntersection[];
+    };
+    white: {
+        territory: number;
+        stones: number;
+        locations: JGOFIntersection[];
+    };
+}
+
 /* When flood filling we use these to keep track of locations we've visited */
 let __current_flood_fill_value = 0;
 const __flood_fill_scratch_pad: number[] = Array(25 * 25).fill(0);
@@ -364,5 +377,63 @@ export class BoardState extends EventEmitter<Events> implements BoardConfig {
     /** Returns true if the `.board` field from the other board is equal to this one */
     public boardEquals(other: BoardState): boolean {
         return matricesAreEqual(this.board, other.board);
+    }
+
+    /**
+     * Computes scoring locations for the board. If `area_scoring` is true, we
+     * will use area scoring rules, otherwise we will use territory scoring rules
+     * (which implies omitting territory in seki).
+     */
+    public computeScoringLocations(area_scoring: boolean): ScoringLocations {
+        const ret: ScoringLocations = {
+            black: {
+                territory: 0,
+                stones: 0,
+                locations: [],
+            },
+            white: {
+                territory: 0,
+                stones: 0,
+                locations: [],
+            },
+        };
+
+        if (area_scoring) {
+            const scoring = goscorer.areaScoring(this.board, this.removal);
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    if (scoring[y][x] === goscorer.BLACK) {
+                        if (this.board[y][x] === JGOFNumericPlayerColor.BLACK) {
+                            ret.black.stones += 1;
+                        } else {
+                            ret.black.territory += 1;
+                        }
+                        ret.black.locations.push({ x, y });
+                    } else if (scoring[y][x] === goscorer.WHITE) {
+                        if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
+                            ret.white.stones += 1;
+                        } else {
+                            ret.white.territory += 1;
+                        }
+                        ret.white.locations.push({ x, y });
+                    }
+                }
+            }
+        } else {
+            const scoring = goscorer.territoryScoring(this.board, this.removal);
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
+                        ret.black.territory += 1;
+                        ret.black.locations.push({ x, y });
+                    } else if (scoring[y][x].isTerritoryFor === goscorer.WHITE) {
+                        ret.white.territory += 1;
+                        ret.white.locations.push({ x, y });
+                    }
+                }
+            }
+        }
+
+        return ret;
     }
 }

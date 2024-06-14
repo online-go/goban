@@ -30,7 +30,6 @@ import { getRelativeEventPosition } from "./canvas_utils";
 import { _ } from "./translate";
 import { formatMessage, MessageID } from "./messages";
 import { color_blend, getRandomInt } from "./util";
-import { StoneStringBuilder } from "./StoneStringBuilder";
 import { callbacks } from "./callbacks";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
@@ -93,7 +92,6 @@ interface GobanSVGInterface {
 
 export class GobanSVG extends GobanCore implements GobanSVGInterface {
     public engine: GoEngine;
-    private parent: HTMLElement;
     //private board_div: HTMLElement;
     private svg: SVGElement;
     private svg_defs: SVGDefsElement;
@@ -131,8 +129,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
 
     private analysis_scoring_color?: "black" | "white" | string;
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
-    private analysis_removal_state?: boolean;
-    private analysis_removal_last_position: { i: number; j: number } = { i: NaN, j: NaN };
 
     private drawing_enabled: boolean = true;
     protected title_div?: HTMLElement;
@@ -3273,31 +3269,6 @@ export class GobanSVG extends GobanCore implements GobanSVGInterface {
             this.analysis_scoring_last_position = cur;
             this.putAnalysisScoreColorAtLocation(cur.i, cur.j, this.analysis_scoring_color);
         }
-    }
-    private onAnalysisToggleStoneRemoval(ev: MouseEvent | TouchEvent) {
-        const pos = getRelativeEventPosition(ev, this.parent);
-        this.analysis_removal_last_position = this.xy2ij(pos.x, pos.y, false);
-        const { i, j } = this.analysis_removal_last_position;
-        const x = i;
-        const y = j;
-
-        if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
-            return;
-        }
-
-        const existing_removal_state = this.getMarks(x, y).stone_removed;
-
-        if (existing_removal_state) {
-            this.analysis_removal_state = undefined;
-        } else {
-            this.analysis_removal_state = true;
-        }
-
-        const stone_group = new StoneStringBuilder(this.engine).getGroup(x, y);
-
-        stone_group.map((loc) => {
-            this.putAnalysisRemovalAtLocation(loc.x, loc.y, this.analysis_removal_state);
-        });
     }
     protected setTitle(title: string): void {
         this.title = title;
