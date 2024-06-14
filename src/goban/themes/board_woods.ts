@@ -16,8 +16,8 @@
 
 import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
-import { _ } from "../translate";
-import { callbacks } from "../callbacks";
+import { _ } from "engine/translate";
+import { callbacks } from "engine/callbacks";
 
 function getCDNReleaseBase() {
     if (callbacks.getCDNReleaseBase) {

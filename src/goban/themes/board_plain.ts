@@ -16,8 +16,8 @@
 
 import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
-import { callbacks } from "../callbacks";
-import { _ } from "../translate";
+import { callbacks } from "engine/callbacks";
+import { _ } from "engine/translate";
 
 // Converts a six-digit hex string to rgba() notation
 function hexToRgba(raw: string, alpha: number = 1): string {

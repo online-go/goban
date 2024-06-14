@@ -27,11 +27,11 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "fs";
-import { autoscore } from "../src/autoscore";
+import { autoscore } from "../src/engine/autoscore";
 import * as clc from "cli-color";
-import { GoEngine, GoEngineInitialState } from "../src/GoEngine";
-import { char2num, makeMatrix, num2char } from "../src/GoMath";
-import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "../src/JGOF";
+import { GoEngine, GoEngineInitialState } from "../src/engine/GoEngine";
+import { char2num, makeMatrix, num2char } from "../src/engine/GoMath";
+import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "../src/engine/JGOF";
 
 function run_autoscore_tests() {
     const test_file_directory = "autoscore_test_files";

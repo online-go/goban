@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { GobanCore, GobanSelectedThemes } from "./GobanCore";
+import type { GobanCore, GobanSelectedThemes } from "../goban/GobanCore";
 
 export interface GobanCallbacks {
     defaultConfig?: () => any;

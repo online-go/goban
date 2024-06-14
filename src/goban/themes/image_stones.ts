@@ -16,14 +16,14 @@
 
 import { GoTheme } from "../GoTheme";
 import { GoThemesInterface } from "../GoThemes";
-import { _ } from "../translate";
+import { _ } from "engine/translate";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 import { renderShadow } from "./rendered_stones";
 import { renderPlainStone } from "./plain_stones";
-import { callbacks } from "../callbacks";
+import { callbacks } from "engine/callbacks";
 
-const anime_black_imagedata = makeSvgImageData(require("../../assets/img/anime_black.svg"));
-const anime_white_imagedata = makeSvgImageData(require("../../assets/img/anime_white.svg"));
+const anime_black_imagedata = makeSvgImageData(require("../../../assets/img/anime_black.svg"));
+const anime_white_imagedata = makeSvgImageData(require("../../../assets/img/anime_white.svg"));
 
 function getCDNReleaseBase() {
     if (callbacks.getCDNReleaseBase) {

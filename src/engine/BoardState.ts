@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { Events } from "./GobanCore";
+import { Events } from "../goban/GobanCore";
 import { EventEmitter } from "eventemitter3";
 import { JGOFIntersection, JGOFNumericPlayerColor } from "./JGOF";
 import { makeMatrix } from "./GoMath";
-import * as goscorer from "./goscorer/goscorer";
+import * as goscorer from "goscorer";
 import { StoneStringBuilder } from "./StoneStringBuilder";
-import { GobanCore } from "./GobanCore";
+import type { GobanCore } from "../goban/GobanCore";
 import { RawStoneString } from "./StoneString";
 import { cloneMatrix, matricesAreEqual } from "./util";
 import { callbacks } from "./callbacks";

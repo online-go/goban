@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-export * from "../AdHocFormat";
-export * from "../AIReview";
-export * from "../autoscore";
-export * from "../BoardState";
-export * from "../GobanError";
-export * from "../GoConditionalMove";
-export * from "../GoEngine";
-export * from "../JGOF";
-export * from "../GobanSocket";
-export * from "../MoveTree";
-export * from "../ScoreEstimator";
-export * from "../StoneString";
-export * from "../StoneStringBuilder";
+export * from "./AdHocFormat";
+export * from "./AIReview";
+export * from "./autoscore";
+export * from "./BoardState";
+export * from "../goban/GobanCore";
+export * from "./GobanError";
+export * from "./GobanSocket";
+export * from "./GoConditionalMove";
+export * from "./GoEngine";
+export * from "./GoMath";
+export * from "./JGOF";
+export * from "./MoveTree";
+export * from "./ownership_estimators";
+export * from "./ScoreEstimator";
+export * from "./StoneString";
+export * from "./StoneStringBuilder";
 export * from "../test_utils";
-export * from "../translate";
-export * from "../ownership_estimators";
-export * from "../util";
+export * from "./translate";
+export * from "./util";
 
-export * from "../GoMath";
-export * as GoMath from "../GoMath";
+export * as GoMath from "./GoMath";

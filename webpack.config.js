@@ -41,7 +41,7 @@ module.exports = (env, argv) => {
         mode: production ? "production" : "development",
 
         resolve: {
-            modules: ["src", "node_modules"],
+            modules: ["src", "node_modules", "src/third_party/goscorer"],
             extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
         },
 
@@ -67,8 +67,7 @@ module.exports = (env, argv) => {
             target: "web",
             entry: {
                 goban: "./src/goban/index.ts",
-                engine: "./src/engine/index.ts",
-                test: "./src/test.tsx",
+                //engine: "./src/engine/index.ts",
             },
 
             output: {
@@ -133,9 +132,10 @@ module.exports = (env, argv) => {
         }),
     ];
 
+    /*
     if (production) {
         ret.push(
-            /* node */
+            // node
             Object.assign({}, common, {
                 target: "node",
 
@@ -181,6 +181,7 @@ module.exports = (env, argv) => {
             }),
         );
     }
+    */
 
     return ret;
 };

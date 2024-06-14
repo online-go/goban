@@ -7,7 +7,9 @@ all dev:
 build lib types:
 	yarn run build-debug
 	yarn run build-production
-	cp -Rp lib/src/* lib/
+	npx dts-bundle-generator -o lib/goban.d.ts src/goban/index.ts
+	# npx dts-bundle-generator -o lib/engine.d.ts src/engine/index.ts
+
 
 lint:
 	yarn run lint

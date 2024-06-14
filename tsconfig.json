@@ -7,13 +7,15 @@
         "outDir": "./lib/",
         "moduleResolution": "node",
         "removeComments": false,
-        "declaration": true,
+        "declaration": false,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "lib": ["es2015", "dom"],
         "baseUrl": ".",
         "paths": {
-            "*": ["src/*", "*"]
+            "*": ["src/*", "*"],
+            "engine": ["src/engine"],
+            "goscorer": ["src/third_party/goscorer/goscorer"]
         },
 
         "forceConsistentCasingInFileNames": true,

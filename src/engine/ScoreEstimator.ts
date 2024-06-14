@@ -18,12 +18,12 @@ import { encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { StoneString } from "./StoneString";
 import { StoneStringBuilder } from "./StoneStringBuilder";
-import { GobanCore } from "./GobanCore";
+import type { GobanCore } from "../goban/GobanCore";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GoEngine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./JGOF";
 import { _ } from "./translate";
 import { wasm_estimate_ownership, remote_estimate_ownership } from "./ownership_estimators";
-import * as goscorer from "./goscorer/goscorer";
+import * as goscorer from "goscorer";
 import { BoardState } from "./BoardState";
 
 /* In addition to the local estimators, we have a RemoteScoring system

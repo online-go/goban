@@ -26,16 +26,22 @@ import {
     PuzzleConfig,
     PuzzlePlacementSetting,
     Score,
-} from "./GoEngine";
-import { GobanMoveError } from "./GobanError";
-import { Move, NumberMatrix, Intersection, encodeMove, makeMatrix } from "./GoMath";
-import * as GoMath from "./GoMath";
-import { GoConditionalMove, ConditionalMoveResponse } from "./GoConditionalMove";
-import { MoveTree, MarkInterface, MoveTreePenMarks } from "./MoveTree";
-import { init_wasm_ownership_estimator } from "./ownership_estimators";
-import { ScoreEstimator } from "./ScoreEstimator";
-import { deepEqual, dup, computeAverageMoveTime, niceInterval, matricesAreEqual } from "./util";
-import { _, interpolate } from "./translate";
+} from "engine/GoEngine";
+import { GobanMoveError } from "engine/GobanError";
+import { Move, NumberMatrix, Intersection, encodeMove, makeMatrix } from "engine/GoMath";
+import * as GoMath from "engine/GoMath";
+import { GoConditionalMove, ConditionalMoveResponse } from "engine/GoConditionalMove";
+import { MoveTree, MarkInterface, MoveTreePenMarks } from "engine/MoveTree";
+import { init_wasm_ownership_estimator } from "engine/ownership_estimators";
+import { ScoreEstimator } from "engine/ScoreEstimator";
+import {
+    deepEqual,
+    dup,
+    computeAverageMoveTime,
+    niceInterval,
+    matricesAreEqual,
+} from "engine/util";
+import { _, interpolate } from "engine/translate";
 import {
     JGOFClock,
     JGOFIntersection,
@@ -46,14 +52,19 @@ import {
     JGOFPauseState,
     JGOFPlayerSummary,
     JGOFSealingIntersection,
-} from "./JGOF";
-import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "./AdHocFormat";
-import { MessageID } from "./messages";
-import { GobanSocket, GobanSocketEvents } from "./GobanSocket";
-import { ServerToClient, GameChatMessage, GameChatLine, StallingScoreEstimate } from "./protocol";
+} from "engine/JGOF";
+import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "engine/AdHocFormat";
+import { MessageID } from "engine/messages";
+import { GobanSocket, GobanSocketEvents } from "engine/GobanSocket";
+import {
+    ServerToClient,
+    GameChatMessage,
+    GameChatLine,
+    StallingScoreEstimate,
+} from "engine/protocol";
 import { EventEmitter } from "eventemitter3";
-import { callbacks } from "./callbacks";
-import { StoneStringBuilder } from "./StoneStringBuilder";
+import { callbacks } from "../engine/callbacks";
+import { StoneStringBuilder } from "engine/StoneStringBuilder";
 import { getRelativeEventPosition } from "./canvas_utils";
 
 declare let swal: any;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { callbacks } from "./callbacks";
+import { callbacks } from "../engine/callbacks";
 
 let __deviceCanvasScalingRatio = 0;
 let canvases_allocated = 0;

@@ -21,7 +21,7 @@ import { Move, encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { RawStoneString } from "./StoneString";
 import { ScoreEstimator } from "./ScoreEstimator";
-import { GobanCore, Events } from "./GobanCore";
+import { GobanCore, Events } from "../goban/GobanCore";
 import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
@@ -34,7 +34,7 @@ import { AdHocPackedMove } from "./AdHocFormat";
 import { _ } from "./translate";
 import { EventEmitter } from "eventemitter3";
 import { GameClock, StallingScoreEstimate } from "./protocol";
-import * as goscorer from "./goscorer/goscorer";
+import * as goscorer from "goscorer";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;

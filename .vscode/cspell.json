@@ -190,5 +190,5 @@
         "zoomable"
     ],
     "language": "en,en-GB",
-    "ignorePaths": ["test/autoscore_test_files", "src/goscorer"]
+    "ignorePaths": ["test/autoscore_test_files", "src/goscorer", "*.d.ts"]
 }

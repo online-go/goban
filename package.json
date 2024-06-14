@@ -56,6 +56,7 @@
         "canvas": "^2.10.2",
         "cli-color": "^2.0.4",
         "cspell": "^8.3.2",
+        "dts-bundle-generator": "^9.5.1",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-jsdoc": "^46.9.1",
