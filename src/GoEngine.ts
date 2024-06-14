@@ -1657,6 +1657,24 @@ export class GoEngine extends BoardState {
                 defaults.superko_algorithm = "ing";
                 defaults.free_handicap_placement = true;
                 defaults.allow_self_capture = true;
+
+                // https://www.cs.cmu.edu/~wjh/go/rules/KSS.html
+                //
+                // 2. Playing the game:
+                //
+                // Counting:
+                //
+                //     5. In handicap games of N-stone handicap, White must
+                //     receive N-point compensation to make the result
+                //     equivalent to territory counting. [...] In handicap
+                //     games, White wins ties.
+                //
+                // Note that Black giving compensation in handicap games is not
+                // found in any official documentation of the Ing rules. AGA
+                // President Phil Straus has requested this convention so that
+                // territory and area counting can give the same result in
+                // handicap games.
+                defaults.score_handicap = true;
                 break;
 
             case "nz":
