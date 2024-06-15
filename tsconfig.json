@@ -33,6 +33,6 @@
         "sourceMap": true,
         "jsx": "react"
     },
-    "files": ["src/index.ts", "src/engine/index.ts", "./test/test_autoscore.ts"],
+    "files": ["src/index.ts", "src/engine/index.ts", "./test/test_autoscore.ts", "jest.config.ts"],
     "include": ["test/unit_tests/*.ts"]
 }
