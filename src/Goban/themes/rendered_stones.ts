@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { GoTheme } from "../GoTheme";
-import { GoThemesInterface } from "../GoThemes";
+import { Theme } from "./Theme";
+import { ThemesInterface } from "./";
 import { _ } from "engine/translate";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 
@@ -477,8 +477,8 @@ function stoneCastsShadow(radius: number): boolean {
     return radius >= 10;
 }
 
-export default function (GoThemes: GoThemesInterface) {
-    class Common extends GoTheme {
+export default function (THEMES: ThemesInterface) {
+    class Common extends Theme {
         override stoneCastsShadow(radius: number): boolean {
             return stoneCastsShadow(radius * deviceCanvasScalingRatio());
         }
@@ -562,7 +562,7 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Slate"); // ensure translation
-    GoThemes["black"]["Slate"] = Slate;
+    THEMES["black"]["Slate"] = Slate;
 
     class Shell extends Common {
         override sort() {
@@ -712,7 +712,7 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
     _("Shell"); // ensure translation
-    GoThemes["white"]["Shell"] = Shell;
+    THEMES["white"]["Shell"] = Shell;
 
     /* Glass { */
 
@@ -830,8 +830,8 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Glass"); // ensure translation
-    GoThemes["black"]["Glass"] = Glass;
-    GoThemes["white"]["Glass"] = Glass;
+    THEMES["black"]["Glass"] = Glass;
+    THEMES["white"]["Glass"] = Glass;
 
     /* Worn Glass { */
 
@@ -949,8 +949,8 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Worn Glass"); // ensure translation
-    GoThemes["black"]["Worn Glass"] = WornGlass;
-    GoThemes["white"]["Worn Glass"] = WornGlass;
+    THEMES["black"]["Worn Glass"] = WornGlass;
+    THEMES["white"]["Worn Glass"] = WornGlass;
 
     /* Night { */
     class Night extends Common {
@@ -1068,6 +1068,6 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Night"); // ensure translation
-    GoThemes["black"]["Night"] = Night;
-    GoThemes["white"]["Night"] = Night;
+    THEMES["black"]["Night"] = Night;
+    THEMES["white"]["Night"] = Night;
 }

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
-import { GoThemesInterface } from "../GoThemes";
+import { Theme, ThemeBackgroundCSS } from "./Theme";
+import { ThemesInterface } from "./";
 import { callbacks } from "../callbacks";
 import { _ } from "engine/translate";
 
@@ -31,15 +31,15 @@ function hexToRgba(raw: string, alpha: number = 1): string {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function (GoThemes: GoThemesInterface) {
-    class Plain extends GoTheme {
+export default function (THEMES: ThemesInterface) {
+    class Plain extends Theme {
         override sort(): number {
             return 1;
         }
         override get theme_name(): string {
             return "Plain";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "",
@@ -66,16 +66,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Plain"); // ensure translation exists
-    GoThemes["board"]["Plain"] = Plain;
+    THEMES["board"]["Plain"] = Plain;
 
-    class Custom extends GoTheme {
+    class Custom extends Theme {
         override sort(): number {
             return 200; //last, because this is the "customisable" one
         }
         override get theme_name(): string {
             return "Custom";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": callbacks.customBoardColor
                     ? callbacks.customBoardColor()
@@ -117,16 +117,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Custom"); // ensure translation exists
-    GoThemes["board"]["Custom"] = Custom;
+    THEMES["board"]["Custom"] = Custom;
 
-    class Night extends GoTheme {
+    class Night extends Theme {
         override sort(): number {
             return 100;
         }
         override get theme_name(): string {
             return "Night Play";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#444444",
                 "background-image": "",
@@ -153,9 +153,9 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Night Play"); // ensure translation exists
-    GoThemes["board"]["Night Play"] = Night;
+    THEMES["board"]["Night Play"] = Night;
 
-    class HNG extends GoTheme {
+    class HNG extends Theme {
         static C = "#00193E";
         static C2 = "#004C75";
         override sort(): number {
@@ -164,7 +164,7 @@ export default function (GoThemes: GoThemesInterface) {
         override get theme_name(): string {
             return "HNG";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#00e7fc",
                 "background-image": "",
@@ -191,9 +191,9 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("HNG"); // ensure translation exists
-    GoThemes["board"]["HNG"] = HNG;
+    THEMES["board"]["HNG"] = HNG;
 
-    class HNGNight extends GoTheme {
+    class HNGNight extends Theme {
         static C = "#007591";
         override sort(): number {
             return 105;
@@ -201,7 +201,7 @@ export default function (GoThemes: GoThemesInterface) {
         override get theme_name(): string {
             return "HNG Night";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#090C1F",
                 "background-image": "",
@@ -228,16 +228,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("HNG Night"); // ensure translation exists
-    GoThemes["board"]["HNG Night"] = HNGNight;
+    THEMES["board"]["HNG Night"] = HNGNight;
 
-    class Book extends GoTheme {
+    class Book extends Theme {
         override sort(): number {
             return 110;
         }
         override get theme_name(): string {
             return "Book";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#ffffff",
                 "background-image": "",
@@ -264,5 +264,5 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Book"); // ensure translation exists
-    GoThemes["board"]["Book"] = Book;
+    THEMES["board"]["Book"] = Book;
 }

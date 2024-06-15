@@ -23,7 +23,7 @@ import { StoneStringBuilder } from "./StoneStringBuilder";
 import type { GobanBase } from "../GobanBase";
 import { RawStoneString } from "./StoneString";
 import { cloneMatrix, matricesAreEqual } from "./util";
-import { callbacks } from "../renderer/callbacks";
+import { callbacks } from "../Goban/callbacks";
 
 export interface BoardConfig {
     width?: number;

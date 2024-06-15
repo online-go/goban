@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { GoTheme } from "../GoTheme";
-import { GoThemesInterface } from "../GoThemes";
+import { Theme } from "./Theme";
+import { ThemesInterface } from "./";
 import { _ } from "engine/translate";
 
 export function renderPlainStone(
@@ -50,8 +50,8 @@ export function renderPlainStone(
     ctx.fill();
 }
 
-export default function (GoThemes: GoThemesInterface) {
-    class Stone extends GoTheme {
+export default function (THEMES: ThemesInterface) {
+    class Stone extends Theme {
         override sort(): number {
             return 1;
         }
@@ -207,6 +207,6 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
 
-    GoThemes["black"]["Plain"] = Plain;
-    GoThemes["white"]["Plain"] = Plain;
+    THEMES["black"]["Plain"] = Plain;
+    THEMES["white"]["Plain"] = Plain;
 }

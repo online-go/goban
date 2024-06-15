@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { GobanBase } from "../GobanBase";
+import { GobanBase } from "../../GobanBase";
 
-export interface GoThemeBackgroundCSS {
+export interface ThemeBackgroundCSS {
     "background-color"?: string;
     "background-image"?: string;
     "background-size"?: string;
 }
 
-export interface GoThemeBackgroundReactStyles {
+export interface ThemeBackgroundReactStyles {
     backgroundColor?: string;
     backgroundImage?: string;
     backgroundSize?: string;
@@ -54,12 +54,12 @@ export interface SVGStoneParameters {
     url?: string;
 }
 
-export class GoTheme {
+export class Theme {
     public name: string;
     public styles: { [style_name: string]: string } = {};
-    protected parent?: GoTheme; // An optional parent theme
+    protected parent?: Theme; // An optional parent theme
 
-    constructor(parent?: GoTheme) {
+    constructor(parent?: Theme) {
         this.name = `[ERROR theme missing name]`;
         this.parent = parent;
     }
@@ -301,7 +301,7 @@ export class GoTheme {
     }
 
     /* Returns a set of CSS styles that should be applied to the background layer (ie the board) */
-    public getBackgroundCSS(): GoThemeBackgroundCSS {
+    public getBackgroundCSS(): ThemeBackgroundCSS {
         return {
             "background-color": "#DCB35C",
             "background-image": "",
@@ -309,9 +309,9 @@ export class GoTheme {
     }
 
     /* Returns a set of CSS styles (for react) that should be applied to the background layer (ie the board) */
-    public getReactStyles(): GoThemeBackgroundReactStyles {
-        const ret: GoThemeBackgroundReactStyles = {};
-        const css: GoThemeBackgroundCSS = this.getBackgroundCSS();
+    public getReactStyles(): ThemeBackgroundReactStyles {
+        const ret: ThemeBackgroundReactStyles = {};
+        const css: ThemeBackgroundCSS = this.getBackgroundCSS();
 
         ret.backgroundColor = css["background-color"];
         ret.backgroundImage = css["background-image"];

@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import { MARK_TYPES } from "./GobanInteractive";
-import { GobanOGSConnectivity } from "./GobanOGSConnectivity";
+import { MARK_TYPES } from "./InteractiveBase";
+import { OGSConnectivity } from "./OGSConnectivity";
 import { GobanConfig } from "../GobanBase";
 import { callbacks } from "./callbacks";
 import { makeMatrix, StoneStringBuilder } from "engine";
 import { getRelativeEventPosition } from "./canvas_utils";
+import { THEMES, THEMES_SORTED, Theme } from "./themes";
 
 export const GOBAN_FONT = "Verdana,Arial,sans-serif";
 export interface GobanSelectedThemes {
@@ -49,8 +50,14 @@ export interface GobanMetrics {
  * You can't create an instance of a Goban directly, you have to create an instance of
  * one of the renderers, such as GobanSVG.
  */
-export abstract class Goban extends GobanOGSConnectivity {
-    protected abstract setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void;
+export abstract class Goban extends OGSConnectivity {
+    static THEMES = THEMES;
+    static THEMES_SORTED = THEMES_SORTED;
+    static Theme = Theme;
+
+    protected abstract setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void;
+
+    protected parent!: HTMLElement;
 
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super(config, preloaded_data);

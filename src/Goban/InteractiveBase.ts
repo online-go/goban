@@ -129,13 +129,15 @@ export interface StateUpdateEvents {
 }
 
 /**
+ * This class serves as a functionality layer encapsulating core interactions
+ * we do with a Goban, we have it as a separate base class simply to help with
+ * code organization and to keep our Goban class size down.
  */
 export abstract class GobanInteractive extends GobanBase {
     public abstract sendTimedOut(): void;
     public abstract sent_timed_out_message: boolean; /// Expected to be true if sendTimedOut has been called
     protected abstract sendMove(mv: MoveCommand, cb?: () => void): boolean;
 
-    protected parent!: HTMLElement;
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
     public double_click_submit: boolean;

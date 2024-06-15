@@ -49,7 +49,7 @@ export class TestGoban extends Goban {
         timeout?: number | undefined,
     ): void {}
     public clearMessage(): void {}
-    protected setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void {}
+    protected setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {}
     public drawSquare(i: number, j: number): void {}
     public redraw(force_clear?: boolean | undefined): void {}
     public move_tree_redraw(no_warp?: boolean | undefined): void {}

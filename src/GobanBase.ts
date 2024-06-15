@@ -41,7 +41,7 @@ import { MessageID } from "engine/messages";
 import type { GobanSocket } from "engine/GobanSocket";
 import type { ServerToClient, GameChatLine } from "engine/protocol";
 import { EventEmitter } from "eventemitter3";
-import { setGobanCallbacks } from "./renderer/callbacks";
+import { setGobanCallbacks } from "./Goban/callbacks";
 
 let last_goban_id = 0;
 

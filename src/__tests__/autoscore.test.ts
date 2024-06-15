@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "fs";
-import { autoscore } from "engine";
+import { autoscore } from "../engine";
 
 describe("Auto-score tests ", () => {
     const files = readdirSync("test/autoscore_test_files");

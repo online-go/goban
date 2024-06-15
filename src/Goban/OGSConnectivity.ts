@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { AudioClockEvent, GobanInteractive, MARK_TYPES, MoveCommand } from "./GobanInteractive";
+import { AudioClockEvent, GobanInteractive, MARK_TYPES, MoveCommand } from "./InteractiveBase";
 import { GobanConfig, JGOFClockWithTransmitting } from "../GobanBase";
 import { callbacks } from "./callbacks";
 import { _, interpolate } from "../engine/translate";
@@ -59,10 +59,13 @@ interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
     timed_out: boolean;
 }
 /**
- * Provides the online connectivity functionality for a Goban to be able
- * to connect to the Online-Go.com servers
+ * This class serves as a functionality layer encapsulating the logic connection
+ * that manages connections to the online-go.com servers.
+ *
+ * We have it as a separate base class simply to help with code organization
+ * and to keep our Goban class size down.
  */
-export abstract class GobanOGSConnectivity extends GobanInteractive {
+export abstract class OGSConnectivity extends GobanInteractive {
     public sent_timed_out_message: boolean = false;
     protected socket!: GobanSocket;
     protected socket_event_bindings: Array<[keyof GobanSocketEvents, () => void]> = [];

@@ -11,7 +11,7 @@
 
 (global as any).CLIENT = true;
 
-import { TestGoban } from "../renderer/TestGoban";
+import { TestGoban } from "../Goban/TestGoban";
 import { MoveTree } from "../engine";
 
 type SGFTestcase = {

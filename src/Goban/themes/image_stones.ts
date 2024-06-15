@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { GoTheme } from "../GoTheme";
-import { GoThemesInterface } from "../GoThemes";
+import { Theme } from "./Theme";
+import { ThemesInterface } from "./";
 import { _ } from "engine/translate";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 import { renderShadow } from "./rendered_stones";
@@ -152,7 +152,7 @@ function stoneCastsShadow(radius: number): boolean {
     return radius >= 10;
 }
 
-export default function (GoThemes: GoThemesInterface) {
+export default function (THEMES: ThemesInterface) {
     /* Firefox doesn't support drawing inlined SVGs into canvases. One can
      * attach them to the dom just fine, but not draw them into a canvas for
      * whatever reason. So, for firefox we have to load the exact same SVG off
@@ -167,7 +167,7 @@ export default function (GoThemes: GoThemesInterface) {
         // ignore
     }
 
-    class Common extends GoTheme {
+    class Common extends Theme {
         override stoneCastsShadow(radius: number): boolean {
             return stoneCastsShadow(radius * deviceCanvasScalingRatio());
         }
@@ -300,8 +300,8 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
 
-    GoThemes["black"]["Anime"] = Anime;
-    GoThemes["white"]["Anime"] = Anime;
+    THEMES["black"]["Anime"] = Anime;
+    THEMES["white"]["Anime"] = Anime;
 
     class Custom extends Common {
         override sort() {
@@ -453,6 +453,6 @@ export default function (GoThemes: GoThemesInterface) {
         }
     }
 
-    GoThemes["black"]["Custom"] = Custom;
-    GoThemes["white"]["Custom"] = Custom;
+    THEMES["black"]["Custom"] = Custom;
+    THEMES["white"]["Custom"] = Custom;
 }

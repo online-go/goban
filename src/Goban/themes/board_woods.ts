@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { GoTheme, GoThemeBackgroundCSS } from "../GoTheme";
-import { GoThemesInterface } from "../GoThemes";
+import { Theme, ThemeBackgroundCSS } from "./Theme";
+import { ThemesInterface } from "./";
 import { _ } from "engine/translate";
 import { callbacks } from "../callbacks";
 
@@ -26,15 +26,15 @@ function getCDNReleaseBase() {
     return "";
 }
 
-export default function (GoThemes: GoThemesInterface) {
-    class Kaya extends GoTheme {
+export default function (THEMES: ThemesInterface) {
+    class Kaya extends Theme {
         override sort(): number {
             return 10;
         }
         override get theme_name(): string {
             return "Kaya";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",
@@ -61,16 +61,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Kaya"); // ensure translation
-    GoThemes["board"]["Kaya"] = Kaya;
+    THEMES["board"]["Kaya"] = Kaya;
 
-    class RedOak extends GoTheme {
+    class RedOak extends Theme {
         override sort(): number {
             return 20;
         }
         override get theme_name(): string {
             return "Red Oak";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/oak.jpg')",
@@ -97,16 +97,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Red Oak"); // ensure translation
-    GoThemes["board"]["Red Oak"] = RedOak;
+    THEMES["board"]["Red Oak"] = RedOak;
 
-    class Persimmon extends GoTheme {
+    class Persimmon extends Theme {
         override sort(): number {
             return 30;
         }
         override get theme_name(): string {
             return "Persimmon";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/persimmon.jpg')",
@@ -133,16 +133,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Persimmon"); // ensure translation
-    GoThemes["board"]["Persimmon"] = Persimmon;
+    THEMES["board"]["Persimmon"] = Persimmon;
 
-    class BlackWalnut extends GoTheme {
+    class BlackWalnut extends Theme {
         override sort(): number {
             return 40;
         }
         override get theme_name(): string {
             return "Black Walnut";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/black_walnut.jpg')",
@@ -169,16 +169,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Black Walnut"); // ensure translation
-    GoThemes["board"]["Black Walnut"] = BlackWalnut;
+    THEMES["board"]["Black Walnut"] = BlackWalnut;
 
-    class Granite extends GoTheme {
+    class Granite extends Theme {
         override sort(): number {
             return 40;
         }
         override get theme_name(): string {
             return "Granite";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/granite.jpg')",
@@ -205,16 +205,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Granite"); // ensure translation
-    GoThemes["board"]["Granite"] = Granite;
+    THEMES["board"]["Granite"] = Granite;
 
-    class Anime extends GoTheme {
+    class Anime extends Theme {
         override sort(): number {
             return 10;
         }
         override get theme_name(): string {
             return "Anime";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/anime_board.svg')",
@@ -242,16 +242,16 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Anime"); // ensure translation
-    GoThemes["board"]["Anime"] = Anime;
+    THEMES["board"]["Anime"] = Anime;
 
-    class BrightKaya extends GoTheme {
+    class BrightKaya extends Theme {
         override sort(): number {
             return 15;
         }
         override get theme_name(): string {
             return "Bright Kaya";
         }
-        override getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): ThemeBackgroundCSS {
             return {
                 "background-color": "#DBB25B",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",
@@ -278,5 +278,5 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     _("Bright Kaya"); // ensure translation
-    GoThemes["board"]["Bright Kaya"] = BrightKaya;
+    THEMES["board"]["Bright Kaya"] = BrightKaya;
 }

@@ -6,8 +6,8 @@
 
 (global as any).CLIENT = true;
 
-import { GobanCanvas, GobanCanvasConfig } from "../renderer/GobanCanvas";
-import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../renderer/GobanInteractive";
+import { GobanCanvas, CanvasRendererGobanConfig } from "../Goban/CanvasRenderer";
+import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../Goban/InteractiveBase";
 import { GobanSocket, GoMath } from "../engine";
 import { GobanBase } from "../GobanBase";
 import WS from "jest-websocket-mock";
@@ -38,11 +38,11 @@ function simulateMouseClick(canvas: HTMLCanvasElement, { x, y }: { x: number; y:
     canvas.dispatchEvent(new MouseEvent("click", eventInitDict));
 }
 
-function commonConfig(): GobanCanvasConfig {
+function commonConfig(): CanvasRendererGobanConfig {
     return { square_size: 10, board_div: board_div, interactive: true, server_socket: mock_socket };
 }
 
-function basic3x3Config(additionalOptions?: GobanCanvasConfig): GobanCanvasConfig {
+function basic3x3Config(additionalOptions?: CanvasRendererGobanConfig): CanvasRendererGobanConfig {
     return {
         ...commonConfig(),
         width: 3,
@@ -51,7 +51,9 @@ function basic3x3Config(additionalOptions?: GobanCanvasConfig): GobanCanvasConfi
     };
 }
 
-function basicScorableBoardConfig(additionalOptions?: GobanCanvasConfig): GobanCanvasConfig {
+function basicScorableBoardConfig(
+    additionalOptions?: CanvasRendererGobanConfig,
+): CanvasRendererGobanConfig {
     return {
         ...commonConfig(),
         width: 4,

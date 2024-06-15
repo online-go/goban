@@ -15,26 +15,25 @@
  */
 
 export * from "engine";
-export * from "./renderer/callbacks";
-export * from "./renderer/canvas_utils";
-export * from "./renderer/GobanCanvas";
 export * from "./GobanBase";
-export * from "./renderer/GobanSVG";
-export * from "./renderer/GoTheme";
-export * from "./renderer/GoThemes";
-export * from "./renderer/Goban";
-export * from "./renderer/TestGoban";
+export * from "./Goban/callbacks";
+export * from "./Goban/canvas_utils";
+export * from "./Goban/CanvasRenderer";
+export * from "./Goban/SVGRenderer";
+export * from "./Goban/themes";
+export * from "./Goban/Goban";
+export * from "./Goban/TestGoban";
 
 export * as protocol from "engine/protocol";
-export { placeRenderedImageStone, preRenderImageStone } from "./renderer/themes/image_stones";
+export { placeRenderedImageStone, preRenderImageStone } from "./Goban/themes/image_stones";
 //export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 //export { GobanSVG as Goban, GobanSVGConfig as GobanConfig } from "./GobanSVG";
 
-import { GobanCanvas, GobanCanvasConfig } from "./renderer/GobanCanvas";
-import { GobanSVG, GobanSVGConfig } from "./renderer/GobanSVG";
+import { GobanCanvas, CanvasRendererGobanConfig } from "./Goban/CanvasRenderer";
+import { SVGRenderer, SVGRendererGobanConfig } from "./Goban/SVGRenderer";
 
-export type GobanRenderer = GobanCanvas | GobanSVG;
-export type GobanRendererConfig = GobanCanvasConfig | GobanSVGConfig;
+export type GobanRenderer = GobanCanvas | SVGRenderer;
+export type GobanRendererConfig = CanvasRendererGobanConfig | SVGRendererGobanConfig;
 
 (window as any)["goban"] = module.exports;
 
@@ -51,7 +50,7 @@ export function createGoban(
     preloaded_data?: AdHocFormat | JGOF,
 ): GobanRenderer {
     if (renderer === "svg") {
-        return new GobanSVG(config, preloaded_data);
+        return new SVGRenderer(config, preloaded_data);
     } else {
         return new GobanCanvas(config, preloaded_data);
     }
