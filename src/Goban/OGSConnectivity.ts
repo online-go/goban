@@ -17,7 +17,7 @@
 import { AudioClockEvent, GobanInteractive, MARK_TYPES, MoveCommand } from "./InteractiveBase";
 import { GobanConfig, JGOFClockWithTransmitting } from "../GobanBase";
 import { callbacks } from "./callbacks";
-import { _, interpolate } from "../engine/translate";
+import { _, interpolate } from "engine/translate";
 import { focus_tracker } from "./focus_tracker";
 import {
     AdHocClock,

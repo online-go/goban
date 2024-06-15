@@ -1,7 +1,7 @@
 // cspell: disable
 
-import { GoMath } from "../engine";
-import { JGOFNumericPlayerColor } from "../engine";
+import { GoMath } from "engine";
+import { JGOFNumericPlayerColor } from "engine";
 
 type Testcase = {
     height: number;

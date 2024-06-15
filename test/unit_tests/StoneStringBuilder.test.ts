@@ -1,4 +1,4 @@
-import { GoMath, StoneStringBuilder, BoardState } from "../engine";
+import { GoMath, StoneStringBuilder, BoardState } from "engine";
 
 // Here is a board displaying many of the features GoStoneGroup cares about.
 

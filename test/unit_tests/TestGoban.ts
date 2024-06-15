@@ -24,11 +24,11 @@
 //    - [ASSERT] public state tracking: `is_pen_enabled`, `current_message`,
 //      `current_title` etc. A way for testers to peer into the internals
 
-import { GobanConfig } from "../GobanBase";
-import { GoEngine } from "../engine/GobanEngine";
-import { MessageID } from "../engine/messages";
-import { MoveTreePenMarks } from "../engine/MoveTree";
-import { Goban, GobanSelectedThemes } from "../Goban/Goban";
+import { GobanConfig } from "../../src/GobanBase";
+import { GoEngine } from "engine/GobanEngine";
+import { MessageID } from "engine/messages";
+import { MoveTreePenMarks } from "engine/MoveTree";
+import { Goban, GobanSelectedThemes } from "../../src/Goban/Goban";
 
 export class TestGoban extends Goban {
     public engine: GoEngine;

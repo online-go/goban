@@ -2,10 +2,13 @@
 
 (global as any).CLIENT = true;
 
-import { GobanCanvas, CanvasRendererGobanConfig } from "../Goban/CanvasRenderer";
-import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../Goban/InteractiveBase";
+import { GobanCanvas, CanvasRendererGobanConfig } from "../../src/Goban/CanvasRenderer";
+import {
+    SCORE_ESTIMATION_TOLERANCE,
+    SCORE_ESTIMATION_TRIALS,
+} from "../../src/Goban/InteractiveBase";
 import { GobanSocket, GoMath } from "engine";
-import { GobanBase } from "../GobanBase";
+import { GobanBase } from "../../src/GobanBase";
 import WS from "jest-websocket-mock";
 
 let board_div: HTMLDivElement;

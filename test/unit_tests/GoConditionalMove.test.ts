@@ -1,4 +1,4 @@
-import { GoConditionalMove } from "../engine";
+import { GoConditionalMove } from "engine";
 
 /**
  * ```

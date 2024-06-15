@@ -3,7 +3,7 @@
 (global as any).CLIENT = true;
 
 import { TestGoban } from "./TestGoban";
-import { MoveTree } from "../engine";
+import { MoveTree } from "engine";
 
 type SGFTestcase = {
     template: string;
