@@ -15,7 +15,7 @@
  */
 
 import { _, interpolate } from "./translate";
-import type { JGOFTimeControl } from "./JGOF";
+import type { JGOFTimeControl } from "./formats/JGOF";
 
 /** Returns a random integer between min (inclusive) and max (exclusive) */
 export function getRandomInt(min: number, max: number) {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { JGOFNumericPlayerColor, JGOFIntersection } from "./JGOF";
+import { JGOFNumericPlayerColor, JGOFIntersection } from "./formats/JGOF";
 
 /** A raw stone string is simply an array of intersections */
 export type RawStoneString = Array<JGOFIntersection>;

@@ -1,12 +1,12 @@
 //cspell: disable
 
-import { GoEngine } from "../GoEngine";
-import { makeMatrix } from "../GoMath";
-import { ScoreEstimator, adjust_estimate, set_local_ownership_estimator } from "../ScoreEstimator";
+import { GoEngine } from "../engine";
+import { makeMatrix } from "../engine";
+import { ScoreEstimator, adjust_estimate, set_local_ownership_estimator } from "../engine";
 import {
     init_remote_ownership_estimator,
     voronoi_estimate_ownership,
-} from "../ownership_estimators";
+} from "../engine/ownership_estimators";
 
 describe("adjust_estimate", () => {
     const BOARD = [

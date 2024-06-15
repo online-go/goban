@@ -1,5 +1,5 @@
-import { escapeSGFText, newlines_to_spaces } from "../util";
-import * as AdHoc from "../AdHocFormat";
+import { escapeSGFText, newlines_to_spaces } from "../engine";
+import * as AdHoc from "../engine/formats/AdHocFormat";
 
 // String.raw`...` is the real string
 // (without js interpreting \, of which we have a ton)

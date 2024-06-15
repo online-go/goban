@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { JGOFAIReview, JGOFIntersection, JGOFNumericPlayerColor } from "./JGOF";
+import { JGOFAIReview, JGOFIntersection, JGOFNumericPlayerColor } from "./formats/JGOF";
 import { MoveTree } from "./MoveTree";
 
 export interface AIReviewWorstMoveEntry {

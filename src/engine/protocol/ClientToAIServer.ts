@@ -15,7 +15,7 @@
  */
 
 import { ClientToServerBase, RuleSet } from "./ClientToServer";
-import { JGOFNumericPlayerColor } from "../JGOF";
+import { JGOFNumericPlayerColor } from "../formats/JGOF";
 
 /** This is an exhaustive list of the messages that the client can send
  *  to the AI servers. */

@@ -4,9 +4,17 @@ SLACK_WEBHOOK=$(shell cat ../ogs/.slack-webhook)
 all dev: 
 	yarn run dev
 	
-build lib types:
+build: lib types
+	
+lib: build-debug build-production 
+	
+build-debug:
 	yarn run build-debug
+
+build-production:
 	yarn run build-production
+
+types:
 	yarn run dts
 
 

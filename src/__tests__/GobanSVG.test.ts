@@ -6,11 +6,10 @@
 
 (global as any).CLIENT = true;
 
-import { GobanSVG, GobanSVGConfig } from "../GobanSVG";
-import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../GobanCore";
-import { setCallbacks } from "../callbacks";
-import { GobanSocket } from "../GobanSocket";
-import * as GoMath from "../GoMath";
+import { GobanSVG, GobanSVGConfig } from "../renderer/GobanSVG";
+import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../renderer/GobanRendererBase";
+import { GobanSocket, GoMath } from "../engine";
+import { Goban } from "../Goban";
 import WS from "jest-websocket-mock";
 
 let board_div: HTMLDivElement;
@@ -366,7 +365,7 @@ describe("onTap", () => {
         const event_layer = goban.event_layer;
 
         const addCoordinatesToChatInput = jest.fn();
-        setCallbacks({ addCoordinatesToChatInput });
+        Goban.setCallbacks({ addCoordinatesToChatInput });
 
         event_layer.dispatchEvent(
             new MouseEvent("click", {

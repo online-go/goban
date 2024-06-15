@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-// This is a minimal implementation of GobanCore.  Currently it is just enough
+// This is a minimal implementation of Goban.  Currently it is just enough
 // to build (in other words, silence the abstract method errors).  In the future
 // I was thinking we'd add:
 //    - [ARRANGE] easy to read board state input.  For instance, maybe it can be
@@ -24,12 +24,14 @@
 //    - [ASSERT] public state tracking: `is_pen_enabled`, `current_message`,
 //      `current_title` etc. A way for testers to peer into the internals
 
-import { GobanConfig, GobanCore, GobanSelectedThemes } from "./goban/GobanCore";
-import { GoEngine } from "engine/GoEngine";
+import { JGOFNumericPlayerColor } from "engine";
+import { GobanConfig } from "../Goban";
+import { GoEngine } from "engine/GobanEngine";
 import { MessageID } from "engine/messages";
 import { MoveTreePenMarks } from "engine/MoveTree";
+import { GobanRendererBase, GobanSelectedThemes } from "./GobanRendererBase";
 
-export class TestGoban extends GobanCore {
+export class TestGoban extends GobanRendererBase {
     public engine: GoEngine;
 
     constructor(config: GobanConfig) {
@@ -56,4 +58,13 @@ export class TestGoban extends GobanCore {
     protected setTitle(title: string): void {}
     protected enableDrawing(): void {}
     protected disableDrawing(): void {}
+    public set(x: number, y: number, color: JGOFNumericPlayerColor): void {}
+    public setForRemoval(
+        x: number,
+        y: number,
+        removed: boolean,
+        emit_stone_removal_updated: boolean,
+    ): void {}
+    public setState(): void {}
+    public updateScoreEstimation(): void {}
 }

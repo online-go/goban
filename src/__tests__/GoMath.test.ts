@@ -1,9 +1,6 @@
 //cspell: disable
 
-import { StoneStringBuilder } from "../StoneStringBuilder";
-import { JGOFNumericPlayerColor } from "../JGOF";
-import * as GoMath from "../GoMath";
-import { BoardState } from "../BoardState";
+import { StoneStringBuilder, JGOFNumericPlayerColor, GoMath, BoardState } from "../engine";
 
 describe("GoStoneGroups constructor", () => {
     test("basic board state", () => {

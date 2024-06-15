@@ -14,45 +14,45 @@
  * limitations under the License.
  */
 
-import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "engine/JGOF";
+import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "engine/formats/JGOF";
 
-import { AdHocFormat } from "engine/AdHocFormat";
+import { AdHocFormat } from "engine/formats/AdHocFormat";
 
-import { GobanCore, GobanConfig, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
-import { GoEngine } from "engine/GoEngine";
+//import { GobanCore, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
+import { GobanConfig } from "../Goban";
+import { GoEngine } from "engine";
 import * as GoMath from "engine/GoMath";
 import { MoveTree } from "engine/MoveTree";
 import { GoTheme } from "./GoTheme";
 import { GoThemes } from "./GoThemes";
 import { MoveTreePenMarks } from "engine/MoveTree";
-import {
-    createDeviceScaledCanvas,
-    resizeDeviceScaledCanvas,
-    allocateCanvasOrError,
-    getRelativeEventPosition,
-} from "./canvas_utils";
+import { getRelativeEventPosition } from "./canvas_utils";
 import { _ } from "engine/translate";
 import { formatMessage, MessageID } from "engine/messages";
 import { color_blend, getRandomInt } from "engine/util";
-import { callbacks } from "../engine/callbacks";
+import { callbacks } from "./callbacks";
+import { GobanRendererBase, GobanMetrics, GobanSelectedThemes } from "./GobanRendererBase";
+
+//import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
 const __theme_cache: {
-    [bw: string]: { [name: string]: { [size: string]: any } };
+    [color: string]: { [name: string]: { [size: string]: any } };
 } = {
     black: {},
     white: {},
 };
+//const __theme_defs_cache: { [radius: number]: SVGDefsElement } = {};
 
 declare let ResizeObserver: any;
 
-export interface GobanCanvasConfig extends GobanConfig {
+export interface GobanSVGConfig extends GobanConfig {
     board_div?: HTMLElement;
     title_div?: HTMLElement;
     move_tree_container?: HTMLElement;
     last_move_opacity?: number;
 }
 
-interface ViewPortInterface {
+interface MoveTreeViewPortInterface {
     offset_x: number;
     offset_y: number;
     minx: number;
@@ -63,7 +63,8 @@ interface ViewPortInterface {
 
 const HOT_PINK = "#ff69b4";
 
-export interface GobanCanvasInterface {
+//interface GobanCanvasInterface {
+interface GobanSVGInterface {
     engine: GoEngine;
     move_tree_container?: HTMLElement;
 
@@ -74,7 +75,7 @@ export interface GobanCanvasInterface {
     setByoYomiLabel(label: string): void;
     setLastMoveOpacity(opacity: number): void;
 
-    move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void;
+    move_tree_bindEvents(svg: SVGElement): void;
     move_tree_redraw(no_warp?: boolean): void;
     setMoveTreeContainer(container: HTMLElement): void;
 
@@ -90,10 +91,13 @@ export interface GobanCanvasInterface {
     destroy(): void;
 }
 
-export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
+export class GobanSVG extends GobanRendererBase implements GobanSVGInterface {
     public engine: GoEngine;
     //private board_div: HTMLElement;
-    private board: HTMLCanvasElement;
+    private svg: SVGElement;
+    private svg_defs: SVGDefsElement;
+    //private loaded_pre_rendered_stones: { [radius: number]: boolean } = {};
+    public event_layer: HTMLDivElement;
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
     private ready_to_draw: boolean = false;
@@ -101,19 +105,23 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     private message_td?: HTMLElement;
     private message_text?: HTMLDivElement;
     private message_timeout?: number;
-    private shadow_layer?: HTMLCanvasElement;
-    private shadow_ctx?: CanvasRenderingContext2D;
     private handleShiftKey: (ev: KeyboardEvent) => void;
+
+    private lines_layer?: SVGGraphicsElement;
+    private coordinate_labels_layer?: SVGGraphicsElement;
+    private grid: Array<Array<SVGGraphicsElement>> = [];
+    private grid_layer?: SVGGraphicsElement;
+    private shadow_grid: Array<Array<SVGElement | undefined>> = [];
+    private shadow_layer?: SVGGraphicsElement;
+    private pen_layer?: SVGGraphicsElement;
 
     private last_move_opacity: number = 1;
     public move_tree_container?: HTMLElement;
     private move_tree_inner_container?: HTMLDivElement;
-    private move_tree_canvas?: HTMLCanvasElement;
+    private move_tree_svg?: SVGElement;
 
-    private __borders_initialized: boolean = false;
     private autoplaying_puzzle_move: boolean = false;
     private byoyomi_label: string = "";
-    private ctx: CanvasRenderingContext2D;
     private current_pen_mark?: { color: string; points: [number, number] };
     private labeling_mode?: "put" | "clear";
     private last_label_position: { i: number; j: number } = { i: NaN, j: NaN };
@@ -124,8 +132,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
 
     private drawing_enabled: boolean = true;
-    private pen_ctx?: CanvasRenderingContext2D;
-    private pen_layer?: HTMLCanvasElement;
     protected title_div?: HTMLElement;
 
     private themes: GobanSelectedThemes = {
@@ -148,35 +154,33 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
 
-    constructor(config: GobanCanvasConfig, preloaded_data?: AdHocFormat | JGOF) {
+    constructor(config: GobanSVGConfig, preloaded_data?: AdHocFormat | JGOF) {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
 
-        // console.log("Goban canvas v 0.5.74.debug 5"); // GaJ: I use this to be sure I have linked & loaded the updates
         if (config.board_div) {
             this.parent = config["board_div"];
         } else {
             this.no_display = true;
-            this.parent =
-                document.createElement(
-                    "div",
-                ); /* let a div dangle in no-mans land to prevent null pointer refs */
+            // unattached div dangle prevent null pointer refs
+            this.parent = document.createElement("div");
         }
 
         this.title_div = config["title_div"];
-        this.board = createDeviceScaledCanvas(10, 10);
-        this.board.setAttribute("id", "board-canvas");
-        this.board.className = "StoneLayer";
+        this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        this.svg.appendChild(this.svg_defs);
         this.last_move_opacity = config["last_move_opacity"] ?? 1;
-        const ctx = this.board.getContext("2d", { willReadFrequently: true });
-        if (ctx) {
-            this.ctx = ctx;
-        } else {
-            throw new Error(`Failed to obtain drawing context for board`);
-        }
 
-        this.parent.appendChild(this.board);
-        this.bindPointerBindings(this.board);
+        this.parent.appendChild(this.svg);
+        this.event_layer = document.createElement("div");
+        this.event_layer.style.position = "absolute";
+        this.event_layer.style.top = "0";
+        this.event_layer.style.right = "0";
+        this.event_layer.style.left = "0";
+        this.event_layer.style.bottom = "0";
+        this.parent.appendChild(this.event_layer);
+        this.bindPointerBindings(this.event_layer);
 
         this.move_tree_container = config.move_tree_container;
 
@@ -228,23 +232,24 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     }
 
     public enablePen(): void {
-        this.attachPenCanvas();
+        this.attachPenLayer();
     }
     public disablePen(): void {
-        this.detachPenCanvas();
+        this.detachPenLayer();
     }
 
     public destroy(): void {
         super.destroy();
 
-        if (this.board && this.board.parentNode) {
-            this.board.parentNode.removeChild(this.board);
+        this.clearMessage();
+
+        if (this.svg && this.svg.parentNode) {
+            this.svg.remove();
         }
         delete (this as any).board;
-        delete (this as any).ctx;
+        delete (this as any).svg;
 
-        this.detachPenCanvas();
-        this.detachShadowLayer();
+        this.detachPenLayer();
 
         if (this.message_timeout) {
             clearTimeout(this.message_timeout);
@@ -264,82 +269,35 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         delete this.message_text;
         delete this.move_tree_container;
         delete this.move_tree_inner_container;
-        delete this.move_tree_canvas;
+        delete this.move_tree_svg;
         delete this.title_div;
     }
-    private detachShadowLayer(): void {
-        if (this.shadow_layer) {
-            if (this.shadow_layer.parentNode) {
-                this.shadow_layer.parentNode.removeChild(this.shadow_layer);
-            }
-            delete this.shadow_layer;
-            delete this.shadow_ctx;
-        }
-    }
-    private attachShadowLayer(): void {
-        if (!this.shadow_layer && this.parent) {
-            this.shadow_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
-            this.shadow_layer.setAttribute("id", "shadow-canvas");
-            this.shadow_layer.className = "ShadowLayer";
-
-            try {
-                this.parent.insertBefore(this.shadow_layer, this.board);
-            } catch (e) {
-                // I'm not really sure how we ever get into this state, but sentry.io reports that we do
-                console.warn("Error inserting shadow layer before board");
-                console.warn(e);
-                try {
-                    this.parent.appendChild(this.shadow_layer);
-                } catch (e) {
-                    console.error(e);
-                }
-            }
-
-            const ctx = this.shadow_layer.getContext("2d", { willReadFrequently: true });
-            if (ctx) {
-                this.shadow_ctx = ctx;
-            } else {
-                //throw new Error(`Failed to obtain shadow layer drawing context`);
-                console.error(new Error(`Failed to obtain shadow layer drawing context`));
-                return;
-            }
-            this.bindPointerBindings(this.shadow_layer);
-        }
-    }
-    private detachPenCanvas(): void {
+    private detachPenLayer(): void {
         if (this.pen_layer) {
-            if (this.pen_layer.parentNode) {
-                this.pen_layer.parentNode.removeChild(this.pen_layer);
-            }
+            this.pen_layer.remove();
             delete this.pen_layer;
-            delete this.pen_ctx;
         }
     }
-    private attachPenCanvas(): void {
+    private attachPenLayer(): void {
         if (!this.pen_layer) {
-            this.pen_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
-            this.pen_layer.setAttribute("id", "pen-canvas");
-            this.pen_layer.className = "PenLayer";
-            this.parent.appendChild(this.pen_layer);
-            const ctx = this.pen_layer.getContext("2d", { willReadFrequently: true });
-            if (ctx) {
-                this.pen_ctx = ctx;
-            } else {
-                throw new Error(`Failed to obtain pen drawing context`);
-            }
-            this.bindPointerBindings(this.pen_layer);
+            this.pen_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            this.pen_layer.setAttribute("id", "pen-svg");
+            this.pen_layer.setAttribute("class", "PenLayer");
+            this.pen_layer.setAttribute("width", this.metrics.width.toString());
+            this.pen_layer.setAttribute("height", this.metrics.height.toString());
+            this.svg.appendChild(this.pen_layer);
         }
     }
-    private bindPointerBindings(canvas: HTMLCanvasElement): void {
+    private bindPointerBindings(div: HTMLDivElement): void {
         if (!this.interactive) {
             return;
         }
 
-        if (canvas.getAttribute("data-pointers-bound") === "true") {
+        if (div.getAttribute("data-pointers-bound") === "true") {
             return;
         }
 
-        canvas.setAttribute("data-pointers-bound", "true");
+        div.setAttribute("data-pointers-bound", "true");
 
         let dragging = false;
 
@@ -350,7 +308,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             const press_duration_ms = performance.now() - pointer_down_timestamp;
             try {
                 if (!dragging) {
-                    /* if we didn't start the click in the canvas, don't respond to it */
                     return;
                 }
                 let right_click = false;
@@ -364,7 +321,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 dragging = false;
 
                 if (this.scoring_mode) {
-                    const pos = getRelativeEventPosition(ev);
+                    const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
                     if (pt.i >= 0 && pt.i < this.width && pt.j >= 0 && pt.j < this.height) {
                         if (this.score_estimator) {
@@ -382,7 +339,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
                 if (ev.ctrlKey || ev.metaKey || ev.altKey) {
                     try {
-                        const pos = getRelativeEventPosition(ev);
+                        const pos = getRelativeEventPosition(ev, this.parent);
                         const pt = this.xy2ij(pos.x, pos.y);
                         if (callbacks.addCoordinatesToChatInput) {
                             callbacks.addCoordinatesToChatInput(
@@ -402,7 +359,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 } else if (this.mode === "analyze" && this.analyze_tool === "removal") {
                     this.onAnalysisToggleStoneRemoval(ev);
                 } else {
-                    const pos = getRelativeEventPosition(ev);
+                    const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
                     if (!double_clicked) {
                         last_click_square = pt;
@@ -485,7 +442,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         let mouse_disabled: any = 0;
 
-        canvas.addEventListener("click", (ev) => {
+        div.addEventListener("click", (ev) => {
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, false);
@@ -493,7 +450,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             ev.preventDefault();
             return false;
         });
-        canvas.addEventListener("dblclick", (ev) => {
+        div.addEventListener("dblclick", (ev) => {
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, true);
@@ -501,21 +458,21 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             ev.preventDefault();
             return false;
         });
-        canvas.addEventListener("mousedown", (ev) => {
+        div.addEventListener("mousedown", (ev) => {
             if (!mouse_disabled) {
                 pointerDown(ev);
             }
             ev.preventDefault();
             return false;
         });
-        canvas.addEventListener("mousemove", (ev) => {
+        div.addEventListener("mousemove", (ev) => {
             if (!mouse_disabled) {
                 pointerMove(ev);
             }
             ev.preventDefault();
             return false;
         });
-        canvas.addEventListener("mouseout", (ev) => {
+        div.addEventListener("mouseout", (ev) => {
             if (!mouse_disabled) {
                 pointerOut(ev);
             } else {
@@ -523,7 +480,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
             return false;
         });
-        canvas.addEventListener("contextmenu", (ev) => {
+        div.addEventListener("contextmenu", (ev) => {
             if (!mouse_disabled) {
                 pointerUp(ev, false);
             } else {
@@ -531,7 +488,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
             return false;
         });
-        canvas.addEventListener("focus", (ev) => {
+        div.addEventListener("focus", (ev) => {
             ev.preventDefault();
             return false;
         });
@@ -549,9 +506,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 mouse_disabled = setTimeout(() => {
                     mouse_disabled = 0;
                 }, 5000);
-                getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
+                getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === canvas) {
+                if (ev.target === div) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     startX = ev.touches[0].clientX;
@@ -569,7 +526,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 // Stop a touch screen device always auto scrolling to the chat input box if it is active when you make a move
                 const currentElement = document.activeElement;
                 if (
-                    ev.target === canvas &&
+                    ev.target === div &&
                     currentElement &&
                     currentElement instanceof HTMLElement &&
                     currentElement.tagName.toLowerCase() === "input"
@@ -584,7 +541,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     mouse_disabled = 0;
                 }, 5000);
 
-                if (ev.target === canvas) {
+                if (ev.target === div) {
                     if (
                         Math.sqrt(
                             (startX - lastX) * (startX - lastX) +
@@ -610,9 +567,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 mouse_disabled = setTimeout(() => {
                     mouse_disabled = 0;
                 }, 5000);
-                getRelativeEventPosition(ev); // enables tracking of last ev position so on touch end can always tell where we released from
+                getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === canvas) {
+                if (ev.target === div) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     if (this.mode === "analyze" && this.analyze_tool === "draw") {
@@ -644,8 +601,13 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     }
     public clearAnalysisDrawing(): void {
         this.pen_marks = [];
+        /*
         if (this.pen_ctx) {
             this.pen_ctx.clearRect(0, 0, this.metrics.width, this.metrics.height);
+        }
+        */
+        if (this.pen_layer) {
+            this.pen_layer.innerHTML = "";
         }
     }
     private xy2pen(x: number, y: number): [number, number] {
@@ -663,6 +625,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         return [(x / 64 - lx) * this.square_size, (y / 64 - ly) * this.square_size];
     }
     private setPenStyle(color: string): void {
+        /*
         if (!this.pen_ctx) {
             throw new Error(`setPenStyle called with null pen_ctx`);
         }
@@ -670,11 +633,12 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         this.pen_ctx.strokeStyle = color;
         this.pen_ctx.lineWidth = Math.max(1, Math.round(this.square_size * 0.1));
         this.pen_ctx.lineCap = "round";
+        */
     }
     private onPenStart(ev: MouseEvent | TouchEvent): void {
-        this.attachPenCanvas();
+        this.attachPenLayer();
 
-        const pos = getRelativeEventPosition(ev);
+        const pos = getRelativeEventPosition(ev, this.parent);
         this.last_pen_position = this.xy2pen(pos.x, pos.y);
         this.current_pen_mark = { color: this.analyze_subtool, points: this.xy2pen(pos.x, pos.y) };
         this.pen_marks.push(this.current_pen_mark);
@@ -683,14 +647,11 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         this.syncReviewMove({ pen: this.analyze_subtool, pp: this.xy2pen(pos.x, pos.y) });
     }
     private onPenMove(ev: MouseEvent | TouchEvent): void {
-        if (!this.pen_ctx) {
-            throw new Error(`onPenMove called with null pen_ctx`);
-        }
         if (!this.last_pen_position || !this.current_pen_mark) {
             throw new Error(`onPenMove called with invalid last pen position or current pen mark`);
         }
 
-        const pos = getRelativeEventPosition(ev);
+        const pos = getRelativeEventPosition(ev, this.parent);
         const start = this.last_pen_position;
         const s = this.pen2xy(start[0], start[1]);
         const end = this.xy2pen(pos.x, pos.y);
@@ -707,10 +668,20 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         this.current_pen_mark.points.push(dx);
         this.current_pen_mark.points.push(dy);
 
+        /*
         this.pen_ctx.beginPath();
         this.pen_ctx.moveTo(s[0], s[1]);
         this.pen_ctx.lineTo(e[0], e[1]);
         this.pen_ctx.stroke();
+        */
+
+        const path = `M ${s[0]} ${s[1]} L ${e[0]} ${e[1]}`;
+        const path_element = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path_element.setAttribute("d", path);
+        path_element.setAttribute("stroke", this.analyze_subtool);
+        path_element.setAttribute("stroke-width", "3");
+        path_element.setAttribute("fill", "none");
+        this.pen_layer?.appendChild(path_element);
 
         this.syncReviewMove({ pp: [dx, dy] });
     }
@@ -721,28 +692,30 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         if (!pen_marks.length) {
             return;
         }
-        this.attachPenCanvas();
-        if (!this.pen_ctx) {
-            throw new Error(`onPenMove called with null pen_ctx`);
-        }
+        this.attachPenLayer();
         this.clearAnalysisDrawing();
         this.pen_marks = pen_marks;
+
         for (let i = 0; i < pen_marks.length; ++i) {
             const stroke = pen_marks[i];
             this.setPenStyle(stroke.color);
 
             let px = stroke.points[0];
             let py = stroke.points[1];
-            this.pen_ctx.beginPath();
             const pt = this.pen2xy(px, py);
-            this.pen_ctx.moveTo(pt[0], pt[1]);
+            let path = `M ${pt[0]} ${pt[1]}`;
             for (let j = 2; j < stroke.points.length; j += 2) {
                 px += stroke.points[j];
                 py += stroke.points[j + 1];
                 const pt = this.pen2xy(px, py);
-                this.pen_ctx.lineTo(pt[0], pt[1]);
+                path += ` L ${pt[0]} ${pt[1]}`;
             }
-            this.pen_ctx.stroke();
+            const path_element = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path_element.setAttribute("d", path);
+            path_element.setAttribute("stroke", stroke.color);
+            path_element.setAttribute("stroke-width", "3");
+            path_element.setAttribute("fill", "none");
+            this.pen_layer?.appendChild(path_element);
         }
     }
     private onTap(
@@ -763,13 +736,13 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             return;
         }
 
-        // If there are modes where right click should not behave as if you clicked a placement on the canvas
+        // If there are modes where right click should not behave as if you clicked a placement on the svg
         // then return here instead of proceeding.
         if (right_click && this.mode === "play") {
             return;
         }
 
-        const pos = getRelativeEventPosition(event);
+        const pos = getRelativeEventPosition(event, this.parent);
         const xx = pos.x;
         const yy = pos.y;
 
@@ -1168,7 +1141,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             return;
         }
 
-        const pos = getRelativeEventPosition(event);
+        const pos = getRelativeEventPosition(event, this.parent);
         const pt = this.xy2ij(pos.x, pos.y);
 
         if (this.__last_pt.i === pt.i && this.__last_pt.j === pt.j) {
@@ -1226,25 +1199,41 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         if (!this.drawing_enabled || this.no_display) {
             return;
         }
-        const ctx = this.ctx;
-        if (!ctx) {
-            return;
-        }
         if (i < 0 || j < 0) {
             return;
         }
-        const s = this.square_size;
-        let ox = this.draw_left_labels ? s : 0;
-        let oy = this.draw_top_labels ? s : 0;
-        if (this.bounds.left > 0) {
-            ox = -s * this.bounds.left;
+
+        let cell = this.grid[j][i];
+        const shadow_cell = this.shadow_grid[j][i];
+
+        if (cell) {
+            cell.remove();
         }
-        if (this.bounds.top > 0) {
-            oy = -s * this.bounds.top;
+        if (shadow_cell) {
+            shadow_cell.remove();
         }
 
-        let cx: number;
-        let cy: number;
+        cell = this.grid[j][i] = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        this.grid_layer!.appendChild(cell);
+
+        const ss = this.square_size;
+        let ox = this.draw_left_labels ? ss : 0;
+        let oy = this.draw_top_labels ? ss : 0;
+        if (this.bounds.left > 0) {
+            ox = -ss * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -ss * this.bounds.top;
+        }
+
+        const l = i * ss + ox;
+        const r = (i + 1) * ss + ox;
+        const t = j * ss + oy;
+        const b = (j + 1) * ss + oy;
+
+        const cx = l + this.metrics.mid;
+        const cy = t + this.metrics.mid;
+
         let draw_last_move = !this.dont_draw_last_move;
 
         let stone_color = 0;
@@ -1307,42 +1296,9 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             have_text_to_draw = true;
         }
 
-        /* clear and draw lines */
-        {
-            const l = i * s + ox;
-            const r = (i + 1) * s + ox;
-            const t = j * s + oy;
-            const b = (j + 1) * s + oy;
-
-            ctx.clearRect(l, t, r - l, b - t);
-            if (this.shadow_ctx) {
-                let shadow_offset = this.square_size * 0.1;
-                this.shadow_ctx.clearRect(
-                    l + shadow_offset,
-                    t + shadow_offset,
-                    this.square_size,
-                    this.square_size,
-                );
-                shadow_offset = this.square_size * 0.2;
-                this.shadow_ctx.clearRect(
-                    l + shadow_offset,
-                    t + shadow_offset,
-                    this.square_size,
-                    this.square_size,
-                );
-                shadow_offset = this.square_size * 0.3;
-                this.shadow_ctx.clearRect(
-                    l + shadow_offset,
-                    t + shadow_offset,
-                    this.square_size,
-                    this.square_size,
-                );
-            }
-
-            cx = l + this.metrics.mid;
-            cy = t + this.metrics.mid;
-
-            /* draw line */
+        /* Fade our lines if we have text to draw */
+        if (have_text_to_draw) {
+            /* draw lighter colored lines */
             let sx = l;
             let ex = r;
             const mx = (r + l) / 2 - this.metrics.offset;
@@ -1370,27 +1326,20 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 }
             }
 
-            if (this.square_size < 5) {
-                ctx.lineWidth = 0.2;
-            } else {
-                ctx.lineWidth = 1;
-            }
-            if (have_text_to_draw) {
-                ctx.strokeStyle = this.theme_faded_line_color;
-            } else {
-                ctx.strokeStyle = this.theme_line_color;
-            }
-            ctx.lineCap = "butt";
-            ctx.beginPath();
-            ctx.moveTo(Math.floor(sx), my);
-            ctx.lineTo(Math.floor(ex), my);
-            ctx.moveTo(mx, Math.floor(sy));
-            ctx.lineTo(mx, Math.floor(ey));
-            ctx.stroke();
-        }
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("stroke", this.theme_faded_line_color);
+            path.setAttribute("stroke-width", this.square_size < 5 ? "0.2" : "1");
+            path.setAttribute("fill", "none");
+            path.setAttribute(
+                "d",
+                `
+                M ${Math.floor(sx)} ${my} L ${Math.floor(ex)} ${my}
+                M ${mx} ${Math.floor(sy)} L ${mx} ${Math.floor(ey)} 
+            `,
+            );
+            cell.appendChild(path);
 
-        /* Draw star points */
-        {
+            /* Draw star points */
             let star_radius;
             if (this.square_size < 5) {
                 star_radius = 0.5;
@@ -1429,41 +1378,28 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
 
             if (draw_star_point) {
-                ctx.beginPath();
-                ctx.fillStyle = this.theme_star_color;
-                if (have_text_to_draw) {
-                    ctx.fillStyle = this.theme_faded_star_color;
-                }
-                ctx.arc(
-                    cx,
-                    cy,
-                    star_radius,
-                    0.001,
-                    2 * Math.PI,
-                    false,
-                ); /* 0.001 to workaround fucked up chrome 27 bug */
-                ctx.fill();
+                const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circ.setAttribute("cx", cx.toString());
+                circ.setAttribute("cy", cy.toString());
+                circ.setAttribute("r", star_radius.toString());
+                circ.setAttribute("fill", this.theme_faded_star_color);
+                cell.appendChild(circ);
             }
         }
 
         /* Heatmap */
-
         if (this.heatmap) {
             if (this.heatmap[j][i] > 0.001) {
                 const color = "#00FF00";
-                ctx.lineCap = "square";
-                ctx.save();
-                ctx.beginPath();
-                ctx.globalAlpha = Math.min(this.heatmap[j][i], 0.5);
                 const r = Math.floor(this.square_size * 0.5) - 0.5;
-                ctx.moveTo(cx - r, cy - r);
-                ctx.lineTo(cx + r, cy - r);
-                ctx.lineTo(cx + r, cy + r);
-                ctx.lineTo(cx - r, cy + r);
-                ctx.lineTo(cx - r, cy - r);
-                ctx.fillStyle = color;
-                ctx.fill();
-                ctx.restore();
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", (cx - r).toFixed(1));
+                rect.setAttribute("y", (cy - r).toFixed(1));
+                rect.setAttribute("width", (r * 2).toFixed(1));
+                rect.setAttribute("height", (r * 2).toFixed(1));
+                rect.setAttribute("fill-opacity", Math.min(this.heatmap[j][i], 0.5).toFixed(2));
+                rect.setAttribute("fill", color);
+                cell.appendChild(rect);
             }
         }
 
@@ -1475,57 +1411,43 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 pos.color
             ) {
                 const color = pos.color ? pos.color : pos.hint ? "#8EFF0A" : "#FF8E0A";
-
-                ctx.lineCap = "square";
-                ctx.save();
-                ctx.beginPath();
-                ctx.globalAlpha = 0.6;
                 const r = Math.floor(this.square_size * 0.5) - 0.5;
-                ctx.moveTo(cx - r, cy - r);
-                ctx.lineTo(cx + r, cy - r);
-                ctx.lineTo(cx + r, cy + r);
-                ctx.lineTo(cx - r, cy + r);
-                ctx.lineTo(cx - r, cy - r);
-                ctx.fillStyle = color;
-                ctx.fill();
-                ctx.restore();
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", (cx - r).toFixed(1));
+                rect.setAttribute("y", (cy - r).toFixed(1));
+                rect.setAttribute("width", (r * 2).toFixed(1));
+                rect.setAttribute("height", (r * 2).toFixed(1));
+                rect.setAttribute("fill-opacity", "0.6");
+                rect.setAttribute("fill", color);
+                cell.appendChild(rect);
             }
         }
 
         /* Colored stones */
-
         if (this.colored_circles) {
             if (this.colored_circles[j][i]) {
                 const circle = this.colored_circles[j][i];
-                const color = circle.color;
-
-                ctx.save();
-                ctx.globalAlpha = 1.0;
                 const radius = Math.floor(this.square_size * 0.5) - 0.5;
                 let lineWidth = radius * (circle.border_width || 0.1);
-
                 if (lineWidth < 0.3) {
                     lineWidth = 0;
                 }
-                ctx.fillStyle = color;
-                ctx.strokeStyle = circle.border_color || "#000000";
-                if (lineWidth > 0) {
-                    ctx.lineWidth = lineWidth;
+
+                const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circ.setAttribute("class", "colored-circle");
+                circ.setAttribute("fill", circle.color);
+                if (circle.border_color) {
+                    circ.setAttribute("stroke", circle.border_color);
                 }
-                ctx.beginPath();
-                ctx.arc(
-                    cx,
-                    cy,
-                    Math.max(0.1, radius - lineWidth / 2),
-                    0.001,
-                    2 * Math.PI,
-                    false,
-                ); /* 0.001 to workaround fucked up chrome bug */
                 if (lineWidth > 0) {
-                    ctx.stroke();
+                    circ.setAttribute("stroke-width", lineWidth.toFixed(1));
+                } else {
+                    circ.setAttribute("stroke-width", "1px");
                 }
-                ctx.fill();
-                ctx.restore();
+                circ.setAttribute("cx", cx.toString());
+                circ.setAttribute("cy", cy.toString());
+                circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
+                cell.appendChild(circ);
             }
         }
 
@@ -1652,15 +1574,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         return;
                     }
 
-                    ctx.save();
-                    let shadow_ctx: CanvasRenderingContext2D | null | undefined = this.shadow_ctx;
-                    if (!stone_color || translucent) {
-                        ctx.globalAlpha = stoneAlphaValue;
-                        shadow_ctx = null;
-                    }
-                    if (shadow_ctx === undefined) {
-                        shadow_ctx = null;
-                    }
+                    const stone_transparent = translucent || !stone_color;
+
                     if (color === 1) {
                         const stone = this.theme_black.getStone(
                             i,
@@ -1668,14 +1583,18 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                             this.theme_black_stones,
                             this,
                         );
-                        this.theme_black.placeBlackStone(
-                            ctx,
-                            shadow_ctx,
+                        const [elt, shadow] = this.theme_black.placeBlackStoneSVG(
+                            cell,
+                            stone_transparent ? undefined : this.shadow_layer,
                             stone,
                             cx,
                             cy,
                             this.theme_stone_radius,
                         );
+                        this.shadow_grid[j][i] = shadow;
+                        if (stone_transparent) {
+                            elt.setAttribute("opacity", stoneAlphaValue.toString());
+                        }
                     } else {
                         const stone = this.theme_white.getStone(
                             i,
@@ -1683,16 +1602,19 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                             this.theme_white_stones,
                             this,
                         );
-                        this.theme_white.placeWhiteStone(
-                            ctx,
-                            shadow_ctx,
+                        const [elt, shadow] = this.theme_white.placeWhiteStoneSVG(
+                            cell,
+                            stone_transparent ? undefined : this.shadow_layer,
                             stone,
                             cx,
                             cy,
                             this.theme_stone_radius,
                         );
+                        this.shadow_grid[j][i] = shadow;
+                        if (stone_transparent) {
+                            elt.setAttribute("opacity", stoneAlphaValue.toString());
+                        }
                     }
-                    ctx.restore();
                 }
 
                 if (
@@ -1702,32 +1624,26 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.colored_circles[j][i]
                 ) {
                     const circle = this.colored_circles[j][i];
-
-                    ctx.save();
-                    ctx.globalAlpha = 1.0;
                     const radius = Math.floor(this.square_size * 0.5) - 0.5;
                     let lineWidth = radius * (circle.border_width || 0.1);
-
                     if (lineWidth < 0.3) {
                         lineWidth = 0;
                     }
-                    ctx.strokeStyle = circle.border_color || "#000000";
-                    if (lineWidth > 0) {
-                        ctx.lineWidth = lineWidth;
+
+                    const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    circ.setAttribute("class", "colored-circle");
+                    if (circle.border_color) {
+                        circ.setAttribute("stroke", circle.border_color || "#000000");
                     }
-                    ctx.beginPath();
-                    ctx.arc(
-                        cx,
-                        cy,
-                        Math.max(0.1, radius - lineWidth / 2),
-                        0.001,
-                        2 * Math.PI,
-                        false,
-                    ); /* 0.001 to workaround fucked up chrome bug */
                     if (lineWidth > 0) {
-                        ctx.stroke();
+                        circ.setAttribute("stroke-width", `${lineWidth.toFixed(1)}px`);
+                    } else {
+                        circ.setAttribute("stroke-width", "1px");
                     }
-                    ctx.restore();
+                    circ.setAttribute("cx", cx.toString());
+                    circ.setAttribute("cy", cy.toString());
+                    circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
+                    cell.appendChild(circ);
                 }
 
                 /* Red X if the stone is marked for removal */
@@ -1741,12 +1657,14 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         this.score_estimator &&
                         this.score_estimator.board[j][i] &&
                         this.score_estimator.removal[j][i]) ||
+                    //(this.mode === "analyze" && pos.stone_removed)
                     pos.stone_removed
                 ) {
                     draw_red_x = true;
                 }
             }
         }
+
         if (
             draw_red_x ||
             (this.mode === "analyze" &&
@@ -1761,21 +1679,25 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j)
         ) {
+            const r = Math.max(1, this.metrics.mid * 0.75);
+            const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            cross.setAttribute("class", "removal-cross");
+            cross.setAttribute("stroke", "#ff0000");
+            cross.setAttribute("stroke-width", `${this.square_size * 0.125}px`);
+            cross.setAttribute("fill", "none");
+            cross.setAttribute(
+                "d",
+                `
+                    M ${cx - r} ${cy - r}
+                    L ${cx + r} ${cy + r}
+                    M ${cx + r} ${cy - r}
+                    L ${cx - r} ${cy + r}
+                `,
+            );
             const opacity = this.engine.board[j][i] ? 1.0 : 0.2;
-            ctx.lineCap = "square";
-            ctx.save();
-            ctx.beginPath();
-            ctx.lineWidth = this.square_size * 0.125;
-            ctx.globalAlpha = opacity;
-            const r = Math.max(1, this.metrics.mid * 0.65);
-            ctx.moveTo(cx - r, cy - r);
-            ctx.lineTo(cx + r, cy + r);
-            ctx.moveTo(cx + r, cy - r);
-            ctx.lineTo(cx - r, cy + r);
-            ctx.strokeStyle = "#ff0000";
-            ctx.stroke();
-            ctx.restore();
-            draw_last_move = false;
+            cross.setAttribute("stroke-opacity", opacity?.toString());
+
+            cell.appendChild(cross);
         }
 
         /* Draw Scores */
@@ -1797,9 +1719,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     this.last_hover_square.x === i &&
                     this.last_hover_square.y === j)
             ) {
-                ctx.beginPath();
-
                 let color = pos.score;
+
                 if (
                     this.scoring_mode &&
                     this.score_estimator &&
@@ -1839,31 +1760,38 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     color = this.analyze_subtool;
                 }
 
+                const r = this.square_size * 0.15;
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", (cx - r).toFixed(1));
+                rect.setAttribute("y", (cy - r).toFixed(1));
+                rect.setAttribute("width", (r * 2).toFixed(1));
+                rect.setAttribute("height", (r * 2).toFixed(1));
                 if (color === "white") {
-                    ctx.fillStyle = this.theme_black_text_color;
-                    ctx.strokeStyle = "#777777";
-                } else if (color === "black") {
-                    ctx.fillStyle = this.theme_white_text_color;
-                    ctx.strokeStyle = "#888888";
-                } else if (color === "dame") {
-                    ctx.fillStyle = "#ff0000";
-                    ctx.strokeStyle = "#365FE6";
-                } else if (color === "seal") {
-                    ctx.fillStyle = "#ff0000";
-                    ctx.strokeStyle = "#E079CE";
+                    rect.setAttribute("fill", this.theme_black_text_color);
+                    rect.setAttribute("stroke", "#777777");
+                }
+                if (color === "black") {
+                    rect.setAttribute("fill", this.theme_white_text_color);
+                    rect.setAttribute("stroke", "#888888");
+                }
+                if (color === "dame") {
+                    rect.setAttribute("fill-opacity", "0.2");
+                    rect.setAttribute("stroke", "#365FE6");
+                }
+                if (color === "seal") {
+                    rect.setAttribute("fill-opacity", "0.8");
+                    rect.setAttribute("fill", "#ff4444");
+                    rect.setAttribute("stroke", "#E079CE");
                 }
                 if (color?.[0] === "#") {
-                    ctx.fillStyle = color;
-                    ctx.strokeStyle = color_blend("#888888", color);
+                    rect.setAttribute("fill", color);
+                    rect.setAttribute("stroke", color_blend("#888888", color));
                 }
-                ctx.lineWidth = Math.ceil(this.square_size * 0.065) - 0.5;
-
-                const r = this.square_size * 0.15;
-                ctx.rect(cx - r, cy - r, r * 2, r * 2);
-                if (color !== "dame") {
-                    ctx.fill();
-                }
-                ctx.stroke();
+                rect.setAttribute(
+                    "stroke-width",
+                    (Math.ceil(this.square_size * 0.065) - 0.5).toFixed(1),
+                );
+                cell.appendChild(rect);
             }
         }
 
@@ -1931,70 +1859,54 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
             if (letter) {
                 letter_was_drawn = true;
-                ctx.save();
-                ctx.fillStyle = text_color;
-                const [, , metrics] = fitText(
-                    ctx,
-                    letter,
-                    `bold FONT_SIZEpx ${GOBAN_FONT}`,
-                    this.square_size * 0.4,
-                    this.square_size * 0.8 * (subscript ? 0.9 : 1.0),
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("class", "letter");
+                text.setAttribute("fill", text_color);
+                text.setAttribute(
+                    "font-size",
+                    subscript ? `${this.square_size * 0.4}px` : `${this.square_size * 0.5}px`,
                 );
-
-                const xx = cx - metrics.width / 2;
-                let yy =
-                    cy +
-                    (/WebKit|Trident/.test(navigator.userAgent)
-                        ? this.square_size * -0.03
-                        : 1); /* middle centering is different on firefox */
-
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("x", cx.toString());
+                let yy = cy;
+                yy += this.square_size / 6;
                 if (subscript) {
                     yy -= this.square_size * 0.15;
                 }
-
-                ctx.textBaseline = "middle";
+                text.setAttribute("y", yy.toString());
+                text.textContent = letter;
                 if (transparent) {
-                    ctx.globalAlpha = 0.6;
+                    text.setAttribute("fill-opacity", "0.6");
                 }
-                ctx.fillText(letter, xx, yy);
+                cell.appendChild(text);
                 draw_last_move = false;
-                ctx.restore();
             }
 
             if (subscript) {
                 letter_was_drawn = true;
-                ctx.save();
-                ctx.fillStyle = text_color;
-                if (letter && subscript === "0") {
-                    subscript = "0.0"; // clarifies the markings on the blue move typically
-                }
-
-                const [, , metrics] = fitText(
-                    ctx,
-                    subscript,
-                    `bold FONT_SIZEpx ${GOBAN_FONT}`,
-                    this.square_size * 0.4,
-                    this.square_size * 0.8 * (letter ? 0.9 : 1.0),
-                );
-
-                const xx = cx - metrics.width / 2;
-                let yy =
-                    cy +
-                    (/WebKit|Trident/.test(navigator.userAgent)
-                        ? this.square_size * -0.03
-                        : 1); /* middle centering is different on firefox */
-
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("class", "subscript");
+                text.setAttribute("fill", text_color);
+                text.setAttribute("font-size", `${this.square_size * 0.4}px`);
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("x", cx.toString());
+                let yy = cy;
+                yy -= this.square_size / 6;
                 if (letter) {
-                    yy += this.square_size * 0.3;
+                    yy += this.square_size * 0.6;
+                } else {
+                    yy += this.square_size * 0.31;
                 }
-
-                ctx.textBaseline = "middle";
+                if (pos.sub_triangle) {
+                    yy -= this.square_size * 0.08;
+                }
+                text.setAttribute("y", yy.toString());
+                text.textContent = subscript;
                 if (transparent) {
-                    ctx.globalAlpha = 0.6;
+                    text.setAttribute("fill-opacity", "0.6");
                 }
-                ctx.fillText(subscript, xx, yy);
+                cell.appendChild(text);
                 draw_last_move = false;
-                ctx.restore();
             }
         }
 
@@ -2027,18 +1939,21 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
 
             if (pos.circle || hover_mark === "circle") {
-                ctx.lineCap = "round";
-                ctx.save();
-                ctx.beginPath();
+                const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circ.setAttribute("class", "circle");
+                circ.setAttribute("fill", "none");
+                circ.setAttribute("stroke", symbol_color);
+                circ.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                circ.setAttribute("cx", cx.toString());
+                circ.setAttribute("cy", cy.toString());
+                circ.setAttribute(
+                    "r",
+                    Math.max(0.1, this.square_size * this.circle_radius).toFixed(2),
+                );
                 if (transparent) {
-                    ctx.globalAlpha = 0.6;
+                    circ.setAttribute("stroke-opacity", "0.6");
                 }
-                ctx.strokeStyle = symbol_color;
-                ctx.lineWidth = this.square_size * 0.075;
-                const r = Math.max(0.1, this.square_size * this.circle_radius);
-                ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
-                ctx.stroke();
-                ctx.restore();
+                cell.appendChild(circ);
                 draw_last_move = false;
             }
             if (
@@ -2050,72 +1965,80 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             ) {
                 let scale = 1.0;
                 let oy = 0.0;
+                let line_width = this.square_size * 0.075;
                 if (pos.sub_triangle) {
                     scale = 0.5;
                     oy = this.square_size * 0.3;
                     transparent = false;
+                    line_width *= 0.5;
                 }
-                ctx.lineCap = "round";
-                ctx.save();
-                ctx.beginPath();
-                if (transparent) {
-                    ctx.globalAlpha = 0.6;
-                }
-                ctx.strokeStyle = symbol_color;
-                if (pos.chat_triangle) {
-                    ctx.strokeStyle = "#00aaFF";
-                }
-                ctx.lineWidth = this.square_size * 0.075 * scale;
-                let theta = -(Math.PI * 2) / 4;
+
+                const triangle = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                triangle.setAttribute("class", "triangle");
+                triangle.setAttribute("fill", "none");
+                triangle.setAttribute("stroke", symbol_color);
+                triangle.setAttribute("stroke-width", `${line_width}px`);
                 const r = this.square_size * 0.3 * scale;
-                ctx.moveTo(cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta));
+                let theta = -(Math.PI * 2) / 4;
+                const points = [];
+                points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
                 theta += (Math.PI * 2) / 3;
-                ctx.lineTo(cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta));
+                points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
                 theta += (Math.PI * 2) / 3;
-                ctx.lineTo(cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta));
+                points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
                 theta += (Math.PI * 2) / 3;
-                ctx.lineTo(cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta));
-                ctx.stroke();
-                ctx.restore();
+                points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
+                triangle.setAttribute(
+                    "points",
+                    points.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" "),
+                );
+                if (transparent) {
+                    triangle.setAttribute("stroke-opacity", "0.6");
+                }
+                cell.appendChild(triangle);
                 draw_last_move = false;
             }
             if (pos.cross || hover_mark === "cross") {
-                ctx.lineCap = "square";
-                ctx.save();
-                ctx.beginPath();
-                ctx.lineWidth = this.square_size * 0.075;
-                if (transparent) {
-                    ctx.globalAlpha = 0.6;
-                }
                 const r = Math.max(1, this.metrics.mid * 0.35);
-                ctx.moveTo(cx - r, cy - r);
-                ctx.lineTo(cx + r, cy + r);
-                ctx.moveTo(cx + r, cy - r);
-                ctx.lineTo(cx - r, cy + r);
-                ctx.strokeStyle = symbol_color;
-                ctx.stroke();
-                ctx.restore();
+                const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                cross.setAttribute("class", "cross");
+                cross.setAttribute("stroke", symbol_color);
+                cross.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                cross.setAttribute("fill", "none");
+                cross.setAttribute(
+                    "d",
+                    `
+                    M ${cx - r} ${cy - r}
+                    L ${cx + r} ${cy + r}
+                    M ${cx + r} ${cy - r}
+                    L ${cx - r} ${cy + r}
+                `,
+                );
+                if (transparent) {
+                    cross.setAttribute("stroke-opacity", "0.6");
+                }
+
+                cell.appendChild(cross);
+
                 draw_last_move = false;
             }
 
             if (pos.square || hover_mark === "square") {
-                ctx.lineCap = "square";
-                ctx.save();
-                ctx.beginPath();
-                ctx.lineWidth = this.square_size * 0.075;
-                if (transparent) {
-                    ctx.globalAlpha = 0.6;
-                }
-                const r = Math.max(1, this.metrics.mid * 0.4);
-                ctx.moveTo(cx - r, cy - r);
-                ctx.lineTo(cx + r, cy - r);
-                ctx.lineTo(cx + r, cy + r);
-                ctx.lineTo(cx - r, cy + r);
-                ctx.lineTo(cx - r, cy - r);
-                ctx.strokeStyle = symbol_color;
-                ctx.stroke();
-                ctx.restore();
                 draw_last_move = false;
+                const square = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                square.setAttribute("class", "square");
+                square.setAttribute("fill", "none");
+                square.setAttribute("stroke", symbol_color);
+                square.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                const r = Math.max(1, this.metrics.mid * 0.4);
+                square.setAttribute("x", (cx - r).toFixed(2));
+                square.setAttribute("y", (cy - r).toFixed(2));
+                square.setAttribute("width", (r * 2).toFixed(2));
+                square.setAttribute("height", (r * 2).toFixed(2));
+                if (transparent) {
+                    square.setAttribute("stroke-opacity", "0.6");
+                }
+                cell.appendChild(square);
             }
         }
 
@@ -2143,20 +2066,28 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                             : this.theme_white_text_color;
 
                     if (this.submit_move) {
-                        ctx.lineCap = "square";
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.lineWidth = this.square_size * 0.075;
-                        ctx.globalAlpha = this.last_move_opacity;
-                        const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
-                        ctx.moveTo(cx - r, cy);
-                        ctx.lineTo(cx + r, cy);
-                        ctx.moveTo(cx, cy - r);
-                        ctx.lineTo(cx, cy + r);
-                        ctx.strokeStyle = color;
-                        ctx.stroke();
-                        ctx.restore();
                         draw_last_move = false;
+
+                        const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
+                        const cross = document.createElementNS(
+                            "http://www.w3.org/2000/svg",
+                            "path",
+                        );
+                        cross.setAttribute("class", "last-move");
+                        cross.setAttribute("stroke", color);
+                        cross.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                        cross.setAttribute("fill", "none");
+                        cross.setAttribute("opacity", this.last_move_opacity.toString());
+                        cross.setAttribute(
+                            "d",
+                            `
+                            M ${cx - r} ${cy}
+                            L ${cx + r} ${cy}
+                            M ${cx} ${cy - r}
+                            L ${cx} ${cy + r}
+                        `,
+                        );
+                        cell.appendChild(cross);
                     } else {
                         if (
                             this.engine.undo_requested &&
@@ -2164,34 +2095,42 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                             this.engine.undo_requested === this.engine.cur_move.move_number
                         ) {
                             const letter = "?";
-                            ctx.save();
-                            ctx.fillStyle = color;
-                            const metrics = ctx.measureText(letter);
-                            const xx = cx - metrics.width / 2;
-                            const yy =
-                                cy +
-                                (/WebKit|Trident/.test(navigator.userAgent)
-                                    ? this.square_size * -0.03
-                                    : 1); /* middle centering is different on firefox */
-                            ctx.textBaseline = "middle";
-                            ctx.fillText(letter, xx, yy);
                             draw_last_move = false;
-                            ctx.restore();
+
+                            const text = document.createElementNS(
+                                "http://www.w3.org/2000/svg",
+                                "text",
+                            );
+                            text.setAttribute("class", "letter");
+                            text.setAttribute("fill", color);
+                            text.setAttribute("font-size", `${this.square_size * 0.5}px`);
+                            text.setAttribute("text-anchor", "middle");
+                            text.setAttribute("x", cx.toString());
+                            let yy = cy;
+                            yy += this.square_size / 6;
+                            text.setAttribute("y", yy.toString());
+                            text.textContent = letter;
+                            cell.appendChild(text);
                         } else {
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.strokeStyle = color;
-                            ctx.lineWidth = this.square_size * 0.075;
-                            ctx.globalAlpha = this.last_move_opacity;
+                            const circ = document.createElementNS(
+                                "http://www.w3.org/2000/svg",
+                                "circle",
+                            );
                             let r = this.square_size * this.last_move_radius;
                             if (this.submit_move) {
                                 r = this.square_size * 0.3;
                             }
 
                             r = Math.max(0.1, r);
-                            ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
-                            ctx.stroke();
-                            ctx.restore();
+                            circ.setAttribute("class", "last-move");
+                            circ.setAttribute("fill", "none");
+                            circ.setAttribute("stroke", color);
+                            circ.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                            circ.setAttribute("cx", cx.toString());
+                            circ.setAttribute("cy", cy.toString());
+                            circ.setAttribute("opacity", this.last_move_opacity.toString());
+                            circ.setAttribute("r", r.toString());
+                            cell.appendChild(circ);
                         }
                     }
                 }
@@ -2210,30 +2149,35 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                     ? this.stalling_score_estimate
                     : this.score_estimator;
             const est = se!.ownership[j][i];
-
-            ctx.beginPath();
-
             const color = est < 0 ? "white" : "black";
             const color_num = color === "black" ? 1 : 2;
 
             if (color_num !== stone_color) {
-                if (color === "white") {
-                    ctx.fillStyle = this.theme_black_text_color;
-                    ctx.strokeStyle = "#777777";
-                } else if (color === "black") {
-                    ctx.fillStyle = this.theme_white_text_color;
-                    ctx.strokeStyle = "#888888";
-                }
-                ctx.lineWidth = Math.ceil(this.square_size * 0.035) - 0.5;
                 const r = this.square_size * 0.2 * Math.abs(est);
-                ctx.rect(cx - r, cy - r, r * 2, r * 2);
-                ctx.fill();
-                ctx.stroke();
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", (cx - r).toFixed(1));
+                rect.setAttribute("y", (cy - r).toFixed(1));
+                rect.setAttribute("width", (r * 2).toFixed(1));
+                rect.setAttribute("height", (r * 2).toFixed(1));
+                if (color === "white") {
+                    rect.setAttribute("fill", this.theme_black_text_color);
+                    rect.setAttribute("stroke", "#777777");
+                }
+                if (color === "black") {
+                    rect.setAttribute("fill", this.theme_white_text_color);
+                    rect.setAttribute("stroke", "#888888");
+                }
+                rect.setAttribute(
+                    "stroke-width",
+                    (Math.ceil(this.square_size * 0.035) - 0.5).toFixed(1),
+                );
+                cell.appendChild(rect);
             }
         }
 
         this.__draw_state[j][i] = this.drawingHash(i, j);
     }
+
     private drawingHash(i: number, j: number): string {
         if (this.no_display) {
             return "";
@@ -2381,6 +2325,15 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 }
 
                 if (
+                    pos.blue_move &&
+                    this.colored_circles &&
+                    this.colored_circles[j] &&
+                    this.colored_circles[j][i]
+                ) {
+                    ret += "blue";
+                }
+
+                if (
                     (this.engine &&
                         this.engine.phase === "stone removal" &&
                         this.engine.last_official_move === this.engine.cur_move &&
@@ -2521,7 +2474,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 ) {
                     color = this.analyze_subtool;
                 }
-
                 if (
                     this.scoring_mode &&
                     this.score_estimator &&
@@ -2652,6 +2604,301 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         return ret;
     }
+
+    private drawLines(force_clear?: boolean): void {
+        if (force_clear) {
+            if (this.lines_layer) {
+                this.lines_layer.remove();
+                delete this.lines_layer;
+            }
+        }
+
+        if (!this.lines_layer) {
+            const ss = this.square_size;
+            let ox = this.draw_left_labels ? ss : 0;
+            let oy = this.draw_top_labels ? ss : 0;
+
+            if (this.bounds.left > 0) {
+                ox = -ss * this.bounds.left;
+            }
+            if (this.bounds.top > 0) {
+                oy = -ss * this.bounds.top;
+            }
+
+            // lines go through center of our stone grid
+            ox += Math.round(ss / 2);
+            oy += Math.round(ss / 2);
+
+            // Tiny square sizes, as in the ones used to display puzzle icons
+            const TINY_SQUARE_SIZE = 10;
+
+            // Compute a line width that is rounded to the nearest 0.5 so we
+            // get crisp lines
+            const line_width =
+                ss > TINY_SQUARE_SIZE
+                    ? Math.round(2 * Math.round(Math.max(1, ss * 0.02))) * 0.5
+                    : // for very small boards, like puzzle icons, have faint lines
+                      ss * 0.08;
+            ox -= line_width * 0.5;
+            oy -= line_width * 0.5;
+
+            // Round to half pixel offsets odd widths for crisp lines
+            ox = Math.round(ox * 2.0) * 0.5;
+            oy = Math.round(oy * 2.0) * 0.5;
+
+            this.lines_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            const lines_path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            let path_str = "";
+            for (let x = 0; x < this.width; ++x) {
+                path_str += `M ${ox + x * ss} ${oy} L ${ox + x * ss} ${
+                    oy + (this.height - 1) * ss
+                } `;
+            }
+            for (let y = 0; y < this.height; ++y) {
+                path_str += `M ${ox} ${oy + y * ss} L ${ox + (this.width - 1) * ss} ${
+                    oy + y * ss
+                } `;
+            }
+            lines_path.setAttribute("d", path_str);
+            lines_path.setAttribute("stroke", this.theme_line_color);
+            if (ss > TINY_SQUARE_SIZE) {
+                lines_path.setAttribute("stroke-width", `${line_width.toFixed(0)}px`);
+            } else {
+                lines_path.setAttribute("stroke-width", `${line_width.toFixed(1)}px`);
+            }
+            lines_path.setAttribute("stroke-linecap", "square");
+            this.lines_layer.appendChild(lines_path);
+
+            // Hoshi / star points
+            let hoshi = null;
+
+            if (this.width === 19 && this.height === 19) {
+                hoshi = [
+                    [3, 3],
+                    [3, 9],
+                    [3, 15],
+                    [9, 3],
+                    [9, 9],
+                    [9, 15],
+                    [15, 3],
+                    [15, 9],
+                    [15, 15],
+                ];
+            }
+
+            if (this.width === 13 && this.height === 13) {
+                hoshi = [
+                    [3, 3],
+                    [3, 9],
+                    [6, 6],
+                    [9, 3],
+                    [9, 9],
+                ];
+            }
+
+            if (this.width === 9 && this.height === 9) {
+                hoshi = [
+                    [2, 2],
+                    [2, 6],
+                    [4, 4],
+                    [6, 2],
+                    [6, 6],
+                ];
+            }
+
+            if (hoshi) {
+                const r = this.square_size * 0.075;
+                for (let i = 0; i < hoshi.length; ++i) {
+                    const [hx, hy] = hoshi[i];
+                    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    circle.setAttribute("cx", (ox + hx * ss).toString());
+                    circle.setAttribute("cy", (oy + hy * ss).toString());
+                    circle.setAttribute("r", `${r.toFixed(1)}px`);
+                    circle.setAttribute("fill", this.theme_star_color);
+                    this.lines_layer.appendChild(circle);
+                }
+            }
+            this.svg.appendChild(this.lines_layer);
+        }
+    }
+
+    private drawCoordinateLabels(force_clear?: boolean): void {
+        if (force_clear) {
+            if (this.coordinate_labels_layer) {
+                this.coordinate_labels_layer.remove();
+                delete this.coordinate_labels_layer;
+            }
+        }
+
+        if (!this.coordinate_labels_layer) {
+            this.coordinate_labels_layer = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "g",
+            );
+            this.coordinate_labels_layer.setAttribute("class", "coordinate-labels");
+
+            let text_size = Math.round(this.square_size * 0.5);
+            let bold_or_not = "bold";
+            if (this.getCoordinateDisplaySystem() === "1-1") {
+                text_size *= 0.7;
+                bold_or_not = "";
+
+                if (this.height > 20) {
+                    text_size *= 0.7;
+                }
+            }
+
+            const place = (ch: string, x: number, y: number): void => {
+                /* places centered (horizontally & vertically) text at x,y */
+                const ox = 0;
+                const oy = this.square_size / 6;
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", (x + ox).toFixed(0));
+                text.setAttribute("y", (y + oy).toFixed(0));
+                text.setAttribute("font-size", `${Math.round(text_size)}px`);
+                text.setAttribute("font-size", `${Math.round(text_size)}px`);
+                text.setAttribute("font-weight", bold_or_not);
+                text.setAttribute("fill", this.theme_board.getLabelTextColor());
+                text.textContent = ch;
+                this.coordinate_labels_layer!.appendChild(text);
+            };
+            const v_place = (ch: string, x: number, y: number): void => {
+                /* places centered (horizontally & vertically) text at x,y, with text going down vertically. */
+                for (let i = 0; i < ch.length; ++i) {
+                    //const xx = x - text_size / 2;
+                    const H = text_size;
+                    const xx = x;
+                    let yy = y + text_size / 2.5;
+
+                    if (ch.length === 2) {
+                        yy = yy - H * 0.5 + i * H;
+                    }
+                    if (ch.length === 3) {
+                        yy = yy - H * 1 + i * H + 0.5;
+                    }
+
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", xx.toFixed(0));
+                    text.setAttribute("y", yy.toFixed(1));
+                    text.setAttribute("font-size", `${Math.round(text_size)}px`);
+                    text.setAttribute("font-weight", bold_or_not);
+                    text.setAttribute("fill", this.theme_board.getLabelTextColor());
+                    text.textContent = ch[i];
+                    this.coordinate_labels_layer!.appendChild(text);
+                }
+            };
+
+            const drawHorizontal = (i: number, j: number): void => {
+                switch (this.getCoordinateDisplaySystem()) {
+                    case "A1":
+                        for (let c = 0; c < this.width; ++i, ++c) {
+                            const x =
+                                (i -
+                                    this.bounds.left -
+                                    (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
+                                    this.square_size +
+                                this.square_size / 2;
+                            const y = j * this.square_size + this.square_size / 2;
+                            place(GoMath.pretty_coor_num2ch(c), x, y);
+                        }
+                        break;
+                    case "1-1":
+                        for (let c = 0; c < this.width; ++i, ++c) {
+                            const x =
+                                (i -
+                                    this.bounds.left -
+                                    (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
+                                    this.square_size +
+                                this.square_size / 2;
+                            const y = j * this.square_size + this.square_size / 2;
+                            place("" + (c + 1), x, y);
+                        }
+                        break;
+                }
+            };
+
+            const drawVertical = (i: number, j: number): void => {
+                switch (this.getCoordinateDisplaySystem()) {
+                    case "A1":
+                        for (let c = 0; c < this.height; ++j, ++c) {
+                            const x = i * this.square_size + this.square_size / 2;
+                            const y =
+                                (j -
+                                    this.bounds.top -
+                                    (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
+                                    this.square_size +
+                                this.square_size / 2;
+                            place("" + (this.height - c), x, y);
+                        }
+                        break;
+                    case "1-1":
+                        const chinese_japanese_numbers = [
+                            "一",
+                            "二",
+                            "三",
+                            "四",
+                            "五",
+                            "六",
+                            "七",
+                            "八",
+                            "九",
+                            "十",
+                            "十一",
+                            "十二",
+                            "十三",
+                            "十四",
+                            "十五",
+                            "十六",
+                            "十七",
+                            "十八",
+                            "十九",
+                            "二十",
+                            "二十一",
+                            "二十二",
+                            "二十三",
+                            "二十四",
+                            "二十五",
+                        ];
+                        for (let c = 0; c < this.height; ++j, ++c) {
+                            const x = i * this.square_size + this.square_size / 2;
+                            const y =
+                                (j -
+                                    this.bounds.top -
+                                    (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
+                                    this.square_size +
+                                this.square_size / 2;
+                            v_place(chinese_japanese_numbers[c], x, y);
+                        }
+                        break;
+                }
+            };
+
+            if (this.draw_top_labels && this.bounds.top === 0) {
+                drawHorizontal(this.draw_left_labels ? 1 : 0, 0);
+            }
+            if (this.draw_bottom_labels && this.bounds.bottom === this.height - 1) {
+                drawHorizontal(
+                    this.draw_left_labels ? 1 : 0,
+                    +this.draw_top_labels + this.bounded_height,
+                );
+            }
+            if (this.draw_left_labels && this.bounds.left === 0) {
+                drawVertical(0, this.draw_top_labels ? 1 : 0);
+            }
+            if (this.draw_right_labels && this.bounds.right === this.width - 1) {
+                drawVertical(+this.draw_left_labels + this.bounded_width, +this.draw_top_labels);
+            }
+
+            this.svg.appendChild(this.coordinate_labels_layer);
+        }
+    }
+
+    protected computeThemeStoneRadius(): number {
+        const r = this.square_size * 0.5;
+        return Math.max(1, r);
+    }
+
     public redraw(force_clear?: boolean): void {
         if (!this.ready_to_draw) {
             return;
@@ -2678,43 +2925,13 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         ) {
             force_clear = true;
             try {
-                //this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
                 this.parent.style.width = metrics.width + "px";
                 this.parent.style.height = metrics.height + "px";
-                resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
-
-                if (this.pen_layer) {
-                    if (this.pen_marks.length) {
-                        resizeDeviceScaledCanvas(this.pen_layer, metrics.width, metrics.height);
-                        const ctx = this.pen_layer.getContext("2d", { willReadFrequently: true });
-                        if (ctx) {
-                            this.pen_ctx = ctx;
-                        } else {
-                            throw new Error(`Failed to obtain drawing context for pen layer`);
-                        }
-                    } else {
-                        this.detachPenCanvas();
-                    }
-                }
-
-                if (this.shadow_layer) {
-                    resizeDeviceScaledCanvas(this.shadow_layer, metrics.width, metrics.height);
-                    const ctx = this.shadow_layer.getContext("2d", { willReadFrequently: true });
-                    if (ctx) {
-                        this.shadow_ctx = ctx;
-                    } else {
-                        throw new Error(`Failed to obtain drawing context for shadow layer`);
-                    }
-                }
+                this.svg.setAttribute("width", metrics.width.toString());
+                this.svg.setAttribute("height", metrics.height.toString());
 
                 this.__set_board_width = metrics.width;
                 this.__set_board_height = metrics.height;
-                const ctx = this.board.getContext("2d", { willReadFrequently: true });
-                if (ctx) {
-                    this.ctx = ctx;
-                } else {
-                    throw new Error(`Failed to obtain drawing context for board`);
-                }
 
                 this.setThemes(this.getSelectedThemes(), true);
             } catch (e) {
@@ -2724,161 +2941,37 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 return;
             }
         }
-        const ctx = this.ctx;
 
-        const place = (ch: string, x: number, y: number): void => {
-            /* places centered (horizontally & vertically) text at x,y */
-            const metrics = ctx.measureText(ch);
-            const xx = x - metrics.width / 2;
-            const yy = y;
-            ctx.fillText(ch, xx, yy);
-        };
-        const v_place = (ch: string, x: number, y: number): void => {
-            /* places centered (horizontally & vertically) text at x,y, with text going down vertically. */
-            for (let i = 0; i < ch.length; ++i) {
-                const metrics = ctx.measureText(ch[i]);
-                const xx = x - metrics.width / 2;
-                let yy = y;
-                const H =
-                    metrics.width; /* should be height in an ideal world, measureText doesn't seem to return it though. For our purposes this works well enough though. */
+        this.drawLines(force_clear);
+        this.drawCoordinateLabels(force_clear);
 
-                if (ch.length === 2) {
-                    yy = yy - H + i * H;
+        if (force_clear || !this.grid_layer || !this.shadow_layer) {
+            this.shadow_layer?.remove();
+            this.shadow_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            this.shadow_layer.setAttribute("class", "shadow-layer");
+            this.svg.appendChild(this.shadow_layer);
+
+            this.grid_layer?.remove();
+            this.grid_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            this.grid_layer.setAttribute("class", "grid");
+            this.svg.appendChild(this.grid_layer);
+
+            for (let j = 0; j < this.height; ++j) {
+                this.grid[j] = [];
+                this.shadow_grid[j] = [];
+                /*
+                for (let i = 0; i < this.width; ++i) {
+                    const cell = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    cell.setAttribute("x", (i * this.square_size).toString());
+                    cell.setAttribute("y", (j * this.square_size).toString());
+                    cell.setAttribute("width", this.square_size.toString());
+                    cell.setAttribute("height", this.square_size.toString());
+                    this.grid_layer.appendChild(cell);
+
+                    this.grid[j][i] = cell;
                 }
-                if (ch.length === 3) {
-                    yy = yy - H * 1.5 + i * H;
-                }
-
-                ctx.fillText(ch[i], xx, yy);
+                */
             }
-        };
-
-        const drawHorizontal = (i: number, j: number): void => {
-            switch (this.getCoordinateDisplaySystem()) {
-                case "A1":
-                    for (let c = 0; c < this.width; ++i, ++c) {
-                        const x =
-                            (i -
-                                this.bounds.left -
-                                (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
-                                this.square_size +
-                            this.square_size / 2;
-                        const y = j * this.square_size + this.square_size / 2;
-                        place(GoMath.pretty_coor_num2ch(c), x, y);
-                    }
-                    break;
-                case "1-1":
-                    for (let c = 0; c < this.width; ++i, ++c) {
-                        const x =
-                            (i -
-                                this.bounds.left -
-                                (this.bounds.left > 0 ? +this.draw_left_labels : 0)) *
-                                this.square_size +
-                            this.square_size / 2;
-                        const y = j * this.square_size + this.square_size / 2;
-                        place("" + (c + 1), x, y);
-                    }
-                    break;
-            }
-        };
-
-        const drawVertical = (i: number, j: number): void => {
-            switch (this.getCoordinateDisplaySystem()) {
-                case "A1":
-                    for (let c = 0; c < this.height; ++j, ++c) {
-                        const x = i * this.square_size + this.square_size / 2;
-                        const y =
-                            (j -
-                                this.bounds.top -
-                                (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
-                                this.square_size +
-                            this.square_size / 2;
-                        place("" + (this.height - c), x, y);
-                    }
-                    break;
-                case "1-1":
-                    const chinese_japanese_numbers = [
-                        "一",
-                        "二",
-                        "三",
-                        "四",
-                        "五",
-                        "六",
-                        "七",
-                        "八",
-                        "九",
-                        "十",
-                        "十一",
-                        "十二",
-                        "十三",
-                        "十四",
-                        "十五",
-                        "十六",
-                        "十七",
-                        "十八",
-                        "十九",
-                        "二十",
-                        "二十一",
-                        "二十二",
-                        "二十三",
-                        "二十四",
-                        "二十五",
-                    ];
-                    for (let c = 0; c < this.height; ++j, ++c) {
-                        const x = i * this.square_size + this.square_size / 2;
-                        const y =
-                            (j -
-                                this.bounds.top -
-                                (this.bounds.top > 0 ? +this.draw_top_labels : 0)) *
-                                this.square_size +
-                            this.square_size / 2;
-                        v_place(chinese_japanese_numbers[c], x, y);
-                    }
-                    break;
-            }
-        };
-
-        if (force_clear || !this.__borders_initialized) {
-            this.__borders_initialized = true;
-            if (this.shadow_ctx) {
-                this.shadow_ctx.clearRect(0, 0, metrics.width, metrics.height);
-            }
-            ctx.clearRect(0, 0, metrics.width, metrics.height);
-
-            /* Draw labels */
-            let text_size = Math.round(this.square_size * 0.5);
-            let bold = "bold";
-            if (this.getCoordinateDisplaySystem() === "1-1") {
-                text_size *= 0.7;
-                bold = "";
-
-                if (this.height > 20) {
-                    text_size *= 0.7;
-                }
-            }
-
-            ctx.font = `${bold} ${text_size}px ${GOBAN_FONT}`;
-            ctx.textBaseline = "middle";
-            ctx.fillStyle = this.theme_board.getLabelTextColor();
-            ctx.save();
-
-            if (this.draw_top_labels && this.bounds.top === 0) {
-                drawHorizontal(this.draw_left_labels ? 1 : 0, 0);
-            }
-            if (this.draw_bottom_labels && this.bounds.bottom === this.height - 1) {
-                drawHorizontal(
-                    this.draw_left_labels ? 1 : 0,
-                    +this.draw_top_labels + this.bounded_height,
-                );
-            }
-            if (this.draw_left_labels && this.bounds.left === 0) {
-                drawVertical(0, this.draw_top_labels ? 1 : 0);
-            }
-            if (this.draw_right_labels && this.bounds.right === this.width - 1) {
-                drawVertical(+this.draw_left_labels + this.bounded_width, +this.draw_top_labels);
-            }
-
-            ctx.restore();
         }
 
         /* Draw squares */
@@ -2891,21 +2984,21 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
         }
 
-        /* Set font for text overlay */
-        {
-            const text_size = Math.round(this.square_size * 0.45);
-            ctx.font = "bold " + text_size + "px " + GOBAN_FONT;
-        }
-
         for (let j = this.bounds.top; j <= this.bounds.bottom; ++j) {
             for (let i = this.bounds.left; i <= this.bounds.right; ++i) {
                 this.drawSquare(i, j);
             }
         }
 
-        this.drawPenMarks(this.pen_marks);
+        if (this.pen_marks) {
+            if (force_clear) {
+                this.detachPenLayer();
+            }
+            this.drawPenMarks(this.pen_marks);
+        }
         this.move_tree_redraw();
     }
+
     public showMessage(
         message_id_or_error: MessageID,
         parameters?: { [key: string]: any },
@@ -2964,7 +3057,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     }
     public clearMessage(): void {
         if (this.message_div) {
-            this.message_div.parentNode?.removeChild(this.message_div);
+            this.message_div.remove();
             delete this.message_div;
         }
         if (this.message_timeout) {
@@ -2976,6 +3069,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
     }
     protected setThemes(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
+            console.log("No display");
             return;
         }
 
@@ -2999,82 +3093,38 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             throw new Error("invalid stone radius computed");
         }
 
-        if (
-            this.theme_white.stoneCastsShadow(this.theme_stone_radius) ||
-            this.theme_black.stoneCastsShadow(this.theme_stone_radius)
-        ) {
-            if (this.shadow_layer) {
-                resizeDeviceScaledCanvas(
-                    this.shadow_layer,
-                    this.metrics.width,
-                    this.metrics.height,
-                );
-                const ctx = this.shadow_layer.getContext("2d", { willReadFrequently: true });
-                if (ctx) {
-                    this.shadow_ctx = ctx;
-                } else {
-                    throw new Error(`Failed to get drawing context for shadow layer`);
-                }
-            } else {
-                this.attachShadowLayer();
-            }
-        } else {
-            this.detachShadowLayer();
-        }
-
-        if (!(themes.white in __theme_cache.white)) {
-            __theme_cache.white[themes.white] = {
-                creation_order: [],
-            };
-        }
-        if (!(themes.black in __theme_cache.black)) {
-            __theme_cache.black[themes.black] = {
-                creation_order: [],
-            };
-        }
-
+        /*
         const deferredRenderCallback = () => {
             this.redraw(true);
             this.move_tree_redraw();
         };
+        */
 
         try {
-            if (!(this.theme_stone_radius in __theme_cache.white[themes.white])) {
-                __theme_cache.white[themes.white][this.theme_stone_radius] =
-                    this.theme_white.preRenderWhite(
-                        this.theme_stone_radius,
-                        23434,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.white[themes.white].creation_order.push(this.theme_stone_radius);
+            this.svg_defs?.remove();
+            this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            this.svg.appendChild(this.svg_defs);
+
+            if (!(themes.white in __theme_cache.white)) {
+                __theme_cache.white[themes.white] = {};
             }
-            if (!(this.theme_stone_radius in __theme_cache.black[themes.black])) {
-                __theme_cache.black[themes.black][this.theme_stone_radius] =
-                    this.theme_black.preRenderBlack(
-                        this.theme_stone_radius,
-                        2081,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.black[themes.black].creation_order.push(this.theme_stone_radius);
+            if (!(themes.black in __theme_cache.black)) {
+                __theme_cache.black[themes.black] = {};
             }
 
-            if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
-                __theme_cache.white[themes.white][MoveTree.stone_radius] =
-                    this.theme_white.preRenderWhite(
-                        MoveTree.stone_radius,
-                        23434,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.white[themes.white].creation_order.push(MoveTree.stone_radius);
-            }
-            if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
-                __theme_cache.black[themes.black][MoveTree.stone_radius] =
-                    this.theme_black.preRenderBlack(
-                        MoveTree.stone_radius,
-                        2081,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.black[themes.black].creation_order.push(MoveTree.stone_radius);
+            for (const radius of [this.theme_stone_radius, MoveTree.stone_radius]) {
+                __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
+                    this.svg_defs,
+                    radius,
+                    23434,
+                    () => {},
+                );
+                __theme_cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
+                    this.svg_defs,
+                    radius,
+                    2081,
+                    () => {},
+                );
             }
         } catch (e) {
             console.error(`Error pre-rendering stones.`, {
@@ -3082,41 +3132,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 move_tree_stone_radius: MoveTree.stone_radius,
             });
             throw e;
-        }
-
-        // We should only need a few sizes, like 6 in most cases, but when we resize a window slowly or
-        // have a bunch of weird sized boards, we'll need more. These are very small and there aren't
-        // any devices that should have a problem with them, except for an artificial limit on iOS devices
-        // which we'll handle below.
-        let max_cache_size = 500;
-        try {
-            /* ipads only allow a very small amount of memory to be allocated to canvases,
-             * so we will be more aggressive about cleaning up the cache on those devices */
-            if (
-                /iP(ad|hone|od).+(Version\/[\d.]|OS \d.*like mac os x)+.*Safari/i.test(
-                    navigator.userAgent,
-                )
-            ) {
-                console.log("iOS device detected, reducing cache size");
-                max_cache_size = 12; // mini goban, main boards, 9x9, 13x13, 19x19 should account for 6. We double that for good measure for odd sizes and resizing.
-            }
-        } catch (e) {
-            console.error(e);
-        }
-
-        if (__theme_cache.black[themes.black].creation_order.length > max_cache_size) {
-            const old_radius = __theme_cache.black[themes.black].creation_order.shift();
-            if (old_radius) {
-                console.log("deleting old radius [black]", old_radius);
-                delete __theme_cache.black[themes.black][old_radius];
-            }
-        }
-        if (__theme_cache.white[themes.white].creation_order.length > max_cache_size) {
-            const old_radius = __theme_cache.white[themes.white].creation_order.shift();
-            if (old_radius) {
-                console.log("deleting old radius [white]", old_radius);
-                delete __theme_cache.white[themes.white][old_radius];
-            }
         }
 
         this.theme_white_stones = __theme_cache.white[themes.white][this.theme_stone_radius];
@@ -3133,7 +3148,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
-        //this.parent.css(this.theme_board.getBackgroundCSS());
         const bg_css = this.theme_board.getBackgroundCSS();
         if (this.parent) {
             for (const key in bg_css) {
@@ -3147,7 +3161,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         }
     }
     private onLabelingStart(ev: MouseEvent | TouchEvent) {
-        const pos = getRelativeEventPosition(ev);
+        const pos = getRelativeEventPosition(ev, this.parent);
         this.last_label_position = this.xy2ij(pos.x, pos.y, false);
 
         {
@@ -3177,7 +3191,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         this.drawSquare(this.last_label_position.i, this.last_label_position.j);
     }
     private onLabelingMove(ev: MouseEvent | TouchEvent) {
-        const pos = getRelativeEventPosition(ev);
+        const pos = getRelativeEventPosition(ev, this.parent);
         const cur = this.xy2ij(pos.x, pos.y);
 
         {
@@ -3194,7 +3208,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             this.setLabelCharacterFromMarks();
         }
     }
-
     private onAnalysisScoringStart(ev: MouseEvent | TouchEvent) {
         const pos = getRelativeEventPosition(ev, this.parent);
         this.analysis_scoring_last_position = this.xy2ij(pos.x, pos.y, false);
@@ -3290,12 +3303,13 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         if (!this.move_tree_inner_container) {
             do_init = true;
             this.move_tree_inner_container = document.createElement("div");
-            this.move_tree_canvas = allocateCanvasOrError();
-            this.move_tree_inner_container.appendChild(this.move_tree_canvas);
+            //this.move_tree_canvas = allocateCanvasOrError();
+            this.move_tree_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            this.move_tree_inner_container.appendChild(this.move_tree_svg);
             this.move_tree_container.appendChild(this.move_tree_inner_container);
-            this.move_tree_bindCanvasEvents(this.move_tree_canvas);
+            this.move_tree_bindEvents(this.move_tree_svg);
             this.move_tree_container.style.position = "relative";
-            this.move_tree_canvas.style.position = "absolute";
+            this.move_tree_svg.style.position = "absolute";
 
             try {
                 const observer = new ResizeObserver(() => {
@@ -3310,8 +3324,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
         }
 
-        if (!this.move_tree_canvas) {
-            console.warn(`move_tree_redraw called without move_tree_canvas set`);
+        if (!this.move_tree_svg) {
+            console.warn(`move_tree_redraw called without move_tree_svg set`);
             return;
         }
 
@@ -3334,18 +3348,19 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             });
         }
 
-        /*
-        if (this.move_tree_canvas.width !== this.move_tree_container.outerWidth ||
-            this.move_tree_canvas.height !== this.move_tree_container.outerHeight
+        if (
+            this.move_tree_svg.clientWidth !== this.move_tree_container.clientWidth ||
+            this.move_tree_svg.clientHeight !== this.move_tree_container.clientHeight
         ) {
-            console.log(this.move_tree_canvas.width, this.move_tree_container.outerWidth,
-                this.move_tree_canvas.height, this.move_tree_container.outerHeight);
-            this.move_tree_canvas.width = this.move_tree_container.outerWidth;
-            this.move_tree_canvas.height = this.move_tree_container.outerHeight;
-            this.move_tree_canvas.style.width = this.move_tree_container.outerWidth + "px";
-            this.move_tree_canvas.style.height = this.move_tree_container.outerHeight + "px";
+            this.move_tree_svg.setAttribute(
+                "width",
+                this.move_tree_container.clientWidth.toString(),
+            );
+            this.move_tree_svg.setAttribute(
+                "height",
+                this.move_tree_container.clientHeight.toString(),
+            );
         }
-        */
 
         this.engine.move_tree.recomputeIsobranches();
         const active_path_end = this.engine.cur_move;
@@ -3354,18 +3369,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         active_path_end.setActivePath(++MoveTree.active_path_number);
 
-        /*
-        if (!this.move_tree_container.data("move-tree-redraw-on-scroll")) {
-            let debounce = false;
-            this.redraw_on_scroll = () => {
-                MoveTree.redraw_root.redraw(MoveTree.redraw_config, true);
-            };
-            this.move_tree_container.data("move-tree-redraw-on-scroll", this.redraw_on_scroll);
-            this.move_tree_container.scroll(this.redraw_on_scroll);
-        }
-        */
-
-        const canvas = this.move_tree_canvas;
+        //const canvas = this.move_tree_canvas;
+        const svg = this.move_tree_svg;
         const engine = this.engine;
 
         this.engine.move_tree_layout_vector = [];
@@ -3388,14 +3393,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
         let div_scroll_top = this.move_tree_container.scrollTop;
         let div_scroll_left = this.move_tree_container.scrollLeft;
 
-        if (canvas.width !== div_clientWidth || canvas.height !== div_clientHeight) {
-            resizeDeviceScaledCanvas(
-                canvas,
-                this.move_tree_container.clientWidth,
-                this.move_tree_container.clientHeight,
-            );
-        }
-
         this.move_tree_inner_container.style.width = width + "px";
         this.move_tree_inner_container.style.height = height + "px";
 
@@ -3416,8 +3413,8 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
         }
 
-        canvas.style.top = div_scroll_top + "px";
-        canvas.style.left = div_scroll_left + "px";
+        svg.style.top = div_scroll_top + "px";
+        svg.style.left = div_scroll_left + "px";
 
         const viewport = {
             offset_x: div_scroll_left,
@@ -3428,38 +3425,24 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             maxy: div_scroll_top + div_clientHeight + MoveTree.stone_square_size,
         };
 
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) {
-            throw new Error(`Failed to get drawing context for move tree canvas`);
-        }
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        svg.innerHTML = "";
 
-        this.move_tree_hilightNode(ctx, active_path_end, "#6BAADA", viewport);
+        this.move_tree_hilightNode(svg, active_path_end, "#6BAADA", viewport);
 
         if (engine.cur_review_move && engine.cur_review_move.id !== active_path_end.id) {
-            this.move_tree_hilightNode(ctx, engine.cur_review_move, "#6BDA6B", viewport);
+            this.move_tree_hilightNode(svg, engine.cur_review_move, "#6BDA6B", viewport);
         }
 
-        ctx.save();
-        ctx.lineWidth = 1.0;
-        ctx.strokeStyle = this.theme_line_color;
-        this.move_tree_recursiveDrawPath(ctx, this.engine.move_tree, viewport);
-        ctx.restore();
+        this.move_tree_recursiveDrawPath(svg, this.engine.move_tree, viewport);
 
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        const text_size = 10;
-        ctx.font = `bold ${text_size}px Verdana,Arial,sans-serif`;
-        ctx.textBaseline = "middle";
         this.move_tree_drawRecursive(
-            ctx,
+            svg,
             this.engine.move_tree,
             MoveTree.active_path_number,
             viewport,
         );
-        ctx.restore();
     }
-    public move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void {
+    public move_tree_bindEvents(svg: SVGElement): void {
         const handler = (event: TouchEvent | MouseEvent) => {
             try {
                 if (!this.move_tree_container) {
@@ -3468,7 +3451,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
                 const ox = this.move_tree_container.scrollLeft;
                 const oy = this.move_tree_container.scrollTop;
-                const pos = getRelativeEventPosition(event);
+                const pos = getRelativeEventPosition(event, this.move_tree_container);
                 pos.x += ox;
                 pos.y += oy;
                 const i = Math.floor(pos.x / MoveTree.stone_square_size);
@@ -3489,7 +3472,7 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                         // nasty looking things to do with Touch etc, so using it here
                         // gets around that kind of thing, even though in theory it
                         // might be nicer to sent the client absolute coords, maybe.
-                        const rpos = getRelativeEventPosition(event);
+                        const rpos = getRelativeEventPosition(event, this.move_tree_container);
                         this.emit("played-by-click", {
                             player_id: this.engine.cur_move.played_by,
                             x: rpos.x,
@@ -3502,46 +3485,39 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             }
         };
 
-        canvas.addEventListener("touchstart", handler);
-        canvas.addEventListener("mousedown", handler);
+        svg.addEventListener("touchstart", handler);
+        svg.addEventListener("mousedown", handler);
 
         this.on("destroy", () => {
-            canvas.removeEventListener("touchstart", handler);
-            canvas.removeEventListener("mousedown", handler);
+            svg.removeEventListener("touchstart", handler);
+            svg.removeEventListener("mousedown", handler);
         });
     }
 
-    protected computeThemeStoneRadius(): number {
-        // Scale proportionally in general
-        let r = this.square_size * 0.488;
-
-        // Prevent pixel sharing in low-res
-        if (this.square_size % 2 === 0) {
-            r = Math.min(r, (this.square_size - 1) / 2);
-        }
-
-        return Math.max(1, r);
-    }
-
     move_tree_drawStone(
-        ctx: CanvasRenderingContext2D,
+        svg: SVGElement,
         node: MoveTree,
         active_path_number: number,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         const stone_idx = node.move_number * 31;
         const cx = node.layout_cx - viewport.offset_x;
         const cy = node.layout_cy - viewport.offset_y;
         const color = node.player;
         const on_path = node.active_path_number === active_path_number;
+        const r = MoveTree.stone_radius;
 
+        const cell = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        svg.appendChild(cell);
         if (!on_path) {
-            ctx.save();
-            ctx.globalAlpha = 0.4;
+            cell.setAttribute("class", "move-tree-stone");
+            cell.setAttribute("fill-opacity", "0.6");
+            cell.setAttribute("stroke-opacity", "0.6");
+            cell.setAttribute("opacity", "0.6");
         }
 
-        const theme_white_stones = __theme_cache.white[this.themes.white][MoveTree.stone_radius];
-        const theme_black_stones = __theme_cache.black[this.themes.black][MoveTree.stone_radius];
+        const theme_white_stones = __theme_cache.white[this.themes.white][r];
+        const theme_black_stones = __theme_cache.black[this.themes.black][r];
 
         if (!theme_white_stones || !theme_black_stones) {
             throw new Error(
@@ -3551,10 +3527,10 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         if (color === 1) {
             const stone = theme_black_stones[stone_idx % theme_black_stones.length];
-            this.theme_black.placeBlackStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
+            this.theme_black.placeBlackStoneSVG(cell, undefined, stone, cx, cy, r);
         } else if (color === 2) {
             const stone = theme_white_stones[stone_idx % theme_white_stones.length];
-            this.theme_white.placeWhiteStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
+            this.theme_white.placeWhiteStoneSVG(cell, undefined, stone, cx, cy, r);
         } else {
             return;
         }
@@ -3586,55 +3562,52 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             delete node.label_metrics;
         }
 
-        ctx.fillStyle = text_color;
-        //ctx.strokeStyle=text_outline_color;
-        if (!node.label_metrics) {
-            node.label_metrics = ctx.measureText(node.label);
-        }
-        const metrics = node.label_metrics;
-        const xx = cx - metrics.width / 2;
-        const yy =
-            cy +
-            (/WebKit|Trident/.test(navigator.userAgent)
-                ? MoveTree.stone_radius * -0.01
-                : 1); /* middle centering is different on firefox */
-        //ctx.strokeText(node.label, xx, yy);
-        ctx.fillText(node.label, xx, yy);
+        const font_size = 10;
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", cx.toFixed(0));
+        text.setAttribute("y", (cy + font_size / 8).toFixed(1));
+        text.setAttribute("width", MoveTree.stone_square_size.toFixed(1));
+        text.setAttribute("height", MoveTree.stone_square_size.toFixed(1));
+        text.setAttribute("font-size", `${font_size}px`);
+        text.setAttribute("font-weight", "bold");
+        text.setAttribute("alignment-baseline", "middle");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("fill", text_color);
+        text.textContent = node.label;
 
-        if (!on_path) {
-            ctx.restore();
-        }
+        cell.appendChild(text);
 
-        let ring_color = null;
+        const ring_color = node.text
+            ? "#3333ff"
+            : node.correct_answer
+              ? "#33ff33"
+              : node.wrong_answer
+                ? "#ff3333"
+                : null;
 
-        if (node.text) {
-            ring_color = "#3333ff";
-        }
-        if (node.correct_answer) {
-            ring_color = "#33ff33";
-        }
-        if (node.wrong_answer) {
-            ring_color = "#ff3333";
-        }
         if (ring_color) {
-            ctx.beginPath();
-            ctx.strokeStyle = ring_color;
-            ctx.lineWidth = 2.0;
-            ctx.arc(cx, cy, MoveTree.stone_radius, 0, 2 * Math.PI, true);
-            ctx.stroke();
+            const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            ring.setAttribute("cx", cx.toFixed(0));
+            ring.setAttribute("cy", cy.toFixed(1));
+            ring.setAttribute("r", r.toFixed(0));
+            ring.setAttribute("fill", "none");
+            ring.setAttribute("stroke", ring_color);
+            ring.setAttribute("stroke-width", "2");
+            cell.appendChild(ring);
         }
     }
     move_tree_drawRecursive(
-        ctx: CanvasRenderingContext2D,
+        svg: SVGElement,
         node: MoveTree,
         active_path_number: number,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         if (node.trunk_next) {
-            this.move_tree_drawRecursive(ctx, node.trunk_next, active_path_number, viewport);
+            this.move_tree_drawRecursive(svg, node.trunk_next, active_path_number, viewport);
         }
         for (let i = 0; i < node.branches.length; ++i) {
-            this.move_tree_drawRecursive(ctx, node.branches[i], active_path_number, viewport);
+            this.move_tree_drawRecursive(svg, node.branches[i], active_path_number, viewport);
         }
 
         if (
@@ -3644,30 +3617,29 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 node.layout_cy >= viewport.miny &&
                 node.layout_cy <= viewport.maxy)
         ) {
-            this.move_tree_drawStone(ctx, node, active_path_number, viewport);
+            this.move_tree_drawStone(svg, node, active_path_number, viewport);
         }
     }
     move_tree_hilightNode(
-        ctx: CanvasRenderingContext2D,
+        svg: SVGElement,
         node: MoveTree,
         color: string,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
-        ctx.beginPath();
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         const sx =
             Math.round(node.layout_cx - MoveTree.stone_square_size * 0.5) - viewport.offset_x;
         const sy =
             Math.round(node.layout_cy - MoveTree.stone_square_size * 0.5) - viewport.offset_y;
-        ctx.rect(sx, sy, MoveTree.stone_square_size, MoveTree.stone_square_size);
-        ctx.fillStyle = color;
-        ctx.fill();
+        rect.setAttribute("x", sx.toFixed(0));
+        rect.setAttribute("y", sy.toFixed(0));
+        rect.setAttribute("width", MoveTree.stone_square_size.toFixed(0));
+        rect.setAttribute("height", MoveTree.stone_square_size.toFixed(0));
+        rect.setAttribute("fill", color);
+        svg.appendChild(rect);
     }
 
-    move_tree_drawPath(
-        ctx: CanvasRenderingContext2D,
-        node: MoveTree,
-        viewport: ViewPortInterface,
-    ): void {
+    move_tree_drawPath(svg: SVGElement, node: MoveTree, viewport: MoveTreeViewPortInterface): void {
         if (node.parent) {
             if (node.parent.layout_cx < viewport.minx && node.layout_cx < viewport.minx) {
                 return;
@@ -3682,25 +3654,29 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
                 return;
             }
 
-            ctx.beginPath();
-            ctx.strokeStyle = node.trunk ? "#000000" : MoveTree.line_colors[node.line_color];
+            const curve = document.createElementNS("http://www.w3.org/2000/svg", "path");
             const ox = viewport.offset_x;
             const oy = viewport.offset_y;
-            ctx.moveTo(node.parent.layout_cx - ox, node.parent.layout_cy - oy);
-            ctx.quadraticCurveTo(
-                node.layout_cx - MoveTree.stone_square_size * 0.5 - ox,
-                node.layout_cy - oy,
-                node.layout_cx - ox,
-                node.layout_cy - oy,
+            curve.setAttribute(
+                "d",
+                `M ${node.parent.layout_cx - ox} ${node.parent.layout_cy - oy} Q ${
+                    node.layout_cx - MoveTree.stone_square_size * 0.5 - ox
+                } ${node.layout_cy - oy} ${node.layout_cx - ox} ${node.layout_cy - oy}`,
             );
-            ctx.stroke();
+            curve.setAttribute("fill", "none");
+            curve.setAttribute(
+                "stroke",
+                node.trunk ? "#000000" : MoveTree.line_colors[node.line_color],
+            );
+            curve.setAttribute("stroke-width", "1");
+            svg.appendChild(curve);
         }
     }
     move_tree_drawIsoBranchTo(
-        ctx: CanvasRenderingContext2D,
+        svg: SVGElement,
         from_node: MoveTree,
         to_node: MoveTree,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         let A: MoveTree = from_node;
         let B: MoveTree = to_node;
@@ -3719,13 +3695,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             return;
         }
 
-        /*
-        let isStrong = (a, b):boolean => {
-            return a.trunk_next === null && a.branches.length === 0 && (b.trunk_next != null || b.branches.length !== 0);
-        };
-        */
-
-        // isStrong(B, A)) {
         if (
             B.trunk_next === null &&
             B.branches.length === 0 &&
@@ -3736,7 +3705,6 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
             B = t;
         }
 
-        //isStrong(A, B);
         const strong =
             A.trunk_next == null &&
             A.branches.length === 0 &&
@@ -3744,85 +3712,39 @@ export class GobanCanvas extends GobanCore implements GobanCanvasInterface {
 
         const ox = viewport.offset_x;
         const oy = viewport.offset_y;
-        ctx.beginPath();
-        ctx.strokeStyle = MoveTree.isobranch_colors[strong ? "strong" : "weak"];
-        const cur_line_width = ctx.lineWidth;
-        ctx.lineWidth = 2;
-        ctx.moveTo(B.layout_cx - ox, B.layout_cy - oy);
+
+        const curve = document.createElementNS("http://www.w3.org/2000/svg", "path");
         const my = strong ? B.layout_cy : (A.layout_cy + B.layout_cy) / 2;
         const mx = (A.layout_cx + B.layout_cx) / 2 + MoveTree.stone_square_size * 0.5;
-        ctx.quadraticCurveTo(mx - ox, my - oy, A.layout_cx - ox, A.layout_cy - oy);
-        ctx.stroke();
-        ctx.lineWidth = cur_line_width;
+        curve.setAttribute(
+            "d",
+            `M ${B.layout_cx - ox} ${B.layout_cy - oy} Q ${mx - ox} ${my - oy} ${
+                A.layout_cx - ox
+            } ${A.layout_cy - oy}`,
+        );
+        curve.setAttribute("fill", "none");
+        curve.setAttribute("stroke", MoveTree.isobranch_colors[strong ? "strong" : "weak"]);
+        curve.setAttribute("stroke-width", "2");
+        svg.appendChild(curve);
     }
     move_tree_recursiveDrawPath(
-        ctx: CanvasRenderingContext2D,
+        svg: SVGElement,
         node: MoveTree,
-        viewport: ViewPortInterface,
+        viewport: MoveTreeViewPortInterface,
     ): void {
         if (node.trunk_next) {
-            this.move_tree_recursiveDrawPath(ctx, node.trunk_next, viewport);
+            this.move_tree_recursiveDrawPath(svg, node.trunk_next, viewport);
         }
         for (let i = 0; i < node.branches.length; ++i) {
-            this.move_tree_recursiveDrawPath(ctx, node.branches[i], viewport);
+            this.move_tree_recursiveDrawPath(svg, node.branches[i], viewport);
         }
 
         if (node.isobranches) {
             for (let i = 0; i < node.isobranches.length; ++i) {
-                this.move_tree_drawIsoBranchTo(ctx, node, node.isobranches[i], viewport);
+                this.move_tree_drawIsoBranchTo(svg, node, node.isobranches[i], viewport);
             }
         }
 
-        /* only consider x, since lines can extend awhile on the y */
-        //if (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx) {
-        this.move_tree_drawPath(ctx, node, viewport);
-        //}
+        this.move_tree_drawPath(svg, node, viewport);
     }
-}
-
-const fitTextCache: { [key: string]: [number, string, TextMetrics] } = {};
-
-// fontPattern MUST have a FONT_SIZE string in it that will be replaced
-// ctx.font will be set to the appropriate size when this returns.
-// @returns font_size, font_string, metrics
-function fitText(
-    ctx: CanvasRenderingContext2D,
-    text: string,
-    fontPattern: string,
-    startingFontSize: number,
-    width: number,
-): [number, string, TextMetrics] {
-    const MIN_FONT_SIZE = 4;
-
-    if (fontPattern.indexOf("FONT_SIZE") < 0) {
-        throw new Error(
-            `fitText expects FONT_SIZE to be present in the fontPattern, was ${fontPattern}`,
-        );
-    }
-
-    const key = `${width} ${fontPattern} ${startingFontSize} ${text}`;
-    if (key in fitTextCache) {
-        const cached = fitTextCache[key];
-        ctx.font = cached[1];
-        return cached;
-    }
-
-    let font_size = startingFontSize;
-
-    do {
-        const font = fontPattern.replace("FONT_SIZE", font_size.toString());
-        ctx.font = font;
-        const metrics = ctx.measureText(text);
-        if (font_size <= MIN_FONT_SIZE || metrics.width < width) {
-            fitTextCache[key] = [font_size, font, metrics];
-            return fitTextCache[key];
-        }
-
-        const new_font_size = Math.floor((font_size * width) / metrics.width);
-        if (new_font_size >= font_size) {
-            font_size = font_size - 1;
-        } else {
-            font_size = new_font_size;
-        }
-    } while (true);
 }

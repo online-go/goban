@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import { AdHocPackedMove } from "engine/AdHocFormat";
-import { JGOFNumericPlayerColor } from "engine/JGOF";
+import { AdHocPackedMove, JGOFNumericPlayerColor } from "engine/formats";
 
 type Coordinate = { x: number; y: number };
 

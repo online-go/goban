@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import type { JGOFMove, JGOFPlayerClock, JGOFSealingIntersection } from "../JGOF";
-import type { ReviewMessage } from "../GoEngine";
+import type { JGOFMove, JGOFPlayerClock, JGOFSealingIntersection } from "../formats/JGOF";
+import type { ReviewMessage } from "../GobanEngine";
 import type { ConditionalMoveResponse } from "../GoConditionalMove";
 
 /** Messages that clients send, regardless of target server */

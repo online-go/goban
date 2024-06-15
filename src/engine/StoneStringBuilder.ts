@@ -17,7 +17,7 @@
 import * as GoMath from "./GoMath";
 import { StoneString } from "./StoneString";
 import { BoardState } from "./BoardState";
-import { JGOFNumericPlayerColor } from "./JGOF";
+import { JGOFNumericPlayerColor } from "./formats/JGOF";
 
 export class StoneStringBuilder {
     private state: BoardState;

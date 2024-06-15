@@ -4,9 +4,9 @@
 
 (global as any).CLIENT = true;
 
-import { GobanSocket, closeErrorCodeToString } from "../GobanSocket";
+import { GobanSocket, closeErrorCodeToString } from "../engine";
 import WS from "jest-websocket-mock";
-import * as protocol from "../protocol";
+import * as protocol from "../engine/protocol";
 
 let last_port = 48880;
 

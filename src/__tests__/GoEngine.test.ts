@@ -1,11 +1,13 @@
 //cspell: disable
 
-import { GoEngine } from "../GoEngine";
+import {
+    GoEngine,
+    GobanMoveError,
+    JGOFIntersection,
+    makeMatrix,
+    matricesAreEqual,
+} from "../engine";
 import { movesFromBoardState } from "../test_utils";
-import { GobanMoveError } from "../GobanError";
-import { JGOFIntersection } from "../JGOF";
-import { makeMatrix } from "../GoMath";
-import { matricesAreEqual } from "../util";
 
 test("boardMatricesAreTheSame", () => {
     const a = [

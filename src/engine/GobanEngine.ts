@@ -21,7 +21,7 @@ import { Move, encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { RawStoneString } from "./StoneString";
 import { ScoreEstimator } from "./ScoreEstimator";
-import { GobanCore, Events } from "../goban/GobanCore";
+import { Goban, GobanEvents } from "../Goban";
 import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
@@ -29,8 +29,8 @@ import {
     JGOFPlayerSummary,
     JGOFIntersection,
     JGOFSealingIntersection,
-} from "./JGOF";
-import { AdHocPackedMove } from "./AdHocFormat";
+} from "./formats/JGOF";
+import { AdHocPackedMove } from "./formats/AdHocFormat";
 import { _ } from "./translate";
 import { EventEmitter } from "eventemitter3";
 import { GameClock, StallingScoreEstimate } from "./protocol";
@@ -468,11 +468,7 @@ export class GoEngine extends BoardState {
     public score_territory_in_seki: boolean = false;
     public territory_included_in_sgf: boolean = false;
 
-    constructor(
-        config: GoEngineConfig,
-        goban_callback?: GobanCore,
-        dontStoreBoardHistory?: boolean,
-    ) {
+    constructor(config: GoEngineConfig, goban_callback?: Goban, dontStoreBoardHistory?: boolean) {
         super(
             GoEngine.fillDefaults(
                 GoEngine.migrateConfig(
@@ -2477,8 +2473,11 @@ export class GoEngine extends BoardState {
         return ret;
     }
 
-    public parentEventEmitter?: EventEmitter<Events>;
-    emit<K extends keyof Events>(event: K, ...args: EventEmitter.EventArgs<Events, K>): boolean {
+    public parentEventEmitter?: EventEmitter<GobanEvents>;
+    emit<K extends keyof GobanEvents>(
+        event: K,
+        ...args: EventEmitter.EventArgs<GobanEvents, K>
+    ): boolean {
         let ret: boolean = super.emit(event, ...args);
         if (this.parentEventEmitter) {
             ret = this.parentEventEmitter.emit(event, ...args) || ret;

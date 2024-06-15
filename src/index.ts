@@ -15,22 +15,22 @@
  */
 
 export * from "engine";
-export * from "../engine/callbacks";
-export * from "./canvas_utils";
-export * from "./GobanCanvas";
-export * from "./GobanCore";
-export * from "./GobanSVG";
-export * from "./GoTheme";
-export * from "./GoThemes";
-export * from "../TestGoban";
+export * from "./renderer/callbacks";
+export * from "./renderer/canvas_utils";
+export * from "./renderer/GobanCanvas";
+export * from "./Goban";
+export * from "./renderer/GobanSVG";
+export * from "./renderer/GoTheme";
+export * from "./renderer/GoThemes";
+export * from "./renderer/TestGoban";
 
 export * as protocol from "engine/protocol";
-export { placeRenderedImageStone, preRenderImageStone } from "./themes/image_stones";
+export { placeRenderedImageStone, preRenderImageStone } from "./renderer/themes/image_stones";
 //export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 //export { GobanSVG as Goban, GobanSVGConfig as GobanConfig } from "./GobanSVG";
 
-import { GobanCanvas, GobanCanvasConfig } from "./GobanCanvas";
-import { GobanSVG, GobanSVGConfig } from "./GobanSVG";
+import { GobanCanvas, GobanCanvasConfig } from "./renderer/GobanCanvas";
+import { GobanSVG, GobanSVGConfig } from "./renderer/GobanSVG";
 
 export type GobanRenderer = GobanCanvas | GobanSVG;
 export type GobanRendererConfig = GobanCanvasConfig | GobanSVGConfig;

@@ -66,7 +66,7 @@ module.exports = (env, argv) => {
         Object.assign({}, common, {
             target: "web",
             entry: {
-                goban: "./src/goban/index.ts",
+                goban: "./src/index.ts",
                 //engine: "./src/engine/index.ts",
             },
 
@@ -132,59 +132,59 @@ module.exports = (env, argv) => {
         }),
     ];
 
-    if (production) {
-        ret.push(
-            // node
-            Object.assign({}, common, {
-                target: "node",
+    //if (production) {
+    ret.push(
+        // node
+        Object.assign({}, common, {
+            target: "node",
 
-                entry: {
-                    "goban-engine": "./src/engine/index.ts",
-                },
+            entry: {
+                "goban-engine": "./src/engine/index.ts",
+            },
 
-                module: {
-                    rules: [
-                        // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
-                        {
-                            test: /\.tsx?$/,
-                            loader: "ts-loader",
-                            exclude: /node_modules/,
-                            options: {
-                                configFile: "tsconfig.node.json",
-                            },
+            module: {
+                rules: [
+                    // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
+                    {
+                        test: /\.tsx?$/,
+                        loader: "ts-loader",
+                        exclude: /node_modules/,
+                        options: {
+                            configFile: "tsconfig.node.json",
                         },
-                    ],
-                },
-
-                output: {
-                    path: __dirname + "/node",
-                    filename: "[name].js",
-                    globalObject: "this",
-                    library: {
-                        name: "goban",
-                        type: "umd",
                     },
-                },
+                ],
+            },
 
-                plugins: plugins.concat([
-                    new webpack.DefinePlugin({
-                        CLIENT: false,
-                        SERVER: true,
+            output: {
+                path: __dirname + "/node",
+                filename: "[name].js",
+                globalObject: "this",
+                library: {
+                    name: "goban",
+                    type: "umd",
+                },
+            },
+
+            plugins: plugins.concat([
+                new webpack.DefinePlugin({
+                    CLIENT: false,
+                    SERVER: true,
+                }),
+            ]),
+
+            optimization: {
+                minimizer: [
+                    new TerserPlugin({
+                        terserOptions: {
+                            safari10: true,
+                        },
                     }),
-                ]),
-
-                optimization: {
-                    minimizer: [
-                        new TerserPlugin({
-                            terserOptions: {
-                                safari10: true,
-                            },
-                        }),
-                    ],
-                },
-            }),
-        );
-    }
+                ],
+            },
+        }),
+    );
+    //}
 
     return ret;
 };

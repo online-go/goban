@@ -20,10 +20,10 @@ import type {
     AutomatchPreferences,
     RemoteStorageReplication,
 } from "./ClientToServer";
-import type { JGOFTimeControl } from "../JGOF";
+import type { JGOFTimeControl } from "../formats/JGOF";
 import type { ConditionalMoveResponse } from "../GoConditionalMove";
-import type { GoEngineConfig, Score, ReviewMessage } from "../GoEngine";
-import type { AdHocPackedMove } from "../AdHocFormat";
+import type { GoEngineConfig, Score, ReviewMessage } from "../GobanEngine";
+import type { AdHocPackedMove } from "../formats/AdHocFormat";
 
 /* NOTE: The reason for the :id non template literal key variants of our
  *       messages is to allow typedoc generate documentation for them,

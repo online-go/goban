@@ -32,5 +32,5 @@
         "sourceMap": true,
         "jsx": "react"
     },
-    "files": ["./src/goban/index.ts", "src/engine/index.ts", "./test/test_autoscore.ts"]
+    "files": ["src/index.ts", "src/engine/index.ts", "./test/test_autoscore.ts"]
 }

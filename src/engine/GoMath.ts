@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { JGOFIntersection, JGOFMove, JGOFNumericPlayerColor } from "./JGOF";
-import { AdHocPackedMove } from "./AdHocFormat";
+import { JGOFIntersection, JGOFMove, JGOFNumericPlayerColor } from "./formats/JGOF";
+import { AdHocPackedMove } from "./formats/AdHocFormat";
 
 export type Move = JGOFMove;
 export type Intersection = JGOFIntersection;

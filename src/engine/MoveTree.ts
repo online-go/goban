@@ -15,11 +15,11 @@
  */
 
 import * as GoMath from "./GoMath";
-import { GoEngine } from "./GoEngine";
+import { GoEngine } from "./GobanEngine";
 import { BoardState } from "./BoardState";
 import { encodeMove } from "./GoMath";
-import { AdHocPackedMove } from "./AdHocFormat";
-import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./JGOF";
+import { AdHocPackedMove } from "./formats/AdHocFormat";
+import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./formats/JGOF";
 import { escapeSGFText, newlines_to_spaces } from "./util";
 
 export interface MarkInterface {

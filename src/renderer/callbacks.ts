@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import type { GobanCore, GobanSelectedThemes } from "../goban/GobanCore";
+import type { Goban } from "../Goban";
+import { GobanSelectedThemes } from "./GobanRendererBase";
 
 export interface GobanCallbacks {
     defaultConfig?: () => any;
     getCoordinateDisplaySystem?: () => "A1" | "1-1";
-    isAnalysisDisabled?: (goban: GobanCore, perGameSettingAppliesToNonPlayers: boolean) => boolean;
+    isAnalysisDisabled?: (goban: Goban, perGameSettingAppliesToNonPlayers: boolean) => boolean;
 
     getClockDrift?: () => number;
     getNetworkLatency?: () => number;
@@ -72,7 +73,7 @@ export const callbacks: GobanCallbacks = {
  * Set's callback functions to be called in various situations. You can set any
  * or all of the callbacks, only the provided callbacks will be updated.
  */
-export function setCallbacks(newCallbacks: GobanCallbacks): void {
+export function setGobanCallbacks(newCallbacks: GobanCallbacks): void {
     for (const key in newCallbacks) {
         if (newCallbacks[key as keyof GobanCallbacks] !== undefined) {
             callbacks[key as keyof GobanCallbacks] = newCallbacks[

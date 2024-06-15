@@ -26,7 +26,7 @@ import {
     PuzzleConfig,
     PuzzlePlacementSetting,
     Score,
-} from "engine/GoEngine";
+} from "engine";
 import { GobanMoveError } from "engine/GobanError";
 import { Move, NumberMatrix, Intersection, encodeMove, makeMatrix } from "engine/GoMath";
 import * as GoMath from "engine/GoMath";
@@ -51,9 +51,8 @@ import {
     JGOFNumericPlayerColor,
     JGOFPauseState,
     JGOFPlayerSummary,
-    JGOFSealingIntersection,
-} from "engine/JGOF";
-import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "engine/AdHocFormat";
+} from "engine/formats/JGOF";
+import { AdHocClock, AdHocPlayerClock, AdHocPauseControl } from "engine/formats/AdHocFormat";
 import { MessageID } from "engine/messages";
 import { GobanSocket, GobanSocketEvents } from "engine/GobanSocket";
 import {
@@ -62,8 +61,7 @@ import {
     GameChatLine,
     StallingScoreEstimate,
 } from "engine/protocol";
-import { EventEmitter } from "eventemitter3";
-import { callbacks } from "../engine/callbacks";
+import { callbacks } from "./callbacks";
 import { StoneStringBuilder } from "engine/StoneStringBuilder";
 import { getRelativeEventPosition } from "./canvas_utils";
 
@@ -93,8 +91,6 @@ export type LabelPosition =
     | "top-right"
     | "bottom-right"
     | "bottom-left";
-
-let last_goban_id = 0;
 
 interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
     timed_out: boolean;
@@ -138,7 +134,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
 
     interactive?: boolean;
     mode?: GobanModes;
-    square_size?: number | ((goban: GobanCore) => number) | "auto";
+    square_size?: number | ((goban: Goban) => number) | "auto";
 
     getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
 
@@ -255,80 +251,6 @@ export interface StateUpdateEvents {
     stalling_score_estimate: ServerToClient["game/:id/stalling_score_estimate"];
 }
 
-export interface Events extends StateUpdateEvents {
-    "destroy": () => void;
-    "update": () => void;
-    "chat-reset": () => void;
-    "error": (d: any) => void;
-    "gamedata": (d: any) => void;
-    "chat": (d: any) => void;
-    "engine.updated": (engine: GoEngine) => void;
-    "load": (config: GobanConfig) => void;
-    "show-message": (message: {
-        formatted: string;
-        message_id: string;
-        parameters?: { [key: string]: any };
-    }) => void;
-    "clear-message": () => void;
-    "submitting-move": (tf: boolean) => void;
-    "chat-remove": (ids: { chat_ids: Array<string> }) => void;
-    "move-made": () => void;
-    "player-update": (player: JGOFPlayerSummary) => void;
-    "played-by-click": (player: { player_id: number; x: number; y: number }) => void;
-    "review.sync-to-current-move": () => void;
-    "review.updated": () => void;
-    "review.load-start": () => void;
-    "review.load-end": () => void;
-    "puzzle-wrong-answer": () => void;
-    "puzzle-correct-answer": () => void;
-    "state_text": (state: { title: string; show_moves_made_count?: boolean }) => void;
-    "advance-to-next-board": () => void;
-    "auto-resign": (obj: { game_id: number; player_id: number; expiration: number }) => void;
-    "clear-auto-resign": (obj: { game_id: number; player_id: number }) => void;
-    "set-for-removal": { x: number; y: number; removed: boolean };
-    "captured-stones": (obj: { removed_stones: Array<JGOFIntersection> }) => void;
-    "stone-removal.accepted": () => void;
-    "stone-removal.updated": () => void;
-    "stone-removal.needs-sealing": (positions: undefined | JGOFSealingIntersection[]) => void;
-    "conditional-moves.updated": () => void;
-    "puzzle-place": (obj: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        color: "black" | "white";
-    }) => void;
-    "clock": (clock: JGOFClockWithTransmitting | null) => void;
-    "audio-game-started": (obj: {
-        /**  Player to move */
-        player_id: number;
-    }) => void;
-    "audio-game-ended": (winner: "black" | "white" | "tie") => void;
-    "audio-pass": () => void;
-    "audio-stone": (obj: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        color: "black" | "white";
-    }) => void;
-    "audio-other-player-disconnected": (obj: { player_id: number }) => void;
-    "audio-other-player-reconnected": (obj: { player_id: number }) => void;
-    "audio-clock": (event: AudioClockEvent) => void;
-    "audio-disconnected": () => void; // your connection has been lost to the server
-    "audio-reconnected": () => void; // your connection has been reestablished
-    "audio-capture-stones": (obj: {
-        count: number /* number of stones we just captured */;
-        already_captured: number /* number of stones that have already been captured by this player */;
-    }) => void;
-    "audio-game-paused": () => void;
-    "audio-game-resumed": () => void;
-    "audio-enter-stone-removal": () => void;
-    "audio-resume-game-from-stone-removal": () => void;
-    "audio-undo-requested": () => void;
-    "audio-undo-granted": () => void;
-}
-
 export interface GobanMetrics {
     width: number;
     height: number;
@@ -336,7 +258,16 @@ export interface GobanMetrics {
     offset: number;
 }
 
-export abstract class GobanCore extends EventEmitter<Events> {
+import { Goban } from "../Goban";
+
+/**
+ * Goban serves as a base class for our renderers as well as a namespace for various
+ * classes, types, and enums.
+ *
+ * You can't create an instance of a Goban directly, you have to create an instance of
+ * one of the renderers, such as GobanSVG.
+ */
+export abstract class GobanRendererBase extends Goban {
     protected parent!: HTMLElement;
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
@@ -504,7 +435,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
     protected colored_circles?: Array<Array<ColoredCircle>>;
     protected game_type: string;
     protected getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
-    protected goban_id: number;
     protected highlight_movetree_moves: boolean;
     protected interactive: boolean;
     protected isInPushedAnalysis: () => boolean;
@@ -523,7 +453,7 @@ export abstract class GobanCore extends EventEmitter<Events> {
     protected no_display: boolean;
     protected onError?: (error: Error) => void;
     protected on_game_screen: boolean;
-    protected original_square_size: number | ((goban: GobanCore) => number) | "auto";
+    protected original_square_size: number | ((goban: Goban) => number) | "auto";
     protected player_id: number;
     protected puzzle_autoplace_delay: number;
     protected restrict_moves_to_movetree: boolean;
@@ -576,8 +506,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
                 this.last_emitted_clock = clock;
             }
         });
-
-        this.goban_id = ++last_goban_id;
 
         /* Apply defaults */
         const C: any = {};
@@ -2091,6 +2019,10 @@ export abstract class GobanCore extends EventEmitter<Events> {
         }
     }
 
+    public set(x: number, y: number, player: JGOFNumericPlayerColor): void {
+        this.markDirty();
+    }
+
     protected updateMoveTree(): void {
         this.move_tree_redraw();
     }
@@ -2325,9 +2257,6 @@ export abstract class GobanCore extends EventEmitter<Events> {
         this.emit("load", config);
 
         return this.engine;
-    }
-    public set(x: number, y: number, player: JGOFNumericPlayerColor): void {
-        this.markDirty();
     }
     public setForRemoval(
         x: number,

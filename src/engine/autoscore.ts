@@ -22,9 +22,9 @@
  */
 
 import { StoneStringBuilder } from "./StoneStringBuilder";
-import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./JGOF";
+import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./formats/JGOF";
 import { char2num, makeMatrix, num2char, pretty_coor_num2ch } from "./GoMath";
-import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GoEngine";
+import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GobanEngine";
 import { BoardState } from "./BoardState";
 
 interface AutoscoreResults {

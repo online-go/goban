@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { GobanMoveErrorMessageId } from "./GobanError";
+import { GobanMoveErrorMessageId } from "../GobanError";
 
 /**
- * JSON Go Format
+ * JGOF (JSON Go Format) is an attempt at normalizing the AdHocFormat.
  */
 
 export interface JGOF {
