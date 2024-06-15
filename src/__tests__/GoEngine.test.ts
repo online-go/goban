@@ -7,7 +7,7 @@ import {
     makeMatrix,
     matricesAreEqual,
 } from "../engine";
-import { movesFromBoardState } from "../test_utils";
+import { movesFromBoardState } from "./test_utils";
 
 test("boardMatricesAreTheSame", () => {
     const a = [

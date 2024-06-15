@@ -33,5 +33,6 @@
         "sourceMap": true,
         "jsx": "react"
     },
-    "files": ["src/index.ts", "src/engine/index.ts", "./test/test_autoscore.ts"]
+    "files": ["src/index.ts", "src/engine/index.ts", "./test/test_autoscore.ts"],
+    "include": ["src/__tests__/*.ts"]
 }

@@ -1,17 +1,8 @@
-/**
- * @jest-environment jsdom
- */
-
-// ^^ jsdom environment is because getLocation() returns window.location.pathname
-// Same about CLIENT.
-//
-// TODO: move this into a setup-jest.ts file
-
 // cspell: disable
 
 (global as any).CLIENT = true;
 
-import { TestGoban } from "../Goban/TestGoban";
+import { TestGoban } from "./TestGoban";
 import { MoveTree } from "../engine";
 
 type SGFTestcase = {

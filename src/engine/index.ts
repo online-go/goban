@@ -28,7 +28,7 @@ export * from "./ownership_estimators";
 export * from "./ScoreEstimator";
 export * from "./StoneString";
 export * from "./StoneStringBuilder";
-export * from "../test_utils";
+export * from "../__tests__/test_utils";
 export * from "./formats";
 export * from "./util";
 

@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 // cspell: disable
 
 (global as any).CLIENT = true;

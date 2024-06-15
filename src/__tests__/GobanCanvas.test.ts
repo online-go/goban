@@ -1,14 +1,10 @@
-/**
- * @jest-environment jsdom
- */
-
 // cspell: disable
 
 (global as any).CLIENT = true;
 
 import { GobanCanvas, CanvasRendererGobanConfig } from "../Goban/CanvasRenderer";
 import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../Goban/InteractiveBase";
-import { GobanSocket, GoMath } from "../engine";
+import { GobanSocket, GoMath } from "engine";
 import { GobanBase } from "../GobanBase";
 import WS from "jest-websocket-mock";
 

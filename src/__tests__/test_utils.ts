@@ -68,3 +68,21 @@ export function movesFromBoardState(board: JGOFNumericPlayerColor[][]): AdHocPac
 
     return ret;
 }
+
+test("movesFromBoardState", () => {
+    const board = [
+        [1, 2, 0, 0],
+        [2, 1, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+    ];
+
+    const moves = movesFromBoardState(board);
+
+    expect(moves).toEqual([
+        [1, 1],
+        [0, 1],
+        [0, 0],
+        [1, 0],
+    ]);
+});

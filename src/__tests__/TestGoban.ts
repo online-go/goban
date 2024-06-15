@@ -25,10 +25,10 @@
 //      `current_title` etc. A way for testers to peer into the internals
 
 import { GobanConfig } from "../GobanBase";
-import { GoEngine } from "engine/GobanEngine";
-import { MessageID } from "engine/messages";
-import { MoveTreePenMarks } from "engine/MoveTree";
-import { Goban, GobanSelectedThemes } from "./Goban";
+import { GoEngine } from "../engine/GobanEngine";
+import { MessageID } from "../engine/messages";
+import { MoveTreePenMarks } from "../engine/MoveTree";
+import { Goban, GobanSelectedThemes } from "../Goban/Goban";
 
 export class TestGoban extends Goban {
     public engine: GoEngine;
@@ -58,3 +58,7 @@ export class TestGoban extends Goban {
     protected enableDrawing(): void {}
     protected disableDrawing(): void {}
 }
+
+test("TestGoban", () => {
+    new TestGoban({});
+});

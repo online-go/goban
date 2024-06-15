@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 (global as any).CLIENT = true;
 
 import { GobanSocket, closeErrorCodeToString } from "../engine";
