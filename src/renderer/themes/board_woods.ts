@@ -28,34 +28,34 @@ function getCDNReleaseBase() {
 
 export default function (GoThemes: GoThemesInterface) {
     class Kaya extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 10;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Kaya";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#000000";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#888888";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#000000";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#888888";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#444444";
         }
     }
@@ -64,34 +64,34 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Kaya"] = Kaya;
 
     class RedOak extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 20;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Red Oak";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/oak.jpg')",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#000000";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#888888";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#000000";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#888888";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#000000";
         }
     }
@@ -100,34 +100,34 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Red Oak"] = RedOak;
 
     class Persimmon extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 30;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Persimmon";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/persimmon.jpg')",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#000000";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#888888";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#000000";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#888888";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#000000";
         }
     }
@@ -136,34 +136,34 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Persimmon"] = Persimmon;
 
     class BlackWalnut extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 40;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Black Walnut";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/black_walnut.jpg')",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#000000";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#4A2F24";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#000000";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#4A2F24";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#000000";
         }
     }
@@ -172,34 +172,34 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Black Walnut"] = BlackWalnut;
 
     class Granite extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 40;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Granite";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/granite.jpg')",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#cccccc";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#888888";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#cccccc";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#888888";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#ffffff";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#cccccc";
         }
     }
@@ -208,35 +208,35 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Granite"] = Granite;
 
     class Anime extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 10;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Anime";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/anime_board.svg')",
                 "background-size": "cover",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#000000";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#888888";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#000000";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#888888";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#444444";
         }
     }
@@ -245,34 +245,34 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Anime"] = Anime;
 
     class BrightKaya extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 15;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Bright Kaya";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DBB25B",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#FFFFFF";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#FFFFFF";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#FFFFFF";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#999999";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#FFFFFF";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#FFFFFF";
         }
     }

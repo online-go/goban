@@ -235,7 +235,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.detachPenCanvas();
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         if (this.board && this.board.parentNode) {

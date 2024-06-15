@@ -238,7 +238,7 @@ export class GobanSVG extends Goban implements GobanSVGInterface {
         this.detachPenLayer();
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this.clearMessage();

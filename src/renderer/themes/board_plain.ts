@@ -33,34 +33,34 @@ function hexToRgba(raw: string, alpha: number = 1): string {
 
 export default function (GoThemes: GoThemesInterface) {
     class Plain extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 1;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Plain";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#000000";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return hexToRgba("#000000", 0.5);
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#000000";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return hexToRgba("#000000", 0.5);
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return hexToRgba("#000000", 0.75);
         }
     }
@@ -69,13 +69,13 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Plain"] = Plain;
 
     class Custom extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 200; //last, because this is the "customisable" one
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Custom";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": callbacks.customBoardColor
                     ? callbacks.customBoardColor()
@@ -87,28 +87,28 @@ export default function (GoThemes: GoThemesInterface) {
                 "background-size": "cover",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return hexToRgba(
                 callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.5,
             );
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return hexToRgba(
                 callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.5,
             );
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return hexToRgba(
                 callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.75,
@@ -120,34 +120,34 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["Custom"] = Custom;
 
     class Night extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 100;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Night Play";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#444444",
                 "background-image": "",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#555555";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#333333";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#555555";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#333333";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#ffffff";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#555555";
         }
     }
@@ -158,34 +158,34 @@ export default function (GoThemes: GoThemesInterface) {
     class HNG extends GoTheme {
         static C = "#00193E";
         static C2 = "#004C75";
-        sort(): number {
+        override sort(): number {
             return 105;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "HNG";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#00e7fc",
                 "background-image": "",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return HNG.C;
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#00AFBF";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return HNG.C;
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#00AFBF";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return HNG.C2;
         }
     }
@@ -195,34 +195,34 @@ export default function (GoThemes: GoThemesInterface) {
 
     class HNGNight extends GoTheme {
         static C = "#007591";
-        sort(): number {
+        override sort(): number {
             return 105;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "HNG Night";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#090C1F",
                 "background-image": "",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return HNGNight.C;
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#4481B5";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return HNGNight.C;
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#4481B5";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#ffffff";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#4481B5";
         }
     }
@@ -231,34 +231,34 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["board"]["HNG Night"] = HNGNight;
 
     class Book extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 110;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Book";
         }
-        getBackgroundCSS(): GoThemeBackgroundCSS {
+        override getBackgroundCSS(): GoThemeBackgroundCSS {
             return {
                 "background-color": "#ffffff",
                 "background-image": "",
             };
         }
-        getLineColor(): string {
+        override getLineColor(): string {
             return "#555555";
         }
-        getFadedLineColor(): string {
+        override getFadedLineColor(): string {
             return "#999999";
         }
-        getStarColor(): string {
+        override getStarColor(): string {
             return "#555555";
         }
-        getFadedStarColor(): string {
+        override getFadedStarColor(): string {
             return "#999999";
         }
-        getBlankTextColor(): string {
+        override getBlankTextColor(): string {
             return "#000000";
         }
-        getLabelTextColor(): string {
+        override getLabelTextColor(): string {
             return "#555555";
         }
     }

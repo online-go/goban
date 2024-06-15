@@ -168,10 +168,10 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     class Common extends GoTheme {
-        stoneCastsShadow(radius: number): boolean {
+        override stoneCastsShadow(radius: number): boolean {
             return stoneCastsShadow(radius * deviceCanvasScalingRatio());
         }
-        placeBlackStone(
+        override placeBlackStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D | null,
             stone: StoneType,
@@ -181,7 +181,7 @@ export default function (GoThemes: GoThemesInterface) {
         ): void {
             placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
-        placeWhiteStone(
+        override placeWhiteStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D | null,
             stone: StoneType,
@@ -194,14 +194,14 @@ export default function (GoThemes: GoThemesInterface) {
     }
 
     class Anime extends Common {
-        sort() {
+        override sort() {
             return 30;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Anime";
         }
 
-        preRenderBlack(
+        override preRenderBlack(
             radius: number,
             _seed: number,
             deferredRenderCallback: () => void,
@@ -214,7 +214,7 @@ export default function (GoThemes: GoThemesInterface) {
             //return preRenderImageStone(radius, anime_black_imagedata);
         }
 
-        preRenderWhite(
+        override preRenderWhite(
             radius: number,
             _seed: number,
             deferredRenderCallback: () => void,
@@ -227,15 +227,15 @@ export default function (GoThemes: GoThemesInterface) {
             //return preRenderImageStone(radius, anime_white_imagedata);
         }
 
-        getBlackTextColor(_color: string): string {
+        override getBlackTextColor(_color: string): string {
             return "#ffffff";
         }
 
-        getWhiteTextColor(_color: string): string {
+        override getWhiteTextColor(_color: string): string {
             return "#000000";
         }
 
-        public placeStoneShadowSVG(
+        public override placeStoneShadowSVG(
             shadow_cell: SVGGraphicsElement | undefined,
             cx: number,
             cy: number,
@@ -261,7 +261,7 @@ export default function (GoThemes: GoThemesInterface) {
             return shadow;
         }
 
-        public preRenderBlackSVG(
+        public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -280,7 +280,7 @@ export default function (GoThemes: GoThemesInterface) {
             return [`anime-black-${radius}`];
         }
 
-        public preRenderWhiteSVG(
+        public override preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -304,15 +304,15 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["white"]["Anime"] = Anime;
 
     class Custom extends Common {
-        sort() {
+        override sort() {
             return 200; // last - in the "url customizable" slot.
         }
 
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Custom";
         }
 
-        placeBlackStone(
+        override placeBlackStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D | null,
             stone: StoneType,
@@ -334,7 +334,7 @@ export default function (GoThemes: GoThemesInterface) {
             }
         }
 
-        preRenderBlack(
+        override preRenderBlack(
             radius: number,
             _seed: number,
             deferredRenderCallback: () => void,
@@ -351,15 +351,15 @@ export default function (GoThemes: GoThemesInterface) {
             //return preRenderImageStone(radius, anime_black_imagedata);
         }
 
-        public getBlackStoneColor(): string {
+        public override getBlackStoneColor(): string {
             return callbacks.customBlackStoneColor ? callbacks.customBlackStoneColor() : "#000000";
         }
 
-        public getBlackTextColor(): string {
+        public override getBlackTextColor(): string {
             return callbacks.customBlackTextColor ? callbacks.customBlackTextColor() : "#FFFFFF";
         }
 
-        placeWhiteStone(
+        override placeWhiteStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D | null,
             stone: StoneType,
@@ -381,7 +381,7 @@ export default function (GoThemes: GoThemesInterface) {
             }
         }
 
-        preRenderWhite(
+        override preRenderWhite(
             radius: number,
             _seed: number,
             deferredRenderCallback: () => void,
@@ -398,15 +398,15 @@ export default function (GoThemes: GoThemesInterface) {
             //return preRenderImageStone(radius, anime_white_imagedata);
         }
 
-        public getWhiteStoneColor(): string {
+        public override getWhiteStoneColor(): string {
             return callbacks.customWhiteStoneColor ? callbacks.customWhiteStoneColor() : "#FFFFFF";
         }
 
-        public getWhiteTextColor(): string {
+        public override getWhiteTextColor(): string {
             return callbacks.customWhiteTextColor ? callbacks.customWhiteTextColor() : "#000000";
         }
 
-        public preRenderBlackSVG(
+        public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -429,7 +429,7 @@ export default function (GoThemes: GoThemesInterface) {
             return [`custom-black-${radius}`];
         }
 
-        public preRenderWhiteSVG(
+        public override preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,

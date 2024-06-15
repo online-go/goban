@@ -52,21 +52,21 @@ export function renderPlainStone(
 
 export default function (GoThemes: GoThemesInterface) {
     class Stone extends GoTheme {
-        sort(): number {
+        override sort(): number {
             return 1;
         }
     }
 
     class Plain extends Stone {
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Plain";
         }
 
-        preRenderBlack(radius: number, seed: number): boolean {
+        override preRenderBlack(radius: number, seed: number): boolean {
             return true;
         }
 
-        placeBlackStone(
+        override placeBlackStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D,
             stone: any,
@@ -84,19 +84,19 @@ export default function (GoThemes: GoThemesInterface) {
             );
         }
 
-        public getBlackStoneColor(): string {
+        public override getBlackStoneColor(): string {
             return "#000000";
         }
 
-        public getBlackTextColor(): string {
+        public override getBlackTextColor(): string {
             return "#FFFFFF";
         }
 
-        preRenderWhite(radius: number, seed: number): any {
+        override preRenderWhite(radius: number, seed: number): any {
             return true;
         }
 
-        placeWhiteStone(
+        override placeWhiteStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D,
             stone: any,
@@ -114,15 +114,15 @@ export default function (GoThemes: GoThemesInterface) {
             );
         }
 
-        public getWhiteStoneColor(): string {
+        public override getWhiteStoneColor(): string {
             return "#FFFFFF";
         }
 
-        public getWhiteTextColor(): string {
+        public override getWhiteTextColor(): string {
             return "#000000";
         }
 
-        public preRenderBlackSVG(
+        public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -167,7 +167,7 @@ export default function (GoThemes: GoThemesInterface) {
             return ret;
         }
 
-        public preRenderWhiteSVG(
+        public override preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,

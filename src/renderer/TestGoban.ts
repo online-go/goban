@@ -24,7 +24,6 @@
 //    - [ASSERT] public state tracking: `is_pen_enabled`, `current_message`,
 //      `current_title` etc. A way for testers to peer into the internals
 
-import { JGOFNumericPlayerColor } from "engine";
 import { GobanConfig } from "../GobanBase";
 import { GoEngine } from "engine/GobanEngine";
 import { MessageID } from "engine/messages";
@@ -58,13 +57,4 @@ export class TestGoban extends Goban {
     protected setTitle(title: string): void {}
     protected enableDrawing(): void {}
     protected disableDrawing(): void {}
-    public set(x: number, y: number, color: JGOFNumericPlayerColor): void {}
-    public setForRemoval(
-        x: number,
-        y: number,
-        removed: boolean,
-        emit_stone_removal_updated: boolean,
-    ): void {}
-    public setState(): void {}
-    public updateScoreEstimation(): void {}
 }

@@ -300,7 +300,6 @@ export class GoEngine extends BoardState {
         {}; /* For use by MoveTree layout and rendering */
     public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
     public readonly name: string = "";
-    public player: JGOFNumericPlayerColor;
     public player_pool: { [id: number]: GoEnginePlayerEntry };
     public latencies?: { [player_id: string]: number };
     public players: {
@@ -452,9 +451,6 @@ export class GoEngine extends BoardState {
     private allow_self_capture: boolean = false;
     private allow_superko: boolean = false;
     private superko_algorithm: GoEngineSuperKoAlgorithm = "psk";
-    public black_prisoners: number = 0;
-    public white_prisoners: number = 0;
-    public board_is_repeating: boolean;
     private dontStoreBoardHistory: boolean;
     public free_handicap_placement: boolean = false;
     private loading_sgf: boolean = false;
@@ -2478,7 +2474,7 @@ export class GoEngine extends BoardState {
     }
 
     public parentEventEmitter?: EventEmitter<GobanEvents>;
-    emit<K extends keyof GobanEvents>(
+    public override emit<K extends keyof GobanEvents>(
         event: K,
         ...args: EventEmitter.EventArgs<GobanEvents, K>
     ): boolean {

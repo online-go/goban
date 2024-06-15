@@ -479,10 +479,10 @@ function stoneCastsShadow(radius: number): boolean {
 
 export default function (GoThemes: GoThemesInterface) {
     class Common extends GoTheme {
-        stoneCastsShadow(radius: number): boolean {
+        override stoneCastsShadow(radius: number): boolean {
             return stoneCastsShadow(radius * deviceCanvasScalingRatio());
         }
-        placeBlackStone(
+        override placeBlackStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D | null,
             stone: StoneType,
@@ -492,7 +492,7 @@ export default function (GoThemes: GoThemesInterface) {
         ): void {
             placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
-        placeWhiteStone(
+        override placeWhiteStone(
             ctx: CanvasRenderingContext2D,
             shadow_ctx: CanvasRenderingContext2D | null,
             stone: StoneType,
@@ -506,14 +506,14 @@ export default function (GoThemes: GoThemesInterface) {
 
     /* Slate & Shell { */
     class Slate extends Common {
-        sort() {
+        override sort() {
             return 30;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Slate";
         }
 
-        preRenderBlack(radius: number, seed: number): StoneTypeArray {
+        override preRenderBlack(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, seed, {
                 base_color: "rgba(30,30,35,1.0)",
                 light: normalized([-4, -4, 5]),
@@ -523,10 +523,10 @@ export default function (GoThemes: GoThemesInterface) {
                 specular_light_distance: 8,
             });
         }
-        getBlackTextColor(color: string): string {
+        override getBlackTextColor(color: string): string {
             return "#ffffff";
         }
-        public preRenderBlackSVG(
+        public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             seed: number,
@@ -565,14 +565,14 @@ export default function (GoThemes: GoThemesInterface) {
     GoThemes["black"]["Slate"] = Slate;
 
     class Shell extends Common {
-        sort() {
+        override sort() {
             return 30;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Shell";
         }
 
-        preRenderWhite(radius: number, seed: number): StoneTypeArray {
+        override preRenderWhite(radius: number, seed: number): StoneTypeArray {
             let ret: StoneTypeArray = [];
             for (let i = 0; i < 10; ++i) {
                 ret = ret.concat(
@@ -590,7 +590,7 @@ export default function (GoThemes: GoThemesInterface) {
             return ret;
         }
 
-        public preRenderWhiteSVG(
+        public override preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             seed: number,
@@ -707,7 +707,7 @@ export default function (GoThemes: GoThemesInterface) {
             return ret;
         }
 
-        getWhiteTextColor(color: string): string {
+        override getWhiteTextColor(color: string): string {
             return "#000000";
         }
     }
@@ -717,14 +717,14 @@ export default function (GoThemes: GoThemesInterface) {
     /* Glass { */
 
     class Glass extends Common {
-        sort() {
+        override sort() {
             return 20;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Glass";
         }
 
-        preRenderBlack(radius: number, seed: number): StoneTypeArray {
+        override preRenderBlack(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, seed, {
                 base_color: "rgba(15,15,20,1.0)",
                 light: normalized([-4, -4, 2]),
@@ -734,11 +734,11 @@ export default function (GoThemes: GoThemesInterface) {
                 specular_light_distance: 10,
             });
         }
-        getBlackTextColor(color: string): string {
+        override getBlackTextColor(color: string): string {
             return "#ffffff";
         }
 
-        preRenderWhite(radius: number, seed: number): StoneTypeArray {
+        override preRenderWhite(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, (seed *= 13), {
                 base_color: "rgba(207,205,206,1.0)",
                 light: normalized([-4, -4, 2]),
@@ -749,11 +749,11 @@ export default function (GoThemes: GoThemesInterface) {
             });
         }
 
-        getWhiteTextColor(color: string): string {
+        override getWhiteTextColor(color: string): string {
             return "#000000";
         }
 
-        public preRenderBlackSVG(
+        public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -789,7 +789,7 @@ export default function (GoThemes: GoThemesInterface) {
             return [key];
         }
 
-        public preRenderWhiteSVG(
+        public override preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -836,14 +836,14 @@ export default function (GoThemes: GoThemesInterface) {
     /* Worn Glass { */
 
     class WornGlass extends Common {
-        sort() {
+        override sort() {
             return 21;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Worn Glass";
         }
 
-        preRenderBlack(radius: number, seed: number): StoneTypeArray {
+        override preRenderBlack(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, seed, {
                 base_color: "rgba(15,15,20,1.0)",
                 light: normalized([-4, -4, 2]),
@@ -853,11 +853,11 @@ export default function (GoThemes: GoThemesInterface) {
                 specular_light_distance: 10,
             });
         }
-        getBlackTextColor(color: string): string {
+        override getBlackTextColor(color: string): string {
             return "#ffffff";
         }
 
-        preRenderWhite(radius: number, seed: number): StoneTypeArray {
+        override preRenderWhite(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, (seed *= 13), {
                 base_color: "rgba(189,189,194,1.0)",
                 light: normalized([-4, -4, 2]),
@@ -868,11 +868,11 @@ export default function (GoThemes: GoThemesInterface) {
             });
         }
 
-        getWhiteTextColor(color: string): string {
+        override getWhiteTextColor(color: string): string {
             return "#000000";
         }
 
-        public preRenderBlackSVG(
+        public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -908,7 +908,7 @@ export default function (GoThemes: GoThemesInterface) {
             return [key];
         }
 
-        public preRenderWhiteSVG(
+        public override preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -954,14 +954,14 @@ export default function (GoThemes: GoThemesInterface) {
 
     /* Night { */
     class Night extends Common {
-        sort() {
+        override sort() {
             return 100;
         }
-        get theme_name(): string {
+        override get theme_name(): string {
             return "Night";
         }
 
-        preRenderBlack(radius: number, seed: number): StoneTypeArray {
+        override preRenderBlack(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, seed, {
                 base_color: "rgba(15,15,20,1.0)",
                 light: normalized([-4, -4, 2]),
@@ -971,11 +971,11 @@ export default function (GoThemes: GoThemesInterface) {
                 specular_light_distance: 10,
             });
         }
-        getBlackTextColor(color: string): string {
+        override getBlackTextColor(color: string): string {
             return "#888888";
         }
 
-        preRenderWhite(radius: number, seed: number): StoneTypeArray {
+        override preRenderWhite(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, (seed *= 13), {
                 base_color: "rgba(100,100,100,1.0)",
                 light: normalized([-4, -4, 2]),
@@ -986,10 +986,10 @@ export default function (GoThemes: GoThemesInterface) {
             });
         }
 
-        getWhiteTextColor(color: string): string {
+        override getWhiteTextColor(color: string): string {
             return "#000000";
         }
-        public preRenderBlackSVG(
+        public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,
@@ -1025,7 +1025,7 @@ export default function (GoThemes: GoThemesInterface) {
             return [key];
         }
 
-        public preRenderWhiteSVG(
+        public override preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             _seed: number,

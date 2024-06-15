@@ -334,12 +334,12 @@ export class ScoreEstimator extends BoardState {
         });
     }
 
-    setRemoved(x: number, y: number, removed: boolean): void {
+    public override setRemoved(x: number, y: number, removed: boolean): void {
         this.clearAutoScore();
         super.setRemoved(x, y, removed);
     }
 
-    clearRemoved(): void {
+    public override clearRemoved(): void {
         this.clearAutoScore();
         super.clearRemoved();
     }
