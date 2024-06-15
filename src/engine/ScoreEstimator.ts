@@ -18,7 +18,7 @@ import { encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { StoneString } from "./StoneString";
 import { StoneStringBuilder } from "./StoneStringBuilder";
-import type { Goban } from "../Goban";
+import type { GobanBase } from "../GobanBase";
 import { GoEngine, PlayerScore, GoEngineRules } from "./GobanEngine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./formats/JGOF";
 import { _ } from "./translate";
@@ -128,7 +128,7 @@ export class ScoreEstimator extends BoardState {
 
     constructor(
         engine: GoEngine,
-        goban_callback: Goban | undefined,
+        goban_callback: GobanBase | undefined,
         trials: number,
         tolerance: number,
         prefer_remote: boolean = false,

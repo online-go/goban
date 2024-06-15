@@ -7,9 +7,9 @@
 (global as any).CLIENT = true;
 
 import { GobanCanvas, GobanCanvasConfig } from "../renderer/GobanCanvas";
-import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../renderer/GobanRendererBase";
+import { SCORE_ESTIMATION_TOLERANCE, SCORE_ESTIMATION_TRIALS } from "../renderer/GobanInteractive";
 import { GobanSocket, GoMath } from "../engine";
-import { Goban } from "../Goban";
+import { GobanBase } from "../GobanBase";
 import WS from "jest-websocket-mock";
 
 let board_div: HTMLDivElement;
@@ -366,7 +366,7 @@ describe("onTap", () => {
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
 
         const addCoordinatesToChatInput = jest.fn();
-        Goban.setCallbacks({ addCoordinatesToChatInput });
+        GobanBase.setCallbacks({ addCoordinatesToChatInput });
 
         canvas.dispatchEvent(
             new MouseEvent("click", {

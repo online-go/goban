@@ -70,7 +70,7 @@ export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
 
     interactive?: boolean;
     mode?: GobanModes;
-    square_size?: number | ((goban: Goban) => number) | "auto";
+    square_size?: number | ((goban: GobanBase) => number) | "auto";
 
     getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
 
@@ -260,7 +260,7 @@ export interface GobanEvents extends StateUpdateEvents {
  * You can't create an instance of a Goban directly, you have to create an instance of
  * one of the renderers, such as GobanSVG.
  */
-export abstract class Goban extends EventEmitter<GobanEvents> {
+export abstract class GobanBase extends EventEmitter<GobanEvents> {
     /* Classes, types, and enums */
     static Engine = GoEngine;
     static setTranslations = setGobanTranslations;
@@ -268,6 +268,7 @@ export abstract class Goban extends EventEmitter<GobanEvents> {
 
     /** Actual fields **/
     public readonly goban_id = ++last_goban_id;
+    public destroyed = false;
 
     /* The rest of these fields are for subclasses of Goban, namely used by the renderers */
     public abstract engine: GoEngine;
@@ -305,5 +306,12 @@ export abstract class Goban extends EventEmitter<GobanEvents> {
 
     constructor() {
         super();
+    }
+
+    public destroy() {
+        this.emit("destroy");
+        this.destroyed = true;
+        this.engine.removeAllListeners();
+        this.removeAllListeners();
     }
 }

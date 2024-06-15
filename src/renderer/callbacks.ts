@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import type { Goban } from "../Goban";
-import { GobanSelectedThemes } from "./GobanRendererBase";
+import type { GobanBase } from "../GobanBase";
+import { GobanSelectedThemes } from "./Goban";
 
 export interface GobanCallbacks {
     defaultConfig?: () => any;
     getCoordinateDisplaySystem?: () => "A1" | "1-1";
-    isAnalysisDisabled?: (goban: Goban, perGameSettingAppliesToNonPlayers: boolean) => boolean;
+    isAnalysisDisabled?: (goban: GobanBase, perGameSettingAppliesToNonPlayers: boolean) => boolean;
 
     getClockDrift?: () => number;
     getNetworkLatency?: () => number;

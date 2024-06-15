@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { GobanEvents } from "../Goban";
+import { GobanEvents } from "../GobanBase";
 import { EventEmitter } from "eventemitter3";
 import { JGOFIntersection, JGOFNumericPlayerColor } from "./formats/JGOF";
 import { makeMatrix } from "./GoMath";
 import * as goscorer from "goscorer";
 import { StoneStringBuilder } from "./StoneStringBuilder";
-import type { Goban } from "../Goban";
+import type { GobanBase } from "../GobanBase";
 import { RawStoneString } from "./StoneString";
 import { cloneMatrix, matricesAreEqual } from "./util";
 import { callbacks } from "../renderer/callbacks";
@@ -61,7 +61,7 @@ export class BoardState extends EventEmitter<GobanEvents> implements BoardConfig
     public readonly width: number = 19;
     public board: JGOFNumericPlayerColor[][];
     public removal: boolean[][];
-    protected goban_callback?: Goban;
+    protected goban_callback?: GobanBase;
 
     public player: JGOFNumericPlayerColor;
     public board_is_repeating: boolean;
@@ -76,7 +76,7 @@ export class BoardState extends EventEmitter<GobanEvents> implements BoardConfig
      * Any state matrices (board, removal, etc..) provided will be cloned
      * and must have the same dimensionality.
      */
-    constructor(config: BoardConfig, goban_callback?: Goban) {
+    constructor(config: BoardConfig, goban_callback?: GobanBase) {
         super();
 
         this.goban_callback = goban_callback;

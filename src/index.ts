@@ -18,10 +18,11 @@ export * from "engine";
 export * from "./renderer/callbacks";
 export * from "./renderer/canvas_utils";
 export * from "./renderer/GobanCanvas";
-export * from "./Goban";
+export * from "./GobanBase";
 export * from "./renderer/GobanSVG";
 export * from "./renderer/GoTheme";
 export * from "./renderer/GoThemes";
+export * from "./renderer/Goban";
 export * from "./renderer/TestGoban";
 
 export * as protocol from "engine/protocol";

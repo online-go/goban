@@ -18,7 +18,7 @@ import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "engine/formats/J
 
 import { AdHocFormat } from "engine/formats/AdHocFormat";
 
-import { GobanConfig } from "../Goban";
+import { GobanConfig } from "../GobanBase";
 import { GoEngine } from "engine";
 import * as GoMath from "engine/GoMath";
 import { MoveTree } from "engine/MoveTree";
@@ -35,12 +35,7 @@ import { _ } from "engine/translate";
 import { formatMessage, MessageID } from "engine/messages";
 import { color_blend, getRandomInt } from "engine/util";
 import { callbacks } from "./callbacks";
-import {
-    GobanRendererBase,
-    GobanMetrics,
-    GobanSelectedThemes,
-    GOBAN_FONT,
-} from "./GobanRendererBase";
+import { Goban, GobanMetrics, GobanSelectedThemes, GOBAN_FONT } from "./Goban";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -96,7 +91,7 @@ export interface GobanCanvasInterface {
     destroy(): void;
 }
 
-export class GobanCanvas extends GobanRendererBase implements GobanCanvasInterface {
+export class GobanCanvas extends Goban implements GobanCanvasInterface {
     public engine: GoEngine;
     //private board_div: HTMLElement;
     private board: HTMLCanvasElement;

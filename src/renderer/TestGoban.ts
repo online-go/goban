@@ -25,13 +25,13 @@
 //      `current_title` etc. A way for testers to peer into the internals
 
 import { JGOFNumericPlayerColor } from "engine";
-import { GobanConfig } from "../Goban";
+import { GobanConfig } from "../GobanBase";
 import { GoEngine } from "engine/GobanEngine";
 import { MessageID } from "engine/messages";
 import { MoveTreePenMarks } from "engine/MoveTree";
-import { GobanRendererBase, GobanSelectedThemes } from "./GobanRendererBase";
+import { Goban, GobanSelectedThemes } from "./Goban";
 
-export class TestGoban extends GobanRendererBase {
+export class TestGoban extends Goban {
     public engine: GoEngine;
 
     constructor(config: GobanConfig) {

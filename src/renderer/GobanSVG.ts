@@ -19,7 +19,7 @@ import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "engine/formats/J
 import { AdHocFormat } from "engine/formats/AdHocFormat";
 
 //import { GobanCore, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
-import { GobanConfig } from "../Goban";
+import { GobanConfig } from "../GobanBase";
 import { GoEngine } from "engine";
 import * as GoMath from "engine/GoMath";
 import { MoveTree } from "engine/MoveTree";
@@ -31,7 +31,7 @@ import { _ } from "engine/translate";
 import { formatMessage, MessageID } from "engine/messages";
 import { color_blend, getRandomInt } from "engine/util";
 import { callbacks } from "./callbacks";
-import { GobanRendererBase, GobanMetrics, GobanSelectedThemes } from "./GobanRendererBase";
+import { Goban, GobanMetrics, GobanSelectedThemes } from "./Goban";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
@@ -91,7 +91,7 @@ interface GobanSVGInterface {
     destroy(): void;
 }
 
-export class GobanSVG extends GobanRendererBase implements GobanSVGInterface {
+export class GobanSVG extends Goban implements GobanSVGInterface {
     public engine: GoEngine;
     //private board_div: HTMLElement;
     private svg: SVGElement;

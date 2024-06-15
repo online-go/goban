@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Goban } from "../Goban";
+import { GobanBase } from "../GobanBase";
 
 export interface GoThemeBackgroundCSS {
     "background-color"?: string;
@@ -251,7 +251,7 @@ export class GoTheme {
     /* Resolve which stone graphic we should use. By default we just pick a
      * random one, if there are multiple images, otherwise whatever was
      * returned by the pre-render method */
-    public getStone(x: number, y: number, stones: any, _goban: Goban): any {
+    public getStone(x: number, y: number, stones: any, _goban: GobanBase): any {
         const ret = Array.isArray(stones)
             ? stones[((x + 1) * 53 * ((y + 1) * 97)) % stones.length]
             : stones;
@@ -267,7 +267,7 @@ export class GoTheme {
     /* Resolve which stone graphic we should use. By default we just pick a
      * random one, if there are multiple images, otherwise whatever was
      * returned by the pre-render method */
-    public getStoneHash(x: number, y: number, stones: any, _goban: Goban): string {
+    public getStoneHash(x: number, y: number, stones: any, _goban: GobanBase): string {
         if (Array.isArray(stones)) {
             return "" + (((x + 1) * 53 * ((y + 1) * 97)) % stones.length);
         }

@@ -18,7 +18,7 @@ export * from "./BoardState";
 export * from "./GobanEngine";
 export * from "./AIReview";
 export * from "./autoscore";
-export * from "../Goban";
+export * from "../GobanBase";
 export * from "./GobanError";
 export * from "./GobanSocket";
 export * from "./GoConditionalMove";
@@ -32,4 +32,5 @@ export * from "../test_utils";
 export * from "./formats";
 export * from "./util";
 
+export * as translate from "./translate";
 export * as GoMath from "./GoMath";

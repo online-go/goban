@@ -21,7 +21,7 @@ import { Move, encodeMove } from "./GoMath";
 import * as GoMath from "./GoMath";
 import { RawStoneString } from "./StoneString";
 import { ScoreEstimator } from "./ScoreEstimator";
-import { Goban, GobanEvents } from "../Goban";
+import { GobanBase, GobanEvents } from "../GobanBase";
 import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
@@ -468,7 +468,11 @@ export class GoEngine extends BoardState {
     public score_territory_in_seki: boolean = false;
     public territory_included_in_sgf: boolean = false;
 
-    constructor(config: GoEngineConfig, goban_callback?: Goban, dontStoreBoardHistory?: boolean) {
+    constructor(
+        config: GoEngineConfig,
+        goban_callback?: GobanBase,
+        dontStoreBoardHistory?: boolean,
+    ) {
         super(
             GoEngine.fillDefaults(
                 GoEngine.migrateConfig(
