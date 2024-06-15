@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Theme } from "./Theme";
+import { GobanTheme } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { _ } from "engine/translate";
 
@@ -51,7 +51,7 @@ export function renderPlainStone(
 }
 
 export default function (THEMES: ThemesInterface) {
-    class Stone extends Theme {
+    class Stone extends GobanTheme {
         override sort(): number {
             return 1;
         }

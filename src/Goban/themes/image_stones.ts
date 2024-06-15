@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Theme } from "./Theme";
+import { GobanTheme } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { _ } from "engine/translate";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
@@ -167,7 +167,7 @@ export default function (THEMES: ThemesInterface) {
         // ignore
     }
 
-    class Common extends Theme {
+    class Common extends GobanTheme {
         override stoneCastsShadow(radius: number): boolean {
             return stoneCastsShadow(radius * deviceCanvasScalingRatio());
         }

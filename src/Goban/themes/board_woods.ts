@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Theme, ThemeBackgroundCSS } from "./Theme";
+import { GobanTheme, GobanThemeBackgroundCSS } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { _ } from "engine/translate";
 import { callbacks } from "../callbacks";
@@ -27,14 +27,14 @@ function getCDNReleaseBase() {
 }
 
 export default function (THEMES: ThemesInterface) {
-    class Kaya extends Theme {
+    class Kaya extends GobanTheme {
         override sort(): number {
             return 10;
         }
         override get theme_name(): string {
             return "Kaya";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",
@@ -63,14 +63,14 @@ export default function (THEMES: ThemesInterface) {
     _("Kaya"); // ensure translation
     THEMES["board"]["Kaya"] = Kaya;
 
-    class RedOak extends Theme {
+    class RedOak extends GobanTheme {
         override sort(): number {
             return 20;
         }
         override get theme_name(): string {
             return "Red Oak";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/oak.jpg')",
@@ -99,14 +99,14 @@ export default function (THEMES: ThemesInterface) {
     _("Red Oak"); // ensure translation
     THEMES["board"]["Red Oak"] = RedOak;
 
-    class Persimmon extends Theme {
+    class Persimmon extends GobanTheme {
         override sort(): number {
             return 30;
         }
         override get theme_name(): string {
             return "Persimmon";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/persimmon.jpg')",
@@ -135,14 +135,14 @@ export default function (THEMES: ThemesInterface) {
     _("Persimmon"); // ensure translation
     THEMES["board"]["Persimmon"] = Persimmon;
 
-    class BlackWalnut extends Theme {
+    class BlackWalnut extends GobanTheme {
         override sort(): number {
             return 40;
         }
         override get theme_name(): string {
             return "Black Walnut";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/black_walnut.jpg')",
@@ -171,14 +171,14 @@ export default function (THEMES: ThemesInterface) {
     _("Black Walnut"); // ensure translation
     THEMES["board"]["Black Walnut"] = BlackWalnut;
 
-    class Granite extends Theme {
+    class Granite extends GobanTheme {
         override sort(): number {
             return 40;
         }
         override get theme_name(): string {
             return "Granite";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/granite.jpg')",
@@ -207,14 +207,14 @@ export default function (THEMES: ThemesInterface) {
     _("Granite"); // ensure translation
     THEMES["board"]["Granite"] = Granite;
 
-    class Anime extends Theme {
+    class Anime extends GobanTheme {
         override sort(): number {
             return 10;
         }
         override get theme_name(): string {
             return "Anime";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/anime_board.svg')",
@@ -244,14 +244,14 @@ export default function (THEMES: ThemesInterface) {
     _("Anime"); // ensure translation
     THEMES["board"]["Anime"] = Anime;
 
-    class BrightKaya extends Theme {
+    class BrightKaya extends GobanTheme {
         override sort(): number {
             return 15;
         }
         override get theme_name(): string {
             return "Bright Kaya";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DBB25B",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/kaya.jpg')",

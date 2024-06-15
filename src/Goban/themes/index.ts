@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-export { Theme } from "./Theme";
+export { GobanTheme } from "./GobanTheme";
 
-import { Theme } from "./Theme";
+import { GobanTheme } from "./GobanTheme";
 
 export interface ThemesInterface {
-    white: { [name: string]: typeof Theme };
-    black: { [name: string]: typeof Theme };
-    board: { [name: string]: typeof Theme };
+    white: { [name: string]: typeof GobanTheme };
+    black: { [name: string]: typeof GobanTheme };
+    board: { [name: string]: typeof GobanTheme };
+
+    // Exists so we can do for (const theme of THEMES) { ...THEMES[theme]...  }
+    [key: string]: { [name: string]: typeof GobanTheme };
 }
 
 export const THEMES: ThemesInterface = {
@@ -30,9 +33,12 @@ export const THEMES: ThemesInterface = {
     board: {},
 };
 export const THEMES_SORTED: {
-    white: Theme[];
-    black: Theme[];
-    board: Theme[];
+    white: GobanTheme[];
+    black: GobanTheme[];
+    board: GobanTheme[];
+
+    // Exists so we can do for (const theme of THEMES_SORTED) { ...THEMES_SORTED[theme]...  }
+    [key: string]: GobanTheme[];
 } = { white: [], black: [], board: [] };
 
 import init_board_plain from "./board_plain";
@@ -47,7 +53,7 @@ init_plain_stones(THEMES);
 init_rendered(THEMES);
 init_image_stones(THEMES);
 
-function theme_sort(a: Theme, b: Theme) {
+function theme_sort(a: GobanTheme, b: GobanTheme) {
     return a.sort() - b.sort();
 }
 

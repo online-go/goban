@@ -23,7 +23,7 @@ import { GobanConfig } from "../GobanBase";
 import { GoEngine } from "engine";
 import * as GoMath from "engine/GoMath";
 import { MoveTree } from "engine/MoveTree";
-import { Theme, THEMES } from "./themes";
+import { GobanTheme, THEMES } from "./themes";
 import { MoveTreePenMarks } from "engine/MoveTree";
 import { getRelativeEventPosition } from "./canvas_utils";
 import { _ } from "engine/translate";
@@ -138,18 +138,18 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         black: "Plain",
         white: "Plain",
     };
-    private theme_black!: Theme;
+    private theme_black!: GobanTheme;
     private theme_black_stones: Array<any> = [];
     private theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
-    private theme_board!: Theme;
+    private theme_board!: GobanTheme;
     private theme_faded_line_color: string = HOT_PINK;
     private theme_faded_star_color: string = HOT_PINK;
     //private theme_faded_text_color:string;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
-    private theme_white!: Theme;
+    private theme_white!: GobanTheme;
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
 

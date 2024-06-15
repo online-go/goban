@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Theme, ThemeBackgroundCSS } from "./Theme";
+import { GobanTheme, GobanThemeBackgroundCSS } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { callbacks } from "../callbacks";
 import { _ } from "engine/translate";
@@ -32,14 +32,14 @@ function hexToRgba(raw: string, alpha: number = 1): string {
 }
 
 export default function (THEMES: ThemesInterface) {
-    class Plain extends Theme {
+    class Plain extends GobanTheme {
         override sort(): number {
             return 1;
         }
         override get theme_name(): string {
             return "Plain";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "",
@@ -68,14 +68,14 @@ export default function (THEMES: ThemesInterface) {
     _("Plain"); // ensure translation exists
     THEMES["board"]["Plain"] = Plain;
 
-    class Custom extends Theme {
+    class Custom extends GobanTheme {
         override sort(): number {
             return 200; //last, because this is the "customisable" one
         }
         override get theme_name(): string {
             return "Custom";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": callbacks.customBoardColor
                     ? callbacks.customBoardColor()
@@ -119,14 +119,14 @@ export default function (THEMES: ThemesInterface) {
     _("Custom"); // ensure translation exists
     THEMES["board"]["Custom"] = Custom;
 
-    class Night extends Theme {
+    class Night extends GobanTheme {
         override sort(): number {
             return 100;
         }
         override get theme_name(): string {
             return "Night Play";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#444444",
                 "background-image": "",
@@ -155,7 +155,7 @@ export default function (THEMES: ThemesInterface) {
     _("Night Play"); // ensure translation exists
     THEMES["board"]["Night Play"] = Night;
 
-    class HNG extends Theme {
+    class HNG extends GobanTheme {
         static C = "#00193E";
         static C2 = "#004C75";
         override sort(): number {
@@ -164,7 +164,7 @@ export default function (THEMES: ThemesInterface) {
         override get theme_name(): string {
             return "HNG";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#00e7fc",
                 "background-image": "",
@@ -193,7 +193,7 @@ export default function (THEMES: ThemesInterface) {
     _("HNG"); // ensure translation exists
     THEMES["board"]["HNG"] = HNG;
 
-    class HNGNight extends Theme {
+    class HNGNight extends GobanTheme {
         static C = "#007591";
         override sort(): number {
             return 105;
@@ -201,7 +201,7 @@ export default function (THEMES: ThemesInterface) {
         override get theme_name(): string {
             return "HNG Night";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#090C1F",
                 "background-image": "",
@@ -230,14 +230,14 @@ export default function (THEMES: ThemesInterface) {
     _("HNG Night"); // ensure translation exists
     THEMES["board"]["HNG Night"] = HNGNight;
 
-    class Book extends Theme {
+    class Book extends GobanTheme {
         override sort(): number {
             return 110;
         }
         override get theme_name(): string {
             return "Book";
         }
-        override getBackgroundCSS(): ThemeBackgroundCSS {
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#ffffff",
                 "background-image": "",
