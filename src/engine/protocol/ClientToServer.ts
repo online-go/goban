@@ -259,7 +259,7 @@ export interface ClientToServer extends ClientToServerBase {
     }) => void;
     /** Cancels a game. This is effectively the same as resign, except the
      *  game will not be ranked. This is only allowed within the first few
-     *  moves of the game. (See GoEngine.gameCanBeCancelled for cancellation ) */
+     *  moves of the game. (See GobanEngine.gameCanBeCancelled for cancellation ) */
     "game/cancel": (data: {
         /** The game id */
         game_id: number;

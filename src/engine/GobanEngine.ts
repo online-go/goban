@@ -49,9 +49,9 @@ declare const SERVER: boolean;
 export const AUTOSCORE_TRIALS = 1000;
 export const AUTOSCORE_TOLERANCE = 0.1;
 
-export type GoEnginePhase = "play" | "stone removal" | "finished";
-export type GoEngineRules = "chinese" | "aga" | "japanese" | "korean" | "ing" | "nz";
-export type GoEngineSuperKoAlgorithm =
+export type GobanEnginePhase = "play" | "stone removal" | "finished";
+export type GobanEngineRules = "chinese" | "aga" | "japanese" | "korean" | "ing" | "nz";
+export type GobanEngineSuperKoAlgorithm =
     | "psk"
     | "csk"
     | "ssk"
@@ -72,7 +72,7 @@ export interface Score {
     black: PlayerScore;
 }
 
-export interface GoEnginePlayerEntry {
+export interface GobanEnginePlayerEntry {
     id: number;
     username: string;
     country?: string;
@@ -92,7 +92,7 @@ export interface GoEnginePlayerEntry {
 // The word "array" is deliberately included in the type name to differentiate from a move tree.
 export type GobanMovesArray = Array<AdHocPackedMove> | Array<JGOFMove>;
 
-export interface GoEngineConfig extends BoardConfig {
+export interface GobanEngineConfig extends BoardConfig {
     game_id?: number | string;
     review_id?: number;
     game_name?: string;
@@ -107,24 +107,24 @@ export interface GoEngineConfig extends BoardConfig {
     handicap_rank_difference?: number;
     handicap?: number;
     komi?: number;
-    rules?: GoEngineRules;
-    phase?: GoEnginePhase;
-    initial_state?: GoEngineInitialState;
+    rules?: GobanEngineRules;
+    phase?: GobanEnginePhase;
+    initial_state?: GobanEngineInitialState;
     marks?: { [mark: string]: string };
     latencies?: { [player_id: string]: number };
-    player_pool?: { [id: number]: GoEnginePlayerEntry }; // we need this to get player details from player_id in player_update events
+    player_pool?: { [id: number]: GobanEnginePlayerEntry }; // we need this to get player details from player_id in player_update events
     players?: {
-        black: GoEnginePlayerEntry;
-        white: GoEnginePlayerEntry;
+        black: GobanEnginePlayerEntry;
+        white: GobanEnginePlayerEntry;
     };
     rengo?: boolean;
     rengo_teams?: {
-        black: Array<GoEnginePlayerEntry>;
-        white: Array<GoEnginePlayerEntry>;
+        black: Array<GobanEnginePlayerEntry>;
+        white: Array<GobanEnginePlayerEntry>;
     };
     rengo_casual_mode?: boolean;
     reviews?: {
-        [review_id: number]: GoEnginePlayerEntry;
+        [review_id: number]: GobanEnginePlayerEntry;
     };
 
     time_control?: JGOFTimeControl;
@@ -156,13 +156,13 @@ export interface GoEngineConfig extends BoardConfig {
     white_must_pass_last?: boolean;
     aga_handicap_scoring?: boolean;
     opponent_plays_first_after_resume?: boolean;
-    superko_algorithm?: GoEngineSuperKoAlgorithm;
+    superko_algorithm?: GobanEngineSuperKoAlgorithm;
     stalling_score_estimate?: StallingScoreEstimate;
 
     // This is used in gtp2ogs
     clock?: GameClock;
 
-    /** When loading initial state or moves, by default GoEngine will try and
+    /** When loading initial state or moves, by default GobanEngine will try and
      *  handle bad data by just resorting to 'edit placing' moves. If this is
      *  true, then those errors are thrown instead.
      */
@@ -203,7 +203,7 @@ export interface GoEngineConfig extends BoardConfig {
     white_player_id?: number;
 }
 
-export interface GoEngineInitialState {
+export interface GobanEngineInitialState {
     black?: string;
     white?: string;
 }
@@ -257,7 +257,7 @@ export interface ReviewMessage {
     /** Sets the owner of the review */
     "owner"?: number | { id: number; username: string };
     /** Initial gamedata to review */
-    "gamedata"?: GoEngineConfig;
+    "gamedata"?: GobanEngineConfig;
     /** Sets the controller of the review */
     "controller"?: number | { id: number; username: string };
     /** Updated information about the players, such as name etc. */
@@ -269,7 +269,7 @@ export interface PuzzleConfig extends BoardConfig {
     mode?: string;
     name?: string;
     puzzle_type?: string;
-    initial_state?: GoEngineInitialState;
+    initial_state?: GobanEngineInitialState;
     marks?: { [mark: string]: string };
     puzzle_autoplace_delay?: number;
     puzzle_opponent_move_mode?: PuzzleOpponentMoveMode;
@@ -291,14 +291,14 @@ export type PuzzlePlacementSetting =
 
 export type PlayerColor = "black" | "white";
 
-export class GoEngine extends BoardState {
+export class GobanEngine extends BoardState {
     //public readonly players.black.id:number;
     //public readonly players.white.id:number;
     public throw_all_errors?: boolean;
     //public cur_review_move?: MoveTree;
     public handicap_rank_difference?: number;
     public handicap: number = NaN;
-    public initial_state: GoEngineInitialState = { black: "", white: "" };
+    public initial_state: GobanEngineInitialState = { black: "", white: "" };
     public komi: number = NaN;
     public move_tree: MoveTree;
     public move_tree_layout_vector: Array<number> =
@@ -307,11 +307,11 @@ export class GoEngine extends BoardState {
         {}; /* For use by MoveTree layout and rendering */
     public move_tree_layout_dirty: boolean = false; /* For use by MoveTree layout and rendering */
     public readonly name: string = "";
-    public player_pool: { [id: number]: GoEnginePlayerEntry };
+    public player_pool: { [id: number]: GobanEnginePlayerEntry };
     public latencies?: { [player_id: string]: number };
     public players: {
-        black: GoEnginePlayerEntry;
-        white: GoEnginePlayerEntry;
+        black: GobanEnginePlayerEntry;
+        white: GobanEnginePlayerEntry;
     } = {
         black: { username: "black", id: NaN },
         white: { username: "white", id: NaN },
@@ -322,9 +322,9 @@ export class GoEngine extends BoardState {
     public puzzle_player_move_mode: PuzzlePlayerMoveMode = "free";
     public puzzle_rank: number = NaN;
     public puzzle_type: string = "[missing puzzle type]";
-    public readonly config: GoEngineConfig;
+    public readonly config: GobanEngineConfig;
     public readonly disable_analysis: boolean = false;
-    //public readonly rules:GoEngineRules = 'japanese';
+    //public readonly rules:GobanEngineRules = 'japanese';
     public time_control: JGOFTimeControl = {
         system: "none",
         speed: "correspondence",
@@ -337,17 +337,17 @@ export class GoEngine extends BoardState {
     public group_ids?: Array<number>;
     public rengo?: boolean;
     public rengo_teams?: {
-        [colour: string]: Array<GoEnginePlayerEntry>; // TBD index this by PlayerColour
+        [colour: string]: Array<GobanEnginePlayerEntry>; // TBD index this by PlayerColour
     };
     public rengo_casual_mode: boolean;
     public stalling_score_estimate?: StallingScoreEstimate;
 
     /* Properties that emit change events */
-    private _phase: GoEnginePhase = "play";
-    public get phase(): GoEnginePhase {
+    private _phase: GobanEnginePhase = "play";
+    public get phase(): GobanEnginePhase {
         return this._phase;
     }
-    public set phase(phase: GoEnginePhase) {
+    public set phase(phase: GobanEnginePhase) {
         if (this._phase === phase) {
             return;
         }
@@ -403,11 +403,11 @@ export class GoEngine extends BoardState {
         this.emit("strict_seki_mode", this.strict_seki_mode);
     }
 
-    private _rules: GoEngineRules = "japanese"; // can't be readonly at this point since parseSGF sets it
-    public get rules(): GoEngineRules {
+    private _rules: GobanEngineRules = "japanese"; // can't be readonly at this point since parseSGF sets it
+    public get rules(): GobanEngineRules {
         return this._rules;
     }
-    public set rules(rules: GoEngineRules) {
+    public set rules(rules: GobanEngineRules) {
         if (this._rules === rules) {
             return;
         }
@@ -457,7 +457,7 @@ export class GoEngine extends BoardState {
     private allow_ko: boolean = false;
     private allow_self_capture: boolean = false;
     private allow_superko: boolean = false;
-    private superko_algorithm: GoEngineSuperKoAlgorithm = "psk";
+    private superko_algorithm: GobanEngineSuperKoAlgorithm = "psk";
     private dontStoreBoardHistory: boolean;
     public free_handicap_placement: boolean = false;
     private loading_sgf: boolean = false;
@@ -472,14 +472,14 @@ export class GoEngine extends BoardState {
     public territory_included_in_sgf: boolean = false;
 
     constructor(
-        config: GoEngineConfig,
+        config: GobanEngineConfig,
         goban_callback?: GobanBase,
         dontStoreBoardHistory?: boolean,
     ) {
         super(
-            GoEngine.fillDefaults(
-                GoEngine.migrateConfig(
-                    ((config: GoEngineConfig): GoEngineConfig => {
+            GobanEngine.fillDefaults(
+                GobanEngine.migrateConfig(
+                    ((config: GobanEngineConfig): GobanEngineConfig => {
                         /* We had a bug where we were filling in some initial state
                          * data incorrectly when we were dealing with sgfs, so this
                          * code exists for sgf 'games' < 800k in the database..
@@ -1244,7 +1244,7 @@ export class GoEngine extends BoardState {
 
         return pieces_removed;
     }
-    public isBoardRepeating(superko_rule: GoEngineSuperKoAlgorithm): boolean {
+    public isBoardRepeating(superko_rule: GobanEngineSuperKoAlgorithm): boolean {
         const MAX_SUPERKO_SEARCH = 30; /* any more than this is probably a waste of time. This may be overkill even. */
         const current_player_to_move = this.player;
         const check_situational = superko_rule === "ssk";
@@ -1548,7 +1548,7 @@ export class GoEngine extends BoardState {
      * This function migrates old config's to whatever our current standard is
      * for configs.
      */
-    private static migrateConfig(config: GoEngineConfig): GoEngineConfig {
+    private static migrateConfig(config: GobanEngineConfig): GobanEngineConfig {
         if (config.ladder !== config.ladder_id) {
             config.ladder_id = config.ladder;
         }
@@ -1600,7 +1600,7 @@ export class GoEngine extends BoardState {
      * This function fills in default values for any missing fields in the
      * config.
      */
-    public static fillDefaults(game_obj: GoEngineConfig): GoEngineConfig {
+    public static fillDefaults(game_obj: GobanEngineConfig): GobanEngineConfig {
         if (!("phase" in game_obj)) {
             game_obj.phase = "play";
         }
@@ -1608,7 +1608,7 @@ export class GoEngine extends BoardState {
             game_obj.rules = "japanese";
         }
 
-        const defaults: GoEngineConfig = {};
+        const defaults: GobanEngineConfig = {};
 
         //defaults.history = [];
         defaults.game_id = 0;
@@ -1902,7 +1902,7 @@ export class GoEngine extends BoardState {
 
         return game_obj;
     }
-    public static clearRuleSettings(game_obj: GoEngineConfig): GoEngineConfig {
+    public static clearRuleSettings(game_obj: GobanEngineConfig): GobanEngineConfig {
         delete game_obj.allow_self_capture;
         delete game_obj.automatic_stone_removal;
         delete game_obj.allow_ko;
@@ -2232,7 +2232,7 @@ export class GoEngine extends BoardState {
                     case "RU":
                         {
                             instructions.push(() => {
-                                let rules: GoEngineRules = "japanese";
+                                let rules: GobanEngineRules = "japanese";
 
                                 switch (val.toLowerCase()) {
                                     case "japanese":

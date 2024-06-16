@@ -20,7 +20,7 @@ import { AdHocFormat } from "engine/formats/AdHocFormat";
 
 //import { GobanCore, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
 import { GobanConfig } from "../GobanBase";
-import { GoEngine } from "engine";
+import { GobanEngine } from "engine";
 import { MoveTree } from "engine/MoveTree";
 import { GobanTheme, THEMES } from "./themes";
 import { MoveTreePenMarks } from "engine/MoveTree";
@@ -70,7 +70,7 @@ const HOT_PINK = "#ff69b4";
 
 //interface GobanCanvasInterface {
 interface GobanSVGInterface {
-    engine: GoEngine;
+    engine: GobanEngine;
     move_tree_container?: HTMLElement;
 
     clearAnalysisDrawing(): void;
@@ -97,7 +97,7 @@ interface GobanSVGInterface {
 }
 
 export class SVGRenderer extends Goban implements GobanSVGInterface {
-    public engine: GoEngine;
+    public engine: GobanEngine;
     //private board_div: HTMLElement;
     private svg: SVGElement;
     private svg_defs: SVGDefsElement;

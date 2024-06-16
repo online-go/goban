@@ -24,7 +24,7 @@
 import { StoneStringBuilder } from "./StoneStringBuilder";
 import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./formats/JGOF";
 import { char2num, makeMatrix, num2char, encodePrettyXCoordinate } from "./util";
-import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GobanEngine";
+import { GobanEngine, GobanEngineInitialState, GobanEngineRules } from "./GobanEngine";
 import { BoardState } from "./BoardState";
 
 interface AutoscoreResults {
@@ -51,7 +51,7 @@ function isBlack(ownership: number): boolean {
 
 export function autoscore(
     board: JGOFNumericPlayerColor[][],
-    rules: GoEngineRules,
+    rules: GobanEngineRules,
     black_plays_first_ownership: number[][],
     white_plays_first_ownership: number[][],
 ): [AutoscoreResults, DebugOutput] {
@@ -508,11 +508,11 @@ export function autoscore(
                 .map((p) => num2char(p.x) + num2char(p.y))
                 .join("");
 
-        const real_initial_state: GoEngineInitialState = {
+        const real_initial_state: GobanEngineInitialState = {
             black: black_state,
             white: white_state,
         };
-        const sealed_initial_state: GoEngineInitialState = {
+        const sealed_initial_state: GobanEngineInitialState = {
             black: sealed_black_state,
             white: sealed_white_state,
         };
@@ -520,7 +520,7 @@ export function autoscore(
         for (const initial_state of [sealed_initial_state, real_initial_state]) {
             const cur_ownership = makeMatrix(width, height, 0);
 
-            const engine = new GoEngine({
+            const engine = new GobanEngine({
                 width: original_board[0].length,
                 height: original_board.length,
                 initial_state,

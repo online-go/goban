@@ -16,7 +16,7 @@
  */
 
 import { GobanConfig } from "../GobanBase";
-import { GoEngine } from "engine/GobanEngine";
+import { GobanEngine } from "engine/GobanEngine";
 import { MessageID } from "engine/messages";
 import { MoveTreePenMarks } from "engine/MoveTree";
 import { Goban, GobanSelectedThemes } from "./Goban";
@@ -25,12 +25,12 @@ import { Goban, GobanSelectedThemes } from "./Goban";
  * This is a minimal implementation of Goban, primarily used for unit tests.
  */
 export class TestGoban extends Goban {
-    public engine: GoEngine;
+    public engine: GobanEngine;
 
     constructor(config: GobanConfig) {
         super(config);
 
-        this.engine = new GoEngine(config);
+        this.engine = new GobanEngine(config);
     }
 
     public enablePen(): void {}

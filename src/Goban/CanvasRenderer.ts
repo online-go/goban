@@ -19,7 +19,7 @@ import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "engine/formats/J
 import { AdHocFormat } from "engine/formats/AdHocFormat";
 
 import { GobanConfig } from "../GobanBase";
-import { GoEngine } from "engine";
+import { GobanEngine } from "engine";
 import { MoveTree } from "engine/MoveTree";
 import { GobanTheme, THEMES } from "./themes";
 import { MoveTreePenMarks } from "engine/MoveTree";
@@ -70,7 +70,7 @@ interface ViewPortInterface {
 const HOT_PINK = "#ff69b4";
 
 export interface GobanCanvasInterface {
-    engine: GoEngine;
+    engine: GobanEngine;
     move_tree_container?: HTMLElement;
 
     clearAnalysisDrawing(): void;
@@ -97,7 +97,7 @@ export interface GobanCanvasInterface {
 }
 
 export class GobanCanvas extends Goban implements GobanCanvasInterface {
-    public engine: GoEngine;
+    public engine: GobanEngine;
     //private board_div: HTMLElement;
     private board: HTMLCanvasElement;
     private __set_board_height: number = -1;

@@ -1,6 +1,6 @@
 //cspell: disable
 
-import { GoEngine } from "engine";
+import { GobanEngine } from "engine";
 import { makeMatrix } from "engine";
 import { ScoreEstimator, adjust_estimate, set_local_ownership_estimator } from "engine";
 import {
@@ -25,7 +25,7 @@ describe("adjust_estimate", () => {
     const KOMI = 0.5;
 
     test("adjust_estimate area", () => {
-        const engine = new GoEngine({ komi: KOMI, rules: "chinese" });
+        const engine = new GobanEngine({ komi: KOMI, rules: "chinese" });
         expect(adjust_estimate(engine, BOARD, OWNERSHIP, SCORE)).toEqual({
             score: -0.5,
             ownership: OWNERSHIP,
@@ -39,7 +39,7 @@ describe("adjust_estimate", () => {
             [1, 0, 0, -1],
             [1, 0, 0, -1],
         ];
-        const engine = new GoEngine({ komi: KOMI, rules: "japanese" });
+        const engine = new GobanEngine({ komi: KOMI, rules: "japanese" });
         expect(adjust_estimate(engine, BOARD, OWNERSHIP, SCORE)).toEqual({
             score: -0.5,
             ownership: ADJUSTED_OWNERSHIP,
@@ -53,7 +53,7 @@ describe("ScoreEstimator", () => {
         [1, 1, -1, -1],
     ];
     const KOMI = 0.5;
-    const engine = new GoEngine({ komi: KOMI, width: 4, height: 2 });
+    const engine = new GobanEngine({ komi: KOMI, width: 4, height: 2 });
     engine.place(1, 0);
     engine.place(2, 0);
     engine.place(1, 1);
@@ -115,7 +115,7 @@ describe("ScoreEstimator", () => {
             [4, 1],
             [3, 1],
         ];
-        const engine = new GoEngine({ komi: KOMI, width: 9, height: 9, rules: "chinese" });
+        const engine = new GobanEngine({ komi: KOMI, width: 9, height: 9, rules: "chinese" });
         for (const [x, y] of moves) {
             engine.place(x, y);
         }
@@ -162,7 +162,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("score() chinese", async () => {
-        const engine = new GoEngine({ komi: KOMI, width: 4, height: 2, rules: "chinese" });
+        const engine = new GobanEngine({ komi: KOMI, width: 4, height: 2, rules: "chinese" });
         engine.place(1, 0);
         engine.place(2, 0);
         engine.place(1, 1);
@@ -197,7 +197,7 @@ describe("ScoreEstimator", () => {
         // . x o .
         // x x . o
 
-        const engine = new GoEngine({ komi: KOMI, width: 4, height: 2, rules: "japanese" });
+        const engine = new GobanEngine({ komi: KOMI, width: 4, height: 2, rules: "japanese" });
         engine.place(1, 0);
         engine.place(2, 0);
         engine.place(1, 1);
@@ -321,7 +321,7 @@ describe("ScoreEstimator", () => {
     });
 
     test("remote scorers do not need to set score", async () => {
-        const engine = new GoEngine({ komi: 3.5, width: 4, height: 2, rules: "chinese" });
+        const engine = new GobanEngine({ komi: 3.5, width: 4, height: 2, rules: "chinese" });
         engine.place(1, 0);
         engine.place(2, 0);
         engine.place(1, 1);
@@ -388,7 +388,7 @@ describe("ScoreEstimator", () => {
 
     test("score() with captures", async () => {
         // A board that is split down the middle between black and white
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 8,
             height: 8,
             initial_state: { black: "dadbdcdddedfdgdh", white: "eaebecedeeefegeh" },

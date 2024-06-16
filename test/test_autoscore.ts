@@ -29,7 +29,7 @@
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { autoscore } from "engine/autoscore";
 import * as clc from "cli-color";
-import { GoEngine, GoEngineInitialState, char2num, makeMatrix, num2char } from "engine";
+import { GobanEngine, GobanEngineInitialState, char2num, makeMatrix, num2char } from "engine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "engine/formats/JGOF";
 
 function run_autoscore_tests() {
@@ -230,7 +230,7 @@ function test_file(path: string, quiet: boolean): boolean {
         }
 
         if (!quiet) {
-            // Double check that when we run everything through our normal GoEngine.computeScore function,
+            // Double check that when we run everything through our normal GobanEngine.computeScore function,
             // that we get the result we're expecting. We exclude the japanese and korean rules here because
             // our test file ownership maps always include territory and stones.
             if (match && rules !== "japanese" && rules !== "korean") {
@@ -257,12 +257,12 @@ function test_file(path: string, quiet: boolean): boolean {
                     }
                 }
 
-                const initial_state: GoEngineInitialState = {
+                const initial_state: GobanEngineInitialState = {
                     black: black_state,
                     white: white_state,
                 };
 
-                const engine = new GoEngine({
+                const engine = new GobanEngine({
                     width: board[0].length,
                     height: board.length,
                     initial_state,

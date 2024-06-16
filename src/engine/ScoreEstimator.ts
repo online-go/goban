@@ -18,7 +18,7 @@ import { encodeMove, makeMatrix, NumberMatrix } from "./util";
 import { StoneString } from "./StoneString";
 import { StoneStringBuilder } from "./StoneStringBuilder";
 import type { GobanBase } from "../GobanBase";
-import { GoEngine, PlayerScore, GoEngineRules } from "./GobanEngine";
+import { GobanEngine, PlayerScore, GobanEngineRules } from "./GobanEngine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "./formats/JGOF";
 import { _ } from "./translate";
 import { wasm_estimate_ownership, remote_estimate_ownership } from "./ownership_estimators";
@@ -35,7 +35,7 @@ export interface ScoreEstimateRequest {
     width: number;
     height: number;
     board_state: JGOFNumericPlayerColor[][];
-    rules: GoEngineRules;
+    rules: GobanEngineRules;
     black_prisoners?: number;
     white_prisoners?: number;
     komi?: number;
@@ -108,7 +108,7 @@ export class ScoreEstimator extends BoardState {
         komi: 0,
     };
 
-    engine: GoEngine;
+    engine: GobanEngine;
     private groups: StoneStringBuilder;
     tolerance: number;
     amount: number = NaN;
@@ -126,7 +126,7 @@ export class ScoreEstimator extends BoardState {
     public autoscored_needs_sealing?: JGOFSealingIntersection[];
 
     constructor(
-        engine: GoEngine,
+        engine: GobanEngine,
         goban_callback: GobanBase | undefined,
         trials: number,
         tolerance: number,
@@ -499,7 +499,7 @@ export class ScoreEstimator extends BoardState {
  * @param score estimated score (not accounting for captures)
  */
 export function adjust_estimate(
-    engine: GoEngine,
+    engine: GobanEngine,
     board: Array<Array<JGOFNumericPlayerColor>>,
     area_map: number[][],
     score: number,

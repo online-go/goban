@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GoEngine } from "./GobanEngine";
+import { GobanEngine } from "./GobanEngine";
 import { BoardState } from "./BoardState";
 import {
     decodeMoves,
@@ -114,7 +114,7 @@ export class MoveTree {
     public line_color: number;
     public trunk: boolean;
     public text: string;
-    private readonly engine: GoEngine;
+    private readonly engine: GobanEngine;
     public x: number;
     public y: number;
     public edited: boolean;
@@ -141,7 +141,7 @@ export class MoveTree {
     private isobranch_hash?: string;
 
     constructor(
-        engine: GoEngine,
+        engine: GobanEngine,
         trunk: boolean,
         x: number,
         y: number,
@@ -213,8 +213,8 @@ export class MoveTree {
     }
     loadJsonForThisNode(json: MoveTreeJson): void {
         /* Unlike toJson, restoring from the json blob is a collaborative effort between
-         * MoveTree and the GoEngine because of all the state we capture along the way..
-         * so during restoration GoEngine will form the tree, and for each node call this
+         * MoveTree and the GobanEngine because of all the state we capture along the way..
+         * so during restoration GobanEngine will form the tree, and for each node call this
          * method with the json that was captured with toJson for this node */
 
         if (json.x !== this.x || json.y !== this.y) {

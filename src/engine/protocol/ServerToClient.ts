@@ -22,7 +22,7 @@ import type {
 } from "./ClientToServer";
 import type { JGOFTimeControl } from "../formats/JGOF";
 import type { ConditionalMoveResponse } from "../ConditionalMoveTree";
-import type { GoEngineConfig, Score, ReviewMessage } from "../GobanEngine";
+import type { GobanEngineConfig, Score, ReviewMessage } from "../GobanEngine";
 import type { AdHocPackedMove } from "../formats/AdHocFormat";
 
 /* NOTE: The reason for the :id non template literal key variants of our
@@ -401,7 +401,7 @@ export interface ServerToClient {
     [k: `game/${number}/error`]: ServerToClient["game/:id/error"];
 
     /** Update the entire game state */
-    "game/:id/gamedata": (data: GoEngineConfig) => void;
+    "game/:id/gamedata": (data: GobanEngineConfig) => void;
     [k: `game/${number}/gamedata`]: ServerToClient["game/:id/gamedata"];
 
     /** Update latency information for a player */

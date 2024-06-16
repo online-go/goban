@@ -57,7 +57,7 @@ const __flood_fill_scratch_pad: number[] = Array(25 * 25).fill(0);
 
 export class BoardState extends EventEmitter<GobanEvents> implements BoardConfig {
     public readonly height: number = 19;
-    //public readonly rules:GoEngineRules = 'japanese';
+    //public readonly rules:GobanEngineRules = 'japanese';
     public readonly width: number = 19;
     public board: JGOFNumericPlayerColor[][];
     public removal: boolean[][];

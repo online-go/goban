@@ -15,9 +15,9 @@
  */
 
 import {
-    GoEngine,
-    GoEnginePhase,
-    GoEngineRules,
+    GobanEngine,
+    GobanEnginePhase,
+    GobanEngineRules,
     ReviewMessage,
     PlayerColor,
     PuzzlePlacementSetting,
@@ -107,7 +107,7 @@ export interface MoveCommand {
 export interface StateUpdateEvents {
     mode: (d: GobanModes) => void;
     title: (d: string) => void;
-    phase: (d: GoEnginePhase) => void;
+    phase: (d: GobanEnginePhase) => void;
     cur_move: (d: MoveTree) => void;
     cur_review_move: (d: MoveTree | undefined) => void;
     last_official_move: (d: MoveTree) => void;
@@ -116,7 +116,7 @@ export interface StateUpdateEvents {
     analyze_subtool: (d: AnalysisSubTool) => void;
     score_estimate: (d: ScoreEstimator | null) => void;
     strict_seki_mode: (d: boolean) => void;
-    rules: (d: GoEngineRules) => void;
+    rules: (d: GobanEngineRules) => void;
     winner: (d: number | undefined) => void;
     undo_requested: (d: number | undefined) => void; // move number of the last undo request
     undo_canceled: () => void;
@@ -310,7 +310,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected label_mark: string = "[UNSET]";
     protected last_hover_square?: JGOFIntersection;
     protected last_move?: MoveTree;
-    protected last_phase?: GoEnginePhase;
+    protected last_phase?: GobanEnginePhase;
     protected last_review_message: ReviewMessage;
     protected last_sound_played_for_a_stone_placement?: string;
     protected last_stone_sound: number;
@@ -502,8 +502,8 @@ export abstract class GobanInteractive extends GobanBase {
      *  own config before these are called, we set this function to be called
      *  by our subclass after it's done it's own internal config stuff.
      */
-    protected post_config_constructor(): GoEngine {
-        let ret: GoEngine;
+    protected post_config_constructor(): GobanEngine {
+        let ret: GobanEngine;
 
         delete this.current_cmove; /* set in setConditionalTree */
         this.currently_my_cmove = false;
@@ -720,7 +720,7 @@ export abstract class GobanInteractive extends GobanBase {
         }
     }
 
-    public load(config: GobanConfig): GoEngine {
+    public load(config: GobanConfig): GobanEngine {
         config = repair_config(config);
         for (const k in config) {
             (this.config as any)[k] = (config as any)[k];
@@ -819,7 +819,7 @@ export abstract class GobanInteractive extends GobanBase {
         // NOTE: the construction needs to be side-effect free, because we might not use the new state
         // so we create the engine twice (in case where keep_old_engine = false)
         // here, it is created without the callback to `this` so that it cannot mess things up
-        const new_engine = new GoEngine(config);
+        const new_engine = new GobanEngine(config);
 
         /*
         if (old_engine) {
@@ -848,7 +848,7 @@ export abstract class GobanInteractive extends GobanBase {
             // we create the engine anew, this time with the callback argument,
             // in case the constructor some side effects on `this`
             // (JM: which it currently does)
-            this.engine = new GoEngine(config, this);
+            this.engine = new GobanEngine(config, this);
             this.emit("engine.updated", this.engine);
             this.engine.parentEventEmitter = this;
         }
@@ -1391,7 +1391,7 @@ export abstract class GobanInteractive extends GobanBase {
             });
         }
     }
-    /** This is a callback that gets called by GoEngine.getState to save and
+    /** This is a callback that gets called by GobanEngine.getState to save and
      * board state as it pushes and pops state. Our renderers can override this
      * to save state they need. */
     /*

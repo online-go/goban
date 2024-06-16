@@ -1,6 +1,12 @@
 //cspell: disable
 
-import { GoEngine, GobanMoveError, JGOFIntersection, makeMatrix, matricesAreEqual } from "engine";
+import {
+    GobanEngine,
+    GobanMoveError,
+    JGOFIntersection,
+    makeMatrix,
+    matricesAreEqual,
+} from "engine";
 import { movesFromBoardState } from "./test_utils";
 
 test("boardMatricesAreTheSame", () => {
@@ -26,8 +32,8 @@ test("boardMatricesAreTheSame", () => {
 });
 
 describe("computeScore", () => {
-    test("GoEngine defaults", () => {
-        const engine = new GoEngine({});
+    test("GobanEngine defaults", () => {
+        const engine = new GobanEngine({});
         expect(engine.computeScore()).toEqual({
             black: {
                 handicap: 0,
@@ -50,8 +56,8 @@ describe("computeScore", () => {
         });
     });
 
-    test("GoEngine defaults", () => {
-        const engine = new GoEngine({});
+    test("GobanEngine defaults", () => {
+        const engine = new GobanEngine({});
         expect(engine.computeScore()).toEqual({
             black: {
                 handicap: 0,
@@ -75,7 +81,7 @@ describe("computeScore", () => {
     });
 
     test("Japanese handicap", () => {
-        const engine = new GoEngine({ rules: "japanese", handicap: 4 });
+        const engine = new GobanEngine({ rules: "japanese", handicap: 4 });
         expect(engine.computeScore()).toEqual({
             black: expect.objectContaining({
                 handicap: 0,
@@ -93,7 +99,7 @@ describe("computeScore", () => {
     });
 
     test("AGA handicap - white is given compensation ", () => {
-        const engine = new GoEngine({ rules: "aga", handicap: 4 });
+        const engine = new GobanEngine({ rules: "aga", handicap: 4 });
 
         // From the AGA Concise rules of Go:
         //
@@ -116,7 +122,7 @@ describe("computeScore", () => {
             [0, 1, 2, 0],
             [0, 1, 2, 0],
         ];
-        const engine = new GoEngine({ width: 4, height: 4, moves: movesFromBoardState(board) });
+        const engine = new GobanEngine({ width: 4, height: 4, moves: movesFromBoardState(board) });
 
         expect(engine.computeScore()).toEqual({
             black: expect.objectContaining({
@@ -142,7 +148,7 @@ describe("computeScore", () => {
             [0, 1, 2, 0],
             [0, 1, 2, 0],
         ];
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 4,
             moves: movesFromBoardState(board),
@@ -173,7 +179,7 @@ describe("computeScore", () => {
             [0, 1, 2, 0],
             [0, 1, 2, 1],
         ];
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 4,
             moves: movesFromBoardState(board),
@@ -204,8 +210,8 @@ describe("computeScore", () => {
 describe("rules", () => {
     test("Korean is almost the same as Japanese", () => {
         // https://forums.online-go.com/t/just-a-brief-question/3564/10
-        const korean_config = new GoEngine({ rules: "korean" }).config;
-        const japanese_config = new GoEngine({ rules: "japanese" }).config;
+        const korean_config = new GobanEngine({ rules: "korean" }).config;
+        const japanese_config = new GobanEngine({ rules: "japanese" }).config;
 
         delete korean_config.rules;
         delete japanese_config.rules;
@@ -214,9 +220,9 @@ describe("rules", () => {
     });
 });
 
-describe("GoEngine.place()", () => {
+describe("GobanEngine.place()", () => {
     test("Basic test to make sure it's working", () => {
-        const engine = new GoEngine({});
+        const engine = new GobanEngine({});
 
         engine.place(16, 3);
         engine.place(3, 2);
@@ -250,7 +256,7 @@ describe("GoEngine.place()", () => {
     });
 
     test("stone on top of stone", () => {
-        const engine = new GoEngine({ width: 3, height: 3 });
+        const engine = new GobanEngine({ width: 3, height: 3 });
 
         engine.place(1, 1);
 
@@ -260,7 +266,7 @@ describe("GoEngine.place()", () => {
     });
 
     test("capture", () => {
-        const engine = new GoEngine({ width: 2, height: 2 });
+        const engine = new GobanEngine({ width: 2, height: 2 });
 
         engine.place(0, 1);
         engine.place(0, 0);
@@ -273,7 +279,7 @@ describe("GoEngine.place()", () => {
     });
 
     test("ko", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 3,
             initial_state: {
@@ -297,7 +303,7 @@ describe("GoEngine.place()", () => {
     });
 
     test("superko", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             rules: "chinese",
             initial_state: {
                 black: "dabbcbdbccadbdcd",
@@ -325,7 +331,7 @@ describe("GoEngine.place()", () => {
     });
 
     test("suicide", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 2,
             height: 2,
             initial_state: {
@@ -349,7 +355,7 @@ describe("GoEngine.place()", () => {
             set: jest.fn(),
         };
 
-        const engine = new GoEngine(
+        const engine = new GobanEngine(
             {
                 width: 2,
                 height: 2,
@@ -372,7 +378,7 @@ describe("GoEngine.place()", () => {
     });
 
     test("removed_stones parameter", () => {
-        const engine = new GoEngine({ width: 2, height: 2 });
+        const engine = new GobanEngine({ width: 2, height: 2 });
 
         engine.place(0, 1);
         engine.place(0, 0);
@@ -385,7 +391,7 @@ describe("GoEngine.place()", () => {
 
 describe("moves", () => {
     test("cur_review_move", () => {
-        const engine = new GoEngine({});
+        const engine = new GobanEngine({});
         const on_cur_review_move = jest.fn();
         engine.addListener("cur_review_move", on_cur_review_move);
 
@@ -408,7 +414,7 @@ describe("moves", () => {
     });
 
     test("cur_move", () => {
-        const engine = new GoEngine({});
+        const engine = new GobanEngine({});
         const on_cur_move = jest.fn();
         engine.addListener("cur_move", on_cur_move);
 
@@ -424,7 +430,7 @@ describe("moves", () => {
 
     describe("setLastOfficialMove", () => {
         test("cur_move on trunk", () => {
-            const engine = new GoEngine({});
+            const engine = new GobanEngine({});
             const on_last_official_move = jest.fn();
             engine.addListener("last_official_move", on_last_official_move);
 
@@ -448,7 +454,7 @@ describe("moves", () => {
         });
 
         test("cur_move not on trunk is an error", () => {
-            const engine = new GoEngine({});
+            const engine = new GobanEngine({});
 
             // isTrunkMove is false by default
             engine.place(10, 10);
@@ -462,7 +468,7 @@ describe("moves", () => {
                 { x: 0, y: 0 },
                 { x: 1, y: 1 },
             ];
-            const engine = new GoEngine({ width: 2, height: 2, moves: moves });
+            const engine = new GobanEngine({ width: 2, height: 2, moves: moves });
 
             expect(engine.board).toEqual([
                 [1, 0],
@@ -477,7 +483,7 @@ describe("moves", () => {
             ];
             // Placement errors are logged, not thrown
             const log_spy = jest.spyOn(console, "log").mockImplementation(() => {});
-            const engine = new GoEngine({ width: 2, height: 2, moves: moves });
+            const engine = new GobanEngine({ width: 2, height: 2, moves: moves });
 
             expect(engine.board).toEqual([
                 [0, 0],
@@ -500,7 +506,9 @@ describe("moves", () => {
 
             // Personally I don't think this should throw - it would be nice if we could just pass in
             // a move_tree, but not moves and moves could be inferred by traversing trunk.
-            expect(() => new GoEngine({ width: 2, height: 2, move_tree })).toThrow("Node mismatch");
+            expect(() => new GobanEngine({ width: 2, height: 2, move_tree })).toThrow(
+                "Node mismatch",
+            );
         });
 
         test("move_tree with two trunk moves", () => {
@@ -517,7 +525,7 @@ describe("moves", () => {
                 },
             };
 
-            const engine = new GoEngine({ width: 2, height: 2, move_tree });
+            const engine = new GobanEngine({ width: 2, height: 2, move_tree });
 
             expect(engine.board).toEqual([
                 [0, 0],
@@ -546,7 +554,7 @@ describe("moves", () => {
                 },
             };
 
-            const engine = new GoEngine({ width: 2, height: 2, move_tree });
+            const engine = new GobanEngine({ width: 2, height: 2, move_tree });
 
             expect(engine.cur_move.move_number).toBe(0);
             expect(engine.showNext()).toBe(true);
@@ -567,7 +575,7 @@ describe("moves", () => {
                 },
             };
 
-            const engine = new GoEngine({ width: 2, height: 2, move_tree });
+            const engine = new GobanEngine({ width: 2, height: 2, move_tree });
 
             expect(engine.cur_move.move_number).toBe(0);
             expect(engine.showNextTrunk()).toBe(true);
@@ -576,7 +584,7 @@ describe("moves", () => {
     });
 
     test("followPath", () => {
-        const engine = new GoEngine({ width: 4, height: 2 });
+        const engine = new GobanEngine({ width: 4, height: 2 });
         engine.followPath(10, "aabacada");
         expect(engine.board).toEqual([
             [1, 2, 1, 2],
@@ -586,7 +594,7 @@ describe("moves", () => {
     });
 
     test("deleteCurMove", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 2,
         });
@@ -605,7 +613,7 @@ describe("moves", () => {
 
 describe("groups", () => {
     test("toggleSingleGroupRemoval", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 4,
             initial_state: { black: "aabbdd", white: "cacbcccd" },
@@ -638,7 +646,7 @@ describe("groups", () => {
     });
 
     test("toggleSingleGroupRemoval out-of-bounds", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 4,
             initial_state: { black: "aabbdd", white: "cacbcccd" },
@@ -659,7 +667,7 @@ describe("groups", () => {
     });
 
     test("toggleSingleGroupRemoval empty area doesn't do anything", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 2,
             initial_state: { black: "aabb", white: "cacb" },
@@ -678,7 +686,7 @@ describe("groups", () => {
     });
 
     test("clearRemoved", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 2,
             initial_state: { black: "aabb", white: "cacb" },
@@ -699,7 +707,7 @@ describe("groups", () => {
     });
 
     test("clearRemoved", () => {
-        const engine = new GoEngine({
+        const engine = new GobanEngine({
             width: 4,
             height: 2,
             initial_state: { black: "aabb", white: "cacb" },

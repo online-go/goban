@@ -32,7 +32,7 @@ import {
     GobanSocket,
     GobanSocketEvents,
     ConditionalMoveTree,
-    GoEngine,
+    GobanEngine,
     init_wasm_ownership_estimator,
     JGOFIntersection,
     JGOFPauseState,
@@ -85,7 +85,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         });
     }
 
-    protected override post_config_constructor(): GoEngine {
+    protected override post_config_constructor(): GobanEngine {
         const ret = super.post_config_constructor();
 
         if ("server_socket" in this.config && this.config["server_socket"]) {
@@ -1336,7 +1336,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         }
     }
 
-    /** This is a callback that gets called by GoEngine.setState to load
+    /** This is a callback that gets called by GobanEngine.setState to load
      * previously saved board state. */
     //public setState(state: any): void {
     public setState(): void {

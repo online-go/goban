@@ -15,10 +15,10 @@
  */
 
 import {
-    GoEngine,
-    GoEngineConfig,
-    GoEnginePhase,
-    GoEngineRules,
+    GobanEngine,
+    GobanEngineConfig,
+    GobanEnginePhase,
+    GobanEngineRules,
     PlayerColor,
     PuzzleConfig,
     PuzzlePlacementSetting,
@@ -66,7 +66,7 @@ export interface GobanBounds {
 
 export type GobanChatLog = Array<GameChatLine>;
 
-export interface GobanConfig extends GoEngineConfig, PuzzleConfig {
+export interface GobanConfig extends GobanEngineConfig, PuzzleConfig {
     display_width?: number;
 
     interactive?: boolean;
@@ -160,7 +160,7 @@ export interface JGOFClockWithTransmitting extends JGOFClock {
 export interface StateUpdateEvents {
     mode: (d: GobanModes) => void;
     title: (d: string) => void;
-    phase: (d: GoEnginePhase) => void;
+    phase: (d: GobanEnginePhase) => void;
     cur_move: (d: MoveTree) => void;
     cur_review_move: (d: MoveTree | undefined) => void;
     last_official_move: (d: MoveTree) => void;
@@ -169,7 +169,7 @@ export interface StateUpdateEvents {
     analyze_subtool: (d: AnalysisSubTool) => void;
     score_estimate: (d: ScoreEstimator | null) => void;
     strict_seki_mode: (d: boolean) => void;
-    rules: (d: GoEngineRules) => void;
+    rules: (d: GobanEngineRules) => void;
     winner: (d: number | undefined) => void;
     undo_requested: (d: number | undefined) => void; // move number of the last undo request
     undo_canceled: () => void;
@@ -187,7 +187,7 @@ export interface GobanEvents extends StateUpdateEvents {
     "error": (d: any) => void;
     "gamedata": (d: any) => void;
     "chat": (d: any) => void;
-    "engine.updated": (engine: GoEngine) => void;
+    "engine.updated": (engine: GobanEngine) => void;
     "load": (config: GobanConfig) => void;
     "show-message": (message: {
         formatted: string;
@@ -276,7 +276,7 @@ export abstract class GobanBase extends EventEmitter<GobanEvents> {
     }
 
     /* The rest of these fields are for subclasses of Goban, namely used by the renderers */
-    public abstract engine: GoEngine;
+    public abstract engine: GobanEngine;
 
     public abstract enablePen(): void;
     public abstract disablePen(): void;
