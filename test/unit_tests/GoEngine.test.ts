@@ -330,7 +330,7 @@ describe("GobanEngine.place()", () => {
         );
     });
 
-    test("suicide", () => {
+    test("self capture", () => {
         const engine = new GobanEngine({
             width: 2,
             height: 2,
@@ -346,7 +346,7 @@ describe("GobanEngine.place()", () => {
          */
 
         expect(() => engine.place(0, 0)).toThrow(
-            new GobanMoveError(0, 0, "A2", "move_is_suicidal"),
+            new GobanMoveError(0, 0, "A2", "illegal_self_capture"),
         );
     });
 

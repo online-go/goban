@@ -21,7 +21,7 @@ export type GobanIOErrorMessageId = "failed_to_load_sgf";
 
 export type GobanMoveErrorMessageId =
     | "stone_already_placed_here"
-    | "move_is_suicidal"
+    | "illegal_self_capture"
     | "illegal_ko_move"
     | "illegal_board_repetition"
     | "move_error"; // generic

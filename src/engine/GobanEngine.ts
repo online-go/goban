@@ -1120,7 +1120,7 @@ export class GobanEngine extends BoardState {
         checkForKo?: boolean,
         errorOnSuperKo?: boolean,
         dontCheckForSuperKo?: boolean,
-        dontCheckForSuicide?: boolean,
+        dontCheckForSelfCapture?: boolean,
         isTrunkMove?: boolean,
         removed_stones?: Array<JGOFIntersection>,
     ): number {
@@ -1155,7 +1155,7 @@ export class GobanEngine extends BoardState {
                 }
                 this.board[y][x] = this.player;
 
-                let suicide_move = false;
+                let self_capture_move = false;
                 const player_group = this.getRawStoneString(x, y, true);
                 const opponent_groups = this.getNeighboringRawStoneStrings(player_group);
 
@@ -1169,16 +1169,16 @@ export class GobanEngine extends BoardState {
                 }
                 if (pieces_removed === 0) {
                     if (this.countLiberties(player_group) === 0) {
-                        if (this.allow_self_capture || dontCheckForSuicide) {
+                        if (this.allow_self_capture || dontCheckForSelfCapture) {
                             pieces_removed += this.captureGroup(player_group);
-                            suicide_move = true;
+                            self_capture_move = true;
                         } else {
                             this.board[y][x] = 0;
                             throw new GobanMoveError(
                                 this.game_id || this.review_id || 0,
                                 this.cur_move?.move_number ?? -1,
                                 this.prettyCoordinates(x, y),
-                                "move_is_suicidal",
+                                "illegal_self_capture",
                             );
                         }
                     }
@@ -1210,7 +1210,7 @@ export class GobanEngine extends BoardState {
                     }
                 }
 
-                if (!suicide_move) {
+                if (!self_capture_move) {
                     if (this.goban_callback) {
                         this.goban_callback.set(x, y, this.player);
                     }

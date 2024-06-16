@@ -38,7 +38,7 @@ export function formatMessage(message_id: MessageID, parameters?: { [key: string
             return _("Loading...");
         case "processing":
             return _("Processing...");
-        case "move_is_suicidal":
+        case "illegal_self_capture":
         case "self_capture_not_allowed":
             return _("Self-capture is not allowed");
         case "server_message":

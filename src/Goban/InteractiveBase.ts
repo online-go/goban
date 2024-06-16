@@ -446,7 +446,7 @@ export abstract class GobanInteractive extends GobanBase {
                 return;
             }
             */
-            if (e instanceof GobanMoveError && e.message_id === "move_is_suicidal") {
+            if (e instanceof GobanMoveError && e.message_id === "illegal_self_capture") {
                 this.showMessage("self_capture_not_allowed", { error: e }, 5000);
                 return;
             } else {
