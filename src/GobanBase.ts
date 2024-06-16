@@ -35,8 +35,9 @@ import {
     JGOFPlayerSummary,
     JGOFSealingIntersection,
     JGOFNumericPlayerColor,
+    JGOFMove,
 } from "engine/formats/JGOF";
-import { AdHocPauseControl } from "engine/formats/AdHocFormat";
+import { AdHocPackedMove, AdHocPauseControl } from "engine/formats/AdHocFormat";
 import { MessageID } from "engine/messages";
 import type { GobanSocket } from "engine/GobanSocket";
 import type { ServerToClient, GameChatLine } from "engine/protocol";
@@ -260,15 +261,19 @@ export interface GobanEvents extends StateUpdateEvents {
  * You can't create an instance of a Goban directly, you have to create an instance of
  * one of the renderers, such as GobanSVG.
  */
+
 export abstract class GobanBase extends EventEmitter<GobanEvents> {
-    /* Classes, types, and enums */
-    static Engine = GoEngine;
+    /* Static functions */
     static setTranslations = setGobanTranslations;
     static setCallbacks = setGobanCallbacks;
 
-    /** Actual fields **/
+    /**  Base fields **/
     public readonly goban_id = ++last_goban_id;
-    public destroyed = false;
+
+    private _destroyed = false;
+    public get destroyed(): boolean {
+        return this._destroyed;
+    }
 
     /* The rest of these fields are for subclasses of Goban, namely used by the renderers */
     public abstract engine: GoEngine;
@@ -310,8 +315,52 @@ export abstract class GobanBase extends EventEmitter<GobanEvents> {
 
     public destroy() {
         this.emit("destroy");
-        this.destroyed = true;
+        this._destroyed = true;
         this.engine.removeAllListeners();
         this.removeAllListeners();
+    }
+
+    /**
+     *  Decodes any of the various ways we express moves that we've accumulated over the years into
+     * a unified `JGOFMove[]`.
+     */
+    public decodeMoves(
+        move_obj:
+            | string
+            | AdHocPackedMove
+            | AdHocPackedMove[]
+            | JGOFMove
+            | JGOFMove[]
+            | [object]
+            | undefined,
+    ): JGOFMove[] {
+        return this.engine.decodeMoves(move_obj);
+    }
+
+    /* Encodes a move list like `[{x: 0, y: 0}, {x:1, y:2}]` into our move string
+     * format `"aabc"` */
+    public encodeMoves(lst: JGOFMove[]): string {
+        return this.engine.encodeMoves(lst);
+    }
+
+    /* Encodes a single move `{x:1, y:2}` into our move string
+     * format `"bc"` */
+    public encodeMove(lst: JGOFMove): string {
+        return this.engine.encodeMove(lst);
+    }
+
+    /** Encodes an x,y pair or a move object like {x: 0, y: 0} into a move string like "A1" */
+    public prettyCoordinates(x: JGOFMove): string;
+    public prettyCoordinates(x: number, y: number): string;
+    public prettyCoordinates(x: number | JGOFMove, y?: number): string {
+        return this.engine.prettyCoordinates(x as any, y as any);
+    }
+
+    /**
+     * Decodes a move string like `"A11"` into a move object like `{x: 0, y: 10}`. Also
+     * handles the special cases like `".."` and "pass" which map to `{x: -1, y: -1}`.
+     */
+    public decodePrettyCoordinates(coordinates: string): JGOFMove {
+        return this.engine.decodePrettyCoordinates(coordinates);
     }
 }

@@ -17,7 +17,7 @@
 import * as GoMath from "./GoMath";
 import { GoEngine } from "./GobanEngine";
 import { BoardState } from "./BoardState";
-import { encodeMove } from "./GoMath";
+import { encodeCoordinate, encodeMove } from "./GoMath";
 import { AdHocPackedMove } from "./formats/AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./formats/JGOF";
 import { escapeSGFText, newlines_to_spaces } from "./util";
@@ -149,7 +149,7 @@ export class MoveTree {
         this.id = ++__move_tree_id;
         this.x = x;
         this.y = y;
-        this.pretty_coordinates = engine.prettyCoords(x, y);
+        this.pretty_coordinates = engine.prettyCoordinates(x, y);
         //this.label;
         //this.label_metrics;
         this.layout_x = 0;
@@ -680,8 +680,8 @@ export class MoveTree {
                 if (this.x === -1) {
                     ret.push("");
                 } else {
-                    ret.push(GoMath.coor_num2ch(this.x));
-                    ret.push(GoMath.coor_num2ch(this.y));
+                    ret.push(encodeCoordinate(this.x));
+                    ret.push(encodeCoordinate(this.y));
                 }
                 ret.push("]");
                 txt.push(this.text);
@@ -708,7 +708,7 @@ export class MoveTree {
                 for (let y = 0; y < this.marks.length; ++y) {
                     for (let x = 0; x < this.marks[0].length; ++x) {
                         const m = this.marks[y][x];
-                        const pos = GoMath.coor_num2ch(x) + GoMath.coor_num2ch(y);
+                        const pos = GoMath.encodeCoordinate(x) + GoMath.encodeCoordinate(y);
                         if (m.triangle) {
                             ret.push("TR[" + pos + "]");
                         }
@@ -1061,7 +1061,7 @@ export class MoveTree {
                     const moves = GoMath.decodeMoves(message.moves, width, height);
                     let move_str = "";
                     for (let i = 0; i < moves.length; ++i) {
-                        move_str += GoMath.prettyCoords(moves[i].x, moves[i].y, height) + " ";
+                        move_str += GoMath.prettyCoordinates(moves[i].x, moves[i].y, height) + " ";
                     }
 
                     return message.name + ". From move " + message.from + ": " + move_str;

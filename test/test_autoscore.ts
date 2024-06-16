@@ -16,7 +16,7 @@
  */
 
 /* This script is for development, debugging, and manual testing of the
- * autoscore functionality found in src/autoscore.ts
+ * autoscore functionality
  *
  * Usage:
  *
@@ -27,15 +27,11 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "fs";
-import { autoscore } from "../src/engine/autoscore";
+import { autoscore } from "engine/autoscore";
 import * as clc from "cli-color";
-import { GoEngine, GoEngineInitialState } from "../src/engine/GobanEngine";
-import { char2num, makeMatrix, num2char } from "../src/engine/GoMath";
-import {
-    JGOFMove,
-    JGOFNumericPlayerColor,
-    JGOFSealingIntersection,
-} from "../src/engine/formats/JGOF";
+import { GoEngine, GoEngineInitialState } from "engine/GobanEngine";
+import { char2num, makeMatrix, num2char } from "engine/GoMath";
+import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "engine/formats/JGOF";
 
 function run_autoscore_tests() {
     const test_file_directory = "autoscore_test_files";

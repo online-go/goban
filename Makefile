@@ -6,7 +6,7 @@ all dev:
 	
 build: lib types
 	
-lib: build-debug build-production 
+lib: build-debug build-production types
 	
 build-debug:
 	yarn run build-debug

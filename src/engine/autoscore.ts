@@ -23,7 +23,7 @@
 
 import { StoneStringBuilder } from "./StoneStringBuilder";
 import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./formats/JGOF";
-import { char2num, makeMatrix, num2char, pretty_coor_num2ch } from "./GoMath";
+import { char2num, makeMatrix, num2char, encodePrettyXCoordinate } from "./GoMath";
 import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GobanEngine";
 import { BoardState } from "./BoardState";
 
@@ -123,7 +123,7 @@ export function autoscore(
         removed.push({ x, y, removal_reason });
         board[y][x] = JGOFNumericPlayerColor.EMPTY;
         removal[y][x] = true;
-        stage_log(`Removing ${pretty_coor_num2ch(x)}${height - y}: ${removal_reason}`);
+        stage_log(`Removing ${encodePrettyXCoordinate(x)}${height - y}: ${removal_reason}`);
     }
 
     /*

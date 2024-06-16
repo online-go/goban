@@ -362,7 +362,6 @@ export abstract class GobanInteractive extends GobanBase {
 
         /* Apply config */
         //window['active_gobans'][this.goban_id] = this;
-        this.destroyed = false;
         this.on_game_screen = this.getLocation().indexOf("/game/") >= 0;
         this.no_display = false;
 
@@ -1476,17 +1475,17 @@ export abstract class GobanInteractive extends GobanBase {
         }
     }
 
-    public editPlaceByPrettyCoord(
-        coord: string,
+    public editPlaceByPrettyCoordinates(
+        coordinates: string,
         color: JGOFNumericPlayerColor,
         isTrunkMove?: boolean,
     ): void {
-        for (const mv of this.engine.decodeMoves(coord)) {
+        for (const mv of this.engine.decodeMoves(coordinates)) {
             this.engine.editPlace(mv.x, mv.y, color, isTrunkMove);
         }
     }
-    public placeByPrettyCoord(coord: string): void {
-        for (const mv of this.engine.decodeMoves(coord)) {
+    public placeByPrettyCoordinates(coordinates: string): void {
+        for (const mv of this.engine.decodeMoves(coordinates)) {
             const removed_stones: Array<JGOFIntersection> = [];
             const removed_count = this.engine.place(
                 mv.x,
@@ -1508,8 +1507,12 @@ export abstract class GobanInteractive extends GobanBase {
             }
         }
     }
-    public setMarkByPrettyCoord(coord: string, mark: number | string, dont_draw?: boolean): void {
-        for (const mv of this.engine.decodeMoves(coord)) {
+    public setMarkByPrettyCoordinates(
+        coordinates: string,
+        mark: number | string,
+        dont_draw?: boolean,
+    ): void {
+        for (const mv of this.engine.decodeMoves(coordinates)) {
             this.setMark(mv.x, mv.y, mark, dont_draw);
         }
     }

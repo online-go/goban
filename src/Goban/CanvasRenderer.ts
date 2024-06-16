@@ -386,7 +386,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         const pt = this.xy2ij(pos.x, pos.y);
                         if (callbacks.addCoordinatesToChatInput) {
                             callbacks.addCoordinatesToChatInput(
-                                this.engine.prettyCoords(pt.i, pt.j),
+                                this.engine.prettyCoordinates(pt.i, pt.j),
                             );
                         }
                     } catch (e) {
@@ -2764,7 +2764,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                                 this.square_size +
                             this.square_size / 2;
                         const y = j * this.square_size + this.square_size / 2;
-                        place(GoMath.pretty_coor_num2ch(c), x, y);
+                        place(GoMath.encodePrettyXCoordinate(c), x, y);
                     }
                     break;
                 case "1-1":

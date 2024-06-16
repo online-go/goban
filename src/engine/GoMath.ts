@@ -17,7 +17,6 @@
 import { JGOFIntersection, JGOFMove, JGOFNumericPlayerColor } from "./formats/JGOF";
 import { AdHocPackedMove } from "./formats/AdHocFormat";
 
-export type Move = JGOFMove;
 export type Intersection = JGOFIntersection;
 export type Matrix<T> = T[][];
 export type NumberMatrix = Matrix<number>;
@@ -66,66 +65,79 @@ export function makeEmptyObjectMatrix<T>(width: number, height: number): Array<A
     }
     return ret;
 }
-const COOR_SEQ = "abcdefghijklmnopqrstuvwxyz";
 
-export function coor_ch2num(ch: string): number {
-    return COOR_SEQ.indexOf(ch?.toLowerCase());
+/* Lower case, includes i, used for our string encoding of moves */
+const COORDINATE_SEQUENCE = "abcdefghijklmnopqrstuvwxyz";
+
+/** Decodes a single coordinate to a number */
+export function decodeCoordinate(ch: string): number {
+    return COORDINATE_SEQUENCE.indexOf(ch?.toLowerCase());
 }
 
-export function coor_num2ch(coor: number): string {
-    return COOR_SEQ[coor];
+/** Encodes a single coordinate to a number */
+export function encodeCoordinate(coor: number): string {
+    return COORDINATE_SEQUENCE[coor];
 }
 
-const PRETTY_COOR_SEQ = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+/* Upper case, and doesn't have I */
+const PRETTY_COORDINATE_SEQUENCE = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 
-export function pretty_coor_ch2num(ch: string): number {
-    return PRETTY_COOR_SEQ.indexOf(ch?.toUpperCase());
+/** Decodes the pretty X coordinate to a number */
+export function decodePrettyXCoordinate(ch: string): number {
+    return PRETTY_COORDINATE_SEQUENCE.indexOf(ch?.toUpperCase());
 }
 
-export function pretty_coor_num2ch(coor: number): string {
-    return PRETTY_COOR_SEQ[coor];
+/** Encodes an X coordinate to a display encoding */
+export function encodePrettyXCoordinate(coor: number): string {
+    return PRETTY_COORDINATE_SEQUENCE[coor];
 }
 
-export function prettyCoords(x: number, y: number, board_height: number): string {
+export function prettyCoordinates(x: number, y: number, board_height: number): string {
     if (x >= 0) {
-        return pretty_coor_num2ch(x) + ("" + (board_height - y));
+        return encodePrettyXCoordinate(x) + ("" + (board_height - y));
     }
     return "pass";
 }
-export function decodeGTPCoordinate(move: string, width: number, height: number): JGOFMove {
+export function decodeGTPCoordinates(move: string, width: number, height: number): JGOFMove {
     if (move === ".." || move.toLowerCase() === "pass") {
         return { x: -1, y: -1 };
     }
     let y = height - parseInt(move.substr(1));
-    const x = pretty_coor_ch2num(move[0]);
+    const x = decodePrettyXCoordinate(move[0]);
     if (x === -1) {
         y = -1;
     }
     return { x, y };
 }
+export function decodePrettyCoordinates(move: string, height: number): JGOFMove {
+    return decodeGTPCoordinates(move, -1, height);
+}
 
-//  TBD: A description of the scope, intent, and even known use-cases of this would be very helpful.
-//     (My head spins trying to understand what this takes care of, and how not to break that)
+/**
+ *  Decodes any of the various ways we express moves that we've accumulated over the years into
+ * a unified `JGOFMove[]`.
+ */
 export function decodeMoves(
     move_obj:
-        | AdHocPackedMove
         | string
-        | Array<AdHocPackedMove>
-        | [object]
-        | Array<JGOFMove>
+        | AdHocPackedMove
+        | AdHocPackedMove[]
         | JGOFMove
+        | JGOFMove[]
+        | [object]
         | undefined,
     width: number,
     height: number,
-): Array<JGOFMove> {
-    const ret: Array<Move> = [];
+): JGOFMove[] {
+    const ret: Array<JGOFMove> = [];
 
+    // undefined or empty string? return empty array.
     if (!move_obj) {
         return [];
     }
 
-    function decodeSingleMoveArray(arr: [number, number, number, number?, object?]): Move {
-        const obj: Move = {
+    function decodeSingleMoveArray(arr: [number, number, number, number?, object?]): JGOFMove {
+        const obj: JGOFMove = {
             x: arr[0],
             y: arr[1],
             timedelta: arr.length > 2 ? arr[2] : -1,
@@ -234,29 +246,29 @@ export function char2num(ch: string): number {
     if (ch === ".") {
         return -1;
     }
-    return coor_ch2num(ch);
+    return decodeCoordinate(ch);
 }
 function pretty_char2num(ch: string): number {
     if (ch === ".") {
         return -1;
     }
-    return pretty_coor_ch2num(ch);
+    return decodePrettyXCoordinate(ch);
 }
 export function num2char(num: number): string {
     if (num === -1) {
         return ".";
     }
-    return coor_num2ch(num);
+    return encodeCoordinate(num);
 }
 
-export function encodeMove(x: number | Move, y?: number): string {
+export function encodeMove(x: number | JGOFMove, y?: number): string {
     if (typeof x === "number") {
         if (typeof y !== "number") {
             throw new Error(`Invalid y parameter to encodeMove y = ${y}`);
         }
         return num2char(x) + num2char(y);
     } else {
-        const mv: Move = x;
+        const mv: JGOFMove = x;
 
         if (!mv.edited) {
             return num2char(mv.x) + num2char(mv.y);
@@ -266,7 +278,9 @@ export function encodeMove(x: number | Move, y?: number): string {
     }
 }
 
-export function encodeMoves(lst: Array<Move>): string {
+/* Encodes a move list like [{x: 0, y: 0}, {x:1, y:2}] into our move string
+ * format "aabc" */
+export function encodeMoves(lst: JGOFMove[]): string {
     let ret = "";
     for (let i = 0; i < lst.length; ++i) {
         ret += encodeMove(lst[i]);
@@ -274,14 +288,7 @@ export function encodeMoves(lst: Array<Move>): string {
     return ret;
 }
 
-export function encodePrettyCoord(coord: string, height: number): string {
-    // "C12" with no "I".   TBD: give these different `string`s proper type names.
-    const x = num2char(pretty_char2num(coord.charAt(0).toLowerCase()));
-    const y = num2char(height - parseInt(coord.substring(1)));
-    return x + y;
-}
-
-export function encodeMoveToArray(mv: Move): AdHocPackedMove {
+export function encodeMoveToArray(mv: JGOFMove): AdHocPackedMove {
     // Note: despite the name here, AdHocPackedMove became a tuple at some point!
     let extra: any = {};
     if (mv.blur) {
@@ -316,35 +323,12 @@ export function encodeMoveToArray(mv: Move): AdHocPackedMove {
     }
     return arr;
 }
-export function encodeMovesToArray(moves: Array<Move>): Array<AdHocPackedMove> {
+export function encodeMovesToArray(moves: Array<JGOFMove>): Array<AdHocPackedMove> {
     const ret: Array<AdHocPackedMove> = [];
     for (let i = 0; i < moves.length; ++i) {
         ret.push(encodeMoveToArray(moves[i]));
     }
     return ret;
-}
-
-export function stripModeratorOnlyExtraInformation(move: AdHocPackedMove): AdHocPackedMove {
-    const moderator_only_extra_info = ["blur", "sgf_downloaded_by"];
-
-    if (move.length === 5 && move[4]) {
-        // the packed move has a defined `extra` field that we have to filter
-        let filtered_extra: any = { ...move[4] };
-        for (const field of moderator_only_extra_info) {
-            delete filtered_extra[field];
-        }
-        if (Object.keys(filtered_extra).length === 0) {
-            filtered_extra = undefined;
-        }
-
-        //filtered_extra.stripped = true;  // this is how you can tell by looking at a move structure in flight whether it went through here.
-        const filtered_move = [...move.slice(0, 4), filtered_extra];
-        while (filtered_move.length > 3 && !filtered_move[filtered_move.length - 1]) {
-            filtered_move.pop();
-        }
-        return filtered_move as AdHocPackedMove;
-    }
-    return move;
 }
 
 /**
@@ -407,7 +391,7 @@ export function ojeSequenceToMoves(sequence: string): Array<JGOFMove> {
         if (play === "pass") {
             return { x: -1, y: -1 };
         }
-        return decodeGTPCoordinate(play, 19, 19);
+        return decodeGTPCoordinates(play, 19, 19);
     });
 
     return moves;

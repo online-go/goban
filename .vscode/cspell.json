@@ -1,5 +1,6 @@
 {
     "words": [
+        "aabc",
         "abcdefghjklmnopqrstuvwxyz",
         "AILR",
         "aireview",
@@ -190,5 +191,9 @@
         "zoomable"
     ],
     "language": "en,en-GB",
-    "ignorePaths": ["test/autoscore_test_files", "src/goscorer", "*.d.ts"]
+    "ignorePaths": [
+        "test/autoscore_test_files",
+        "src/goscorer",
+        "*.d.ts"
+    ]
 }

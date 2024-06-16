@@ -17,7 +17,13 @@
 import { BoardState, BoardConfig } from "./BoardState";
 import { GobanMoveError } from "./GobanError";
 import { MoveTree, MoveTreeJson } from "./MoveTree";
-import { Move, encodeMove } from "./GoMath";
+import {
+    decodeMoves,
+    decodePrettyCoordinates,
+    encodeMove,
+    encodeMoves,
+    prettyCoordinates,
+} from "./GoMath";
 import * as GoMath from "./GoMath";
 import { RawStoneString } from "./StoneString";
 import { ScoreEstimator } from "./ScoreEstimator";
@@ -325,7 +331,7 @@ export class GoEngine extends BoardState {
     };
     public game_id: number = NaN;
     public review_id?: number;
-    public decoded_moves: Array<Move> = [];
+    public decoded_moves: Array<JGOFMove> = [];
     public automatic_stone_removal: boolean = false;
     public group_ids?: Array<number>;
     public rengo?: boolean;
@@ -629,7 +635,7 @@ export class GoEngine extends BoardState {
                                 this.cur_move.player === JGOFNumericPlayerColor.BLACK
                                     ? "black"
                                     : "white"
-                            } at ${this.prettyCoords(mv.x, mv.y)} (${mv.x}, ${mv.y})`,
+                            } at ${this.prettyCoordinates(mv.x, mv.y)} (${mv.x}, ${mv.y})`,
                             stack: e.stack,
                         });
                         console.log(config.errors[config.errors.length - 1]);
@@ -684,11 +690,54 @@ export class GoEngine extends BoardState {
         }
     }
 
+    /**
+     * Decodes any of the various ways we express moves that we've accumulated over the years into
+     * a unified `JGOFMove[]`.
+     */
     public decodeMoves(
-        move_obj: AdHocPackedMove | string | Array<AdHocPackedMove> | [object] | Array<JGOFMove>,
-    ): Array<JGOFMove> {
-        return GoMath.decodeMoves(move_obj, this.width, this.height);
+        move_obj:
+            | string
+            | AdHocPackedMove
+            | AdHocPackedMove[]
+            | JGOFMove
+            | JGOFMove[]
+            | [object]
+            | undefined,
+    ): JGOFMove[] {
+        return decodeMoves(move_obj, this.width, this.height);
     }
+
+    /* Encodes a move list like `[{x: 0, y: 0}, {x:1, y:2}]` into our move string
+     * format `"aabc"` */
+    public encodeMoves(lst: JGOFMove[]): string {
+        return encodeMoves(lst);
+    }
+
+    /* Encodes a single move `{x:1, y:2}` into our move string
+     * format `"bc"` */
+    public encodeMove(lst: JGOFMove): string {
+        return encodeMoves([lst]);
+    }
+
+    /**
+     * Decodes a move string like `"A11"` into a move object like `{x: 0, y: 10}`. Also
+     * handles the special cases like `".."` and "pass" which map to `{x: -1, y: -1}`.
+     */
+    public decodePrettyCoordinates(coordinates: string): JGOFMove {
+        return decodePrettyCoordinates(coordinates, this.height);
+    }
+
+    /** Encodes an x,y pair or a move object like {x: 0, y: 0} into a move string like "A1" */
+    public prettyCoordinates(x: JGOFMove): string;
+    public prettyCoordinates(x: number, y: number): string;
+    public prettyCoordinates(x: number | JGOFMove, y?: number): string {
+        if (typeof x !== "number") {
+            y = x.y;
+            x = x.x;
+        }
+        return prettyCoordinates(x, y as number, this.height);
+    }
+
     private getState(): BoardState {
         return this.cloneBoardState();
     }
@@ -902,7 +951,7 @@ export class GoEngine extends BoardState {
     public getMoveDiff(): { from: number; moves: string } {
         const branch_point = this.cur_move.getBranchPoint();
         let cur: MoveTree | null = this.cur_move;
-        const moves: Array<Move> = [];
+        const moves: JGOFMove[] = [];
 
         while (cur && cur.id !== branch_point.id) {
             moves.push({
@@ -982,9 +1031,6 @@ export class GoEngine extends BoardState {
 
     private opponent(): JGOFNumericPlayerColor {
         return this.player === 1 ? 2 : 1;
-    }
-    public prettyCoords(x: number, y: number): string {
-        return GoMath.prettyCoords(x, y, this.height);
     }
 
     private captureGroup(group: RawStoneString): number {
@@ -1086,7 +1132,7 @@ export class GoEngine extends BoardState {
                         if (this.board[y][x] !== this.player) {
                             console.log(
                                 "Invalid duplicate stone placement at " +
-                                    this.prettyCoords(x, y) +
+                                    this.prettyCoordinates(x, y) +
                                     " board color: " +
                                     this.board[y][x] +
                                     "   placed color: " +
@@ -1102,7 +1148,7 @@ export class GoEngine extends BoardState {
                     throw new GobanMoveError(
                         this.game_id || this.review_id || 0,
                         this.cur_move?.move_number ?? -1,
-                        this.prettyCoords(x, y),
+                        this.prettyCoordinates(x, y),
                         "stone_already_placed_here",
                     );
                 }
@@ -1130,7 +1176,7 @@ export class GoEngine extends BoardState {
                             throw new GobanMoveError(
                                 this.game_id || this.review_id || 0,
                                 this.cur_move?.move_number ?? -1,
-                                this.prettyCoords(x, y),
+                                this.prettyCoordinates(x, y),
                                 "move_is_suicidal",
                             );
                         }
@@ -1142,7 +1188,7 @@ export class GoEngine extends BoardState {
                         throw new GobanMoveError(
                             this.game_id || this.review_id || 0,
                             this.cur_move?.move_number ?? -1,
-                            this.prettyCoords(x, y),
+                            this.prettyCoordinates(x, y),
                             "illegal_ko_move",
                         );
                     }
@@ -1156,7 +1202,7 @@ export class GoEngine extends BoardState {
                             throw new GobanMoveError(
                                 this.game_id || this.review_id || 0,
                                 this.cur_move?.move_number ?? -1,
-                                this.prettyCoords(x, y),
+                                this.prettyCoordinates(x, y),
                                 "illegal_board_repetition",
                             );
                         }

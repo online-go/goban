@@ -1,6 +1,13 @@
 //cspell: disable
 
-import { StoneStringBuilder, JGOFNumericPlayerColor, GoMath, BoardState } from "engine";
+import {
+    StoneStringBuilder,
+    JGOFNumericPlayerColor,
+    GoMath,
+    BoardState,
+    decodePrettyCoordinates,
+    encodeMove,
+} from "engine";
 
 describe("GoStoneGroups constructor", () => {
     test("basic board state", () => {
@@ -85,41 +92,41 @@ describe("matrices", () => {
 
 describe("prettyCoords", () => {
     test("pass", () => {
-        expect(GoMath.prettyCoords(-1, -1, 19)).toBe("pass");
+        expect(GoMath.prettyCoordinates(-1, -1, 19)).toBe("pass");
     });
 
     test("out of bounds", () => {
         // I doubt this is actually desired behavior.  Feel free to remove this
         // test after verifying nothing depends on this behavior.
-        expect(GoMath.prettyCoords(25, 9, 19)).toBe("undefined10");
-        expect(GoMath.prettyCoords(9, 25, 19)).toBe("K-6");
+        expect(GoMath.prettyCoordinates(25, 9, 19)).toBe("undefined10");
+        expect(GoMath.prettyCoordinates(9, 25, 19)).toBe("K-6");
     });
 
     test("regular moves", () => {
-        expect(GoMath.prettyCoords(0, 0, 19)).toBe("A19");
-        expect(GoMath.prettyCoords(2, 15, 19)).toBe("C4");
-        expect(GoMath.prettyCoords(9, 9, 19)).toBe("K10");
+        expect(GoMath.prettyCoordinates(0, 0, 19)).toBe("A19");
+        expect(GoMath.prettyCoordinates(2, 15, 19)).toBe("C4");
+        expect(GoMath.prettyCoordinates(9, 9, 19)).toBe("K10");
     });
 });
 
 describe("decodeGTPCoordinate", () => {
     test("pass", () => {
-        expect(GoMath.decodeGTPCoordinate("pass", 19, 19)).toEqual({ x: -1, y: -1 });
-        expect(GoMath.decodeGTPCoordinate("..", 19, 19)).toEqual({ x: -1, y: -1 });
+        expect(GoMath.decodeGTPCoordinates("pass", 19, 19)).toEqual({ x: -1, y: -1 });
+        expect(GoMath.decodeGTPCoordinates("..", 19, 19)).toEqual({ x: -1, y: -1 });
     });
     test("nonsense", () => {
-        expect(GoMath.decodeGTPCoordinate("&%", 19, 19)).toEqual({ x: -1, y: -1 });
+        expect(GoMath.decodeGTPCoordinates("&%", 19, 19)).toEqual({ x: -1, y: -1 });
     });
     test("regular moves (lowercase)", () => {
-        expect(GoMath.decodeGTPCoordinate("a1", 19, 19)).toEqual({ x: 0, y: 18 });
-        expect(GoMath.decodeGTPCoordinate("c4", 19, 19)).toEqual({ x: 2, y: 15 });
-        expect(GoMath.decodeGTPCoordinate("k10", 19, 19)).toEqual({ x: 9, y: 9 });
+        expect(GoMath.decodeGTPCoordinates("a1", 19, 19)).toEqual({ x: 0, y: 18 });
+        expect(GoMath.decodeGTPCoordinates("c4", 19, 19)).toEqual({ x: 2, y: 15 });
+        expect(GoMath.decodeGTPCoordinates("k10", 19, 19)).toEqual({ x: 9, y: 9 });
     });
 
     test("regular moves (lowercase)", () => {
-        expect(GoMath.decodeGTPCoordinate("A1", 19, 19)).toEqual({ x: 0, y: 18 });
-        expect(GoMath.decodeGTPCoordinate("C4", 19, 19)).toEqual({ x: 2, y: 15 });
-        expect(GoMath.decodeGTPCoordinate("K10", 19, 19)).toEqual({ x: 9, y: 9 });
+        expect(GoMath.decodeGTPCoordinates("A1", 19, 19)).toEqual({ x: 0, y: 18 });
+        expect(GoMath.decodeGTPCoordinates("C4", 19, 19)).toEqual({ x: 2, y: 15 });
+        expect(GoMath.decodeGTPCoordinates("K10", 19, 19)).toEqual({ x: 9, y: 9 });
     });
 });
 
@@ -271,26 +278,26 @@ describe("encodeMove", () => {
     });
 });
 
-describe("encodePrettyCoord", () => {
+describe("decodePrettyCoord", () => {
     test("tengen", () => {
-        expect(GoMath.encodePrettyCoord("k10", 19)).toBe("jj");
+        expect(encodeMove(decodePrettyCoordinates("k10", 19))).toBe("jj");
     });
 
     test("a1", () => {
-        expect(GoMath.encodePrettyCoord("a1", 3)).toBe("ac");
+        expect(encodeMove(decodePrettyCoordinates("a1", 3))).toBe("ac");
     });
 
     test("capital", () => {
-        expect(GoMath.encodePrettyCoord("A1", 3)).toBe("ac");
+        expect(encodeMove(decodePrettyCoordinates("A1", 3))).toBe("ac");
     });
 
     test("far corner", () => {
-        expect(GoMath.encodePrettyCoord("c3", 3)).toBe("ca");
+        expect(encodeMove(decodePrettyCoordinates("c3", 3))).toBe("ca");
     });
 
     test("pass", () => {
         // Is this really the pretty representation of pass?
-        expect(GoMath.encodePrettyCoord(".4", 3)).toBe("..");
+        expect(encodeMove(decodePrettyCoordinates(".4", 3))).toBe("..");
     });
 });
 
@@ -357,30 +364,6 @@ test("encodeMovesToArray", () => {
         [4, 4, 2048],
         [3, 3, 1024],
     ]);
-});
-
-describe("stripModeratorOnlyExtraInformation", () => {
-    test("does not strip x, y, timedelta", () => {
-        expect(GoMath.stripModeratorOnlyExtraInformation([1, 2, 3])).toEqual([1, 2, 3]);
-    });
-
-    test("trims blur", () => {
-        expect(GoMath.stripModeratorOnlyExtraInformation([1, 2, 3, 1, { blur: 1 }])).toEqual([
-            1, 2, 3, 1,
-        ]);
-    });
-
-    test("trims sgf_downloaded_by", () => {
-        expect(
-            GoMath.stripModeratorOnlyExtraInformation([1, 2, 3, 1, { sgf_downloaded_by: 1234 }]),
-        ).toEqual([1, 2, 3, 1]);
-    });
-
-    test("doesn't trim non-mod info in extra", () => {
-        expect(
-            GoMath.stripModeratorOnlyExtraInformation([1, 2, 3, 1, { misc_extra: "asdf" }]),
-        ).toEqual([1, 2, 3, 1, { misc_extra: "asdf" }]);
-    });
 });
 
 describe("trimJGOFMoves", () => {

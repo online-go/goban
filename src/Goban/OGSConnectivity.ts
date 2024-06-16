@@ -41,10 +41,10 @@ import {
     JGOFPlayerSummary,
     JGOFTimeControl,
     MarkInterface,
-    Move,
     niceInterval,
     ReviewMessage,
     ScoreEstimator,
+    JGOFMove,
 } from "engine";
 import {
     //ServerToClient,
@@ -636,7 +636,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     } else {
                         const removed = cfg.removed;
                         const stones = cfg.stones;
-                        let moves: Array<Move>;
+                        let moves: JGOFMove[];
                         if (!stones) {
                             moves = [];
                         } else {
