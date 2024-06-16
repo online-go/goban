@@ -34,5 +34,8 @@
         "jsx": "react"
     },
     "files": ["src/index.ts", "src/engine/index.ts", "jest.config.ts"],
-    "include": ["test/**/*.ts"]
+    "include": ["test/**/*.ts"],
+    "ts-node": {
+        "require": ["tsconfig-paths/register"]
+    }
 }
