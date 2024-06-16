@@ -2,7 +2,7 @@
 
 (global as any).CLIENT = true;
 
-import { TestGoban } from "./TestGoban";
+import { TestGoban } from "../../src/Goban/TestGoban";
 
 test("call FollowConditionalPath", () => {
     const goban = new TestGoban({ moves: [] });

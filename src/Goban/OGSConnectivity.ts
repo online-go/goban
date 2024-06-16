@@ -31,7 +31,7 @@ import {
     encodeMove,
     GobanSocket,
     GobanSocketEvents,
-    GoConditionalMove,
+    ConditionalMoveTree,
     GoEngine,
     GoMath,
     init_wasm_ownership_estimator,
@@ -620,7 +620,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     if (cmoves.moves == null) {
                         this.setConditionalTree();
                     } else {
-                        this.setConditionalTree(GoConditionalMove.decode(cmoves.moves));
+                        this.setConditionalTree(ConditionalMoveTree.decode(cmoves.moves));
                     }
                 },
             );

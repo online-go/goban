@@ -15,21 +15,15 @@
  * limitations under the License.
  */
 
-// This is a minimal implementation of Goban.  Currently it is just enough
-// to build (in other words, silence the abstract method errors).  In the future
-// I was thinking we'd add:
-//    - [ARRANGE] easy to read board state input.  For instance, maybe it can be
-//      initialized with a GnuGo-style ASCII string instead of an Array of 1s 2s
-//      and 0s.
-//    - [ASSERT] public state tracking: `is_pen_enabled`, `current_message`,
-//      `current_title` etc. A way for testers to peer into the internals
-
-import { GobanConfig } from "../../src/GobanBase";
+import { GobanConfig } from "../GobanBase";
 import { GoEngine } from "engine/GobanEngine";
 import { MessageID } from "engine/messages";
 import { MoveTreePenMarks } from "engine/MoveTree";
-import { Goban, GobanSelectedThemes } from "../../src/Goban/Goban";
+import { Goban, GobanSelectedThemes } from "./Goban";
 
+/**
+ * This is a minimal implementation of Goban, primarily used for unit tests.
+ */
 export class TestGoban extends Goban {
     public engine: GoEngine;
 
@@ -58,7 +52,3 @@ export class TestGoban extends Goban {
     protected enableDrawing(): void {}
     protected disableDrawing(): void {}
 }
-
-test("TestGoban", () => {
-    new TestGoban({});
-});

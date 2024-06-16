@@ -16,7 +16,7 @@
 
 import type { JGOFMove, JGOFPlayerClock, JGOFSealingIntersection } from "../formats/JGOF";
 import type { ReviewMessage } from "../GobanEngine";
-import type { ConditionalMoveResponse } from "../GoConditionalMove";
+import type { ConditionalMoveResponse } from "../ConditionalMoveTree";
 
 /** Messages that clients send, regardless of target server */
 export interface ClientToServerBase {

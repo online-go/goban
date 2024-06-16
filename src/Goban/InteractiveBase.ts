@@ -22,11 +22,11 @@ import {
     PlayerColor,
     PuzzlePlacementSetting,
     Score,
+    ConditionalMoveTree,
+    GobanMoveError,
 } from "engine";
-import { GobanMoveError } from "engine/GobanError";
 import { NumberMatrix, Intersection, encodeMove } from "engine/GoMath";
 import * as GoMath from "engine/GoMath";
-import { GoConditionalMove } from "engine/GoConditionalMove";
 import { MoveTree, MarkInterface } from "engine/MoveTree";
 import { ScoreEstimator } from "engine/ScoreEstimator";
 import { computeAverageMoveTime, niceInterval, matricesAreEqual } from "engine/util";
@@ -139,7 +139,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected abstract sendMove(mv: MoveCommand, cb?: () => void): boolean;
 
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
-    public conditional_tree: GoConditionalMove = new GoConditionalMove(null);
+    public conditional_tree: ConditionalMoveTree = new ConditionalMoveTree(null);
     public double_click_submit: boolean;
     public variation_stone_opacity: number;
     public draw_bottom_labels: boolean;
@@ -286,7 +286,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected bounds: GobanBounds;
     protected conditional_path: string = "";
     public config: GobanConfig;
-    protected current_cmove?: GoConditionalMove;
+    protected current_cmove?: ConditionalMoveTree;
     protected currently_my_cmove: boolean = false;
     protected dirty_redraw: any = null; // timer
     protected disconnectedFromGame: boolean = true;
@@ -1174,9 +1174,9 @@ export abstract class GobanInteractive extends GobanBase {
         }
     }
 
-    public setConditionalTree(conditional_tree?: GoConditionalMove): void {
+    public setConditionalTree(conditional_tree?: ConditionalMoveTree): void {
         if (typeof conditional_tree === "undefined") {
-            this.conditional_tree = new GoConditionalMove(null);
+            this.conditional_tree = new ConditionalMoveTree(null);
         } else {
             this.conditional_tree = conditional_tree;
         }
@@ -1211,7 +1211,7 @@ export abstract class GobanInteractive extends GobanBase {
             if (mv in this.current_cmove.children) {
                 cmove = this.current_cmove.children[mv];
             } else {
-                cmove = new GoConditionalMove(null, this.current_cmove);
+                cmove = new ConditionalMoveTree(null, this.current_cmove);
                 this.current_cmove.children[mv] = cmove;
             }
             this.current_cmove = cmove;

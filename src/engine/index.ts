@@ -21,14 +21,13 @@ export * from "./autoscore";
 export * from "../GobanBase";
 export * from "./GobanError";
 export * from "./GobanSocket";
-export * from "./GoConditionalMove";
+export * from "./ConditionalMoveTree";
 export * from "./GoMath";
 export * from "./MoveTree";
 export * from "./ownership_estimators";
 export * from "./ScoreEstimator";
 export * from "./StoneString";
 export * from "./StoneStringBuilder";
-export * from "../../test/unit_tests/test_utils";
 export * from "./formats";
 export * from "./util";
 

@@ -22,6 +22,7 @@ export * from "./Goban/CanvasRenderer";
 export * from "./Goban/SVGRenderer";
 export * from "./Goban/themes";
 export * from "./Goban/Goban";
+export * from "./Goban/TestGoban"; // we export this for ui tests
 
 export * as protocol from "engine/protocol";
 export { placeRenderedImageStone, preRenderImageStone } from "./Goban/themes/image_stones";

@@ -21,51 +21,51 @@ export type ConditionalMoveResponse = [
     string | null,
 
     /** next move tree */
-    ConditionalMoveTree,
+    ConditionalMoveResponseTree,
 ];
 
-export interface ConditionalMoveTree {
+export interface ConditionalMoveResponseTree {
     [move: string]: ConditionalMoveResponse;
 }
 
-export class GoConditionalMove {
+export class ConditionalMoveTree {
     children: {
-        [move: string]: GoConditionalMove;
+        [move: string]: ConditionalMoveTree;
     };
-    parent?: GoConditionalMove;
+    parent?: ConditionalMoveTree;
     move: string | null;
 
-    constructor(move: string | null, parent?: GoConditionalMove) {
+    constructor(move: string | null, parent?: ConditionalMoveTree) {
         this.move = move;
         this.parent = parent;
         this.children = {};
     }
 
     encode(): ConditionalMoveResponse {
-        const ret: ConditionalMoveTree = {};
+        const ret: ConditionalMoveResponseTree = {};
         for (const ch in this.children) {
             ret[ch] = this.children[ch].encode();
         }
         return [this.move, ret];
     }
-    static decode(data: ConditionalMoveResponse): GoConditionalMove {
+    static decode(data: ConditionalMoveResponse): ConditionalMoveTree {
         const move = data[0];
         const children = data[1];
-        const ret = new GoConditionalMove(move);
+        const ret = new ConditionalMoveTree(move);
         for (const ch in children) {
-            const child = GoConditionalMove.decode(children[ch]);
+            const child = ConditionalMoveTree.decode(children[ch]);
             child.parent = ret;
             ret.children[ch] = child;
         }
         return ret;
     }
-    getChild(mv: string): GoConditionalMove {
+    getChild(mv: string): ConditionalMoveTree {
         if (mv in this.children) {
             return this.children[mv];
         }
-        return new GoConditionalMove(null, this);
+        return new ConditionalMoveTree(null, this);
     }
-    duplicate(): GoConditionalMove {
-        return GoConditionalMove.decode(this.encode());
+    duplicate(): ConditionalMoveTree {
+        return ConditionalMoveTree.decode(this.encode());
     }
 }

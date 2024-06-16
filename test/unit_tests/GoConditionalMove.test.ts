@@ -1,4 +1,4 @@
-import { GoConditionalMove } from "engine";
+import { ConditionalMoveTree } from "engine";
 
 /**
  * ```
@@ -11,7 +11,7 @@ import { GoConditionalMove } from "engine";
  * ```
  */
 function makeLargeTree() {
-    return GoConditionalMove.decode([
+    return ConditionalMoveTree.decode([
         null,
         {
             aa: ["bb", { cc: [null, {}], dd: ["ee", { ff: ["gg", {}] }], hh: ["ii", {}] }],
@@ -22,7 +22,7 @@ function makeLargeTree() {
 
 describe("constructor", () => {
     test("null", () => {
-        const m = new GoConditionalMove(null);
+        const m = new ConditionalMoveTree(null);
 
         expect(m.children).toEqual({});
         expect(m.move).toBeNull();
@@ -30,7 +30,7 @@ describe("constructor", () => {
     });
 
     test("with move string", () => {
-        const m = new GoConditionalMove("aa");
+        const m = new ConditionalMoveTree("aa");
 
         expect(m.children).toEqual({});
         expect(m.move).toBe("aa");
@@ -38,8 +38,8 @@ describe("constructor", () => {
     });
 
     test("with move string and parent", () => {
-        const p = new GoConditionalMove("aa");
-        const m = new GoConditionalMove("bb", p);
+        const p = new ConditionalMoveTree("aa");
+        const m = new ConditionalMoveTree("bb", p);
 
         expect(m.children).toEqual({});
         expect(m.move).toBe("bb");
@@ -53,13 +53,13 @@ describe("constructor", () => {
 
 describe("encode/decode", () => {
     test("null", () => {
-        const m = new GoConditionalMove(null);
+        const m = new ConditionalMoveTree(null);
 
         expect(m.encode()).toEqual([null, {}]);
     });
 
     test("with move string", () => {
-        const m = new GoConditionalMove("aa");
+        const m = new ConditionalMoveTree("aa");
 
         expect(m.encode()).toEqual(["aa", {}]);
     });
@@ -88,14 +88,14 @@ describe("encode/decode", () => {
 
 describe("duplicate", () => {
     test("null", () => {
-        const m = new GoConditionalMove(null);
+        const m = new ConditionalMoveTree(null);
 
         expect(m.duplicate()).toEqual(m);
         expect(m.duplicate()).not.toBe(m);
     });
 
     test("with move string", () => {
-        const m = new GoConditionalMove("aa");
+        const m = new ConditionalMoveTree("aa");
 
         expect(m.duplicate()).toEqual(m);
         expect(m.duplicate()).not.toBe(m);
@@ -116,6 +116,6 @@ describe("duplicate", () => {
 });
 
 test("getChild returns GoConditionalMove if doesn't exist", () => {
-    const m = new GoConditionalMove(null);
-    expect(m.getChild("aa")).toEqual(new GoConditionalMove(null, m));
+    const m = new ConditionalMoveTree(null);
+    expect(m.getChild("aa")).toEqual(new ConditionalMoveTree(null, m));
 });
