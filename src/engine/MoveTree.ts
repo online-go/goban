@@ -123,7 +123,7 @@ export class MoveTree {
     public player_update: JGOFPlayerSummary | undefined;
     public played_by: number | undefined;
 
-    /* public for use by renderer */
+    /* public for use by renderers when drawing move trees  */
     public active_path_number: number = 0;
     public layout_cx: number = 0;
     public layout_cy: number = 0;
@@ -136,7 +136,8 @@ export class MoveTree {
     /* These need to be protected by accessor methods now that we're not
      * initializing them on construction */
     private chat_log?: Array<MoveTreeChatLine>;
-    private marks?: Array<Array<MarkInterface>>;
+    private marks?: MarkInterface[][];
+    private stashed_marks: MarkInterface[][][] = [];
     public isobranches: any;
     private isobranch_hash?: string;
 
@@ -174,7 +175,8 @@ export class MoveTree {
         this.text = "";
     }
 
-    toJson(): MoveTreeJson {
+    /** Serializes our MoveTree into a MoveTreeJson object */
+    public toJson(): MoveTreeJson {
         const ret: MoveTreeJson = {
             x: this.x,
             y: this.y,
@@ -211,7 +213,9 @@ export class MoveTree {
 
         return ret;
     }
-    loadJsonForThisNode(json: MoveTreeJson): void {
+
+    /** Loads the state of this MoveTree node from a MoveTreeJson object */
+    public loadJsonForThisNode(json: MoveTreeJson): void {
         /* Unlike toJson, restoring from the json blob is a collaborative effort between
          * MoveTree and the GobanEngine because of all the state we capture along the way..
          * so during restoration GobanEngine will form the tree, and for each node call this
@@ -238,7 +242,8 @@ export class MoveTree {
         }
     }
 
-    recomputeIsobranches(): void {
+    /** Recomputes the isobranches for the entire tree. This needs to be called on the root node. */
+    public recomputeIsobranches(): void {
         if (this.parent) {
             throw new Error("MoveTree.recomputeIsobranches needs to be called from the root node");
         }
@@ -585,25 +590,40 @@ export class MoveTree {
             this.remove();
         }
     }
-    getChatLog(): Array<any> {
+    getChatLog(): any[] {
         if (!this.chat_log) {
             this.chat_log = [];
         }
         return this.chat_log;
     }
-    getAllMarks(): Array<Array<MarkInterface>> {
+    getAllMarks(): MarkInterface[][] {
         if (!this.marks) {
             this.marks = this.clearMarks();
         }
         return this.marks;
     }
-    setAllMarks(marks: Array<Array<MarkInterface>>): void {
+    setAllMarks(marks: MarkInterface[][]): void {
         this.marks = marks;
     }
-    clearMarks(): Array<Array<MarkInterface>> {
+    clearMarks(): MarkInterface[][] {
         this.marks = makeObjectMatrix<MarkInterface>(this.engine.width, this.engine.height);
         return this.marks;
     }
+
+    /** Saves the current marks in our stash, restore them with popMarks */
+    public stashMarks(): void {
+        this.stashed_marks.push(this.getAllMarks());
+        this.clearMarks();
+    }
+
+    /** Restores previously stashed marks */
+    public popStashedMarks(): void {
+        if (this.stashed_marks.length > 0) {
+            this.marks = this.stashed_marks.pop();
+        }
+    }
+
+    /** Returns true if there are any marks that have been set */
     hasMarks(): boolean {
         if (!this.marks) {
             return false;
@@ -620,7 +640,9 @@ export class MoveTree {
         }
         return false;
     }
-    foreachMarkedPosition(fn: (i: number, j: number) => void): void {
+
+    /** Calls a callback for each positions that has a mark on it */
+    public foreachMarkedPosition(fn: (i: number, j: number) => void): void {
         if (!this.marks) {
             return;
         }
