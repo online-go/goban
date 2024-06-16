@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { encodeMove } from "./GoMath";
-import * as GoMath from "./GoMath";
+import { encodeMove, makeMatrix, NumberMatrix } from "./util";
 import { StoneString } from "./StoneString";
 import { StoneStringBuilder } from "./StoneStringBuilder";
 import type { GobanBase } from "../GobanBase";
@@ -83,7 +82,7 @@ type LocalEstimator = (
     color_to_move: "black" | "white",
     trials: number,
     tolerance: number,
-) => GoMath.NumberMatrix;
+) => NumberMatrix;
 let local_ownership_estimator = wasm_estimate_ownership;
 export function set_local_ownership_estimator(estimator: LocalEstimator) {
     local_ownership_estimator = estimator;
@@ -139,15 +138,15 @@ export class ScoreEstimator extends BoardState {
         this.engine = engine;
         this.color_to_move = engine.colorToMove();
         this.board = engine.cloneBoard();
-        this.ownership = GoMath.makeMatrix(this.width, this.height, 0);
-        this.territory = GoMath.makeMatrix(this.width, this.height, 0);
+        this.ownership = makeMatrix(this.width, this.height, 0);
+        this.territory = makeMatrix(this.width, this.height, 0);
         this.estimated_hard_score = 0.0;
         this.trials = trials;
         this.tolerance = tolerance;
         this.prefer_remote = prefer_remote;
         this.autoscore = autoscore;
 
-        this.territory = GoMath.makeMatrix(this.width, this.height, 0);
+        this.territory = makeMatrix(this.width, this.height, 0);
         this.groups = new StoneStringBuilder(this);
 
         this.when_ready = this.estimateScore(this.trials, this.tolerance, autoscore);
@@ -248,7 +247,7 @@ export class ScoreEstimator extends BoardState {
             tolerance = 0.25;
         }
 
-        const board = GoMath.makeMatrix(this.width, this.height, 0);
+        const board = makeMatrix(this.width, this.height, 0);
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 board[y][x] = this.board[y][x] === 2 ? -1 : this.board[y][x];
@@ -438,14 +437,14 @@ export class ScoreEstimator extends BoardState {
                         } else {
                             this.black.territory += 1;
                         }
-                        this.black.scoring_positions += GoMath.encodeMove(x, y);
+                        this.black.scoring_positions += encodeMove(x, y);
                     } else if (scoring[y][x] === goscorer.WHITE) {
                         if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
                             this.white.stones += 1;
                         } else {
                             this.white.territory += 1;
                         }
-                        this.white.scoring_positions += GoMath.encodeMove(x, y);
+                        this.white.scoring_positions += encodeMove(x, y);
                     }
                 }
             }
@@ -463,10 +462,10 @@ export class ScoreEstimator extends BoardState {
                     } else {
                         if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
                             this.black.territory += 1;
-                            this.black.scoring_positions += GoMath.encodeMove(x, y);
+                            this.black.scoring_positions += encodeMove(x, y);
                         } else if (scoring[y][x].isTerritoryFor === goscorer.WHITE) {
                             this.white.territory += 1;
-                            this.white.scoring_positions += GoMath.encodeMove(x, y);
+                            this.white.scoring_positions += encodeMove(x, y);
                         }
                     }
                 }
@@ -507,7 +506,7 @@ export function adjust_estimate(
 ) {
     let adjusted_score = score - engine.getHandicapPointAdjustmentForWhite();
     const { width, height } = get_dimensions(board);
-    const ownership = GoMath.makeMatrix(width, height, 0);
+    const ownership = makeMatrix(width, height, 0);
 
     // For Japanese rules we use territory counting.  Don't even
     // attempt to handle rules with score_stones and not
@@ -560,7 +559,7 @@ function get_dimensions(board: Array<Array<unknown>>) {
     return { width: board[0].length, height: board.length };
 }
 
-function sum_board(board: GoMath.NumberMatrix) {
+function sum_board(board: NumberMatrix) {
     const { width, height } = get_dimensions(board);
     let sum = 0;
     for (let y = 0; y < height; y++) {

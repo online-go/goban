@@ -20,7 +20,6 @@ import { AdHocFormat } from "engine/formats/AdHocFormat";
 
 import { GobanConfig } from "../GobanBase";
 import { GoEngine } from "engine";
-import * as GoMath from "engine/GoMath";
 import { MoveTree } from "engine/MoveTree";
 import { GobanTheme, THEMES } from "./themes";
 import { MoveTreePenMarks } from "engine/MoveTree";
@@ -32,7 +31,14 @@ import {
 } from "./canvas_utils";
 import { _ } from "engine/translate";
 import { formatMessage, MessageID } from "engine/messages";
-import { color_blend, getRandomInt } from "engine/util";
+import {
+    color_blend,
+    encodeMove,
+    encodeMoves,
+    encodePrettyXCoordinate,
+    getRandomInt,
+    makeStringMatrix,
+} from "engine/util";
 import { callbacks } from "./callbacks";
 import { Goban, GobanMetrics, GobanSelectedThemes, GOBAN_FONT } from "./Goban";
 
@@ -830,7 +836,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             }
             const sent = this.sendMove({
                 game_id: this.game_id,
-                move: GoMath.encodeMove(x, y),
+                move: encodeMove(x, y),
             });
             if (sent) {
                 this.playMovementSound();
@@ -866,7 +872,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     this.socket.send("game/removed_stones/set", {
                         game_id: this.game_id,
                         removed: removed,
-                        stones: GoMath.encodeMoves(group),
+                        stones: encodeMoves(group),
                     });
                 }
             } else if (this.mode === "puzzle") {
@@ -2764,7 +2770,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                                 this.square_size +
                             this.square_size / 2;
                         const y = j * this.square_size + this.square_size / 2;
-                        place(GoMath.encodePrettyXCoordinate(c), x, y);
+                        place(encodePrettyXCoordinate(c), x, y);
                     }
                     break;
                 case "1-1":
@@ -2888,7 +2894,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             this.__draw_state.length !== this.height ||
             this.__draw_state[0].length !== this.width
         ) {
-            this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
+            this.__draw_state = makeStringMatrix(this.width, this.height);
         }
 
         /* Set font for text overlay */

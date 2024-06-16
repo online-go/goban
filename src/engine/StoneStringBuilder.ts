@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import * as GoMath from "./GoMath";
 import { StoneString } from "./StoneString";
 import { BoardState } from "./BoardState";
 import { JGOFNumericPlayerColor } from "./formats/JGOF";
+import { makeMatrix } from "./util";
 
 export class StoneStringBuilder {
     private state: BoardState;
@@ -26,7 +26,7 @@ export class StoneStringBuilder {
 
     constructor(state: BoardState, original_board?: JGOFNumericPlayerColor[][]) {
         const stone_strings: StoneString[] = Array(1); // this is indexed by group_id, so we 1 index this array so group_id >= 1
-        const group_id_map = GoMath.makeMatrix(state.width, state.height, 0);
+        const group_id_map = makeMatrix(state.width, state.height, 0);
 
         this.state = state;
         this.stone_string_id_map = group_id_map;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { dup } from "../util";
+import { cloneMatrix } from "engine/util";
 
 /**
  * This estimator simply marks territory for whichever color has a
@@ -23,7 +23,7 @@ import { dup } from "../util";
  */
 export function voronoi_estimate_ownership(board: number[][]) {
     const { width, height } = get_dims(board);
-    const ownership: number[][] = dup(board);
+    const ownership: number[][] = cloneMatrix(board);
     let points = getPoints(board, (pt) => pt !== 0);
     while (points.length) {
         const unvisited = points

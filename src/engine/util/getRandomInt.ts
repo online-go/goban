@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Online-Go.com
+ * Copyright (C)  Online-Go.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-export * from "./BoardState";
-export * from "./GobanEngine";
-export * from "./autoscore";
-export * from "../GobanBase";
-export * from "./GobanError";
-export * from "./GobanSocket";
-export * from "./ConditionalMoveTree";
-export * from "./MoveTree";
-export * from "./ownership_estimators";
-export * from "./ScoreEstimator";
-export * from "./StoneString";
-export * from "./StoneStringBuilder";
-export * from "./formats";
-export * from "./util";
-
-export * as translate from "./translate";
+/** Returns a random integer between min (inclusive) and max (exclusive) */
+export function getRandomInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min)) + min;
+}

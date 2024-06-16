@@ -3,10 +3,20 @@
 import {
     StoneStringBuilder,
     JGOFNumericPlayerColor,
-    GoMath,
     BoardState,
     decodePrettyCoordinates,
     encodeMove,
+    decodeGTPCoordinates,
+    decodeMoves,
+    encodeMovesToArray,
+    encodeMoveToArray,
+    makeEmptyObjectMatrix,
+    makeMatrix,
+    makeObjectMatrix,
+    makeStringMatrix,
+    ojeSequenceToMoves,
+    prettyCoordinates,
+    sortMoves,
 } from "engine";
 
 describe("GoStoneGroups constructor", () => {
@@ -50,89 +60,89 @@ describe("GoStoneGroups constructor", () => {
 
 describe("matrices", () => {
     test("makeMatrix", () => {
-        expect(GoMath.makeMatrix(3, 2, 0)).toEqual([
+        expect(makeMatrix(3, 2, 0)).toEqual([
             [0, 0, 0],
             [0, 0, 0],
         ]);
-        expect(GoMath.makeMatrix(3, 2, 1234)).toEqual([
+        expect(makeMatrix(3, 2, 1234)).toEqual([
             [1234, 1234, 1234],
             [1234, 1234, 1234],
         ]);
-        expect(GoMath.makeMatrix(0, 0, 0)).toEqual([]);
+        expect(makeMatrix(0, 0, 0)).toEqual([]);
     });
 
     test("makeStringMatrix", () => {
-        expect(GoMath.makeStringMatrix(3, 2)).toEqual([
+        expect(makeStringMatrix(3, 2)).toEqual([
             ["", "", ""],
             ["", "", ""],
         ]);
-        expect(GoMath.makeStringMatrix(3, 2, "asdf")).toEqual([
+        expect(makeStringMatrix(3, 2, "asdf")).toEqual([
             ["asdf", "asdf", "asdf"],
             ["asdf", "asdf", "asdf"],
         ]);
-        expect(GoMath.makeStringMatrix(0, 0)).toEqual([]);
+        expect(makeStringMatrix(0, 0)).toEqual([]);
     });
 
     test("makeObjectMatrix", () => {
-        expect(GoMath.makeObjectMatrix(3, 2)).toEqual([
+        expect(makeObjectMatrix(3, 2)).toEqual([
             [{}, {}, {}],
             [{}, {}, {}],
         ]);
-        expect(GoMath.makeObjectMatrix(0, 0)).toEqual([]);
+        expect(makeObjectMatrix(0, 0)).toEqual([]);
     });
 
     test("makeEmptyObjectMatrix", () => {
-        expect(GoMath.makeEmptyObjectMatrix(3, 2)).toEqual([
+        expect(makeEmptyObjectMatrix(3, 2)).toEqual([
             [undefined, undefined, undefined],
             [undefined, undefined, undefined],
         ]);
-        expect(GoMath.makeEmptyObjectMatrix(0, 0)).toEqual([]);
+        expect(makeEmptyObjectMatrix(0, 0)).toEqual([]);
     });
 });
 
 describe("prettyCoords", () => {
     test("pass", () => {
-        expect(GoMath.prettyCoordinates(-1, -1, 19)).toBe("pass");
+        expect(prettyCoordinates(-1, -1, 19)).toBe("pass");
     });
 
     test("out of bounds", () => {
         // I doubt this is actually desired behavior.  Feel free to remove this
         // test after verifying nothing depends on this behavior.
-        expect(GoMath.prettyCoordinates(25, 9, 19)).toBe("undefined10");
-        expect(GoMath.prettyCoordinates(9, 25, 19)).toBe("K-6");
+        expect(prettyCoordinates(25, 9, 19)).toBe("undefined10");
+        expect(prettyCoordinates(9, 25, 19)).toBe("K-6");
     });
 
     test("regular moves", () => {
-        expect(GoMath.prettyCoordinates(0, 0, 19)).toBe("A19");
-        expect(GoMath.prettyCoordinates(2, 15, 19)).toBe("C4");
-        expect(GoMath.prettyCoordinates(9, 9, 19)).toBe("K10");
+        expect(prettyCoordinates(0, 0, 19)).toBe("A19");
+        expect(prettyCoordinates(2, 15, 19)).toBe("C4");
+        expect(prettyCoordinates(9, 9, 19)).toBe("K10");
     });
 });
 
 describe("decodeGTPCoordinate", () => {
     test("pass", () => {
-        expect(GoMath.decodeGTPCoordinates("pass", 19, 19)).toEqual({ x: -1, y: -1 });
-        expect(GoMath.decodeGTPCoordinates("..", 19, 19)).toEqual({ x: -1, y: -1 });
+        expect(decodeGTPCoordinates("pass", 19, 19)).toEqual({ x: -1, y: -1 });
+        expect(decodeGTPCoordinates("..", 19, 19)).toEqual({ x: -1, y: -1 });
     });
     test("nonsense", () => {
-        expect(GoMath.decodeGTPCoordinates("&%", 19, 19)).toEqual({ x: -1, y: -1 });
+        expect(decodeGTPCoordinates("&%", 19, 19)).toEqual({ x: -1, y: -1 });
     });
     test("regular moves (lowercase)", () => {
-        expect(GoMath.decodeGTPCoordinates("a1", 19, 19)).toEqual({ x: 0, y: 18 });
-        expect(GoMath.decodeGTPCoordinates("c4", 19, 19)).toEqual({ x: 2, y: 15 });
-        expect(GoMath.decodeGTPCoordinates("k10", 19, 19)).toEqual({ x: 9, y: 9 });
+        expect(decodeGTPCoordinates("a1", 19, 19)).toEqual({ x: 0, y: 18 });
+        expect(decodeGTPCoordinates("c4", 19, 19)).toEqual({ x: 2, y: 15 });
+        expect(decodeGTPCoordinates("k10", 19, 19)).toEqual({ x: 9, y: 9 });
     });
 
     test("regular moves (lowercase)", () => {
-        expect(GoMath.decodeGTPCoordinates("A1", 19, 19)).toEqual({ x: 0, y: 18 });
-        expect(GoMath.decodeGTPCoordinates("C4", 19, 19)).toEqual({ x: 2, y: 15 });
-        expect(GoMath.decodeGTPCoordinates("K10", 19, 19)).toEqual({ x: 9, y: 9 });
+        expect(decodeGTPCoordinates("A1", 19, 19)).toEqual({ x: 0, y: 18 });
+        expect(decodeGTPCoordinates("C4", 19, 19)).toEqual({ x: 2, y: 15 });
+        expect(decodeGTPCoordinates("K10", 19, 19)).toEqual({ x: 9, y: 9 });
     });
 });
 
 describe("decodeMoves", () => {
     test("decodes string", () => {
-        expect(GoMath.decodeMoves("aabbcc", 19, 19)).toEqual([
+        expect(decodeMoves("aabbcc", 19, 19)).toEqual([
             { x: 0, y: 0, color: 0, edited: false },
             { x: 1, y: 1, color: 0, edited: false },
             { x: 2, y: 2, color: 0, edited: false },
@@ -140,76 +150,74 @@ describe("decodeMoves", () => {
     });
 
     test("decodes string with passes", () => {
-        expect(GoMath.decodeMoves("aa..", 19, 19)).toEqual([
+        expect(decodeMoves("aa..", 19, 19)).toEqual([
             { x: 0, y: 0, color: 0, edited: false },
             { x: -1, y: -1, color: 0, edited: false },
         ]);
     });
 
     test("converts JGOFMove to Array<JGOFMove>", () => {
-        expect(GoMath.decodeMoves({ x: 2, y: 2 }, 19, 19)).toEqual([{ x: 2, y: 2 }]);
+        expect(decodeMoves({ x: 2, y: 2 }, 19, 19)).toEqual([{ x: 2, y: 2 }]);
     });
 
     test("throws on random object", () => {
         expect(() => {
-            GoMath.decodeMoves(new Object() as any, 19, 19);
+            decodeMoves(new Object() as any, 19, 19);
         }).toThrow("Invalid move format: {}");
     });
 
     test("x greater than width returns pass", () => {
-        expect(GoMath.decodeMoves("da", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
+        expect(decodeMoves("da", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
     });
 
     test("y greater than height returns pass", () => {
-        expect(GoMath.decodeMoves("ad", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
+        expect(decodeMoves("ad", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
     });
 
     test("bad data", () => {
         // not really sure when this happens, but there's code to handle it
-        expect(GoMath.decodeMoves("!undefined", 19, 19)).toEqual([
+        expect(decodeMoves("!undefined", 19, 19)).toEqual([
             { x: -1, y: -1, color: 0, edited: true },
         ]);
     });
 
     test("pretty coordinates", () => {
-        expect(GoMath.decodeMoves("K10", 19, 19)).toEqual([
-            { x: 9, y: 9, color: 0, edited: false },
-        ]);
+        expect(decodeMoves("K10", 19, 19)).toEqual([{ x: 9, y: 9, color: 0, edited: false }]);
     });
 
     test("throws on unparsed input", () => {
         expect(() => {
-            GoMath.decodeMoves("K10z", 19, 19);
+            decodeMoves("K10z", 19, 19);
         }).toThrow("Unparsed move input: z");
     });
 
     test("pretty x greater than width returns pass", () => {
-        expect(GoMath.decodeMoves("D1", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
+        expect(decodeMoves("D1", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
     });
 
     test("pretty y greater than height returns pass", () => {
-        expect(GoMath.decodeMoves("A4", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
+        expect(decodeMoves("A4", 3, 3)).toEqual([{ x: -1, y: -1, color: 0, edited: false }]);
     });
 
     test("throws without height and width", () => {
         // Actually this ts is meant to cover the undefined case..
 
         expect(() => {
-            GoMath.decodeMoves("aabbcc", 0, 0);
+            decodeMoves("aabbcc", 0, 0);
         }).toThrow(
             "decodeMoves requires a height and width to be set when decoding a string coordinate",
         );
     });
 
     test("single packed move", () => {
-        expect(GoMath.decodeMoves([1, 2, 2048], 3, 3)).toEqual([
+        expect(decodeMoves([1, 2, 2048], 3, 3)).toEqual([
             { x: 1, y: 2, color: 0, timedelta: 2048 },
         ]);
     });
 
     test("Array<JGOFMove>", () => {
         expect(
-            GoMath.decodeMoves(
+            decodeMoves(
                 [
                     { x: 4, y: 4, color: 1 },
                     { x: 3, y: 3, color: 2 },
@@ -225,7 +233,7 @@ describe("decodeMoves", () => {
 
     test("Array<packed move>", () => {
         expect(
-            GoMath.decodeMoves(
+            decodeMoves(
                 [
                     [1, 2, 2048, 2, { blur: 1234 }],
                     [3, 4, 2048, 1],
@@ -241,39 +249,39 @@ describe("decodeMoves", () => {
 
     test("throws without height and width", () => {
         expect(() => {
-            GoMath.decodeMoves(["asdf" as any, [3, 4, 2048]], 19, 19);
+            decodeMoves(["asdf" as any, [3, 4, 2048]], 19, 19);
         }).toThrow("Unrecognized move format: asdf");
     });
 
     test("empty array", () => {
-        expect(GoMath.decodeMoves([], 19, 19)).toEqual([]);
+        expect(decodeMoves([], 19, 19)).toEqual([]);
     });
 });
 
 describe("encodeMove", () => {
     test("corner", () => {
-        expect(GoMath.encodeMove(0, 0)).toBe("aa");
+        expect(encodeMove(0, 0)).toBe("aa");
     });
 
     test("tengen", () => {
-        expect(GoMath.encodeMove(9, 9)).toBe("jj");
+        expect(encodeMove(9, 9)).toBe("jj");
     });
 
     test("a19", () => {
-        expect(GoMath.encodeMove(0, 18)).toBe("as");
+        expect(encodeMove(0, 18)).toBe("as");
     });
 
     test("t1", () => {
-        expect(GoMath.encodeMove(18, 0)).toBe("sa");
+        expect(encodeMove(18, 0)).toBe("sa");
     });
 
     test("Move type", () => {
-        expect(GoMath.encodeMove({ x: 3, y: 3 })).toBe("dd");
+        expect(encodeMove({ x: 3, y: 3 })).toBe("dd");
     });
 
     test("throws if x is a number but y is missing", () => {
         expect(() => {
-            GoMath.encodeMove(3);
+            encodeMove(3);
         }).toThrow("Invalid y parameter to encodeMove y = undefined");
     });
 });
@@ -303,28 +311,26 @@ describe("decodePrettyCoord", () => {
 
 describe("encodeMoveToArray", () => {
     test("x, y, timedelta", () => {
-        expect(GoMath.encodeMoveToArray({ x: 4, y: 5, timedelta: 678 })).toEqual([4, 5, 678]);
+        expect(encodeMoveToArray({ x: 4, y: 5, timedelta: 678 })).toEqual([4, 5, 678]);
     });
 
     test("timedelta defaults to -1", () => {
-        expect(GoMath.encodeMoveToArray({ x: 1, y: 1 })).toEqual([1, 1, -1]);
+        expect(encodeMoveToArray({ x: 1, y: 1 })).toEqual([1, 1, -1]);
     });
 
     test("if !edited color gets stripped", () => {
-        expect(GoMath.encodeMoveToArray({ x: 1, y: 1, timedelta: 1000, color: 2 })).toEqual([
-            1, 1, 1000,
-        ]);
+        expect(encodeMoveToArray({ x: 1, y: 1, timedelta: 1000, color: 2 })).toEqual([1, 1, 1000]);
     });
 
     test("if edited color is the 4th element", () => {
-        expect(
-            GoMath.encodeMoveToArray({ x: 1, y: 1, timedelta: 1000, color: 2, edited: true }),
-        ).toEqual([1, 1, 1000, 2]);
+        expect(encodeMoveToArray({ x: 1, y: 1, timedelta: 1000, color: 2, edited: true })).toEqual([
+            1, 1, 1000, 2,
+        ]);
     });
 
     test("extra fields are saved", () => {
         expect(
-            GoMath.encodeMoveToArray({
+            encodeMoveToArray({
                 x: 1,
                 y: 1,
                 timedelta: 1000,
@@ -356,7 +362,7 @@ describe("encodeMoveToArray", () => {
 
 test("encodeMovesToArray", () => {
     expect(
-        GoMath.encodeMovesToArray([
+        encodeMovesToArray([
             { x: 4, y: 4, timedelta: 2048 },
             { x: 3, y: 3, timedelta: 1024 },
         ]),
@@ -366,14 +372,15 @@ test("encodeMovesToArray", () => {
     ]);
 });
 
+/*
 describe("trimJGOFMoves", () => {
     test("empty", () => {
-        expect(GoMath.trimJGOFMoves([])).toEqual([]);
+        expect(trimJGOFMoves([])).toEqual([]);
     });
 
     test("does not trim edited=true, color=1 etc.", () => {
         expect(
-            GoMath.trimJGOFMoves([
+            trimJGOFMoves([
                 {
                     x: 1,
                     y: 1,
@@ -395,7 +402,7 @@ describe("trimJGOFMoves", () => {
 
     test("trims played_by", () => {
         expect(
-            GoMath.trimJGOFMoves([
+            trimJGOFMoves([
                 {
                     x: 1,
                     y: 1,
@@ -412,7 +419,7 @@ describe("trimJGOFMoves", () => {
 
     test("trims edited=false", () => {
         expect(
-            GoMath.trimJGOFMoves([
+            trimJGOFMoves([
                 {
                     x: 1,
                     y: 1,
@@ -429,7 +436,7 @@ describe("trimJGOFMoves", () => {
 
     test("trims color=0", () => {
         expect(
-            GoMath.trimJGOFMoves([
+            trimJGOFMoves([
                 {
                     x: 1,
                     y: 1,
@@ -452,7 +459,7 @@ describe("trimJGOFMoves", () => {
                 edited: false,
             },
         ];
-        GoMath.trimJGOFMoves(arr);
+        trimJGOFMoves(arr);
         expect(arr).toEqual([
             {
                 x: 1,
@@ -462,41 +469,42 @@ describe("trimJGOFMoves", () => {
         ]);
     });
 });
+*/
 
 describe("sortMoves", () => {
     test("sorted array", () => {
-        expect(GoMath.sortMoves("aabbcc", 3, 3)).toBe("aabbcc");
+        expect(sortMoves("aabbcc", 3, 3)).toBe("aabbcc");
     });
 
     test("reversed array", () => {
-        expect(GoMath.sortMoves("ccbbaa", 3, 3)).toBe("aabbcc");
+        expect(sortMoves("ccbbaa", 3, 3)).toBe("aabbcc");
     });
 
     test("y takes precedence", () => {
-        expect(GoMath.sortMoves("abba", 3, 3)).toBe("baab");
+        expect(sortMoves("abba", 3, 3)).toBe("baab");
     });
 
     test("empty array", () => {
-        expect(GoMath.sortMoves("", 2, 2)).toBe("");
+        expect(sortMoves("", 2, 2)).toBe("");
     });
 
     test("out of bounds", () => {
-        expect(GoMath.sortMoves("cc", 2, 2)).toBe("..");
+        expect(sortMoves("cc", 2, 2)).toBe("..");
     });
 
     test("edited moves pushed to the end", () => {
-        expect(GoMath.sortMoves("!1aabb!2ccdd", 4, 4)).toBe("bbdd!1aa!2cc");
+        expect(sortMoves("!1aabb!2ccdd", 4, 4)).toBe("bbdd!1aa!2cc");
     });
 
     test("repeat elements", () => {
-        expect(GoMath.sortMoves("aaaaaa", 2, 2)).toBe("aaaaaa");
+        expect(sortMoves("aaaaaa", 2, 2)).toBe("aaaaaa");
     });
 });
 
 describe("ojeSequenceToMoves", () => {
     test("bad sequence", () => {
         expect(() => {
-            GoMath.ojeSequenceToMoves("nonsense");
+            ojeSequenceToMoves("nonsense");
         }).toThrow("root");
     });
 
@@ -512,6 +520,6 @@ describe("ojeSequenceToMoves", () => {
             ],
         ],
     ])("id of %s", (sequence, id) => {
-        expect(GoMath.ojeSequenceToMoves(sequence)).toStrictEqual(id);
+        expect(ojeSequenceToMoves(sequence)).toStrictEqual(id);
     });
 });

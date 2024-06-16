@@ -17,7 +17,7 @@
 import { GobanEvents } from "../GobanBase";
 import { EventEmitter } from "eventemitter3";
 import { JGOFIntersection, JGOFNumericPlayerColor } from "./formats/JGOF";
-import { makeMatrix } from "./GoMath";
+import { makeMatrix } from "./util";
 import * as goscorer from "goscorer";
 import { StoneStringBuilder } from "./StoneStringBuilder";
 import type { GobanBase } from "../GobanBase";

@@ -22,9 +22,10 @@ import {
     decodePrettyCoordinates,
     encodeMove,
     encodeMoves,
+    positionId,
     prettyCoordinates,
-} from "./GoMath";
-import * as GoMath from "./GoMath";
+    sortMoves,
+} from "./util";
 import { RawStoneString } from "./StoneString";
 import { ScoreEstimator } from "./ScoreEstimator";
 import { GobanBase, GobanEvents } from "../GobanBase";
@@ -771,7 +772,7 @@ export class GoEngine extends BoardState {
     }
 
     public currentPositionId(): string {
-        return GoMath.positionId(this.board, this.height, this.width);
+        return positionId(this.board, this.height, this.width);
     }
 
     public followPath(
@@ -964,7 +965,7 @@ export class GoEngine extends BoardState {
         }
 
         moves.reverse();
-        return { from: branch_point.getMoveIndex(), moves: GoMath.encodeMoves(moves) };
+        return { from: branch_point.getMoveIndex(), moves: encodeMoves(moves) };
     }
     public setAsCurrentReviewMove(): void {
         if (this.dontStoreBoardHistory) {
@@ -1322,7 +1323,7 @@ export class GoEngine extends BoardState {
                     break;
                 }
             }
-            this.initial_state.black = GoMath.encodeMoves(moves);
+            this.initial_state.black = encodeMoves(moves);
 
             moves = this.decodeMoves(this.initial_state?.white || "");
             for (let i = 0; i < moves.length; ++i) {
@@ -1331,7 +1332,7 @@ export class GoEngine extends BoardState {
                     break;
                 }
             }
-            this.initial_state.white = GoMath.encodeMoves(moves);
+            this.initial_state.white = encodeMoves(moves);
 
             /* Then add if applicable */
             if (color) {
@@ -1339,7 +1340,7 @@ export class GoEngine extends BoardState {
                     this.initial_state[color === 1 ? "black" : "white"] || "",
                 );
                 moves.push({ x: x, y: y, color: color });
-                this.initial_state[color === 1 ? "black" : "white"] = GoMath.encodeMoves(moves);
+                this.initial_state[color === 1 ? "black" : "white"] = encodeMoves(moves);
             }
         }
 
@@ -1401,7 +1402,7 @@ export class GoEngine extends BoardState {
             ret += arr[i];
         }
 
-        return GoMath.sortMoves(ret, this.width, this.height);
+        return sortMoves(ret, this.width, this.height);
     }
 
     public getMoveNumber(): number {
@@ -1474,14 +1475,14 @@ export class GoEngine extends BoardState {
                             } else {
                                 ret.black.territory += 1;
                             }
-                            ret.black.scoring_positions += GoMath.encodeMove(x, y);
+                            ret.black.scoring_positions += encodeMove(x, y);
                         } else if (scoring[y][x] === goscorer.WHITE) {
                             if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
                                 ret.white.stones += 1;
                             } else {
                                 ret.white.territory += 1;
                             }
-                            ret.white.scoring_positions += GoMath.encodeMove(x, y);
+                            ret.white.scoring_positions += encodeMove(x, y);
                         }
                     }
                 }
@@ -1491,10 +1492,10 @@ export class GoEngine extends BoardState {
                     for (let x = 0; x < this.width; ++x) {
                         if (scoring[y][x].isTerritoryFor === goscorer.BLACK) {
                             ret.black.territory += 1;
-                            ret.black.scoring_positions += GoMath.encodeMove(x, y);
+                            ret.black.scoring_positions += encodeMove(x, y);
                         } else if (scoring[y][x].isTerritoryFor === goscorer.WHITE) {
                             ret.white.territory += 1;
-                            ret.white.scoring_positions += GoMath.encodeMove(x, y);
+                            ret.white.scoring_positions += encodeMove(x, y);
                         }
                     }
                 }

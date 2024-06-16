@@ -1,4 +1,4 @@
-import { GoMath, StoneStringBuilder, BoardState } from "engine";
+import { StoneStringBuilder, BoardState, makeMatrix } from "engine";
 
 // Here is a board displaying many of the features GoStoneGroup cares about.
 
@@ -23,7 +23,7 @@ const FEATURE_BOARD = [
     [2, 2, 1, 2, 0],
 ];
 
-const REMOVAL = GoMath.makeMatrix(5, 5, false);
+const REMOVAL = makeMatrix(5, 5, false);
 
 function makeGoMathWithFeatureBoard() {
     return new StoneStringBuilder(

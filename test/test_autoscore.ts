@@ -29,8 +29,7 @@
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { autoscore } from "engine/autoscore";
 import * as clc from "cli-color";
-import { GoEngine, GoEngineInitialState } from "engine/GobanEngine";
-import { char2num, makeMatrix, num2char } from "engine/GoMath";
+import { GoEngine, GoEngineInitialState, char2num, makeMatrix, num2char } from "engine";
 import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "engine/formats/JGOF";
 
 function run_autoscore_tests() {

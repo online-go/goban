@@ -1,7 +1,6 @@
 // cspell: disable
 
-import { GoMath } from "engine";
-import { JGOFNumericPlayerColor } from "engine";
+import { JGOFNumericPlayerColor, positionId } from "engine";
 
 type Testcase = {
     height: number;
@@ -145,5 +144,5 @@ const TEST_BOARDS: Array<Testcase> = [
 ];
 
 test.each(TEST_BOARDS)("Position IDs", ({ board, height, width, id }) => {
-    expect(GoMath.positionId(board, height, width)).toEqual(id);
+    expect(positionId(board, height, width)).toEqual(id);
 });

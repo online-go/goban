@@ -7,7 +7,7 @@ import {
     SCORE_ESTIMATION_TOLERANCE,
     SCORE_ESTIMATION_TRIALS,
 } from "../../src/Goban/InteractiveBase";
-import { GobanSocket, GoMath } from "engine";
+import { GobanSocket, makeMatrix } from "engine";
 import { GobanBase } from "../../src/GobanBase";
 import WS from "jest-websocket-mock";
 
@@ -416,10 +416,10 @@ describe("onTap", () => {
         const mock_score_estimate = {
             handleClick: jest.fn(),
             when_ready: Promise.resolve(),
-            board: GoMath.makeMatrix(4, 2, 0),
-            removal: GoMath.makeMatrix(4, 2, 0),
-            territory: GoMath.makeMatrix(4, 2, 0),
-            ownership: GoMath.makeMatrix(4, 2, 0),
+            board: makeMatrix(4, 2, 0),
+            removal: makeMatrix(4, 2, 0),
+            territory: makeMatrix(4, 2, 0),
+            ownership: makeMatrix(4, 2, 0),
         };
         goban.engine.estimateScore = jest.fn().mockReturnValue(mock_score_estimate);
 

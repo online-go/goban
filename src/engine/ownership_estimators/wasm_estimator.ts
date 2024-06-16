@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
+import { makeMatrix } from "engine/util";
+
 /* The OGSScoreEstimator method is a wasm compiled C program that
  * does simple random playouts. On the client, the OGSScoreEstimator script
  * is loaded in an async fashion, so at some point that global variable
  * becomes not null and can be used.
  */
-
-import * as GoMath from "../GoMath";
 
 declare const CLIENT: boolean;
 
@@ -98,7 +98,7 @@ export function wasm_estimate_ownership(
 ) {
     const width = board[0].length;
     const height = board.length;
-    const ownership = GoMath.makeMatrix(width, height, 0);
+    const ownership = makeMatrix(width, height, 0);
 
     if (!OGSScoreEstimator_initialized) {
         console.warn("Score estimator not initialized yet, uptime = " + performance.now());

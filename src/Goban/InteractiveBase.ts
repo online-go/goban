@@ -25,8 +25,7 @@ import {
     ConditionalMoveTree,
     GobanMoveError,
 } from "engine";
-import { NumberMatrix, Intersection, encodeMove } from "engine/GoMath";
-import * as GoMath from "engine/GoMath";
+import { NumberMatrix, encodeMove, makeStringMatrix, makeEmptyObjectMatrix } from "engine/util";
 import { MoveTree, MarkInterface } from "engine/MoveTree";
 import { ScoreEstimator } from "engine/ScoreEstimator";
 import { computeAverageMoveTime, niceInterval, matricesAreEqual } from "engine/util";
@@ -309,13 +308,13 @@ export abstract class GobanInteractive extends GobanBase {
     protected isPlayerOwner: () => boolean;
     protected label_character: string;
     protected label_mark: string = "[UNSET]";
-    protected last_hover_square?: Intersection;
+    protected last_hover_square?: JGOFIntersection;
     protected last_move?: MoveTree;
     protected last_phase?: GoEnginePhase;
     protected last_review_message: ReviewMessage;
     protected last_sound_played_for_a_stone_placement?: string;
     protected last_stone_sound: number;
-    protected move_selected?: Intersection;
+    protected move_selected?: JGOFIntersection;
     protected no_display: boolean;
     protected onError?: (error: Error) => void;
     protected on_game_screen: boolean;
@@ -400,7 +399,7 @@ export abstract class GobanInteractive extends GobanBase {
         this.pen_marks = [];
 
         this.config = repair_config(config);
-        this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
+        this.__draw_state = makeStringMatrix(this.width, this.height);
         this.game_id =
             (typeof config.game_id === "string" ? parseInt(config.game_id) : config.game_id) || 0;
         this.player_id = config.player_id || 0;
@@ -767,7 +766,7 @@ export abstract class GobanInteractive extends GobanBase {
             this.__draw_state.length !== this.height ||
             this.__draw_state[0].length !== this.width
         ) {
-            this.__draw_state = GoMath.makeStringMatrix(this.width, this.height);
+            this.__draw_state = makeStringMatrix(this.width, this.height);
         }
 
         this.chat_log = [];
@@ -1423,7 +1422,7 @@ export abstract class GobanInteractive extends GobanBase {
             return;
         }
 
-        this.colored_circles = GoMath.makeEmptyObjectMatrix<ColoredCircle>(this.width, this.height);
+        this.colored_circles = makeEmptyObjectMatrix<ColoredCircle>(this.width, this.height);
         for (const circle of circles) {
             const mv = circle.move;
             this.colored_circles[mv.y][mv.x] = circle;

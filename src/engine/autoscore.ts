@@ -23,7 +23,7 @@
 
 import { StoneStringBuilder } from "./StoneStringBuilder";
 import { JGOFNumericPlayerColor, JGOFSealingIntersection, JGOFMove } from "./formats/JGOF";
-import { char2num, makeMatrix, num2char, encodePrettyXCoordinate } from "./GoMath";
+import { char2num, makeMatrix, num2char, encodePrettyXCoordinate } from "./util";
 import { GoEngine, GoEngineInitialState, GoEngineRules } from "./GobanEngine";
 import { BoardState } from "./BoardState";
 

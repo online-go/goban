@@ -27,13 +27,12 @@ import {
     AUTOSCORE_TRIALS,
     ConditionalMoveResponse,
     deepEqual,
-    dup,
+    deepClone,
     encodeMove,
     GobanSocket,
     GobanSocketEvents,
     ConditionalMoveTree,
     GoEngine,
-    GoMath,
     init_wasm_ownership_estimator,
     JGOFIntersection,
     JGOFPauseState,
@@ -487,7 +486,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
                     if (this.engine.playerToMove() !== this.player_id) {
                         const t = this.conditional_tree.getChild(
-                            GoMath.encodeMove(the_move.x, the_move.y),
+                            encodeMove(the_move.x, the_move.y),
                         );
                         t.move = null;
                         this.setConditionalTree(t);
@@ -1110,7 +1109,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     m: diff.moves,
                     k: marks,
                 };
-                const tmp = dup(msg);
+                const tmp = deepClone(msg);
 
                 if (this.last_review_message.f === msg.f && this.last_review_message.m === msg.m) {
                     delete msg["f"];

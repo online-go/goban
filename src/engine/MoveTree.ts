@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-import * as GoMath from "./GoMath";
 import { GoEngine } from "./GobanEngine";
 import { BoardState } from "./BoardState";
-import { encodeCoordinate, encodeMove } from "./GoMath";
+import {
+    decodeMoves,
+    encodeCoordinate,
+    encodeMove,
+    makeObjectMatrix,
+    prettyCoordinates,
+} from "./util";
 import { AdHocPackedMove } from "./formats/AdHocFormat";
 import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./formats/JGOF";
 import { escapeSGFText, newlines_to_spaces } from "./util";
@@ -596,7 +601,7 @@ export class MoveTree {
         this.marks = marks;
     }
     clearMarks(): Array<Array<MarkInterface>> {
-        this.marks = GoMath.makeObjectMatrix<MarkInterface>(this.engine.width, this.engine.height);
+        this.marks = makeObjectMatrix<MarkInterface>(this.engine.width, this.engine.height);
         return this.marks;
     }
     hasMarks(): boolean {
@@ -708,7 +713,7 @@ export class MoveTree {
                 for (let y = 0; y < this.marks.length; ++y) {
                     for (let x = 0; x < this.marks[0].length; ++x) {
                         const m = this.marks[y][x];
-                        const pos = GoMath.encodeCoordinate(x) + GoMath.encodeCoordinate(y);
+                        const pos = encodeCoordinate(x) + encodeCoordinate(y);
                         if (m.triangle) {
                             ret.push("TR[" + pos + "]");
                         }
@@ -1058,10 +1063,10 @@ export class MoveTree {
         try {
             if (typeof message === "object") {
                 if (message.type === "analysis") {
-                    const moves = GoMath.decodeMoves(message.moves, width, height);
+                    const moves = decodeMoves(message.moves, width, height);
                     let move_str = "";
                     for (let i = 0; i < moves.length; ++i) {
-                        move_str += GoMath.prettyCoordinates(moves[i].x, moves[i].y, height) + " ";
+                        move_str += prettyCoordinates(moves[i].x, moves[i].y, height) + " ";
                     }
 
                     return message.name + ". From move " + message.from + ": " + move_str;
