@@ -57,6 +57,8 @@ export abstract class Goban extends OGSConnectivity {
     protected abstract setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void;
 
     protected parent!: HTMLElement;
+    private analysis_scoring_color?: "black" | "white" | string;
+    private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
 
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super(config, preloaded_data);
@@ -301,5 +303,69 @@ export abstract class Goban extends OGSConnectivity {
         }
 
         return ret;
+    }
+
+    protected onAnalysisScoringStart(ev: MouseEvent | TouchEvent) {
+        const pos = getRelativeEventPosition(ev, this.parent);
+        this.analysis_scoring_last_position = this.xy2ij(pos.x, pos.y, false);
+
+        {
+            const x = this.analysis_scoring_last_position.i;
+            const y = this.analysis_scoring_last_position.j;
+            if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+                return;
+            }
+        }
+
+        const existing_color = this.getAnalysisScoreColorAtLocation(
+            this.analysis_scoring_last_position.i,
+            this.analysis_scoring_last_position.j,
+        );
+
+        if (existing_color === this.analyze_subtool) {
+            this.analysis_scoring_color = undefined;
+        } else {
+            this.analysis_scoring_color = this.analyze_subtool;
+        }
+
+        this.putAnalysisScoreColorAtLocation(
+            this.analysis_scoring_last_position.i,
+            this.analysis_scoring_last_position.j,
+            this.analysis_scoring_color,
+        );
+
+        /* clear hover */
+        if (this.__last_pt.valid) {
+            const last_hover = this.last_hover_square;
+            delete this.last_hover_square;
+            if (last_hover) {
+                this.drawSquare(last_hover.x, last_hover.y);
+            }
+        }
+        this.__last_pt = this.xy2ij(-1, -1);
+        this.drawSquare(
+            this.analysis_scoring_last_position.i,
+            this.analysis_scoring_last_position.j,
+        );
+    }
+    protected onAnalysisScoringMove(ev: MouseEvent | TouchEvent) {
+        const pos = getRelativeEventPosition(ev, this.parent);
+        const cur = this.xy2ij(pos.x, pos.y);
+
+        {
+            const x = cur.i;
+            const y = cur.j;
+            if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+                return;
+            }
+        }
+
+        if (
+            cur.i !== this.analysis_scoring_last_position.i ||
+            cur.j !== this.analysis_scoring_last_position.j
+        ) {
+            this.analysis_scoring_last_position = cur;
+            this.putAnalysisScoreColorAtLocation(cur.i, cur.j, this.analysis_scoring_color);
+        }
     }
 }

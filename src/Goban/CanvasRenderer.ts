@@ -126,9 +126,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private last_pen_position?: [number, number];
     protected metrics: GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
 
-    private analysis_scoring_color?: "black" | "white" | string;
-    private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
-
     private drawing_enabled: boolean = true;
     private pen_ctx?: CanvasRenderingContext2D;
     private pen_layer?: HTMLCanvasElement;
@@ -3201,69 +3198,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
     }
 
-    private onAnalysisScoringStart(ev: MouseEvent | TouchEvent) {
-        const pos = getRelativeEventPosition(ev, this.parent);
-        this.analysis_scoring_last_position = this.xy2ij(pos.x, pos.y, false);
-
-        {
-            const x = this.analysis_scoring_last_position.i;
-            const y = this.analysis_scoring_last_position.j;
-            if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
-                return;
-            }
-        }
-
-        const existing_color = this.getAnalysisScoreColorAtLocation(
-            this.analysis_scoring_last_position.i,
-            this.analysis_scoring_last_position.j,
-        );
-
-        if (existing_color) {
-            this.analysis_scoring_color = undefined;
-        } else {
-            this.analysis_scoring_color = this.analyze_subtool;
-        }
-
-        this.putAnalysisScoreColorAtLocation(
-            this.analysis_scoring_last_position.i,
-            this.analysis_scoring_last_position.j,
-            this.analysis_scoring_color,
-        );
-
-        /* clear hover */
-        if (this.__last_pt.valid) {
-            const last_hover = this.last_hover_square;
-            delete this.last_hover_square;
-            if (last_hover) {
-                this.drawSquare(last_hover.x, last_hover.y);
-            }
-        }
-        this.__last_pt = this.xy2ij(-1, -1);
-        this.drawSquare(
-            this.analysis_scoring_last_position.i,
-            this.analysis_scoring_last_position.j,
-        );
-    }
-    private onAnalysisScoringMove(ev: MouseEvent | TouchEvent) {
-        const pos = getRelativeEventPosition(ev, this.parent);
-        const cur = this.xy2ij(pos.x, pos.y);
-
-        {
-            const x = cur.i;
-            const y = cur.j;
-            if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
-                return;
-            }
-        }
-
-        if (
-            cur.i !== this.analysis_scoring_last_position.i ||
-            cur.j !== this.analysis_scoring_last_position.j
-        ) {
-            this.analysis_scoring_last_position = cur;
-            this.putAnalysisScoreColorAtLocation(cur.i, cur.j, this.analysis_scoring_color);
-        }
-    }
     protected setTitle(title: string): void {
         this.title = title;
         if (this.title_div) {
