@@ -26,18 +26,16 @@ export function sortMoves(
     height: number,
 ): string | JGOFMove[] {
     if (moves instanceof Array) {
-        return moves.sort((a, b) => {
-            const av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
-            const bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
-            return av - bv;
-        });
+        return moves.sort(compare_moves);
     } else {
         const arr = decodeMoves(moves, width, height);
-        arr.sort((a, b) => {
-            const av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
-            const bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
-            return av - bv;
-        });
+        arr.sort(compare_moves);
         return encodeMoves(arr);
     }
+}
+
+function compare_moves(a: JGOFMove, b: JGOFMove): number {
+    const av = (a.edited ? 1 : 0) * 10000 + a.x + a.y * 100;
+    const bv = (b.edited ? 1 : 0) * 10000 + b.x + b.y * 100;
+    return av - bv;
 }
