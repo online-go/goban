@@ -1776,7 +1776,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         /* Draw Scores */
         {
             if (
-                (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
+                (pos.score &&
+                    (this.engine.phase !== "finished" ||
+                        this.mode === "play" ||
+                        this.mode === "analyze")) ||
                 (this.scoring_mode &&
                     this.score_estimator &&
                     (this.score_estimator.territory[j][i] ||
@@ -2459,7 +2462,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         /* Draw Scores */
         {
             if (
-                (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
+                (pos.score &&
+                    (this.engine.phase !== "finished" ||
+                        this.mode === "play" ||
+                        this.mode === "analyze")) ||
                 (this.scoring_mode &&
                     this.score_estimator &&
                     (this.score_estimator.territory[j][i] ||

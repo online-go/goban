@@ -1698,7 +1698,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         /* Draw Scores */
         {
             if (
-                (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
+                (pos.score &&
+                    (this.engine.phase !== "finished" ||
+                        this.mode === "play" ||
+                        this.mode === "analyze")) ||
                 (this.scoring_mode &&
                     this.score_estimator &&
                     (this.score_estimator.territory[j][i] ||
@@ -2412,7 +2415,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         /* Draw Scores */
         {
             if (
-                (pos.score && (this.engine.phase !== "finished" || this.mode === "play")) ||
+                (pos.score &&
+                    (this.engine.phase !== "finished" ||
+                        this.mode === "play" ||
+                        this.mode === "analyze")) ||
                 (this.scoring_mode &&
                     this.score_estimator &&
                     (this.score_estimator.territory[j][i] ||
