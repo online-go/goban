@@ -23,14 +23,20 @@ lint:
 
 test:
 	yarn run test
+	
+detect-duplicate-code:
+	yarn run detect-duplicate-code
 
 doc docs typedoc:
 	yarn run typedoc
 
+publish_docs: typedoc
+	cd docs && git add docs && git commit -m "Update docs" && git push
+
 clean:
 	rm -Rf lib node
 
-publish push: publish_npm upload_to_cdn notify
+publish push: publish_npm publish_docs upload_to_cdn notify
 
 beta: beta_npm upload_to_cdn
 
