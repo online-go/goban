@@ -677,6 +677,22 @@ export interface GameListWhere {
     malk_only?: boolean;
 }
 
+interface GameListPlayer {
+    username: string;
+    id: number;
+    rank: number;
+    professional: boolean;
+    accepted: boolean;
+    ratings: {
+        version: number;
+        overall: {
+            rating: number;
+            deviation: number;
+            volatility: number;
+        };
+    };
+}
+
 export interface GameListEntry {
     id: number;
     group_ids?: Array<number>;
@@ -690,36 +706,8 @@ export interface GameListEntry {
     move_number: number;
     paused: boolean;
     private: boolean;
-    black: {
-        username: string;
-        id: number;
-        rank: number;
-        professional: boolean;
-        accepted: boolean;
-        ratings: {
-            version: number;
-            overall: {
-                rating: number;
-                deviation: number;
-                volatility: number;
-            };
-        };
-    };
-    white: {
-        username: string;
-        id: number;
-        rank: number;
-        professional: boolean;
-        accepted: boolean;
-        ratings: {
-            version: number;
-            overall: {
-                rating: number;
-                deviation: number;
-                volatility: number;
-            };
-        };
-    };
+    black: GameListPlayer;
+    white: GameListPlayer;
 
     rengo: boolean;
     rengo_teams: {

@@ -24,7 +24,7 @@ lint:
 test:
 	yarn run test
 	
-detect-duplicate-code:
+detect-duplicate-code duplicate-code-detection:
 	yarn run detect-duplicate-code
 
 doc docs typedoc:

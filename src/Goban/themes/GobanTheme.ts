@@ -210,15 +210,16 @@ export class GobanTheme {
         return invisible_circle_to_cast_shadow;
     }
 
-    public placeWhiteStoneSVG(
+    private placeStoneSVG(
         cell: SVGGraphicsElement,
         shadow_cell: SVGGraphicsElement | undefined,
         stone: string,
         cx: number,
         cy: number,
         radius: number,
+        shadow_circle_color: string,
     ): [SVGElement, SVGElement | undefined] {
-        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius, "#eeeeee");
+        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius, shadow_circle_color);
 
         const ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
         ref.setAttribute("href", `#${stone}`);
@@ -229,6 +230,17 @@ export class GobanTheme {
         return [ref, shadow];
     }
 
+    public placeWhiteStoneSVG(
+        cell: SVGGraphicsElement,
+        shadow_cell: SVGGraphicsElement | undefined,
+        stone: string,
+        cx: number,
+        cy: number,
+        radius: number,
+    ): [SVGElement, SVGElement | undefined] {
+        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "#eeeeee");
+    }
+
     public placeBlackStoneSVG(
         cell: SVGGraphicsElement,
         shadow_cell: SVGGraphicsElement | undefined,
@@ -237,15 +249,7 @@ export class GobanTheme {
         cy: number,
         radius: number,
     ): [SVGElement, SVGElement | undefined] {
-        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius, "#222222");
-
-        const ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
-        ref.setAttribute("href", `#${stone}`);
-        ref.setAttribute("x", `${cx - radius}`);
-        ref.setAttribute("y", `${cy - radius}`);
-        cell.appendChild(ref);
-
-        return [ref, shadow];
+        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "#222222");
     }
 
     /* Resolve which stone graphic we should use. By default we just pick a

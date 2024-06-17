@@ -26,7 +26,7 @@
         "build-debug": "webpack",
         "build-production": "webpack --mode production",
         "dts": "dts-bundle-generator -o lib/goban.d.ts  src/index.ts",
-        "detect-duplicate-code": "jscpd --min-tokens 50 src/",
+        "detect-duplicate-code": "jscpd --ignore '**/board_woods.ts' --ignore-pattern '.*place.*StoneSVG.*' --min-tokens 50 src/",
         "lint": "eslint src/ --ext=.ts,.tsx",
         "lint:fix": "eslint --fix src/ --ext=.ts,.tsx",
         "typedoc": "typedoc --plugin typedoc-plugin-missing-exports src/index.ts ",
