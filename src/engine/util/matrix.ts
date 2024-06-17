@@ -86,11 +86,10 @@ export function makeObjectMatrix<T>(width: number, height: number): Array<Array<
     return ret;
 }
 
-export function makeEmptyObjectMatrix<T>(width: number, height: number): Array<Array<T>> {
+export function makeEmptyMatrix<T>(width: number, height: number): Array<Array<T | undefined>> {
     const ret = new Array<Array<T>>(height);
     for (let y = 0; y < height; ++y) {
-        const row = new Array<T>(width);
-        ret[y] = row;
+        ret[y] = new Array<T>(width);
     }
     return ret;
 }

@@ -10,7 +10,7 @@ import {
     decodeMoves,
     encodeMovesToArray,
     encodeMoveToArray,
-    makeEmptyObjectMatrix,
+    makeEmptyMatrix,
     makeMatrix,
     makeObjectMatrix,
     makeStringMatrix,
@@ -92,11 +92,11 @@ describe("matrices", () => {
     });
 
     test("makeEmptyObjectMatrix", () => {
-        expect(makeEmptyObjectMatrix(3, 2)).toEqual([
+        expect(makeEmptyMatrix(3, 2)).toEqual([
             [undefined, undefined, undefined],
             [undefined, undefined, undefined],
         ]);
-        expect(makeEmptyObjectMatrix(0, 0)).toEqual([]);
+        expect(makeEmptyMatrix(0, 0)).toEqual([]);
     });
 });
 

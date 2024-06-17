@@ -1427,8 +1427,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         /* Colored stones */
         if (this.colored_circles) {
-            if (this.colored_circles[j][i]) {
-                const circle = this.colored_circles[j][i];
+            const circle = this.colored_circles[j][i];
+            if (circle) {
                 const radius = Math.floor(this.square_size * 0.5) - 0.5;
                 let lineWidth = radius * (circle.border_width || 0.1);
                 if (lineWidth < 0.3) {

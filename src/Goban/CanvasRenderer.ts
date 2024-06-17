@@ -1498,8 +1498,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         /* Colored stones */
 
         if (this.colored_circles) {
-            if (this.colored_circles[j][i]) {
-                const circle = this.colored_circles[j][i];
+            const circle = this.colored_circles[j][i];
+            if (circle) {
                 const color = circle.color;
 
                 ctx.save();

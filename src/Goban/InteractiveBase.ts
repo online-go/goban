@@ -25,7 +25,7 @@ import {
     ConditionalMoveTree,
     GobanMoveError,
 } from "engine";
-import { NumberMatrix, encodeMove, makeStringMatrix, makeEmptyObjectMatrix } from "engine/util";
+import { NumberMatrix, encodeMove, makeStringMatrix, makeEmptyMatrix } from "engine/util";
 import { MoveTree, MarkInterface } from "engine/MoveTree";
 import { ScoreEstimator } from "engine/ScoreEstimator";
 import { computeAverageMoveTime, niceInterval, matricesAreEqual } from "engine/util";
@@ -297,7 +297,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected edit_color?: "black" | "white";
     protected errorHandler: (e: Error) => void;
     protected heatmap?: NumberMatrix;
-    protected colored_circles?: Array<Array<ColoredCircle>>;
+    protected colored_circles?: Array<Array<ColoredCircle | undefined>>;
     protected game_type: string;
     protected getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
     protected highlight_movetree_moves: boolean;
@@ -1422,7 +1422,7 @@ export abstract class GobanInteractive extends GobanBase {
             return;
         }
 
-        this.colored_circles = makeEmptyObjectMatrix<ColoredCircle>(this.width, this.height);
+        this.colored_circles = makeEmptyMatrix<ColoredCircle>(this.width, this.height);
         for (const circle of circles) {
             const mv = circle.move;
             this.colored_circles[mv.y][mv.x] = circle;
