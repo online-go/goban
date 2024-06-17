@@ -25,7 +25,7 @@ import {
     ConditionalMoveTree,
     GobanMoveError,
 } from "engine";
-import { NumberMatrix, encodeMove, makeStringMatrix, makeEmptyMatrix } from "engine/util";
+import { NumberMatrix, encodeMove, makeMatrix, makeEmptyMatrix } from "engine/util";
 import { MoveTree, MarkInterface } from "engine/MoveTree";
 import { ScoreEstimator } from "engine/ScoreEstimator";
 import { computeAverageMoveTime, niceInterval, matricesAreEqual } from "engine/util";
@@ -275,7 +275,7 @@ export abstract class GobanInteractive extends GobanBase {
 
     protected __board_redraw_pen_layer_timer: any = null;
     protected __clock_timer?: ReturnType<typeof setTimeout>;
-    protected __draw_state: Array<Array<string>>;
+    protected __draw_state: string[][];
     protected __last_pt: { i: number; j: number; valid: boolean } = { i: -1, j: -1, valid: false };
     protected __update_move_tree: any = null; /* timer */
     protected analysis_move_counter: number;
@@ -399,7 +399,7 @@ export abstract class GobanInteractive extends GobanBase {
         this.pen_marks = [];
 
         this.config = repair_config(config);
-        this.__draw_state = makeStringMatrix(this.width, this.height);
+        this.__draw_state = makeMatrix(this.width, this.height, "");
         this.game_id =
             (typeof config.game_id === "string" ? parseInt(config.game_id) : config.game_id) || 0;
         this.player_id = config.player_id || 0;
@@ -766,7 +766,7 @@ export abstract class GobanInteractive extends GobanBase {
             this.__draw_state.length !== this.height ||
             this.__draw_state[0].length !== this.width
         ) {
-            this.__draw_state = makeStringMatrix(this.width, this.height);
+            this.__draw_state = makeMatrix(this.width, this.height, "");
         }
 
         this.chat_log = [];

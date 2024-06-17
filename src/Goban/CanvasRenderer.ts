@@ -37,7 +37,7 @@ import {
     encodeMoves,
     encodePrettyXCoordinate,
     getRandomInt,
-    makeStringMatrix,
+    makeMatrix,
 } from "engine/util";
 import { callbacks } from "./callbacks";
 import { Goban, GobanMetrics, GobanSelectedThemes, GOBAN_FONT } from "./Goban";
@@ -1497,39 +1497,37 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         /* Colored stones */
 
-        if (this.colored_circles) {
-            const circle = this.colored_circles[j][i];
-            if (circle) {
-                const color = circle.color;
+        const circle = this.colored_circles?.[j][i];
+        if (circle) {
+            const color = circle.color;
 
-                ctx.save();
-                ctx.globalAlpha = 1.0;
-                const radius = Math.floor(this.square_size * 0.5) - 0.5;
-                let lineWidth = radius * (circle.border_width || 0.1);
+            ctx.save();
+            ctx.globalAlpha = 1.0;
+            const radius = Math.floor(this.square_size * 0.5) - 0.5;
+            let lineWidth = radius * (circle.border_width || 0.1);
 
-                if (lineWidth < 0.3) {
-                    lineWidth = 0;
-                }
-                ctx.fillStyle = color;
-                ctx.strokeStyle = circle.border_color || "#000000";
-                if (lineWidth > 0) {
-                    ctx.lineWidth = lineWidth;
-                }
-                ctx.beginPath();
-                ctx.arc(
-                    cx,
-                    cy,
-                    Math.max(0.1, radius - lineWidth / 2),
-                    0.001,
-                    2 * Math.PI,
-                    false,
-                ); /* 0.001 to workaround fucked up chrome bug */
-                if (lineWidth > 0) {
-                    ctx.stroke();
-                }
-                ctx.fill();
-                ctx.restore();
+            if (lineWidth < 0.3) {
+                lineWidth = 0;
             }
+            ctx.fillStyle = color;
+            ctx.strokeStyle = circle.border_color || "#000000";
+            if (lineWidth > 0) {
+                ctx.lineWidth = lineWidth;
+            }
+            ctx.beginPath();
+            ctx.arc(
+                cx,
+                cy,
+                Math.max(0.1, radius - lineWidth / 2),
+                0.001,
+                2 * Math.PI,
+                false,
+            ); /* 0.001 to workaround fucked up chrome bug */
+            if (lineWidth > 0) {
+                ctx.stroke();
+            }
+            ctx.fill();
+            ctx.restore();
         }
 
         /* Draw stones & hovers */
@@ -1698,14 +1696,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     ctx.restore();
                 }
 
-                if (
-                    pos.blue_move &&
-                    this.colored_circles &&
-                    this.colored_circles[j] &&
-                    this.colored_circles[j][i]
-                ) {
-                    const circle = this.colored_circles[j][i];
-
+                const circle = this.colored_circles?.[j]?.[i];
+                if (pos.blue_move && circle) {
                     ctx.save();
                     ctx.globalAlpha = 1.0;
                     const radius = Math.floor(this.square_size * 0.5) - 0.5;
@@ -2263,11 +2255,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
 
         /* Colored stones */
-        if (this.colored_circles) {
-            if (this.colored_circles[j][i]) {
-                const circle = this.colored_circles[j][i];
-                ret += "circle " + circle.color;
-            }
+        const circle = this.colored_circles?.[j][i];
+        if (circle) {
+            ret += "circle " + circle.color;
         }
 
         /* Figure out marks for this spot */
@@ -2891,7 +2881,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             this.__draw_state.length !== this.height ||
             this.__draw_state[0].length !== this.width
         ) {
-            this.__draw_state = makeStringMatrix(this.width, this.height);
+            this.__draw_state = makeMatrix(this.width, this.height, "");
         }
 
         /* Set font for text overlay */

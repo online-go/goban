@@ -60,20 +60,6 @@ export function makeMatrix<T = number>(width: number, height: number, initialVal
     }
     return ret;
 }
-export function makeStringMatrix(
-    width: number,
-    height: number,
-    initialValue: string = "",
-): StringMatrix {
-    const ret: StringMatrix = [];
-    for (let y = 0; y < height; ++y) {
-        ret.push([]);
-        for (let x = 0; x < width; ++x) {
-            ret[y].push(initialValue);
-        }
-    }
-    return ret;
-}
 export function makeObjectMatrix<T>(width: number, height: number): Array<Array<T>> {
     const ret = new Array<Array<T>>(height);
     for (let y = 0; y < height; ++y) {

@@ -33,7 +33,7 @@ import {
     encodeMoves,
     encodePrettyXCoordinate,
     getRandomInt,
-    makeStringMatrix,
+    makeMatrix,
 } from "engine/util";
 import { callbacks } from "./callbacks";
 import { Goban, GobanMetrics, GobanSelectedThemes } from "./Goban";
@@ -1426,31 +1426,29 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Colored stones */
-        if (this.colored_circles) {
-            const circle = this.colored_circles[j][i];
-            if (circle) {
-                const radius = Math.floor(this.square_size * 0.5) - 0.5;
-                let lineWidth = radius * (circle.border_width || 0.1);
-                if (lineWidth < 0.3) {
-                    lineWidth = 0;
-                }
-
-                const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circ.setAttribute("class", "colored-circle");
-                circ.setAttribute("fill", circle.color);
-                if (circle.border_color) {
-                    circ.setAttribute("stroke", circle.border_color);
-                }
-                if (lineWidth > 0) {
-                    circ.setAttribute("stroke-width", lineWidth.toFixed(1));
-                } else {
-                    circ.setAttribute("stroke-width", "1px");
-                }
-                circ.setAttribute("cx", cx.toString());
-                circ.setAttribute("cy", cy.toString());
-                circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
-                cell.appendChild(circ);
+        const circle = this.colored_circles?.[j][i];
+        if (circle) {
+            const radius = Math.floor(this.square_size * 0.5) - 0.5;
+            let lineWidth = radius * (circle.border_width || 0.1);
+            if (lineWidth < 0.3) {
+                lineWidth = 0;
             }
+
+            const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circ.setAttribute("class", "colored-circle");
+            circ.setAttribute("fill", circle.color);
+            if (circle.border_color) {
+                circ.setAttribute("stroke", circle.border_color);
+            }
+            if (lineWidth > 0) {
+                circ.setAttribute("stroke-width", lineWidth.toFixed(1));
+            } else {
+                circ.setAttribute("stroke-width", "1px");
+            }
+            circ.setAttribute("cx", cx.toString());
+            circ.setAttribute("cy", cy.toString());
+            circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
+            cell.appendChild(circ);
         }
 
         /* Draw stones & hovers */
@@ -1619,13 +1617,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     }
                 }
 
-                if (
-                    pos.blue_move &&
-                    this.colored_circles &&
-                    this.colored_circles[j] &&
-                    this.colored_circles[j][i]
-                ) {
-                    const circle = this.colored_circles[j][i];
+                const circle = this.colored_circles?.[j][i];
+                if (pos.blue_move && circle) {
                     const radius = Math.floor(this.square_size * 0.5) - 0.5;
                     let lineWidth = radius * (circle.border_width || 0.1);
                     if (lineWidth < 0.3) {
@@ -2206,11 +2199,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Colored stones */
-        if (this.colored_circles) {
-            if (this.colored_circles[j][i]) {
-                const circle = this.colored_circles[j][i];
-                ret += "circle " + circle.color;
-            }
+        const circle = this.colored_circles?.[j][i];
+        if (circle) {
+            ret += "circle " + circle.color;
         }
 
         /* Figure out marks for this spot */
@@ -2983,7 +2974,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.__draw_state.length !== this.height ||
             this.__draw_state[0].length !== this.width
         ) {
-            this.__draw_state = makeStringMatrix(this.width, this.height);
+            this.__draw_state = makeMatrix(this.width, this.height, "");
         }
 
         for (let j = this.bounds.top; j <= this.bounds.bottom; ++j) {

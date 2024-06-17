@@ -13,7 +13,6 @@ import {
     makeEmptyMatrix,
     makeMatrix,
     makeObjectMatrix,
-    makeStringMatrix,
     ojeSequenceToMoves,
     prettyCoordinates,
     sortMoves,
@@ -71,16 +70,16 @@ describe("matrices", () => {
         expect(makeMatrix(0, 0, 0)).toEqual([]);
     });
 
-    test("makeStringMatrix", () => {
-        expect(makeStringMatrix(3, 2)).toEqual([
+    test("makeMatrix<string>", () => {
+        expect(makeMatrix(3, 2, "")).toEqual([
             ["", "", ""],
             ["", "", ""],
         ]);
-        expect(makeStringMatrix(3, 2, "asdf")).toEqual([
+        expect(makeMatrix(3, 2, "asdf")).toEqual([
             ["asdf", "asdf", "asdf"],
             ["asdf", "asdf", "asdf"],
         ]);
-        expect(makeStringMatrix(0, 0)).toEqual([]);
+        expect(makeMatrix(0, 0, "")).toEqual([]);
     });
 
     test("makeObjectMatrix", () => {
