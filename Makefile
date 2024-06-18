@@ -56,8 +56,6 @@ upload_to_cdn:
 	mkdir deployment-staging-area;
 	cp lib/goban.js* deployment-staging-area
 	cp lib/goban.min.js* deployment-staging-area
-	cp lib/engine.js* deployment-staging-area
-	cp lib/engine.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/`node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version'`/
 
 .PHONY: doc build docs test clean all dev typedoc publich push lib types
