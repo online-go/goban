@@ -1617,6 +1617,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     }
                 }
 
+                /** Draw the circle around the blue move */
                 const circle = this.colored_circles?.[j][i];
                 if (pos.blue_move && circle) {
                     const radius = Math.floor(this.square_size * 0.5) - 0.5;
@@ -1635,6 +1636,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     } else {
                         circ.setAttribute("stroke-width", "1px");
                     }
+                    circ.setAttribute("fill", "none");
                     circ.setAttribute("cx", cx.toString());
                     circ.setAttribute("cy", cy.toString());
                     circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
