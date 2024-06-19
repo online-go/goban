@@ -102,7 +102,20 @@ export function autoscore(
     score_positions();
 
     stage("Final state");
-    debug_board_output("Final ownership", final_ownership);
+    const final_ownership_with_seals = makeMatrix(width, height, ".");
+    for (let y = 0; y < height; ++y) {
+        for (let x = 0; x < width; ++x) {
+            if (sealed[y][x]) {
+                final_ownership_with_seals[y][x] = "s";
+            } else {
+                final_ownership_with_seals[y][x] =
+                    final_ownership[y][x] === 1 ? "B" : final_ownership[y][x] === 2 ? "W" : ".";
+            }
+        }
+    }
+
+    //debug_board_output("Final ownership", final_ownership);
+    debug_board_string_output("Final ownership", final_ownership_with_seals);
     debug_boolean_board("Sealed", sealed, "s");
     debug_board_output("Final sealed ownership", final_sealed_ownership);
 
@@ -172,6 +185,15 @@ export function autoscore(
     }
     */
 
+    /**
+     * Look for groups that look like they are at risk of a snapback and
+     * mark them as settled to avoid trying to be too smart, let the players
+     * figure out what they want to with those stones, if anything. Neighboring
+     * strings are also marked as settled as any that aren't are likely intwined
+     * in the life and death and resulting status of the snapback, so again to
+     * avoid trying to be too smart, just trust that the players intended to
+     * end the game in this state and score it.
+     */
     function settle_snapback_locations() {
         stage("Settling snapbacks");
 
@@ -804,6 +826,37 @@ function debug_board_output(title: string, board: JGOFNumericPlayerColor[][]) {
                 c = "?";
             }
             out += colorizeIntersection(c);
+        }
+
+        out += " " + ` ${board.length - y} `.substr(-3);
+        out += "\n";
+    }
+
+    out += "   ";
+    for (let x = 0; x < board[0].length; ++x) {
+        out += `${x_coords[x]}`;
+    }
+    out += "\n";
+
+    out += "\n";
+    board_output(out);
+    end_board();
+}
+
+function debug_board_string_output(title: string, board: string[][]) {
+    begin_board(title);
+    let out = "   ";
+    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+
+    for (let x = 0; x < board[0].length; ++x) {
+        out += `${x_coords[x]}`;
+    }
+    out += "\n";
+
+    for (let y = 0; y < board.length; ++y) {
+        out += ` ${board.length - y} `.substr(-3);
+        for (let x = 0; x < board[y].length; ++x) {
+            out += colorizeIntersection(board[y][x]);
         }
 
         out += " " + ` ${board.length - y} `.substr(-3);

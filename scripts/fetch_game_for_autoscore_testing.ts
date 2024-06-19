@@ -12,7 +12,7 @@ Note: this script requires a JWT to be provided in the file "user.jwt"
 */
 
 import { readFileSync, writeFileSync } from "fs";
-import { ScoreEstimateRequest } from "../src/ScoreEstimator";
+import { ScoreEstimateRequest } from "engine";
 
 const jwt = readFileSync("user.jwt").toString().replace(/"/g, "").trim();
 const game_id = process.argv[2];
