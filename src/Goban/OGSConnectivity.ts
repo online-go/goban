@@ -44,6 +44,7 @@ import {
     ReviewMessage,
     ScoreEstimator,
     JGOFMove,
+    makeMatrix,
 } from "engine";
 import {
     //ServerToClient,
@@ -1392,6 +1393,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 AUTOSCORE_TOLERANCE,
                 true /* prefer remote */,
                 true /* autoscore */,
+                /* Don't use existing stone removal markings for auto scoring */
+                makeMatrix(this.width, this.height, false),
             );
 
             se.when_ready

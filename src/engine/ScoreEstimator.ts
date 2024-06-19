@@ -132,8 +132,13 @@ export class ScoreEstimator extends BoardState {
         tolerance: number,
         prefer_remote: boolean = false,
         autoscore: boolean = false,
+        removal?: boolean[][],
     ) {
         super(engine, goban_callback);
+
+        if (removal) {
+            this.removal = removal;
+        }
 
         this.engine = engine;
         this.color_to_move = engine.colorToMove();
