@@ -92,6 +92,8 @@ export function autoscore(
     debug_groups("Groups", groups);
 
     // Perform our removal logic
+    //normalize_ownership();
+    settle_snapback_locations();
     settle_agreed_upon_stones();
     settle_agreed_upon_territory();
     remove_obviously_dead_stones();
@@ -124,6 +126,112 @@ export function autoscore(
         board[y][x] = JGOFNumericPlayerColor.EMPTY;
         removal[y][x] = true;
         stage_log(`Removing ${encodePrettyXCoordinate(x)}${height - y}: ${removal_reason}`);
+    }
+
+    /**
+     * Normalizes the string ownerships, this prevents single stones out of a group being marked
+     * as captured when there are snapback situation still left on the board.
+     */
+    /*
+    function normalize_ownership() {
+        stage("Ownership normalization");
+
+        const stone_strings = new StoneStringBuilder(
+            new BoardState({
+                board,
+                removal,
+            }),
+            original_board,
+        );
+
+        stone_strings.foreachGroup((stone_string) => {
+            let black = 0;
+            let white = 0;
+            let avg = 0;
+            stone_string.intersections.forEach((point) => {
+                const { x, y } = point;
+                black += black_plays_first_ownership[y][x];
+                white += white_plays_first_ownership[y][x];
+                avg += average_ownership[y][x];
+            });
+            black /= stone_string.intersections.length;
+            white /= stone_string.intersections.length;
+            avg /= stone_string.intersections.length;
+            stone_string.intersections.forEach((point) => {
+                const { x, y } = point;
+                black_plays_first_ownership[y][x] = black;
+                white_plays_first_ownership[y][x] = white;
+                average_ownership[y][x] = avg;
+            });
+        });
+
+        debug_board_output("Board", board);
+        debug_ownership_output("Black plays first estimates", black_plays_first_ownership);
+        debug_ownership_output("White plays first estimates", white_plays_first_ownership);
+        debug_ownership_output("Average estimates", average_ownership);
+    }
+    */
+
+    function settle_snapback_locations() {
+        stage("Settling snapbacks");
+
+        const snapbacks = makeMatrix(width, height, false);
+        const neighbors_of_snapbacks = makeMatrix(width, height, false);
+
+        const stone_strings = new StoneStringBuilder(
+            new BoardState({
+                board,
+                removal,
+            }),
+            original_board,
+        );
+        stone_strings.foreachGroup((stone_string) => {
+            if (stone_string.color === JGOFNumericPlayerColor.EMPTY) {
+                return;
+            }
+
+            let looks_like_snapback =
+                stone_string.intersections.some(({ x, y }) =>
+                    isBlack(black_plays_first_ownership[y][x]),
+                ) &&
+                stone_string.intersections.some(({ x, y }) =>
+                    isWhite(black_plays_first_ownership[y][x]),
+                );
+            looks_like_snapback ||=
+                stone_string.intersections.some(({ x, y }) =>
+                    isBlack(white_plays_first_ownership[y][x]),
+                ) &&
+                stone_string.intersections.some(({ x, y }) =>
+                    isWhite(white_plays_first_ownership[y][x]),
+                );
+            looks_like_snapback ||=
+                stone_string.intersections.some(({ x, y }) => isBlack(average_ownership[y][x])) &&
+                stone_string.intersections.some(({ x, y }) => isWhite(average_ownership[y][x]));
+
+            if (looks_like_snapback) {
+                const color = stone_string.color;
+                stone_string.intersections.forEach(({ x, y }) => {
+                    is_settled[y][x] = 1;
+                    settled[y][x] = color;
+                    snapbacks[y][x] = true;
+                });
+
+                // settle our neighbors as well as they are likely part of the snapback
+                stone_string.foreachNeighboringStoneString((neighbor) => {
+                    const color = neighbor.color;
+                    neighbor.intersections.forEach(({ x, y }) => {
+                        is_settled[y][x] = 1;
+                        settled[y][x] = color;
+
+                        neighbors_of_snapbacks[y][x] = true;
+                    });
+                });
+            }
+        });
+
+        debug_boolean_board("Snapbacks", snapbacks, "s");
+        debug_boolean_board("Neighbors of snapbacks", neighbors_of_snapbacks, "n");
+        debug_boolean_board("Settled", is_settled);
     }
 
     /*
@@ -229,6 +337,9 @@ export function autoscore(
         stage("Removing stones both estimates agree upon");
         for (let y = 0; y < height; ++y) {
             for (let x = 0; x < width; ++x) {
+                if (is_settled[y][x]) {
+                    continue;
+                }
                 if (
                     board[y][x] === JGOFNumericPlayerColor.WHITE &&
                     isBlack(black_plays_first_ownership[y][x]) &&
@@ -1010,11 +1121,11 @@ function finalize_debug_output(): string {
     final_output = "";
 
     let legend = "";
-    legend += "Legend:\n";
+    legend += "Stone string coloring legend (not boolean maps):\n";
     legend += "  " + black("Black") + "\n";
     legend += "  " + white("White") + "\n";
     legend += "  " + blue("Dame") + "\n";
-    legend += "  " + yellow("Territory in Seki") + "\n";
+    //legend += "  " + yellow("Territory in Seki") + "\n";
     legend += "  " + magenta("Undecided territory") + "\n";
     legend += "  " + red("Error") + "\n";
 

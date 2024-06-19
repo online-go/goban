@@ -33,13 +33,13 @@ export class StoneString {
 
     private __added_neighbors: { [group_id: number]: boolean };
     private neighboring_space: StoneString[];
-    private neighboring_enemy: StoneString[];
+    private neighboring_stone_strings: StoneString[];
 
     constructor(id: number, color: JGOFNumericPlayerColor) {
         this.intersections = [];
         this.neighbors = [];
         this.neighboring_space = [];
-        this.neighboring_enemy = [];
+        this.neighboring_stone_strings = [];
         this.id = id;
         this.color = color;
 
@@ -61,8 +61,8 @@ export class StoneString {
         }
     }
     public foreachNeighboringStoneString(fn: (stone_string: StoneString) => void): void {
-        for (let i = 0; i < this.neighbors.length; ++i) {
-            fn(this.neighboring_enemy[i]);
+        for (let i = 0; i < this.neighboring_stone_strings.length; ++i) {
+            fn(this.neighboring_stone_strings[i]);
         }
     }
     public size(): number {
@@ -84,7 +84,7 @@ export class StoneString {
                 if (group.color === JGOFNumericPlayerColor.EMPTY) {
                     this.neighboring_space.push(group);
                 } else {
-                    this.neighboring_enemy.push(group);
+                    this.neighboring_stone_strings.push(group);
                 }
             }
         }
