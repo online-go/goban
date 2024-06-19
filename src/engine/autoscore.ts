@@ -564,12 +564,15 @@ export function autoscore(
 
                     const avg = total_ownership / group.intersections.length;
 
+                    // If we meet our sealing threshold, seal
                     if (avg <= WHITE_SEAL_THRESHOLD || avg >= BLACK_SEAL_THRESHOLD) {
                         const color =
                             avg <= WHITE_SEAL_THRESHOLD
                                 ? JGOFNumericPlayerColor.WHITE
                                 : JGOFNumericPlayerColor.BLACK;
 
+                        // For each point, if it's touching a stone of the other color, mark it
+                        // as a seal point.
                         group.map((point) => {
                             const x = point.x;
                             const y = point.y;
