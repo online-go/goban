@@ -16,7 +16,7 @@
  */
 
 /* This script is for development, debugging, and manual testing of the
- * autoscore functionality found in src/autoscore.ts
+ * autoscore functionality
  *
  * Usage:
  *
@@ -27,11 +27,10 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "fs";
-import { autoscore } from "../src/autoscore";
+import { autoscore } from "engine/autoscore";
 import * as clc from "cli-color";
-import { GoEngine, GoEngineInitialState } from "../src/GoEngine";
-import { char2num, makeMatrix, num2char } from "../src/GoMath";
-import { JGOFNumericPlayerColor } from "../src/JGOF";
+import { GobanEngine, GobanEngineInitialState, char2num, makeMatrix, num2char } from "engine";
+import { JGOFMove, JGOFNumericPlayerColor, JGOFSealingIntersection } from "engine/formats/JGOF";
 
 function run_autoscore_tests() {
     const test_file_directory = "autoscore_test_files";
@@ -109,9 +108,18 @@ function test_file(path: string, quiet: boolean): boolean {
     if (!data.correct_ownership) {
         throw new Error(`${path} correct_ownership field is invalid`);
     }
+
+    const rules = data.rules ?? "chinese";
+
+    // validate ownership structures look ok
     for (const row of data.correct_ownership) {
         for (const cell of row) {
-            const is_w_or_b = cell === "W" || cell === "B" || cell === " " || cell === "*";
+            const is_w_or_b =
+                cell === "W" || // owned by white
+                cell === "B" || // owned by black
+                cell === " " || // dame
+                cell === "*" || // anything
+                cell === "s"; // marked for needing to seal
             if (!is_w_or_b) {
                 throw new Error(
                     `${path} correct_ownership field contains "${cell}" which is invalid`,
@@ -119,147 +127,220 @@ function test_file(path: string, quiet: boolean): boolean {
             }
         }
     }
-
-    // run autoscore
-    const [res, debug_output] = autoscore(data.board, data.black, data.white);
-
-    let match = true;
-    const matches: boolean[][] = [];
-
-    for (let y = 0; y < res.result.length; ++y) {
-        matches[y] = [];
-        for (let x = 0; x < res.result[0].length; ++x) {
-            const v = res.result[y][x];
-            const m =
-                data.correct_ownership[y][x] === "*" ||
-                (v === 0 && data.correct_ownership[y][x] === " ") ||
-                (v === 1 && data.correct_ownership[y][x] === "B") ||
-                (v === 2 && data.correct_ownership[y][x] === "W");
-            matches[y][x] = m;
-            match &&= m;
+    if (data.sealed_ownership) {
+        for (const row of data.sealed_ownership) {
+            for (const cell of row) {
+                const is_w_or_b =
+                    cell === "W" || // owned by white
+                    cell === "B" || // owned by black
+                    cell === " " || // dame
+                    cell === "*" || // anything
+                    cell === "s"; // marked for needing to seal
+                if (!is_w_or_b) {
+                    throw new Error(
+                        `${path} correct_ownership field contains "${cell}" which is invalid`,
+                    );
+                }
+            }
         }
     }
 
+    // run autoscore
+    const [res, debug_output] = autoscore(data.board, rules, data.black, data.white);
+
     if (!quiet) {
-        // Double check that when we run everything through our normal GoEngine.computeScore function,
-        // that we get the result we're expecting
-        if (match) {
-            const board = original_board.map((row: number[]) => row.slice());
+        console.log("");
+        console.log(debug_output);
+        console.log("");
+    }
 
-            let black_state = "";
-            let white_state = "";
+    let ok = true;
+    if (data.sealed_ownership) {
+        ok &&= test_result(
+            "Sealed ownership",
+            res.sealed_result,
+            res.removed,
+            res.needs_sealing,
+            true,
+            data.sealed_ownership,
+            quiet,
+        );
+    }
+    ok &&= test_result(
+        "Correct ownership",
+        res.result,
+        res.removed,
+        res.needs_sealing,
+        false,
+        data.correct_ownership,
+        quiet,
+    );
 
-            for (let y = 0; y < board.length; ++y) {
-                for (let x = 0; x < board[y].length; ++x) {
-                    const v = board[y][x];
-                    const c = num2char(x) + num2char(y);
-                    if (v === JGOFNumericPlayerColor.BLACK) {
-                        black_state += c;
-                    } else if (v === 2) {
-                        white_state += c;
+    return ok;
+
+    function test_result(
+        mnemonic: string,
+        result: JGOFNumericPlayerColor[][],
+        removed: JGOFMove[],
+        needs_sealing: JGOFSealingIntersection[],
+        perform_sealing: boolean,
+        correct_ownership: string[],
+        quiet: boolean,
+    ) {
+        if (!quiet) {
+            console.log("");
+            console.log(`=== Testing ${mnemonic} ===`);
+        }
+
+        let match = true;
+        const matches: boolean[][] = [];
+
+        for (let y = 0; y < result.length; ++y) {
+            matches[y] = [];
+            for (let x = 0; x < result[0].length; ++x) {
+                const v = result[y][x];
+                let m =
+                    correct_ownership[y][x] === "*" ||
+                    correct_ownership[y][x] === "s" || // seal
+                    (v === 0 && correct_ownership[y][x] === " ") ||
+                    (v === 1 && correct_ownership[y][x] === "B") ||
+                    (v === 2 && correct_ownership[y][x] === "W");
+
+                if (correct_ownership[y][x] === "s") {
+                    const has_needs_sealing =
+                        needs_sealing.find((pt) => pt.x === x && pt.y === y) !== undefined;
+
+                    m &&= has_needs_sealing;
+                }
+
+                matches[y][x] = m;
+                match &&= m;
+            }
+        }
+
+        /* Ensure all needs_sealing are marked as such */
+        for (const { x, y } of needs_sealing) {
+            if (correct_ownership[y][x] !== "s" && correct_ownership[y][x] !== "*") {
+                console.error(
+                    `Engine thought we needed sealing at ${x},${y} but the that spot wasn't flagged as needing it in the test file`,
+                );
+                match = false;
+                matches[y][x] = false;
+            }
+        }
+
+        if (!quiet) {
+            // Double check that when we run everything through our normal GobanEngine.computeScore function,
+            // that we get the result we're expecting. We exclude the japanese and korean rules here because
+            // our test file ownership maps always include territory and stones.
+            if (match && rules !== "japanese" && rules !== "korean") {
+                const board = original_board.map((row: number[]) => row.slice());
+
+                if (perform_sealing) {
+                    for (const { x, y, color } of needs_sealing) {
+                        board[y][x] = color;
                     }
                 }
-            }
 
-            const initial_state: GoEngineInitialState = {
-                black: black_state,
-                white: white_state,
-            };
+                let black_state = "";
+                let white_state = "";
 
-            const engine = new GoEngine({
-                width: board[0].length,
-                height: board.length,
-                initial_state,
-                rules: "chinese", // for area scoring
-                removed: res.removed_string,
-            });
-
-            const score = engine.computeScore();
-
-            const scored_board = makeMatrix(board[0].length, board.length, 0);
-
-            for (let i = 0; i < score.black.scoring_positions.length; i += 2) {
-                const x = char2num(score.black.scoring_positions[i]);
-                const y = char2num(score.black.scoring_positions[i + 1]);
-                scored_board[y][x] = JGOFNumericPlayerColor.BLACK;
-            }
-            for (let i = 0; i < score.white.scoring_positions.length; i += 2) {
-                const x = char2num(score.white.scoring_positions[i]);
-                const y = char2num(score.white.scoring_positions[i + 1]);
-                scored_board[y][x] = JGOFNumericPlayerColor.WHITE;
-            }
-
-            let official_match = true;
-            const official_matches: boolean[][] = [];
-            for (let y = 0; y < scored_board.length; ++y) {
-                official_matches[y] = [];
-                for (let x = 0; x < scored_board[0].length; ++x) {
-                    const v = scored_board[y][x];
-                    const m =
-                        data.correct_ownership[y][x] === "*" ||
-                        (v === 0 && data.correct_ownership[y][x] === " ") ||
-                        (v === 1 && data.correct_ownership[y][x] === "B") ||
-                        (v === 2 && data.correct_ownership[y][x] === "W");
-                    official_matches[y][x] = m;
-                    official_match &&= m;
+                for (let y = 0; y < board.length; ++y) {
+                    for (let x = 0; x < board[y].length; ++x) {
+                        const v = board[y][x];
+                        const c = num2char(x) + num2char(y);
+                        if (v === JGOFNumericPlayerColor.BLACK) {
+                            black_state += c;
+                        } else if (v === 2) {
+                            white_state += c;
+                        }
+                    }
                 }
-            }
 
-            if (!quiet) {
-                if (official_match) {
-                    console.log("Final autoscore matches official scoring");
-                } else {
-                    console.error("Official score did not match our expected scoring");
+                const initial_state: GobanEngineInitialState = {
+                    black: black_state,
+                    white: white_state,
+                };
+
+                const engine = new GobanEngine({
+                    width: board[0].length,
+                    height: board.length,
+                    initial_state,
+                    rules,
+                    removed,
+                });
+
+                const score = engine.computeScore();
+
+                const scored_board = makeMatrix(board[0].length, board.length, 0);
+
+                for (let i = 0; i < score.black.scoring_positions.length; i += 2) {
+                    const x = char2num(score.black.scoring_positions[i]);
+                    const y = char2num(score.black.scoring_positions[i + 1]);
+                    scored_board[y][x] = JGOFNumericPlayerColor.BLACK;
+                }
+                for (let i = 0; i < score.white.scoring_positions.length; i += 2) {
+                    const x = char2num(score.white.scoring_positions[i]);
+                    const y = char2num(score.white.scoring_positions[i + 1]);
+                    scored_board[y][x] = JGOFNumericPlayerColor.WHITE;
+                }
+
+                let official_match = true;
+                const official_matches: boolean[][] = [];
+                for (let y = 0; y < scored_board.length; ++y) {
+                    official_matches[y] = [];
+                    for (let x = 0; x < scored_board[0].length; ++x) {
+                        const v = scored_board[y][x];
+                        const m =
+                            correct_ownership[y][x] === "*" ||
+                            correct_ownership[y][x] === "s" ||
+                            //(v === 0 && correct_ownership[y][x] === "s") ||
+                            (v === 0 && correct_ownership[y][x] === " ") ||
+                            (v === 1 && correct_ownership[y][x] === "B") ||
+                            (v === 2 && correct_ownership[y][x] === "W");
+                        official_matches[y][x] = m;
+                        official_match &&= m;
+                    }
+                }
+
+                if (!quiet && !official_match) {
+                    console.log("");
+                    console.log("");
+                    console.log("Final scored board");
                     print_expected(
                         scored_board.map((row) =>
                             row.map((v) => (v === 1 ? "B" : v === 2 ? "W" : " ")).join(""),
                         ),
                     );
-                    print_mismatches(official_matches);
+
+                    if (official_match) {
+                        console.log("Final autoscore matches official scoring");
+                    } else {
+                        console.error("Official score did not match our expected scoring");
+                        print_mismatches(official_matches);
+                    }
                 }
+
+                match &&= official_match;
             }
 
-            match &&= official_match;
-        }
+            if (!match) {
+                console.log("Expected ownership:");
+                print_expected(correct_ownership);
+                console.log("Mismatches:");
+                print_mismatches(matches);
+                console.log("");
 
-        if (!match) {
-            console.log("");
-            console.log("");
-            console.log(`>>> ${path} failed`);
-            console.log(`>>> ${path} failed`);
-            console.log(`>>> ${path} failed`);
-            console.log("");
-            console.log(debug_output);
-            console.log("");
-            console.log("Expected ownership:");
-            print_expected(data.correct_ownership);
-            console.log("Mismatches:");
-            print_mismatches(matches);
-            console.log("");
-
-            console.log("Removed");
-            for (const [x, y, reason] of res.removed) {
-                console.log(
-                    `  ${"ABCDEFGHJKLMNOPQRSTUVWXYZ"[x]}${data.board.length - y}: ${reason}`,
-                );
+                console.log(`${mnemonic} ${path} failed`);
+            } else {
+                console.log(`${mnemonic} ${path} passed`);
             }
-
-            console.log(`<<< ${path} failed`);
-            console.log(`<<< ${path} failed`);
-            console.log(`<<< ${path} failed`);
             console.log("");
             console.log("");
-        } else {
-            console.log("");
-            console.log("");
-            console.log(debug_output);
-            console.log("");
-            console.log("");
-            console.log(`${path} passed`);
         }
+
+        return match;
     }
-
-    return match;
 }
 
 if (require.main === module) {
@@ -316,7 +397,9 @@ function print_expected(board: string[]) {
             } else if (c === " ") {
                 out += clc.blue(".");
             } else if (c === "*") {
-                out += clc.yellow(" ");
+                out += clc.yellow("*");
+            } else if (c === "s") {
+                out += clc.magenta("s");
             } else {
                 out += clc.red(c);
             }

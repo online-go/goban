@@ -7,27 +7,35 @@
         "outDir": "./lib/",
         "moduleResolution": "node",
         "removeComments": false,
-        "declaration": true,
+        "declaration": false,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "lib": ["es2015", "dom"],
         "baseUrl": ".",
         "paths": {
-            "*": ["src/*", "*"]
+            "*": ["src/*", "*"],
+            "engine": ["src/engine"],
+            "goscorer": ["src/third_party/goscorer/goscorer"]
         },
 
         "forceConsistentCasingInFileNames": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
         "noImplicitThis": true,
+        "noImplicitOverride": true,
         "strictBindCallApply": true,
         "strictFunctionTypes": true,
         "strictNullChecks": true,
         "strictPropertyInitialization": true,
         "noUnusedLocals": true,
+        "allowJs": true,
 
         "sourceMap": true,
         "jsx": "react"
     },
-    "files": ["./src/goban.ts", "./src/engine.ts", "./test/test_autoscore.ts"]
+    "files": ["src/index.ts", "src/engine/index.ts", "jest.config.ts"],
+    "include": ["test/**/*.ts", "scripts/**/*.ts"],
+    "ts-node": {
+        "require": ["tsconfig-paths/register"]
+    }
 }
