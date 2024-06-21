@@ -1,0 +1,48 @@
+{
+  "game_id": 51750020,
+  "description": "hexahedron says: This is an approach ko rather than a direct ko, so Black is NOT obligated to capture B9 before the end of the game, which would result in Black losing one point of territory. In this position, white DOES have a way to win this game by playing it out. White can initiate the two-step ko, and then use the multiple ko threats in the upper right to force Black to give up something. So White should do so rather than agreeing to end the game here.",
+  "board": [
+    "bW  bWb  ",
+    " bbbbWb  ",
+    "bbWWWWb  ",
+    "WW  Wb b ",
+    "  WWWb   ",
+    "    Wb   ",
+    "    Wb   ",
+    "  W Wb b ",
+    "    WWb  "
+  ],
+  "black": [
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0],
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0],
+    [ 1.0,  1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0]
+  ],
+  "white": [
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0],
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0],
+    [ 1.0,  1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0]
+  ],
+  "correct_ownership": [
+    "BBBBBWBBB",
+    "BBBBBWBBB",
+    "BBWWWWBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWWBBB"
+  ]
+}

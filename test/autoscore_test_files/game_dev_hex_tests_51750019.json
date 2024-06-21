@@ -1,0 +1,49 @@
+{
+  "game_id": 51750019,
+  "description": "hexahedron says This is an approach ko rather than a direct ko, so Black is NOT obligated to capture B9 before the end of the game, which would result in Black losing one point of territory. White also has no way to win this game by playing it out because White has no ko threats. If wA8, bPass, wC9, bA9, wPass, bD9, White did force black to play it out, but White had to give away an extra capture to do so, so Black still wins by 0.5.",
+
+  "board": [
+    "bW  bWWb ",
+    " bbbbWbb ",
+    "bbWWWWbWW",
+    "WW  Wb bW",
+    "    Wb bW",
+    "    Wb bb",
+    "    Wbb  ",
+    "    Wb   ",
+    "    Wb   "
+  ],
+  "black": [
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0, -1.0,  1.0,  1.0],
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0],
+    [ 1.0,  1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0]
+  ],
+  "white": [
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0, -1.0,  1.0,  1.0],
+    [ 1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0],
+    [ 1.0,  1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0],
+    [-1.0, -1.0, -1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0]
+  ],
+  "correct_ownership": [
+    "BBBBBWWBB",
+    "BBBBBWBBB",
+    "BBWWWWBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB",
+    "WWWWWBBBB"
+  ]
+}
