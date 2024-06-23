@@ -4,4 +4,4 @@ all:
 	@echo "To publish use make [publish|publish-beta]"
 
 publish-beta:
-	yarn publish --tag beta ./
+	yarn publish --no-git-tag-version --tag beta ./

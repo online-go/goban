@@ -41,9 +41,11 @@ publish push: publish_npm publish_docs upload_to_cdn notify
 
 beta: beta_npm upload_to_cdn
 
-beta_npm: build
+beta_npm: build publish-beta
+
+publish-beta:
+	make -C engine/ publish-beta
 	yarn publish --tag beta ./
-	cd engine; yarn publish --tag beta ./
 
 notify:
 	MSG=`git log -1 --pretty="%B" | sed s/\"//g | sed s/\'//g `; \

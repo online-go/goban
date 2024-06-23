@@ -408,11 +408,16 @@ export function autoscore(
             let amount_of_territory = 0;
             let number_of_possible_eyes = 0; // could be false eyes, but we'll count them at this stage
             group.foreachNeighboringEmptyString((empty_intersections) => {
+                /*
                 const { x, y } = empty_intersections.intersections[0];
                 stage_log(
-                    `Group at ${encodePrettyXCoordinate(x)}${height - y} with color
-                    ${group.color} has ${empty_intersections.intersections.length} empty intersections and is territory = ${empty_intersections.is_territory}`,
+                    `Group at ${encodePrettyXCoordinate(x)}${height - y} with color ${
+                        group.color
+                    } has ${
+                        empty_intersections.intersections.length
+                    } empty intersections and is territory = ${empty_intersections.is_territory}`,
                 );
+                */
                 if (empty_intersections.is_territory) {
                     number_of_possible_eyes++;
                     amount_of_territory += empty_intersections.intersections.length;
@@ -460,16 +465,16 @@ export function autoscore(
          * Consider unsettled groups. Count the unsettled stones along with
          * their neighboring stones
          */
-        const groups = new StoneStringBuilder(
+        const unsettled_intersection_groups = new StoneStringBuilder(
             new BoardState({
                 board: is_settled,
                 removal: makeMatrix(width, height, false),
             }),
         );
 
-        debug_groups("Initial groups", groups);
+        debug_groups("Settlement intersection groups", unsettled_intersection_groups);
 
-        groups.foreachGroup((group) => {
+        unsettled_intersection_groups.foreachGroup((group) => {
             // if this group is a settled group, ignore it, we don't care about those
             const pt = group.intersections[0];
             if (is_settled[pt.y][pt.x]) {
@@ -488,8 +493,12 @@ export function autoscore(
                 0, // white
             ];
             let total_ownership_estimate = 0;
+            let total_ownership_tally = 0;
 
             const already_tallied = makeMatrix(width, height, 0);
+            let tally_ct = 0;
+
+            /** Tallies the surrounding stones */
             function tally_edge(x: number, y: number) {
                 if (x < 0 || x >= width || y < 0 || y >= height) {
                     return;
@@ -511,14 +520,40 @@ export function autoscore(
                 tally_edge(x + 1, y);
                 tally_edge(x, y - 1);
                 tally_edge(x, y + 1);
+                total_ownership_estimate += average_ownership[y][x];
+                tally_ct += 1;
 
-                total_ownership_estimate +=
-                    black_plays_first_ownership[y][x] + white_plays_first_ownership[y][x];
+                total_ownership_tally +=
+                    board[y][x] === JGOFNumericPlayerColor.BLACK
+                        ? 1
+                        : board[y][x] === JGOFNumericPlayerColor.WHITE
+                          ? -1
+                          : 0;
             });
 
-            const average_color_estimate = total_ownership_estimate / group.intersections.length;
+            //const average_color_estimate =
+            //    total_ownership_estimate / (group.intersections.length * 2);
+            //const average_color_estimate = total_ownership_estimate / tally_ct;
+            const average_color_estimate = total_ownership_tally / tally_ct;
 
             let color_judgement: JGOFNumericPlayerColor;
+
+            // We need to have a lot of empty intersections compared to the
+            // stones we're considering in order for this to usually make sense
+            const required_empty_intersections = 8;
+            const ratio_threshold = 1.5; // if one color has 1.5 times the stones of the other
+
+            if (contained[0] < required_empty_intersections) {
+                const { x, y } = group.intersections[0];
+                stage_log(
+                    `${encodePrettyXCoordinate(x)}${height - y} Not enough empty intersections to judge color ${contained}`,
+                );
+                return;
+            }
+
+            const pretty_coord =
+                encodePrettyXCoordinate(group.intersections[0].x) +
+                (height - group.intersections[0].y);
 
             const total = [
                 surrounding[0] + contained[0],
@@ -526,39 +561,62 @@ export function autoscore(
                 surrounding[2] + contained[2],
             ];
             if (average_color_estimate > 0.5) {
+                stage_log(
+                    `${pretty_coord} Average color estimate is black (${average_color_estimate})`,
+                );
                 color_judgement = JGOFNumericPlayerColor.BLACK;
-            } else if (total_ownership_estimate < -0.5) {
+            } else if (average_color_estimate < -0.5) {
+                stage_log(
+                    `${pretty_coord} Average color estimate is white (${average_color_estimate})`,
+                );
                 color_judgement = JGOFNumericPlayerColor.WHITE;
             } else {
-                if (total[JGOFNumericPlayerColor.BLACK] > total[JGOFNumericPlayerColor.WHITE]) {
-                    color_judgement = JGOFNumericPlayerColor.BLACK;
-                } else if (
-                    total[JGOFNumericPlayerColor.WHITE] > total[JGOFNumericPlayerColor.BLACK]
+                if (
+                    total[JGOFNumericPlayerColor.BLACK] >
+                    total[JGOFNumericPlayerColor.WHITE] * ratio_threshold
                 ) {
+                    color_judgement = JGOFNumericPlayerColor.BLACK;
+                    stage_log(
+                        `${pretty_coord} Average color estimate is black (${
+                            total[JGOFNumericPlayerColor.BLACK]
+                        } black stones vs ${total[JGOFNumericPlayerColor.WHITE]})`,
+                    );
+                } else if (
+                    total[JGOFNumericPlayerColor.WHITE] >
+                    total[JGOFNumericPlayerColor.BLACK] * ratio_threshold
+                ) {
+                    stage_log(
+                        `${pretty_coord} Average color estimate is white (${
+                            total[JGOFNumericPlayerColor.WHITE]
+                        } white stones vs ${total[JGOFNumericPlayerColor.BLACK]})`,
+                    );
                     color_judgement = JGOFNumericPlayerColor.WHITE;
                 } else {
                     color_judgement = JGOFNumericPlayerColor.EMPTY;
+                    stage_log(`${pretty_coord} Average color estimate is empty`);
                 }
             }
 
-            group.map((point) => {
-                const x = point.x;
-                const y = point.y;
-                if (board[y][x] && board[y][x] !== color_judgement) {
-                    const stone_color =
-                        board[y][x] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
-                    const judgement_color =
-                        color_judgement === JGOFNumericPlayerColor.BLACK ? "black" : "white";
+            if (color_judgement !== JGOFNumericPlayerColor.EMPTY) {
+                group.map((point) => {
+                    const x = point.x;
+                    const y = point.y;
+                    if (board[y][x] && board[y][x] !== color_judgement) {
+                        const stone_color =
+                            board[y][x] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
+                        const judgement_color =
+                            color_judgement === JGOFNumericPlayerColor.BLACK ? "black" : "white";
 
-                    remove(
-                        x,
-                        y,
-                        `clearing unsettled ${stone_color} stones within assumed ${judgement_color} territory `,
-                    );
-                    is_settled[y][x] = 1;
-                    settled[y][x] = color_judgement;
-                }
-            });
+                        remove(
+                            x,
+                            y,
+                            `clearing unsettled ${stone_color} stones within assumed ${judgement_color} territory `,
+                        );
+                        is_settled[y][x] = 1;
+                        settled[y][x] = color_judgement;
+                    }
+                });
+            }
         });
 
         const removal_diff = removal.map((row, y) =>
@@ -774,7 +832,7 @@ export function autoscore(
         }
         //debug_boolean_board("Sealed", sealed, "s");
 
-        const print_final_ownership_string = false;
+        const print_final_ownership_string = true;
         // aid while correcting and forming the test files
         if (print_final_ownership_string) {
             let ownership_string = '\n  "correct_ownership": [\n';

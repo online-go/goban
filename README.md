@@ -16,10 +16,10 @@ To import into an application targeting the web:
 import { ... } from "goban";
 ```
 
-To import into an application targeting node:
+To import into an application targeting node, use the [goban-engine](https://www.npmjs.com/package/goban-engine) package:
 
 ```
-import { ... } from "goban/lib/engine";
+import { ... } from "goban-engine";
 ```
 
 # Documentation
