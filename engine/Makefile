@@ -5,3 +5,6 @@ all:
 
 publish-beta:
 	yarn publish --no-git-tag-version --tag beta ./
+
+publish:
+	yarn publish --no-git-tag-version ./

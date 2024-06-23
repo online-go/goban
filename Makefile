@@ -53,8 +53,8 @@ notify:
 	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' $(SLACK_WEBHOOK)
 
 publish_npm: build
+	make -C engine/ publish
 	yarn publish ./
-	cd engine/; yarn publish ./
 
 upload_to_cdn:
 	rm -Rf deployment-staging-area;
