@@ -97,6 +97,7 @@ export function autoscore(
     settle_agreed_upon_stones();
     settle_agreed_upon_territory();
     remove_obviously_dead_stones();
+    settle_groups_that_have_significant_of_territory();
     clear_unsettled_stones_from_territory();
     seal_territory();
     score_positions();
@@ -380,6 +381,59 @@ export function autoscore(
         debug_boolean_board("Removed", removal, "x");
     }
 
+    /**
+     * Groups that are not definitely alive, not definitely dead, and
+     * have a good amount of territory associated with them should
+     * be considered settled as the players likely intended for the
+     * group to be considered alive.
+     */
+
+    function settle_groups_that_have_significant_of_territory() {
+        stage("Settle groups with significant amounts of territory");
+        const groups = new StoneStringBuilder(
+            new BoardState({
+                board,
+                removal,
+            }),
+        );
+        debug_groups("Initial groups", groups);
+
+        const new_settled = makeMatrix(width, height, false);
+
+        groups.foreachGroup((group) => {
+            if (is_settled[group.intersections[0].y][group.intersections[0].x]) {
+                return;
+            }
+
+            let amount_of_territory = 0;
+            let number_of_possible_eyes = 0; // could be false eyes, but we'll count them at this stage
+            group.foreachNeighboringEmptyString((empty_intersections) => {
+                const { x, y } = empty_intersections.intersections[0];
+                stage_log(
+                    `Group at ${encodePrettyXCoordinate(x)}${height - y} with color
+                    ${group.color} has ${empty_intersections.intersections.length} empty intersections and is territory = ${empty_intersections.is_territory}`,
+                );
+                if (empty_intersections.is_territory) {
+                    number_of_possible_eyes++;
+                    amount_of_territory += empty_intersections.intersections.length;
+                }
+            });
+
+            if (amount_of_territory > 4 || number_of_possible_eyes > 1) {
+                group.map((point) => {
+                    const x = point.x;
+                    const y = point.y;
+                    new_settled[y][x] = true;
+                    is_settled[y][x] = 1;
+                    settled[y][x] = group.color;
+                });
+            }
+        });
+
+        debug_boolean_board("Newly settled", new_settled, "s");
+        debug_boolean_board("Settled", is_settled, "s");
+    }
+
     /*
      * Consider unsettled groups (as defined by looking at connected
      * intersections that are not settled, regardless of whether they have a
@@ -412,6 +466,8 @@ export function autoscore(
                 removal: makeMatrix(width, height, false),
             }),
         );
+
+        debug_groups("Initial groups", groups);
 
         groups.foreachGroup((group) => {
             // if this group is a settled group, ignore it, we don't care about those
