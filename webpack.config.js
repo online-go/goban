@@ -85,7 +85,7 @@ module.exports = (env, argv) => {
             },
 
             output: {
-                path: __dirname + "/node",
+                path: __dirname + "/engine/",
                 filename: "[name].js",
                 globalObject: "this",
                 library: {

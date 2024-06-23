@@ -89,7 +89,7 @@ module.exports = {
         "prettier/prettier": "error",
         "use-isnan": "error",
         "header/header": [
-            2, // error
+            "error",
             "block",
             [
                 {

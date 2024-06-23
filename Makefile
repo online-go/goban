@@ -16,6 +16,7 @@ build-production:
 
 types:
 	yarn run dts
+	yarn run dts-engine
 
 
 lint:
@@ -42,6 +43,7 @@ beta: beta_npm upload_to_cdn
 
 beta_npm: build
 	yarn publish --tag beta ./
+	cd engine; yarn publish --tag beta ./
 
 notify:
 	MSG=`git log -1 --pretty="%B" | sed s/\"//g | sed s/\'//g `; \
@@ -50,6 +52,7 @@ notify:
 
 publish_npm: build
 	yarn publish ./
+	cd engine/; yarn publish ./
 
 upload_to_cdn:
 	rm -Rf deployment-staging-area;

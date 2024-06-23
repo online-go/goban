@@ -2,15 +2,10 @@
     "name": "goban",
     "version": "0.8.0",
     "description": "",
-    "main": "node/goban-engine.js",
-    "browser": {
-        "goban": "lib/goban.js"
-    },
+    "main": "lib/goban.js",
     "types": "lib/goban.d.ts",
     "files": [
-        "lib/",
-        "node/",
-        "src/"
+        "lib/"
     ],
     "keywords": [
         "go",
@@ -26,6 +21,7 @@
         "build-debug": "webpack",
         "build-production": "webpack --mode production",
         "dts": "dts-bundle-generator -o lib/goban.d.ts  src/index.ts",
+        "dts-engine": "dts-bundle-generator -o engine/goban-engine.d.ts  src/engine/index.ts",
         "detect-duplicate-code": "jscpd --ignore '**/board_woods.ts' --ignore-pattern '.*place.*StoneSVG.*' --min-tokens 50 src/",
         "lint": "eslint src/ --ext=.ts,.tsx",
         "lint:fix": "eslint --fix src/ --ext=.ts,.tsx",

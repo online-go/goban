@@ -28,5 +28,6 @@ export * from "./StoneString";
 export * from "./StoneStringBuilder";
 export * from "./formats";
 export * from "./util";
+export * as protocol from "./protocol";
 
 export * as translate from "./translate";
