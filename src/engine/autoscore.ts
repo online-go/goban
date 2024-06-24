@@ -531,9 +531,6 @@ export function autoscore(
                           : 0;
             });
 
-            //const average_color_estimate =
-            //    total_ownership_estimate / (group.intersections.length * 2);
-            //const average_color_estimate = total_ownership_estimate / tally_ct;
             const average_color_estimate = total_ownership_tally / tally_ct;
 
             let color_judgement: JGOFNumericPlayerColor;
