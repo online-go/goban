@@ -1,3 +1,7 @@
+/*
+ * Copyright (C)  Online-Go.com
+ * Copyright (C)  Benjamin P. Jones
+ */
 import { escapeSGFText, newlines_to_spaces } from "engine";
 import * as AdHoc from "engine/formats/AdHocFormat";
 

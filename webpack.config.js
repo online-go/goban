@@ -85,11 +85,11 @@ module.exports = (env, argv) => {
             },
 
             output: {
-                path: __dirname + "/engine/",
+                path: __dirname + "/engine/build",
                 filename: "[name].js",
                 globalObject: "this",
                 library: {
-                    name: "goban",
+                    name: "goban-engine",
                     type: "umd",
                 },
             },
@@ -120,7 +120,7 @@ module.exports = (env, argv) => {
             },
 
             output: {
-                path: __dirname + "/lib",
+                path: __dirname + "/build",
                 filename: production ? "[name].min.js" : "[name].js",
                 library: {
                     name: "goban",

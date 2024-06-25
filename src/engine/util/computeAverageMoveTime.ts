@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { JGOFTimeControl } from "engine/formats";
+import type { JGOFTimeControl } from "../formats";
 
 /**
  * Compute the expected average time per move for a given time control.

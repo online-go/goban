@@ -4,19 +4,15 @@ SLACK_WEBHOOK=$(shell cat ../ogs/.slack-webhook)
 all dev: 
 	yarn run dev
 	
-build: lib types
+build: lib
 	
-lib: build-debug build-production types
+lib: build-debug build-production
 	
 build-debug:
 	yarn run build-debug
 
 build-production:
 	yarn run build-production
-
-types:
-	yarn run dts
-	yarn run dts-engine
 
 
 lint:
@@ -35,7 +31,7 @@ publish_docs: typedoc
 	cd docs && git add docs && git commit -m "Update docs" && git push
 
 clean:
-	rm -Rf lib node
+	rm -Rf lib node build engine/build
 
 publish push: publish_npm publish_docs upload_to_cdn notify
 
@@ -63,4 +59,5 @@ upload_to_cdn:
 	cp lib/goban.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/`node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version'`/
 
-.PHONY: doc build docs test clean all dev typedoc publich push lib types
+.PHONY: doc build docs test clean all dev typedoc publish push lib publish_npm upload_to_cdn notify beta beta_npm publish-beta publish_docs build-debug build-production detect-duplicate-code duplicate-code-detection lint
+ 

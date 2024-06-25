@@ -2,10 +2,10 @@
     "name": "goban",
     "version": "0.8.1",
     "description": "",
-    "main": "lib/goban.js",
-    "types": "lib/goban.d.ts",
+    "main": "build/goban.js",
+    "types": "build/src/index.d.ts",
     "files": [
-        "lib/"
+        "build/"
     ],
     "keywords": [
         "go",

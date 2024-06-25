@@ -2,12 +2,10 @@
     "name": "goban-engine",
     "version": "0.8.1",
     "description": "",
-    "main": "goban-engine.js",
-    "types": "goban-engine.d.ts",
+    "main": "build/goban-engine.js",
+    "types": "build/engine/index.d.ts",
     "files": [
-        "goban-engine.js",
-        "goban-engine.d.ts",
-        "goban-engine.js.map"
+        "build/"
     ],
     "keywords": [
         "go",

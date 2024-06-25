@@ -1,3 +1,7 @@
+/*
+ * Copyright (C)  Online-Go.com
+ * Copyright (C)  Benjamin P. Jones
+ */
 (global as any).CLIENT = true;
 
 import { GobanSocket, closeErrorCodeToString } from "engine";

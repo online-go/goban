@@ -1,3 +1,7 @@
+/*
+ * Copyright (C)  Online-Go.com
+ * Copyright (C)  Benjamin P. Jones
+ */
 import { StoneStringBuilder, BoardState, makeMatrix } from "engine";
 
 // Here is a board displaying many of the features GoStoneGroup cares about.

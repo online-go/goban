@@ -22,10 +22,10 @@ import {
     PlayerColor,
     PuzzleConfig,
     PuzzlePlacementSetting,
-} from "engine";
-import { MoveTree, MoveTreePenMarks } from "engine/MoveTree";
-import { ScoreEstimator } from "engine/ScoreEstimator";
-import { setGobanTranslations } from "engine/translate";
+} from "./engine";
+import { MoveTree, MoveTreePenMarks } from "./engine/MoveTree";
+import { ScoreEstimator } from "./engine/ScoreEstimator";
+import { setGobanTranslations } from "./engine/translate";
 import {
     JGOFClock,
     JGOFIntersection,
@@ -36,11 +36,11 @@ import {
     JGOFSealingIntersection,
     JGOFNumericPlayerColor,
     JGOFMove,
-} from "engine/formats/JGOF";
-import { AdHocPackedMove, AdHocPauseControl } from "engine/formats/AdHocFormat";
-import { MessageID } from "engine/messages";
-import type { GobanSocket } from "engine/GobanSocket";
-import type { ServerToClient, GameChatLine } from "engine/protocol";
+} from "./engine/formats/JGOF";
+import { AdHocPackedMove, AdHocPauseControl } from "./engine/formats/AdHocFormat";
+import { MessageID } from "./engine/messages";
+import type { GobanSocket } from "./engine/GobanSocket";
+import type { ServerToClient, GameChatLine } from "./engine/protocol";
 import { EventEmitter } from "eventemitter3";
 import { setGobanCallbacks } from "./Goban/callbacks";
 

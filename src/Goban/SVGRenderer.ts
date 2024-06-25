@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "engine/formats/JGOF";
+import { JGOF, JGOFIntersection, JGOFNumericPlayerColor } from "../engine/formats/JGOF";
 
-import { AdHocFormat } from "engine/formats/AdHocFormat";
+import { AdHocFormat } from "../engine/formats/AdHocFormat";
 
 //import { GobanCore, GobanSelectedThemes, GobanMetrics, GOBAN_FONT } from "./GobanCore";
 import { GobanConfig } from "../GobanBase";
-import { GobanEngine } from "engine";
-import { MoveTree } from "engine/MoveTree";
+import { GobanEngine } from "../engine";
+import { MoveTree } from "../engine/MoveTree";
 import { GobanTheme, THEMES } from "./themes";
-import { MoveTreePenMarks } from "engine/MoveTree";
+import { MoveTreePenMarks } from "../engine/MoveTree";
 import { getRelativeEventPosition } from "./canvas_utils";
-import { _ } from "engine/translate";
-import { formatMessage, MessageID } from "engine/messages";
+import { _ } from "../engine/translate";
+import { formatMessage, MessageID } from "../engine/messages";
 import {
     color_blend,
     encodeMove,
@@ -34,7 +34,7 @@ import {
     encodePrettyXCoordinate,
     getRandomInt,
     makeMatrix,
-} from "engine/util";
+} from "../engine/util";
 import { callbacks } from "./callbacks";
 import { Goban, GobanMetrics, GobanSelectedThemes } from "./Goban";
 

@@ -4,10 +4,10 @@
     "compilerOptions": {
         "target": "es2015",
         "module": "commonjs",
-        "outDir": "./lib/",
+        "outDir": "./build/",
         "moduleResolution": "node",
         "removeComments": false,
-        "declaration": false,
+        "declaration": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "lib": ["es2015", "dom"],

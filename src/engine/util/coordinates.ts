@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { JGOFMove } from "engine/formats";
+import { JGOFMove } from "../formats";
 
 /* Lower case, includes i, used for our string encoding of moves */
 const COORDINATE_SEQUENCE = "abcdefghijklmnopqrstuvwxyz";

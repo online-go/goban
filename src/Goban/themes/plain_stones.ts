@@ -16,7 +16,7 @@
 
 import { GobanTheme } from "./GobanTheme";
 import { ThemesInterface } from "./";
-import { _ } from "engine/translate";
+import { _ } from "../../engine/translate";
 
 export function renderPlainStone(
     ctx: CanvasRenderingContext2D,

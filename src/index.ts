@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-export * from "engine";
+export * from "./engine";
+export * from "./engine/protocol";
+export * from "./engine/formats";
 export * from "./GobanBase";
 export * from "./Goban/callbacks";
 export * from "./Goban/canvas_utils";
 export * from "./Goban/CanvasRenderer";
 export * from "./Goban/SVGRenderer";
 export * from "./Goban/themes";
+export * from "./Goban/themes/GobanTheme";
 export * from "./Goban/Goban";
+export * from "./Goban/InteractiveBase";
 export * from "./Goban/TestGoban"; // we export this for ui tests
 
-export * as protocol from "engine/protocol";
+export * as protocol from "./engine/protocol";
 export { placeRenderedImageStone, preRenderImageStone } from "./Goban/themes/image_stones";
 //export { GobanCanvas as Goban, GobanCanvasConfig as GobanConfig } from "./GobanCanvas";
 //export { GobanSVG as Goban, GobanSVGConfig as GobanConfig } from "./GobanSVG";
@@ -43,7 +47,7 @@ export function setGobanRenderer(_renderer: "svg" | "canvas") {
     renderer = _renderer;
 }
 
-import { AdHocFormat, JGOF } from "engine";
+import { AdHocFormat, JGOF } from "./engine";
 
 export function createGoban(
     config: GobanRendererConfig,

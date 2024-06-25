@@ -1,3 +1,7 @@
+/*
+ * Copyright (C)  Online-Go.com
+ * Copyright (C)  Benjamin P. Jones
+ */
 // cspell: disable
 
 import { JGOFNumericPlayerColor, positionId } from "engine";

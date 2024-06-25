@@ -16,9 +16,9 @@
  */
 
 import { GobanConfig } from "../GobanBase";
-import { GobanEngine } from "engine/GobanEngine";
-import { MessageID } from "engine/messages";
-import { MoveTreePenMarks } from "engine/MoveTree";
+import { GobanEngine } from "../engine/GobanEngine";
+import { MessageID } from "../engine/messages";
+import { MoveTreePenMarks } from "../engine/MoveTree";
 import { Goban, GobanSelectedThemes } from "./Goban";
 
 /**

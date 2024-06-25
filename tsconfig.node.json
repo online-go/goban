@@ -4,7 +4,7 @@
     "compilerOptions": {
         "target": "es2022",
         "module": "node16",
-        "outDir": "./node/",
+        "outDir": "./engine/build/",
         "moduleResolution": "node16",
         "esModuleInterop": true,
         "removeComments": false,

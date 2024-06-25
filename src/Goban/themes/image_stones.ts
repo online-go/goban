@@ -16,7 +16,7 @@
 
 import { GobanTheme } from "./GobanTheme";
 import { ThemesInterface } from "./";
-import { _ } from "engine/translate";
+import { _ } from "../../engine/translate";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 import { renderShadow } from "./rendered_stones";
 import { renderPlainStone } from "./plain_stones";

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { makeMatrix } from "engine/util";
+import { makeMatrix } from "../util";
 
 /* The OGSScoreEstimator method is a wasm compiled C program that
  * does simple random playouts. On the client, the OGSScoreEstimator script

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { JGOFNumericPlayerColor } from "engine/formats";
+import { JGOFNumericPlayerColor } from "../formats";
 import { encodeMove } from "./move_encoding";
 
 /**

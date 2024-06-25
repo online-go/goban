@@ -17,7 +17,7 @@
 import { GobanTheme, GobanThemeBackgroundCSS } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { callbacks } from "../callbacks";
-import { _ } from "engine/translate";
+import { _ } from "../../engine/translate";
 
 // Converts a six-digit hex string to rgba() notation
 function hexToRgba(raw: string, alpha: number = 1): string {

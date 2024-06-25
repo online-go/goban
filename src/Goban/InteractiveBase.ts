@@ -17,27 +17,20 @@
 import {
     GobanEngine,
     GobanEnginePhase,
-    GobanEngineRules,
     ReviewMessage,
-    PlayerColor,
     PuzzlePlacementSetting,
     Score,
     ConditionalMoveTree,
     GobanMoveError,
-} from "engine";
-import { NumberMatrix, encodeMove, makeMatrix, makeEmptyMatrix } from "engine/util";
-import { MoveTree, MarkInterface } from "engine/MoveTree";
-import { ScoreEstimator } from "engine/ScoreEstimator";
-import { computeAverageMoveTime, niceInterval, matricesAreEqual } from "engine/util";
-import { _ } from "engine/translate";
-import {
-    JGOFIntersection,
-    JGOFPlayerClock,
-    JGOFTimeControlSystem,
-    JGOFNumericPlayerColor,
-} from "engine/formats/JGOF";
-import { AdHocClock, AdHocPauseControl } from "engine/formats/AdHocFormat";
-import { ServerToClient, StallingScoreEstimate } from "engine/protocol";
+} from "../engine";
+import { NumberMatrix, encodeMove, makeMatrix, makeEmptyMatrix } from "../engine/util";
+import { MoveTree, MarkInterface } from "../engine/MoveTree";
+import { ScoreEstimator } from "../engine/ScoreEstimator";
+import { computeAverageMoveTime, niceInterval, matricesAreEqual } from "../engine/util";
+import { _ } from "../engine/translate";
+import { JGOFIntersection, JGOFPlayerClock, JGOFNumericPlayerColor } from "../engine/formats/JGOF";
+import { AdHocClock, AdHocPauseControl } from "../engine/formats/AdHocFormat";
+import { StallingScoreEstimate } from "../engine/protocol";
 import { callbacks } from "./callbacks";
 import {
     GobanBase,
@@ -74,57 +67,12 @@ export interface ColoredCircle {
     border_color?: string;
 }
 
-export interface AudioClockEvent {
-    /** Number of seconds left in the current period */
-    countdown_seconds: number;
-
-    /** Full player clock information */
-    clock: JGOFPlayerClock;
-
-    /** The player (id) whose turn it is */
-    player_id: string;
-
-    /** The player whose turn it is */
-    color: PlayerColor;
-
-    /** Time control system being used by the clock */
-    time_control_system: JGOFTimeControlSystem;
-
-    /** True if we are in overtime. This is only ever set for systems that have
-     *  a concept of overtime.
-     */
-    in_overtime: boolean;
-}
-
 export interface MoveCommand {
     //game_id?: number | string;
     game_id: number;
     move: string;
     blur?: number;
     clock?: JGOFPlayerClock;
-}
-
-export interface StateUpdateEvents {
-    mode: (d: GobanModes) => void;
-    title: (d: string) => void;
-    phase: (d: GobanEnginePhase) => void;
-    cur_move: (d: MoveTree) => void;
-    cur_review_move: (d: MoveTree | undefined) => void;
-    last_official_move: (d: MoveTree) => void;
-    submit_move: (d: (() => void) | undefined) => void;
-    analyze_tool: (d: AnalysisTool) => void;
-    analyze_subtool: (d: AnalysisSubTool) => void;
-    score_estimate: (d: ScoreEstimator | null) => void;
-    strict_seki_mode: (d: boolean) => void;
-    rules: (d: GobanEngineRules) => void;
-    winner: (d: number | undefined) => void;
-    undo_requested: (d: number | undefined) => void; // move number of the last undo request
-    undo_canceled: () => void;
-    paused: (d: boolean) => void;
-    outcome: (d: string) => void;
-    review_owner_id: (d: number | undefined) => void;
-    review_controller_id: (d: number | undefined) => void;
-    stalling_score_estimate: ServerToClient["game/:id/stalling_score_estimate"];
 }
 
 /**

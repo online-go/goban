@@ -18,7 +18,7 @@ import { MARK_TYPES } from "./InteractiveBase";
 import { OGSConnectivity } from "./OGSConnectivity";
 import { GobanConfig } from "../GobanBase";
 import { callbacks } from "./callbacks";
-import { makeMatrix, StoneStringBuilder } from "engine";
+import { makeMatrix, StoneStringBuilder } from "../engine";
 import { getRelativeEventPosition } from "./canvas_utils";
 import { THEMES, THEMES_SORTED } from "./themes";
 

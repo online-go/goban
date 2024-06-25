@@ -16,7 +16,7 @@
 
 import { GobanTheme, GobanThemeBackgroundCSS } from "./GobanTheme";
 import { ThemesInterface } from "./";
-import { _ } from "engine/translate";
+import { _ } from "../../engine/translate";
 import { callbacks } from "../callbacks";
 
 function getCDNReleaseBase() {

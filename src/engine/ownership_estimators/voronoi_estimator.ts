@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { cloneMatrix } from "engine/util";
+import { cloneMatrix } from "../util";
 
 /**
  * This estimator simply marks territory for whichever color has a
