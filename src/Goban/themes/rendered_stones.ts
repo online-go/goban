@@ -639,7 +639,6 @@ export default function (THEMES: ThemesInterface) {
 
                 // draw clamshell lines
                 const n_lines = 8 + (Math.abs(s) % 8);
-                let path = "";
 
                 const lines_g = document.createElementNS("http://www.w3.org/2000/svg", "g");
                 const lines_radius = radius * 0.85;
@@ -649,6 +648,7 @@ export default function (THEMES: ThemesInterface) {
 
                 let unit_x = shift + 1 / n_lines - 0.5;
                 while (unit_x < 0.5 * 0.8) {
+                    let path = "";
                     const x_increment =
                         seedRandomFloat(s, 1 / n_lines / 2, 1 / n_lines) * compactness;
                     unit_x += x_increment;
