@@ -1,4 +1,5 @@
 VERSION=$(shell node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version')
+GIT_VERSION=$(shell git describe --long | sed 's/\-g.*//' | sed 's/\-/\./')
 SLACK_WEBHOOK=$(shell cat ../ogs/.slack-webhook)
 
 all dev: 
@@ -40,8 +41,15 @@ beta: beta_npm upload_to_cdn
 beta_npm: build publish-beta
 
 publish-beta:
-	make -C engine/ publish-beta
-	yarn publish --tag beta ./
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" package.json
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" engine/package.json
+	@read -p "Publishing version $(GIT_VERSION) to the beta tag. Enter OTP :" otp; \
+	npm publish --dry-run --tag beta --otp $$otp engine/ && \
+	npm publish --dry-run --tag beta --otp $$otp ./ && \
+	echo "" && \
+	echo "" && \
+	echo "Published version $(GIT_VERSION)-beta to the beta tag successfully." && \
+	echo ""
 
 notify:
 	MSG=`git log -1 --pretty="%B" | sed s/\"//g | sed s/\'//g `; \
