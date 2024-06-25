@@ -1263,6 +1263,10 @@ export abstract class GobanInteractive extends GobanBase {
             return false;
         }
 
+        if (mode === "analyze" && this.scoring_mode === "stalling-scoring-mode") {
+            this.scoring_mode = false;
+        }
+
         if (
             this.engine.config.disable_analysis &&
             this.engine.phase !== "finished" &&
