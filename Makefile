@@ -34,21 +34,32 @@ publish_docs: typedoc
 clean:
 	rm -Rf lib node build engine/build
 
-publish push: publish_npm publish_docs upload_to_cdn notify
+publish push: publish-production publish_docs upload_to_cdn notify
 
 beta: beta_npm upload_to_cdn
 
 beta_npm: build publish-beta
 
-publish-beta:
+publish-beta: build
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" package.json
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" engine/package.json
-	@read -p "Publishing version $(GIT_VERSION) to the beta tag. Enter OTP :" otp; \
-	npm publish --dry-run --tag beta --otp $$otp engine/ && \
-	npm publish --dry-run --tag beta --otp $$otp ./ && \
+	@read -p "Publishing version $(GIT_VERSION) to the beta tag. Enter OTP : " otp; \
+	npm publish --tag beta --otp $$otp engine/ && \
+	npm publish --tag beta --otp $$otp ./ && \
 	echo "" && \
 	echo "" && \
 	echo "Published version $(GIT_VERSION)-beta to the beta tag successfully." && \
+	echo ""
+
+publish-production: build
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)\",/" package.json
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)\",/" engine/package.json
+	@read -p "Publishing version $(GIT_VERSION). Enter OTP : " otp; \
+	npm publish --otp $$otp engine/ && \
+	npm publish --otp $$otp ./ && \
+	echo "" && \
+	echo "" && \
+	echo "Published version $(GIT_VERSION) successfully." && \
 	echo ""
 
 notify:
@@ -56,9 +67,6 @@ notify:
 	VERSION=`git describe --long`; \
 	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' $(SLACK_WEBHOOK)
 
-publish_npm: build
-	make -C engine/ publish
-	yarn publish ./
 
 upload_to_cdn:
 	rm -Rf deployment-staging-area;
@@ -67,5 +75,5 @@ upload_to_cdn:
 	cp lib/goban.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/`node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version'`/
 
-.PHONY: doc build docs test clean all dev typedoc publish push lib publish_npm upload_to_cdn notify beta beta_npm publish-beta publish_docs build-debug build-production detect-duplicate-code duplicate-code-detection lint
+.PHONY: doc build docs test clean all dev typedoc publish push lib publish-production upload_to_cdn notify beta beta_npm publish-beta publish_docs build-debug build-production detect-duplicate-code duplicate-code-detection lint
  

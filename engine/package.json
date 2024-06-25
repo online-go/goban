@@ -1,6 +1,6 @@
 {
     "name": "goban-engine",
-    "version": "8.3.0-beta",
+    "version": "8.3.1-beta",
     "description": "",
     "main": "build/goban-engine.js",
     "types": "build/engine/index.d.ts",
