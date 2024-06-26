@@ -1,0 +1,82 @@
+html, body {
+    margin: 0;
+    background-color: #333;
+    color: #aaa;
+}
+.Goban {
+    margin-left: 1rem;
+    margin-top: 1rem;
+    position: relative;
+    display: inline-block;
+}
+
+.StoneLayer, .ShadowLayer, .PenLayer {
+    position: absolute;
+    left: 0;
+    right: 0;
+}
+
+.ShadowLayer {
+    z-index: 5;
+}
+.StoneLayer {
+    z-index: 10;
+}
+.PenLayer {
+    z-index: 20;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+.setting span {
+    display: inline-block;
+    min-width: 7rem;
+}
+
+.move-tree-container {
+    display: inline-block;
+    background-color: gray;
+    height: 20rem;
+    width: 30rem;
+    margin: 1rem;
+    resize: both;
+    overflow: scroll;
+}
+
+svg text {
+    font-family: Verdana, Arial, sans-serif;
+    text-anchor: middle;
+    font-weight: bold;
+    user-select: none;
+}
+
+a {
+    color: hsl(200, 100%, 50%);
+}
+
+.Main {
+    display: flex;
+    flex-direction: row;
+    width: 100vw;
+    height: 100vh;
+}
+
+.LeftNav {
+    flex-basis: 10rem;
+    flex-grow: 0;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+
+}
+
+.Main-content {
+    flex-grow: 1;
+
+}
+
+.font-mono {
+    font-family: monospace;
+}

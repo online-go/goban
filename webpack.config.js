@@ -117,6 +117,7 @@ module.exports = (env, argv) => {
             target: "web",
             entry: {
                 goban: "./src/index.ts",
+                examples: "./examples/main.tsx",
             },
 
             output: {
@@ -167,9 +168,13 @@ module.exports = (env, argv) => {
                 static: [
                     path.join(__dirname, "assets"),
                     path.join(__dirname, "test"),
-                    path.join(__dirname, "lib"),
+                    path.join(__dirname, "build"),
+                    path.join(__dirname, "examples"),
+                    path.join(__dirname, "src"),
                 ],
-
+                historyApiFallback: {
+                    index: "index.html",
+                },
                 devMiddleware: {
                     index: true,
                     mimeTypes: { phtml: "text/html" },
