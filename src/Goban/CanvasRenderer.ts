@@ -1531,7 +1531,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
 
         /* Draw stones & hovers */
-        let draw_red_x = false;
+        let draw_removal_x = false;
         {
             if (
                 stone_color /* if there is really a stone here */ ||
@@ -1738,12 +1738,12 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         this.score_estimator.removal[j][i]) ||
                     pos.stone_removed
                 ) {
-                    draw_red_x = true;
+                    draw_removal_x = true;
                 }
             }
         }
         if (
-            draw_red_x ||
+            draw_removal_x ||
             (this.mode === "analyze" &&
                 this.analyze_tool === "removal" &&
                 this.last_hover_square &&
@@ -1756,6 +1756,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j)
         ) {
+            const color =
+                this.engine.board[j][i] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
+
             const opacity = this.engine.board[j][i] ? 1.0 : 0.2;
             ctx.lineCap = "square";
             ctx.save();
@@ -1767,7 +1770,27 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             ctx.lineTo(cx + r, cy + r);
             ctx.moveTo(cx + r, cy - r);
             ctx.lineTo(cx - r, cy + r);
-            ctx.strokeStyle = "#ff0000";
+
+            if (pos.score === "black" && color === "white") {
+                ctx.strokeStyle = this.theme_white_text_color;
+            } else if (pos.score === "white" && color === "black") {
+                ctx.strokeStyle = this.theme_black_text_color;
+            } else if (
+                (pos.score === "white" && color === "white") ||
+                (pos.score === "black" && color === "black")
+            ) {
+                // score point for the same color where the stone is removed
+                // should call special attention to it
+                ctx.strokeStyle = "#ff0000";
+            } else {
+                // otherwise, no score but removed stones can happen when
+                // territory isn't properly sealed, so we are going to mark
+                // it grey to avoid calling too much attention, but still
+                // denote that removing these stones doesn't result in
+                // the territory being territory yet.
+                ctx.strokeStyle = "#888888";
+            }
+
             ctx.stroke();
             ctx.restore();
             draw_last_move = false;
@@ -2295,7 +2318,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
 
         /* Draw stones & hovers */
-        let draw_red_x = false;
+        let draw_removal_x = false;
         {
             if (
                 stone_color /* if there is really a stone here */ ||
@@ -2389,7 +2412,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     //(this.mode === "analyze" && pos.stone_removed)
                     pos.stone_removed
                 ) {
-                    draw_red_x = true;
+                    draw_removal_x = true;
                 }
 
                 ret += (translucent ? "T" : "") + color + ",";
@@ -2397,7 +2420,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
 
         if (
-            draw_red_x ||
+            draw_removal_x ||
             (this.mode === "analyze" &&
                 this.analyze_tool === "removal" &&
                 this.last_hover_square &&
@@ -2410,7 +2433,15 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j)
         ) {
-            ret += "redX";
+            const color =
+                this.engine.board[j][i] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
+            if (pos.score === "black" && color === "white") {
+                ret += "whiteX";
+            } else if (pos.score === "white" && color === "black") {
+                ret += "blackX";
+            } else {
+                ret += "redX";
+            }
         }
 
         /* Draw square highlights if any */
