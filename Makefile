@@ -5,9 +5,7 @@ SLACK_WEBHOOK=$(shell cat ../ogs/.slack-webhook)
 all dev: 
 	yarn run dev
 	
-build: lib
-	
-lib: build-debug build-production
+build: build-debug build-production
 	
 build-debug:
 	yarn run build-debug
@@ -71,9 +69,9 @@ notify:
 upload_to_cdn:
 	rm -Rf deployment-staging-area;
 	mkdir deployment-staging-area;
-	cp lib/goban.js* deployment-staging-area
-	cp lib/goban.min.js* deployment-staging-area
+	cp build/goban.js* deployment-staging-area
+	cp build/goban.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/`node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version'`/
 
-.PHONY: doc build docs test clean all dev typedoc publish push lib publish-production upload_to_cdn notify beta beta_npm publish-beta publish_docs build-debug build-production detect-duplicate-code duplicate-code-detection lint
+.PHONY: doc build docs test clean all dev typedoc publish push build publish-production upload_to_cdn notify beta beta_npm publish-beta publish_docs build-debug build-production detect-duplicate-code duplicate-code-detection lint
  
