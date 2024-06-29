@@ -1445,14 +1445,16 @@ export class GobanEngine extends BoardState {
             ret.white.prisoners = this.white_prisoners;
             ret.black.prisoners = this.black_prisoners;
 
-            for (let y = 0; y < this.height; ++y) {
-                for (let x = 0; x < this.width; ++x) {
-                    if (this.removal[y][x]) {
-                        if (this.board[y][x] === JGOFNumericPlayerColor.BLACK) {
-                            ret.white.prisoners += 1;
-                        }
-                        if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
-                            ret.black.prisoners += 1;
+            if (this._cur_move === this.last_official_move) {
+                for (let y = 0; y < this.height; ++y) {
+                    for (let x = 0; x < this.width; ++x) {
+                        if (this.removal[y][x]) {
+                            if (this.board[y][x] === JGOFNumericPlayerColor.BLACK) {
+                                ret.white.prisoners += 1;
+                            }
+                            if (this.board[y][x] === JGOFNumericPlayerColor.WHITE) {
+                                ret.black.prisoners += 1;
+                            }
                         }
                     }
                 }
