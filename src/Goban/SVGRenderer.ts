@@ -1218,6 +1218,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         cell = this.grid[j][i] = document.createElementNS("http://www.w3.org/2000/svg", "g");
         this.grid_layer!.appendChild(cell);
 
+        const removed_stone_scale = 0.9;
         const ss = this.square_size;
         let ox = this.draw_left_labels ? ss : 0;
         let oy = this.draw_top_labels ? ss : 0;
@@ -1233,8 +1234,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         const t = j * ss + oy;
         const b = (j + 1) * ss + oy;
 
-        const cx = l + this.metrics.mid;
-        const cy = t + this.metrics.mid;
+        //const cx = l + this.metrics.mid;
+        //const cy = t + this.metrics.mid;
+        const cx = this.metrics.mid;
+        const cy = this.metrics.mid;
+
+        let transform = `translate(${l},${t})`;
 
         let draw_last_move = !this.dont_draw_last_move;
 
@@ -1658,10 +1663,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     pos.stone_removed
                 ) {
                     draw_removal_x = true;
+                    transform = `translate(${l + this.metrics.mid * (1.0 - removed_stone_scale)}, ${
+                        t + this.metrics.mid * (1.0 - removed_stone_scale)
+                    }) scale(${removed_stone_scale})`;
                 }
             }
         }
 
+        let red_x = false;
         if (
             draw_removal_x ||
             (this.mode === "analyze" &&
@@ -1676,46 +1685,96 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j)
         ) {
-            const r = Math.max(1, this.metrics.mid * 0.75);
+            let r = Math.max(1, this.metrics.mid * 0.5);
             const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
             cross.setAttribute("class", "removal-cross");
             const color =
                 this.engine.board[j][i] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
 
             if (pos.score === "black" && color === "white") {
-                cross.setAttribute("stroke", this.theme_white_text_color);
+                cross.setAttribute("fill", this.theme_white_text_color);
             } else if (pos.score === "white" && color === "black") {
-                cross.setAttribute("stroke", this.theme_black_text_color);
+                cross.setAttribute("fill", this.theme_black_text_color);
             } else if (
                 (pos.score === "white" && color === "white") ||
                 (pos.score === "black" && color === "black")
             ) {
                 // score point for the same color where the stone is removed
                 // should call special attention to it
-                cross.setAttribute("stroke", "#ff0000");
+                cross.setAttribute("fill", "#ff0000");
+                red_x = true;
+                r = Math.max(1, this.metrics.mid * 0.65);
             } else {
                 // otherwise, no score but removed stones can happen when
                 // territory isn't properly sealed, so we are going to mark
                 // it grey to avoid calling too much attention, but still
                 // denote that removing these stones doesn't result in
                 // the territory being territory yet.
-                cross.setAttribute("stroke", "#888888");
+                cross.setAttribute("fill", "#777777");
             }
 
-            //cross.setAttribute("stroke", "#ff0000");
-            cross.setAttribute("stroke-width", `${this.square_size * 0.125}px`);
-            cross.setAttribute("fill", "none");
+            /* four dagger tip points with a square in the center. Start at top left going clockwise*/
+            const dx = r * 0.25; // tip width
+            const ir = r * 0.3; // inner radius for our box
+            const ir_dx = ir * 0.4; // offset to where our daggers meet the box
+
+            // prettier-ignore
+            const points = [
+                /* top half */
+                -r          , -r          ,
+                -r + dx     , -r          ,
+                -ir + ir_dx , -ir - ir_dx ,
+                ir - ir_dx  , -ir - ir_dx ,
+                r - dx      , -r          ,
+                r           , -r          ,
+
+                /* right half */
+                r          , -r + dx     ,
+                ir + ir_dx , -ir + ir_dx ,
+                ir + ir_dx , ir - ir_dx  ,
+                r          , r - dx      ,
+                r          , r           ,
+
+                /* bottom half */
+                r - dx      , r          ,
+                ir - ir_dx  , ir + ir_dx ,
+                -ir + ir_dx , ir + ir_dx ,
+                -r + dx     , r          ,
+                -r          , r          ,
+
+                /* left half */
+                -r          , r - dx      ,
+                -ir - ir_dx , ir - ir_dx  ,
+                -ir - ir_dx , -ir + ir_dx ,
+                -r          , -r + dx     ,
+                //-r          , -r          ,
+            ];
+
+            const path =
+                points
+                    .map((v, i) => {
+                        return (i % 2 === 0 ? (i === 0 ? "M" : "L") : " ") + v;
+                    })
+                    .join(" ") + " Z";
+
+            cross.setAttribute("stroke", "#888888");
+            cross.setAttribute("stroke-width", `${this.square_size * 0.0275}px`);
+            //cross.setAttribute("fill", "none");
             cross.setAttribute(
                 "d",
+                path,
+                /*
                 `
                     M ${cx - r} ${cy - r}
                     L ${cx + r} ${cy + r}
                     M ${cx + r} ${cy - r}
                     L ${cx - r} ${cy + r}
                 `,
+                */
             );
             const opacity = this.engine.board[j][i] ? 1.0 : 0.2;
             cross.setAttribute("stroke-opacity", opacity?.toString());
+            cross.setAttribute("transform", `translate(${cx}, ${cy})`);
 
             cell.appendChild(cross);
         }
@@ -1724,6 +1783,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         {
             if (
                 (pos.score &&
+                    (!draw_removal_x || red_x) &&
                     (this.engine.phase !== "finished" ||
                         this.mode === "play" ||
                         this.mode === "analyze")) ||
@@ -2199,6 +2259,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.__draw_state[j][i] = this.drawingHash(i, j);
+
+        cell.setAttribute("transform", transform);
+
+        if (this.shadow_grid[j][i]) {
+            this.shadow_grid[j][i].setAttribute("transform", transform);
+        }
     }
 
     private drawingHash(i: number, j: number): string {
@@ -2374,6 +2440,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
         }
 
+        let red_x = false;
         if (
             draw_removal_x ||
             (this.mode === "analyze" &&
@@ -2396,6 +2463,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 ret += "blackX";
             } else {
                 ret += "redX";
+                red_x = true;
             }
         }
 
@@ -2449,6 +2517,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         {
             if (
                 (pos.score &&
+                    (!draw_removal_x || red_x) &&
                     (this.engine.phase !== "finished" ||
                         this.mode === "play" ||
                         this.mode === "analyze")) ||
