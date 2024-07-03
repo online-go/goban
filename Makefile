@@ -6,6 +6,7 @@ all dev:
 	yarn run dev
 	
 build: build-debug build-production
+	cp src/Goban.styl build/Goban.styl
 	
 build-debug:
 	yarn run build-debug
@@ -37,6 +38,9 @@ publish push: publish-production publish_docs upload_to_cdn notify
 beta: beta_npm upload_to_cdn
 
 beta_npm: build publish-beta
+
+pack: build
+	yarn pack
 
 publish-beta: build
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" package.json
