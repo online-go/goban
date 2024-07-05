@@ -22,6 +22,7 @@ import {
     decodePrettyCoordinates,
     encodeMove,
     encodeMoves,
+    makeMatrix,
     positionId,
     prettyCoordinates,
     sortMoves,
@@ -751,7 +752,7 @@ export class GobanEngine extends BoardState {
         //this.goban_callback?.setState(state.udata_state);
         this.goban_callback?.setState?.();
 
-        const redrawn: { [s: string]: boolean } = {};
+        const redrawn = makeMatrix<boolean>(this.width, this.height, false);
 
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
@@ -760,10 +761,23 @@ export class GobanEngine extends BoardState {
                     (this.cur_move.x === x && this.cur_move.y === y)
                 ) {
                     this.board[y][x] = state.board[y][x];
-                    if (this.goban_callback) {
-                        this.goban_callback.set(x, y, this.board[y][x]);
-                    }
-                    redrawn[x + "," + y] = true;
+                    redrawn[y][x] = true;
+                }
+
+                if (
+                    this.removal[y][x] !== state.removal[y][x] ||
+                    (this.cur_move.x === x && this.cur_move.y === y)
+                ) {
+                    this.removal[y][x] = state.removal[y][x];
+                    redrawn[y][x] = true;
+                }
+            }
+        }
+
+        if (this.goban_callback) {
+            for (let y = 0; y < this.height; ++y) {
+                for (let x = 0; x < this.width; ++x) {
+                    this.goban_callback.set(x, y, this.board[y][x]);
                 }
             }
         }
@@ -914,9 +928,7 @@ export class GobanEngine extends BoardState {
             return;
         }
         this.move_before_jump = this.cur_move;
-        if (node.state) {
-            this.setState(node.state);
-        }
+        this.setState(node.state);
         this.cur_move = node;
         if (node.player_update) {
             //console.log("Engine jumpTo doing player_update...");
@@ -2530,5 +2542,15 @@ export class GobanEngine extends BoardState {
             ret = this.parentEventEmitter.emit(event, ...args) || ret;
         }
         return ret;
+    }
+
+    public override setRemoved(
+        x: number,
+        y: number,
+        removed: boolean,
+        emit_stone_removal_updated: boolean = true,
+    ): void {
+        this.cur_move.state.setRemoved(x, y, removed, false);
+        super.setRemoved(x, y, removed, emit_stone_removal_updated);
     }
 }

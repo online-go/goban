@@ -726,3 +726,30 @@ describe("groups", () => {
         expect(engine.getStoneRemovalString()).toBe("aabb");
     });
 });
+
+describe("state", () => {
+    const engine = new GobanEngine({});
+
+    engine.place(0, 0);
+    const move1 = engine.cur_move;
+    engine.place(1, 1);
+    const move2 = engine.cur_move;
+
+    expect(engine.board[0][0]).toBe(1);
+    expect(engine.board[1][1]).toBe(2);
+    expect(engine.removal[1][1]).toBe(false);
+    expect(engine.cur_move.state.removal[1][1]).toBe(false);
+
+    engine.setRemoved(1, 1, true);
+    expect(engine.removal[1][1]).toBe(true);
+    expect(engine.cur_move.state.removal[1][1]).toBe(true);
+    expect(engine.getStoneRemovalString()).toBe("bb");
+
+    engine.jumpTo(move1);
+    expect(engine.removal[1][1]).toBe(false);
+    expect(engine.getStoneRemovalString()).toBe("");
+
+    engine.jumpTo(move2);
+    expect(engine.removal[1][1]).toBe(true);
+    expect(engine.getStoneRemovalString()).toBe("bb");
+});
