@@ -200,7 +200,7 @@ export interface JGOFPauseState {
     moderator?: string;
 }
 
-export type JGOFTimeControlSpeed = "blitz" | "live" | "correspondence";
+export type JGOFTimeControlSpeed = "blitz" | "rapid" | "live" | "correspondence";
 export type JGOFTimeControlSystem =
     | "fischer"
     | "byoyomi"
