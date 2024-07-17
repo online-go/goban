@@ -267,17 +267,18 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): string[] {
+            const id = this.def_uid(`anime-black-${radius}`);
             defs.append(
                 this.renderSVG(
                     {
-                        id: `anime-black-${radius}`,
+                        id,
                         url: getCDNReleaseBase() + "/img/anime_black.svg",
                     },
                     radius,
                 ),
             );
 
-            return [`anime-black-${radius}`];
+            return [id];
         }
 
         public override preRenderWhiteSVG(
@@ -286,17 +287,18 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): string[] {
+            const id = this.def_uid(`anime-white-${radius}`);
             defs.append(
                 this.renderSVG(
                     {
-                        id: `anime-white-${radius}`,
+                        id,
                         url: getCDNReleaseBase() + "/img/anime_white.svg",
                     },
                     radius,
                 ),
             );
 
-            return [`anime-white-${radius}`];
+            return [id];
         }
     }
 
@@ -416,17 +418,18 @@ export default function (THEMES: ThemesInterface) {
                 return super.preRenderBlackSVG(defs, radius, _seed, deferredRenderCallback);
             }
 
+            const id = this.def_uid(`custom-black-${radius}`);
             defs.append(
                 this.renderSVG(
                     {
-                        id: `custom-black-${radius}`,
+                        id,
                         url: callbacks.customBlackStoneUrl(),
                     },
                     radius,
                 ),
             );
 
-            return [`custom-black-${radius}`];
+            return [id];
         }
 
         public override preRenderWhiteSVG(
@@ -439,17 +442,18 @@ export default function (THEMES: ThemesInterface) {
                 return super.preRenderWhiteSVG(defs, radius, _seed, deferredRenderCallback);
             }
 
+            const id = this.def_uid(`custom-white-${radius}`);
             defs.append(
                 this.renderSVG(
                     {
-                        id: `custom-white-${radius}`,
+                        id,
                         url: callbacks.customWhiteStoneUrl(),
                     },
                     radius,
                 ),
             );
 
-            return [`custom-white-${radius}`];
+            return [id];
         }
     }
 

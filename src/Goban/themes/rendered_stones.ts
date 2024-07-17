@@ -533,7 +533,7 @@ export default function (THEMES: ThemesInterface) {
             _deferredRenderCallback: () => void,
         ): string[] {
             const ret = [];
-            const key = `black-slate-${radius}`;
+            const key = this.def_uid(`black-slate-${radius}`);
             ret.push(key);
             defs.appendChild(
                 this.renderSVG(
@@ -600,7 +600,7 @@ export default function (THEMES: ThemesInterface) {
             let s = seed;
 
             for (let i = 0; i < 20; ++i) {
-                const key = `white-shell-${i}-${radius}`;
+                const key = this.def_uid(`white-shell-${i}-${radius}`);
                 ret.push(key);
 
                 const stone = this.renderSVG(
@@ -759,7 +759,7 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `black-glass-${radius}`;
+            const key = this.def_uid(`black-glass-${radius}`);
             const stone = this.renderSVG(
                 {
                     id: key,
@@ -795,7 +795,7 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `white-glass-${radius}`;
+            const key = this.def_uid(`white-glass-${radius}`);
             const stone = this.renderSVG(
                 {
                     id: key,
@@ -878,7 +878,7 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `black-worn-glass-${radius}`;
+            const key = this.def_uid(`black-worn-glass-${radius}`);
             const stone = this.renderSVG(
                 {
                     id: key,
@@ -914,7 +914,7 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `white-worn-glass-${radius}`;
+            const key = this.def_uid(`white-worn-glass-${radius}`);
             const stone = this.renderSVG(
                 {
                     id: key,
@@ -995,7 +995,7 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `black-night-${radius}`;
+            const key = this.def_uid(`black-night-${radius}`);
             const stone = this.renderSVG(
                 {
                     id: key,
@@ -1031,7 +1031,7 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             _deferredRenderCallback: () => void,
         ): string[] {
-            const key = `white-night-${radius}`;
+            const key = this.def_uid(`white-night-${radius}`);
             const stone = this.renderSVG(
                 {
                     id: key,

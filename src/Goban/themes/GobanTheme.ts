@@ -16,6 +16,8 @@
 
 import { GobanBase } from "../../GobanBase";
 
+let last_def_uid = 0;
+
 export interface GobanThemeBackgroundCSS {
     "background-color"?: string;
     "background-image"?: string;
@@ -103,7 +105,7 @@ export class GobanTheme {
         _deferredRenderCallback: () => void,
     ): string[] {
         const ret = [];
-        const key = `black-${radius}`;
+        const key = this.def_uid(`black-${radius}`);
         ret.push(key);
 
         defs.appendChild(
@@ -131,7 +133,7 @@ export class GobanTheme {
         _deferredRenderCallback: () => void,
     ): string[] {
         const ret = [];
-        const key = `white-${radius}`;
+        const key = this.def_uid(`white-${radius}`);
         ret.push(key);
         defs.appendChild(
             this.renderSVG(
@@ -436,5 +438,11 @@ export class GobanTheme {
         }
 
         return stone;
+    }
+
+    public def_uid(base: string): string {
+        const uid = last_def_uid++;
+
+        return `${base}-${uid}`;
     }
 }

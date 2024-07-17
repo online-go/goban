@@ -129,7 +129,7 @@ export default function (THEMES: ThemesInterface) {
             _deferredRenderCallback: () => void,
         ): string[] {
             const ret = [];
-            const key = `plain-black-${radius}`;
+            const key = this.def_uid(`plain-black-${radius}`);
             ret.push(key);
 
             let color: string | undefined = this.getBlackStoneColor();
@@ -174,7 +174,7 @@ export default function (THEMES: ThemesInterface) {
             _deferredRenderCallback: () => void,
         ): string[] {
             const ret = [];
-            const key = `plain-white-${radius}`;
+            const key = this.def_uid(`plain-white-${radius}`);
             ret.push(key);
             defs.appendChild(
                 this.renderSVG(
