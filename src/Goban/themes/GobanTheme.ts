@@ -440,6 +440,7 @@ export class GobanTheme {
         return stone;
     }
 
+    /* Makes a unique id for a def element */
     public def_uid(base: string): string {
         const uid = last_def_uid++;
 
