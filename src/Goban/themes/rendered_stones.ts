@@ -31,10 +31,12 @@ interface RenderOptions {
     specular_light_distance: number;
 }
 
+/*
 function seedRandomFloat(seed: number, min: number, max: number): number {
     const n = Math.abs(((seed * 9301 + 49297) % 233280) / 233280);
     return min + n * (max - min);
 }
+*/
 
 /**
  * Converts an RGB color value to HSL. Conversion formula
@@ -502,6 +504,58 @@ export default function (THEMES: ThemesInterface) {
         ): void {
             placeRenderedStone(ctx, shadow_ctx, stone, cx, cy, radius);
         }
+
+        public preRenderSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            rendered: StoneTypeArray,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            const ret = [];
+            for (let i = 0; i < rendered.length; ++i) {
+                const id = this.def_uid(`white-shell-${i}-${radius}`);
+
+                const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+                img.setAttribute("id", id);
+                //img.setAttribute("width", rendered[i].stone.width.toString());
+                //img.setAttribute("height", rendered[i].stone.height.toString());
+                img.setAttribute("width", `${Math.ceil(radius * 2)}`);
+                img.setAttribute("height", `${Math.ceil(radius * 2)}`);
+                img.setAttribute("x", "0");
+                img.setAttribute("y", "0");
+                img.setAttributeNS(
+                    "http://www.w3.org/1999/xlink",
+                    "href",
+                    rendered[i].stone.toDataURL(),
+                );
+
+                defs.appendChild(img);
+                ret.push(id);
+            }
+            return ret;
+        }
+
+        public override preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            //radius = Math.ceil(radius * 2) / 2;
+            const rendered = this.preRenderWhite(radius, seed, _deferredRenderCallback);
+            return this.preRenderSVG(defs, radius, rendered, _deferredRenderCallback);
+        }
+
+        public override preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            seed: number,
+            _deferredRenderCallback: () => void,
+        ): string[] {
+            //radius = Math.ceil(radius * 2) / 2;
+            const rendered = this.preRenderBlack(radius, seed, _deferredRenderCallback);
+            return this.preRenderSVG(defs, radius, rendered, _deferredRenderCallback);
+        }
     }
 
     /* Slate & Shell { */
@@ -526,7 +580,8 @@ export default function (THEMES: ThemesInterface) {
         override getBlackTextColor(color: string): string {
             return "#ffffff";
         }
-        public override preRenderBlackSVG(
+        /*
+        public preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
             seed: number,
@@ -559,6 +614,7 @@ export default function (THEMES: ThemesInterface) {
             );
             return ret;
         }
+        */
     }
 
     _("Slate"); // ensure translation
@@ -590,7 +646,8 @@ export default function (THEMES: ThemesInterface) {
             return ret;
         }
 
-        public override preRenderWhiteSVG(
+        /*
+        public preRenderWhiteSVG(
             defs: SVGDefsElement,
             radius: number,
             seed: number,
@@ -706,6 +763,7 @@ export default function (THEMES: ThemesInterface) {
             }
             return ret;
         }
+        */
 
         override getWhiteTextColor(color: string): string {
             return "#000000";
@@ -753,6 +811,7 @@ export default function (THEMES: ThemesInterface) {
             return "#000000";
         }
 
+        /*
         public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
@@ -827,6 +886,7 @@ export default function (THEMES: ThemesInterface) {
             defs.appendChild(stone);
             return [key];
         }
+        */
     }
 
     _("Glass"); // ensure translation
@@ -872,6 +932,7 @@ export default function (THEMES: ThemesInterface) {
             return "#000000";
         }
 
+        /*
         public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
@@ -946,6 +1007,7 @@ export default function (THEMES: ThemesInterface) {
             defs.appendChild(stone);
             return [key];
         }
+        */
     }
 
     _("Worn Glass"); // ensure translation
@@ -989,6 +1051,7 @@ export default function (THEMES: ThemesInterface) {
         override getWhiteTextColor(color: string): string {
             return "#000000";
         }
+        /*
         public override preRenderBlackSVG(
             defs: SVGDefsElement,
             radius: number,
@@ -1043,12 +1106,6 @@ export default function (THEMES: ThemesInterface) {
                                 offset: 0,
                                 color: "hsl(261, 7%, 60%)",
                             },
-                            /*
-                            {
-                                offset: 20,
-                                color: "hsl(261, 7%, 60%)",
-                            },
-                            */
                             {
                                 offset: 90,
                                 color: "hsl(261, 7%, 40%)",
@@ -1065,6 +1122,7 @@ export default function (THEMES: ThemesInterface) {
             defs.appendChild(stone);
             return [key];
         }
+        */
     }
 
     _("Night"); // ensure translation
