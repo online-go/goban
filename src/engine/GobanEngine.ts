@@ -127,6 +127,7 @@ export interface GobanEngineConfig extends BoardConfig {
     reviews?: {
         [review_id: number]: GobanEnginePlayerEntry;
     };
+    is_game_record?: boolean /* Indicates that this game is a game record of a real life game */;
 
     time_control?: JGOFTimeControl;
     moves?: GobanMovesArray;
@@ -342,6 +343,7 @@ export class GobanEngine extends BoardState {
     };
     public rengo_casual_mode: boolean;
     public stalling_score_estimate?: StallingScoreEstimate;
+    public readonly is_game_record: boolean = false;
 
     /* Properties that emit change events */
     private _phase: GobanEnginePhase = "play";
@@ -507,6 +509,7 @@ export class GobanEngine extends BoardState {
 
         const self = this;
         this.config = config;
+        this.is_game_record = !!config.is_game_record;
         this.dontStoreBoardHistory =
             !!dontStoreBoardHistory; /* Server side, we don't want to store board snapshots */
 

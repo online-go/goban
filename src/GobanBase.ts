@@ -363,4 +363,9 @@ export abstract class GobanBase extends EventEmitter<GobanEvents> {
     public decodePrettyCoordinates(coordinates: string): JGOFMove {
         return this.engine.decodePrettyCoordinates(coordinates);
     }
+
+    /** True if the game is a game record of a real life game */
+    public get is_game_record(): boolean {
+        return this.engine.is_game_record;
+    }
 }
