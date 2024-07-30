@@ -137,9 +137,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     protected title_div?: HTMLElement;
 
     private themes: GobanSelectedThemes = {
-        board: "Plain",
-        black: "Plain",
-        white: "Plain",
+        "board": "Plain",
+        "black": "Plain",
+        "white": "Plain",
+        "removal-graphic": "x",
+        "removal-scale": 1.0,
     };
     private theme_black!: GobanTheme;
     private theme_black_stones: Array<any> = [];
@@ -1198,7 +1200,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
     private __drawSquare(i: number, j: number): void {
-        if (!this.drawing_enabled || this.no_display) {
+        if (!this.drawing_enabled || this.no_display || !this.grid || !this.grid[j]) {
             return;
         }
         if (i < 0 || j < 0) {
@@ -1218,7 +1220,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         cell = this.grid[j][i] = document.createElementNS("http://www.w3.org/2000/svg", "g");
         this.grid_layer!.appendChild(cell);
 
-        const removed_stone_scale = 0.9;
+        const removed_stone_scale = this.themes["removal-scale"];
         const ss = this.square_size;
         let ox = this.draw_left_labels ? ss : 0;
         let oy = this.draw_top_labels ? ss : 0;
@@ -1662,7 +1664,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     //(this.mode === "analyze" && pos.stone_removed)
                     pos.stone_removed
                 ) {
-                    draw_removal_x = true;
+                    draw_removal_x = this.themes["removal-graphic"] === "x";
                     transform = `translate(${l + this.metrics.mid * (1.0 - removed_stone_scale)}, ${
                         t + this.metrics.mid * (1.0 - removed_stone_scale)
                     }) scale(${removed_stone_scale})`;

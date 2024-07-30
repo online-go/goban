@@ -24,9 +24,11 @@ import { THEMES, THEMES_SORTED } from "./themes";
 
 export const GOBAN_FONT = "Verdana,Arial,sans-serif";
 export interface GobanSelectedThemes {
-    board: string;
-    white: string;
-    black: string;
+    "board": string;
+    "white": string;
+    "black": string;
+    "removal-graphic": "square" | "x";
+    "removal-scale": number;
 }
 export type LabelPosition =
     | "all"
@@ -85,7 +87,13 @@ export abstract class Goban extends OGSConnectivity {
         }
         //return {white:'Plain', black:'Plain', board:'Plain'};
         //return {white:'Plain', black:'Plain', board:'Kaya'};
-        return { white: "Shell", black: "Slate", board: "Kaya" };
+        return {
+            "white": "Shell",
+            "black": "Slate",
+            "board": "Kaya",
+            "removal-graphic": "square",
+            "removal-scale": 1.0,
+        };
     }
 
     protected putOrClearLabel(x: number, y: number, mode?: "put" | "clear"): boolean {

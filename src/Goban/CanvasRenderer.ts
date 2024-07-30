@@ -132,9 +132,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     protected title_div?: HTMLElement;
 
     private themes: GobanSelectedThemes = {
-        board: "Plain",
-        black: "Plain",
-        white: "Plain",
+        "board": "Plain",
+        "black": "Plain",
+        "white": "Plain",
+        "removal-graphic": "x",
+        "removal-scale": 1.0,
     };
     private theme_black!: GobanTheme;
     private theme_black_stones: Array<any> = [];

@@ -46,11 +46,11 @@ try {
 
 Goban.setCallbacks({
     getSelectedThemes: () => ({
-        board: "Kaya",
+        "board": "Kaya",
         //board: "Anime",
 
-        white: "Plain",
-        black: "Plain",
+        "white": "Plain",
+        "black": "Plain",
         //white: "Glass",
         //black: "Glass",
         //white: "Worn Glass",
@@ -63,6 +63,8 @@ Goban.setCallbacks({
         //black: "Anime",
         //white: "Custom",
         //black: "Custom",
+        "removal-graphic": "square",
+        "removal-scale": 1.0,
     }),
 
     customWhiteStoneUrl: () => {
@@ -309,7 +311,7 @@ function GobanTestPage(): JSX.Element {
                     <ReactGobanCanvas key={idx} />
                 ),
             )}
-            {true && (svg_or_canvas === "svg" ? <ReactGobanSVG /> : <ReactGobanCanvas />)}
+            {svg_or_canvas === "svg" ? <ReactGobanSVG /> : <ReactGobanCanvas />}
         </div>
     );
 }
