@@ -1740,7 +1740,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         this.score_estimator.removal[j][i]) ||
                     pos.stone_removed
                 ) {
-                    draw_removal_x = true;
+                    //draw_removal_x = true;
+                    draw_removal_x = this.themes["removal-graphic"] === "x";
                 }
             }
         }
