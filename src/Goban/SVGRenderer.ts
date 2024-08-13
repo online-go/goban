@@ -1069,8 +1069,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
                     if (this.mode === "analyze" && this.analyze_tool === "stone") {
                         let c: MoveTree | null = this.engine.cur_move;
+
                         while (c && !c.trunk) {
                             let mark: any = c.getMoveNumberDifferenceFromTrunk();
+
                             if (c.edited) {
                                 mark = "triangle";
                             }
@@ -1261,14 +1263,16 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.engine &&
             this.engine.cur_move &&
             (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" && this.isInPushedAnalysis()))
+                (typeof this.isInPushedAnalysis() !== "undefined" &&
+                    this.isInPushedAnalysis() &&
+                    this.show_variation_move_numbers))
         ) {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {
                 if (cur.x === i && cur.y === j) {
                     const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
-                        if (!cur.edited && this.show_move_numbers) {
+                        if (!cur.edited && this.show_variation_move_numbers) {
                             alt_marking = cur.getMoveNumberDifferenceFromTrunk().toString();
                         }
                     }
@@ -2176,7 +2180,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     } else {
                         if (
                             this.engine.undo_requested &&
-                            this.visual_undo_request_indicator &&
+                            this.getShowUndoRequestIndicator() &&
                             this.engine.undo_requested === this.engine.cur_move.move_number
                         ) {
                             const letter = "?";
@@ -2318,7 +2322,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 if (cur.x === i && cur.y === j) {
                     const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
-                        if (!cur.edited && this.show_move_numbers) {
+                        if (!cur.edited && this.show_variation_move_numbers) {
                             alt_marking = cur.getMoveNumberDifferenceFromTrunk().toString();
                         }
                     }
@@ -2686,6 +2690,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
+                if (
+                    this.engine.undo_requested &&
+                    this.getShowUndoRequestIndicator() &&
+                    this.engine.undo_requested === this.engine.cur_move.move_number
+                ) {
+                    ret += "?" + ",";
+                }
             }
         }
 

@@ -1275,7 +1275,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 if (cur.x === i && cur.y === j) {
                     const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
-                        if (!cur.edited && this.show_move_numbers) {
+                        if (!cur.edited && this.show_variation_move_numbers) {
                             alt_marking = cur.getMoveNumberDifferenceFromTrunk().toString();
                         }
                     }
@@ -2184,7 +2184,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     } else {
                         if (
                             this.engine.undo_requested &&
-                            this.visual_undo_request_indicator &&
+                            this.getShowUndoRequestIndicator() &&
                             this.engine.undo_requested === this.engine.cur_move.move_number
                         ) {
                             const letter = "?";
@@ -2307,7 +2307,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 if (cur.x === i && cur.y === j) {
                     const move_diff = cur.getMoveNumberDifferenceFromTrunk();
                     if (move_diff !== cur.move_number) {
-                        if (!cur.edited && this.show_move_numbers) {
+                        if (!cur.edited && this.show_variation_move_numbers) {
                             alt_marking = cur.getMoveNumberDifferenceFromTrunk().toString();
                         }
                     }
@@ -2664,6 +2664,13 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
+                if (
+                    this.engine.undo_requested &&
+                    this.getShowUndoRequestIndicator() &&
+                    this.engine.undo_requested === this.engine.cur_move.move_number
+                ) {
+                    ret += "?" + ",";
+                }
             }
         }
 

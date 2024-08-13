@@ -390,7 +390,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.engine.undo_requested = parseInt(move_number);
                     this.emit("update");
                     this.emit("audio-undo-requested");
-                    if (this.visual_undo_request_indicator) {
+                    if (this.getShowUndoRequestIndicator()) {
                         this.redraw(true); // need to update the mark on the last move
                     }
                 },
@@ -403,7 +403,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 this.engine.undo_requested = undefined; // can't call delete here because this is a getter/setter
                 this.emit("update");
                 this.emit("undo_canceled");
-                if (this.visual_undo_request_indicator) {
+                if (this.getShowUndoRequestIndicator()) {
                     this.redraw(true);
                 }
             });

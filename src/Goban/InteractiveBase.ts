@@ -93,7 +93,6 @@ export abstract class GobanInteractive extends GobanBase {
     public draw_left_labels: boolean;
     public draw_right_labels: boolean;
     public draw_top_labels: boolean;
-    public visual_undo_request_indicator: boolean;
     public height: number;
     public last_clock?: AdHocClock;
     public last_emitted_clock?: JGOFClockWithTransmitting;
@@ -273,7 +272,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected review_had_gamedata: boolean;
     protected scoring_mode: boolean | "stalling-scoring-mode";
     protected shift_key_is_down: boolean;
-    protected show_move_numbers: boolean;
+    //protected show_move_numbers: boolean;
     protected show_variation_move_numbers: boolean;
     protected square_size: number = 10;
     protected stone_placement_enabled: boolean;
@@ -337,10 +336,6 @@ export abstract class GobanInteractive extends GobanBase {
             typeof config.variation_stone_opacity !== "undefined"
                 ? config.variation_stone_opacity
                 : 0.6;
-        this.visual_undo_request_indicator =
-            "visual_undo_request_indicator" in config
-                ? !!config.visual_undo_request_indicator
-                : false;
         this.original_square_size = config.square_size || "auto";
         //this.square_size = config["square_size"] || "auto";
         this.interactive = !!config.interactive;
@@ -410,7 +405,7 @@ export abstract class GobanInteractive extends GobanBase {
         this.draw_right_labels = "draw_right_labels" in config ? !!config.draw_right_labels : true;
         this.draw_bottom_labels =
             "draw_bottom_labels" in config ? !!config.draw_bottom_labels : true;
-        this.show_move_numbers = this.getShowMoveNumbers();
+        //this.show_move_numbers = this.getShowMoveNumbers();
         this.show_variation_move_numbers = this.getShowVariationMoveNumbers();
 
         if (this.bounds.left > 0) {
@@ -475,12 +470,20 @@ export abstract class GobanInteractive extends GobanBase {
         }
         return "A1";
     }
+    protected getShowUndoRequestIndicator(): boolean {
+        if (callbacks.getShowUndoRequestIndicator) {
+            return callbacks.getShowUndoRequestIndicator();
+        }
+        return true;
+    }
+    /*
     protected getShowMoveNumbers(): boolean {
         if (callbacks.getShowMoveNumbers) {
             return callbacks.getShowMoveNumbers();
         }
         return false;
     }
+    */
     protected getShowVariationMoveNumbers(): boolean {
         if (callbacks.getShowVariationMoveNumbers) {
             return callbacks.getShowVariationMoveNumbers();

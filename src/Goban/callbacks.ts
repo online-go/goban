@@ -25,8 +25,9 @@ export interface GobanCallbacks {
     getClockDrift?: () => number;
     getNetworkLatency?: () => number;
     getLocation?: () => string;
-    getShowMoveNumbers?: () => boolean;
+    // getShowMoveNumbers?: () => boolean;
     getShowVariationMoveNumbers?: () => boolean;
+    getShowUndoRequestIndicator?: () => boolean;
     getMoveTreeNumbering?: () => "move-coordinates" | "none" | "move-number";
     getCDNReleaseBase?: () => string;
     getSoundEnabled?: () => boolean;
