@@ -96,7 +96,6 @@ export interface GobanConfig extends GobanEngineConfig, PuzzleConfig {
     one_click_submit?: boolean;
     double_click_submit?: boolean;
     variation_stone_opacity?: number;
-    visual_undo_request_indicator?: boolean;
 
     //
     auth?: string;
