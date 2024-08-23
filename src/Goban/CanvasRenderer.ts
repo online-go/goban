@@ -207,6 +207,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.setTheme(this.getSelectedThemes(), true);
         let first_pass = true;
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
+            if (!this.engine) {
+                return;
+            }
             if (
                 themes.black === "Custom" ||
                 themes.white === "Custom" ||
