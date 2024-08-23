@@ -210,6 +210,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.setTheme(this.getSelectedThemes(), true);
         let first_pass = true;
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
+            if (!this.engine) {
+                return;
+            }
             if (
                 themes.black === "Custom" ||
                 themes.white === "Custom" ||
