@@ -1237,9 +1237,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         const l = i * ss + ox;
-        const r = (i + 1) * ss + ox;
+        //const r = (i + 1) * ss + ox;
         const t = j * ss + oy;
-        const b = (j + 1) * ss + oy;
+        //const b = (j + 1) * ss + oy;
 
         //const cx = l + this.metrics.mid;
         //const cy = t + this.metrics.mid;
@@ -1315,12 +1315,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         /* Fade our lines if we have text to draw */
         if (have_text_to_draw) {
             /* draw lighter colored lines */
-            let sx = l;
-            let ex = r;
-            const mx = (r + l) / 2 - this.metrics.offset;
-            let sy = t;
-            let ey = b;
-            const my = (t + b) / 2 - this.metrics.offset;
+            let sx = 0;
+            let ex = ss;
+            const mx = ss / 2 - this.metrics.offset;
+            let sy = 0;
+            let ey = ss;
+            const my = ss / 2 - this.metrics.offset;
 
             if (i === 0) {
                 sx += this.metrics.mid;
