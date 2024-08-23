@@ -485,6 +485,10 @@ export abstract class GobanInteractive extends GobanBase {
     }
     */
     protected getShowVariationMoveNumbers(): boolean {
+        if (this.mode === "puzzle") {
+            return false;
+        }
+
         if (callbacks.getShowVariationMoveNumbers) {
             return callbacks.getShowVariationMoveNumbers();
         }
