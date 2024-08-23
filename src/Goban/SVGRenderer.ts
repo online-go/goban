@@ -1938,13 +1938,15 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             ) {
                 const m = this.engine.getMoveByLocation(i, j, false);
                 if (m && !m.trunk) {
-                    if (m.edited) {
-                        //letter = "triangle";
-                        if (this.engine.board[j][i]) {
-                            alt_marking = "triangle";
+                    const move_diff = m.getMoveNumberDifferenceFromTrunk();
+                    if (move_diff !== m.move_number) {
+                        if (m.edited) {
+                            if (this.engine.board[j][i]) {
+                                alt_marking = "triangle";
+                            }
+                        } else {
+                            letter = move_diff.toString();
                         }
-                    } else {
-                        letter = m.getMoveNumberDifferenceFromTrunk().toString();
                     }
                 }
             }
