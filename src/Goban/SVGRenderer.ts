@@ -773,7 +773,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             /* nor when in labeling mode */
             this.analyze_tool !== "label"
         ) {
-            const m = this.engine.getMoveByLocation(x, y);
+            const m = this.engine.getMoveByLocation(x, y, true);
             if (m) {
                 this.engine.jumpTo(m);
                 this.emit("update");
@@ -1933,7 +1933,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     pos.square
                 )
             ) {
-                const m = this.engine.getMoveByLocation(i, j);
+                const m = this.engine.getMoveByLocation(i, j, false);
                 if (m && !m.trunk) {
                     if (m.edited) {
                         //letter = "triangle";
@@ -2628,7 +2628,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 !letter &&
                 !(pos.circle || pos.triangle || pos.chat_triangle || pos.cross || pos.square)
             ) {
-                const m = this.engine.getMoveByLocation(i, j);
+                const m = this.engine.getMoveByLocation(i, j, false);
                 if (m && !m.trunk) {
                     if (m.edited) {
                         //letter = "triangle";

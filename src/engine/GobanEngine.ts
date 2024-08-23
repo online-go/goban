@@ -2479,14 +2479,23 @@ export class GobanEngine extends BoardState {
         );
         return se.score();
     }
-    public getMoveByLocation(x: number, y: number): MoveTree | null {
+    /* Returns the move by location if it exists within our current branch. If
+     * include_forward_search is true, we also search forward in the tree along
+     * the last selected branch. */
+    public getMoveByLocation(
+        x: number,
+        y: number,
+        include_forward_search: boolean,
+    ): MoveTree | null {
         let m: MoveTree | null = null;
         let cur_move: MoveTree | null = this.cur_move;
-        while (!m && cur_move) {
-            if (cur_move.x === x && cur_move.y === y) {
-                m = cur_move;
+        if (include_forward_search) {
+            while (!m && cur_move) {
+                if (cur_move.x === x && cur_move.y === y) {
+                    m = cur_move;
+                }
+                cur_move = cur_move.next();
             }
-            cur_move = cur_move.next();
         }
         cur_move = this.cur_move.parent;
         while (!m && cur_move) {
