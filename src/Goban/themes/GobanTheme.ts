@@ -192,24 +192,24 @@ export class GobanTheme {
             return;
         }
 
-        const invisible_circle_to_cast_shadow = document.createElementNS(
+        const circle_to_cast_shadow = document.createElementNS(
             "http://www.w3.org/2000/svg",
             "circle",
         );
-        invisible_circle_to_cast_shadow.setAttribute("class", "shadow");
-        invisible_circle_to_cast_shadow.setAttribute("fill", color);
-        invisible_circle_to_cast_shadow.setAttribute("cx", cx.toString());
-        invisible_circle_to_cast_shadow.setAttribute("cy", cy.toString());
-        invisible_circle_to_cast_shadow.setAttribute("r", (radius * 0.97).toString());
+        circle_to_cast_shadow.setAttribute("class", "shadow");
+        circle_to_cast_shadow.setAttribute("fill", color);
+        circle_to_cast_shadow.setAttribute("cx", cx.toString());
+        circle_to_cast_shadow.setAttribute("cy", cy.toString());
+        circle_to_cast_shadow.setAttribute("r", (radius * 0.9).toString());
         const sx = radius * 0.15;
         const sy = radius * 0.15;
         const softness = radius * 0.1;
-        invisible_circle_to_cast_shadow.setAttribute(
+        circle_to_cast_shadow.setAttribute(
             "style",
             `filter: drop-shadow(${sx}px ${sy}px ${softness}px rgba(0,0,0,0.4)`,
         );
-        shadow_cell.appendChild(invisible_circle_to_cast_shadow);
-        return invisible_circle_to_cast_shadow;
+        shadow_cell.appendChild(circle_to_cast_shadow);
+        return circle_to_cast_shadow;
     }
 
     private placeStoneSVG(
