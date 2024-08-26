@@ -147,7 +147,64 @@ export class GobanTheme {
                 radius,
             ),
         );
+
         return ret;
+    }
+
+    public preRenderShadowSVG(defs: SVGDefsElement, color: string): void {
+        /* Radial gradient for shadow */
+        const radial_gradient = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "radialGradient",
+        );
+        radial_gradient.setAttribute("id", "shadow-" + color);
+        radial_gradient.setAttribute("r", "1.0");
+
+        // solid stone color
+        const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop1.setAttribute("offset", "0");
+        stop1.setAttribute("stop-color", color);
+        stop1.setAttribute("stop-opacity", "1.0");
+        radial_gradient.appendChild(stop1);
+        const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop2.setAttribute("offset", "30%");
+        stop2.setAttribute("stop-color", color);
+        stop2.setAttribute("stop-opacity", "1.0");
+        radial_gradient.appendChild(stop2);
+
+        const shadow_color = "#333333";
+
+        {
+            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            shadow_stop.setAttribute("offset", "31%");
+            shadow_stop.setAttribute("stop-color", shadow_color);
+            shadow_stop.setAttribute("stop-opacity", "0.6");
+            radial_gradient.appendChild(shadow_stop);
+        }
+
+        {
+            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            shadow_stop.setAttribute("offset", "34%");
+            shadow_stop.setAttribute("stop-color", shadow_color);
+            shadow_stop.setAttribute("stop-opacity", "0.50");
+            radial_gradient.appendChild(shadow_stop);
+        }
+        {
+            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            shadow_stop.setAttribute("offset", "40%");
+            shadow_stop.setAttribute("stop-color", shadow_color);
+            shadow_stop.setAttribute("stop-opacity", "0.5");
+            radial_gradient.appendChild(shadow_stop);
+        }
+        {
+            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            shadow_stop.setAttribute("offset", "50%");
+            shadow_stop.setAttribute("stop-color", shadow_color);
+            shadow_stop.setAttribute("stop-opacity", "0.0");
+            radial_gradient.appendChild(shadow_stop);
+        }
+
+        defs.appendChild(radial_gradient);
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
@@ -196,18 +253,10 @@ export class GobanTheme {
             "http://www.w3.org/2000/svg",
             "circle",
         );
-        circle_to_cast_shadow.setAttribute("class", "shadow");
-        circle_to_cast_shadow.setAttribute("fill", color);
-        circle_to_cast_shadow.setAttribute("cx", cx.toString());
-        circle_to_cast_shadow.setAttribute("cy", cy.toString());
-        circle_to_cast_shadow.setAttribute("r", (radius * 0.9).toString());
-        const sx = radius * 0.15;
-        const sy = radius * 0.15;
-        const softness = radius * 0.1;
-        circle_to_cast_shadow.setAttribute(
-            "style",
-            `filter: drop-shadow(${sx}px ${sy}px ${softness}px rgba(0,0,0,0.4)`,
-        );
+        circle_to_cast_shadow.setAttribute("fill", `url(#shadow-${color})`);
+        circle_to_cast_shadow.setAttribute("cx", (cx * 1.2).toString());
+        circle_to_cast_shadow.setAttribute("cy", (cy * 1.2).toString());
+        circle_to_cast_shadow.setAttribute("r", (radius * 0.95).toString());
         shadow_cell.appendChild(circle_to_cast_shadow);
         return circle_to_cast_shadow;
     }
@@ -240,7 +289,7 @@ export class GobanTheme {
         cy: number,
         radius: number,
     ): [SVGElement, SVGElement | undefined] {
-        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "#eeeeee");
+        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "white");
     }
 
     public placeBlackStoneSVG(
@@ -251,7 +300,7 @@ export class GobanTheme {
         cy: number,
         radius: number,
     ): [SVGElement, SVGElement | undefined] {
-        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "#222222");
+        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "black");
     }
 
     /* Resolve which stone graphic we should use. By default we just pick a

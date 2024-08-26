@@ -3231,6 +3231,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 __theme_cache.black[themes.black] = {};
             }
 
+            this.theme_white.preRenderShadowSVG(this.svg_defs, "black");
+            this.theme_white.preRenderShadowSVG(this.svg_defs, "white");
+
             for (const radius of [this.theme_stone_radius, MoveTree.stone_radius]) {
                 __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
                     this.svg_defs,
