@@ -203,28 +203,16 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         window.addEventListener("keydown", this.handleShiftKey);
         window.addEventListener("keyup", this.handleShiftKey);
 
-        // these are set in this.setThemes(..)
-        // this.theme_board
-        // this.theme_white
-        // this.theme_black
         this.setTheme(this.getSelectedThemes(), true);
-        let first_pass = true;
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
             if (!this.engine) {
+                console.error("Engine not initialized yet, ignoring theme change");
                 return;
-            }
-            if (
-                themes.black === "Custom" ||
-                themes.white === "Custom" ||
-                themes.board === "Custom"
-            ) {
-                //first_pass = true;
             }
             delete __theme_cache.black?.["Custom"];
             delete __theme_cache.white?.["Custom"];
             delete __theme_cache.board?.["Custom"];
-            this.setTheme(themes, first_pass ? true : false);
-            first_pass = false;
+            this.setTheme(themes, false);
         });
         this.on("destroy", () => watcher.remove());
 
