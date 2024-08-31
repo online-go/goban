@@ -19,7 +19,7 @@ import { GobanSelectedThemes } from "./Goban";
 
 export interface GobanCallbacks {
     defaultConfig?: () => any;
-    getCoordinateDisplaySystem?: () => "A1" | "1-1";
+    getCoordinateDisplaySystem?: () => "A1" | "1-1" | "none";
     isAnalysisDisabled?: (goban: GobanBase, perGameSettingAppliesToNonPlayers: boolean) => boolean;
 
     getClockDrift?: () => number;

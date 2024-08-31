@@ -2822,6 +2822,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         place("" + (c + 1), x, y);
                     }
                     break;
+                case "none":
+                    break;
             }
         };
 
@@ -2877,6 +2879,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                             this.square_size / 2;
                         v_place(chinese_japanese_numbers[c], x, y);
                     }
+                    break;
+                case "none":
                     break;
             }
         };

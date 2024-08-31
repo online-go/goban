@@ -464,7 +464,7 @@ export abstract class GobanInteractive extends GobanBase {
         return ret;
     }
 
-    protected getCoordinateDisplaySystem(): "A1" | "1-1" {
+    protected getCoordinateDisplaySystem(): "A1" | "1-1" | "none" {
         if (callbacks.getCoordinateDisplaySystem) {
             return callbacks.getCoordinateDisplaySystem();
         }
