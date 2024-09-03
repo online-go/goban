@@ -118,8 +118,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private grid: Array<Array<SVGGraphicsElement>> = [];
     public grid_layer?: SVGGraphicsElement;
     private cells: Array<Array<GCell>> = [];
-    private shadow_grid: Array<Array<SVGElement | undefined>> = [];
-    private shadow_layer?: SVGGraphicsElement;
+    public shadow_grid: Array<Array<SVGElement | undefined>> = [];
+    public shadow_layer?: SVGGraphicsElement;
     private pen_layer?: SVGGraphicsElement;
 
     private last_move_opacity: number = 1;
@@ -4597,12 +4597,13 @@ class GCell {
 
         this.g.setAttribute("transform", transform);
 
-        /* TODO: Deal with shadows *
-        /*
-        if (this.shadow_grid[j][i]) {
-            this.shadow_grid[j][i].setAttribute("transform", transform);
+        if (this.last_stone_shadow) {
+            this.last_stone_shadow.setAttribute("transform", transform);
         }
-        */
+    }
+
+    public get transform(): string {
+        return this._transform;
     }
 
     /*
@@ -4878,6 +4879,7 @@ class GCell {
     private last_stone_stone?: string;
     private last_stone_radius?: number;
     private last_stone_alpha_value?: number;
+    private last_stone_shadow?: SVGElement;
 
     public stone(
         color: JGOFNumericPlayerColor,
@@ -4907,8 +4909,7 @@ class GCell {
             color === JGOFNumericPlayerColor.BLACK
                 ? this.renderer.theme_black.placeBlackStoneSVG(
                       this.g,
-                      //transparent ? undefined : this.shadow_layer,
-                      undefined,
+                      transparent ? undefined : this.renderer.shadow_layer,
                       stone,
                       cx,
                       cy,
@@ -4916,8 +4917,7 @@ class GCell {
                   )
                 : this.renderer.theme_black.placeWhiteStoneSVG(
                       this.g,
-                      //transparent ? undefined : this.shadow_layer,
-                      undefined,
+                      transparent ? undefined : this.renderer.shadow_layer,
                       stone,
                       cx,
                       cy,
@@ -4926,7 +4926,14 @@ class GCell {
         if (shadow) {
             console.warn("Shadows not implemented");
         }
-        //this.shadow_grid[j][i] = shadow;
+        if (this.last_stone_shadow) {
+            this.last_stone_shadow.remove();
+        }
+        this.last_stone_shadow = shadow;
+        if (this.last_stone_shadow) {
+            this.last_stone_shadow.setAttribute("transform", this.transform);
+        }
+
         if (transparent) {
             elt.setAttribute("opacity", stone_alpha_value.toString());
         }
@@ -4942,6 +4949,10 @@ class GCell {
         if (this.last_stone) {
             this.last_stone.remove();
             delete this.last_stone;
+        }
+        if (this.last_stone_shadow) {
+            this.last_stone_shadow.remove();
+            delete this.last_stone_shadow;
         }
     }
 
