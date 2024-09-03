@@ -47,7 +47,7 @@ try {
 Goban.setCallbacks({
     getSelectedThemes: () => ({
         "board": "Kaya",
-        //board: "Anime",
+        //"board": "Anime",
 
         "white": "Plain",
         "black": "Plain",

@@ -126,6 +126,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     public move_tree_container?: HTMLElement;
     private move_tree_inner_container?: HTMLDivElement;
     private move_tree_svg?: SVGElement;
+    private move_tree_svg_defs?: SVGDefsElement;
 
     private autoplaying_puzzle_move: boolean = false;
     private byoyomi_label: string = "";
@@ -174,11 +175,23 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         this.title_div = config["title_div"];
         this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+        const shadow_root = this.parent.shadowRoot ?? this.parent.attachShadow({ mode: "open" });
+        //const shadow_root = this.parent.attachShadow({ mode: "closed" });
+        shadow_root.appendChild(this.svg);
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(`text {
+            font-family: Verdana, Arial, sans-serif;
+            text-anchor: middle;
+            font-weight: bold;
+            user-select: none;
+        }`);
+        shadow_root.adoptedStyleSheets = [sheet];
+
         this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         this.svg.appendChild(this.svg_defs);
         this.last_move_opacity = config["last_move_opacity"] ?? 1;
 
-        this.parent.appendChild(this.svg);
         this.event_layer = document.createElement("div");
         this.event_layer.style.position = "absolute";
         this.event_layer.style.top = "0";
@@ -1208,7 +1221,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             return;
         }
 
-        const CELLS = false;
+        const CELLS = true;
 
         if (CELLS) {
             this.cellDraw(i, j);
@@ -3897,6 +3910,37 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         this.emit("clear-message");
     }
+
+    protected generateSvgDefs(radius: number): SVGDefsElement {
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        const themes = this.themes;
+
+        if (!(themes.white in __theme_cache.white)) {
+            __theme_cache.white[themes.white] = {};
+        }
+        if (!(themes.black in __theme_cache.black)) {
+            __theme_cache.black[themes.black] = {};
+        }
+
+        this.theme_black.preRenderShadowSVG(defs, "black");
+        this.theme_white.preRenderShadowSVG(defs, "white");
+
+        __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
+            defs,
+            radius,
+            23434,
+            () => {},
+        );
+        __theme_cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
+            defs,
+            radius,
+            2081,
+            () => {},
+        );
+
+        return defs;
+    }
+
     protected setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
             console.log("No display");
@@ -3932,32 +3976,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         try {
             this.svg_defs?.remove();
-            this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            this.svg_defs = this.generateSvgDefs(this.theme_stone_radius);
             this.svg.appendChild(this.svg_defs);
 
-            if (!(themes.white in __theme_cache.white)) {
-                __theme_cache.white[themes.white] = {};
-            }
-            if (!(themes.black in __theme_cache.black)) {
-                __theme_cache.black[themes.black] = {};
-            }
-
-            this.theme_white.preRenderShadowSVG(this.svg_defs, "black");
-            this.theme_white.preRenderShadowSVG(this.svg_defs, "white");
-
-            for (const radius of [this.theme_stone_radius, MoveTree.stone_radius]) {
-                __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
-                    this.svg_defs,
-                    radius,
-                    23434,
-                    () => {},
-                );
-                __theme_cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
-                    this.svg_defs,
-                    radius,
-                    2081,
-                    () => {},
-                );
+            if (this.move_tree_svg) {
+                this.move_tree_svg_defs?.remove();
+                this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius);
+                this.move_tree_svg.appendChild(this.move_tree_svg_defs);
             }
         } catch (e) {
             console.error(`Error pre-rendering stones.`, {
@@ -4075,11 +4100,28 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.move_tree_inner_container = document.createElement("div");
             //this.move_tree_canvas = allocateCanvasOrError();
             this.move_tree_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            this.move_tree_inner_container.appendChild(this.move_tree_svg);
+            //this.move_tree_inner_container.appendChild(this.move_tree_svg);
+
+            //const shadow_root = this.move_tree_inner_container.attachShadow({ mode: "closed" });
+            const shadow_root =
+                this.move_tree_inner_container.shadowRoot ??
+                this.move_tree_inner_container.attachShadow({ mode: "open" });
+            shadow_root.appendChild(this.move_tree_svg);
+            const sheet = new CSSStyleSheet();
+            sheet.replaceSync(`text {
+                font-family: Verdana, Arial, sans-serif;
+                text-anchor: middle;
+                font-weight: bold;
+                user-select: none;
+            }`);
+            shadow_root.adoptedStyleSheets = [sheet];
+
+            this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius);
             this.move_tree_container.appendChild(this.move_tree_inner_container);
             this.move_tree_bindEvents(this.move_tree_svg);
             this.move_tree_container.style.position = "relative";
             this.move_tree_svg.style.position = "absolute";
+            this.move_tree_svg.appendChild(this.move_tree_svg_defs);
 
             try {
                 const observer = new ResizeObserver(() => {
@@ -4196,6 +4238,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         };
 
         svg.innerHTML = "";
+        if (this.move_tree_svg_defs) {
+            svg.appendChild(this.move_tree_svg_defs);
+        }
 
         this.move_tree_hilightNode(svg, active_path_end, "#6BAADA", viewport);
 
