@@ -376,8 +376,8 @@ function ReactGoban<GobanClass extends Goban>(
 
         let i = 0;
         const start = Date.now();
-        //const NUM_MOVES = 300;
-        const NUM_MOVES = 20;
+        const NUM_MOVES = 300;
+        // const NUM_MOVES = 20;
         const interval = setInterval(() => {
             i++;
             if (i >= NUM_MOVES) {

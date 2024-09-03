@@ -37,6 +37,7 @@ import {
 } from "../engine/util";
 import { callbacks } from "./callbacks";
 import { Goban, GobanMetrics, GobanSelectedThemes } from "./Goban";
+import { ColoredCircle } from "./InteractiveBase";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
@@ -115,7 +116,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private lines_layer?: SVGGraphicsElement;
     private coordinate_labels_layer?: SVGGraphicsElement;
     private grid: Array<Array<SVGGraphicsElement>> = [];
-    private grid_layer?: SVGGraphicsElement;
+    public grid_layer?: SVGGraphicsElement;
+    private cells: Array<Array<GCell>> = [];
     private shadow_grid: Array<Array<SVGElement | undefined>> = [];
     private shadow_layer?: SVGGraphicsElement;
     private pen_layer?: SVGGraphicsElement;
@@ -131,7 +133,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private labeling_mode?: "put" | "clear";
     private last_label_position: { i: number; j: number } = { i: NaN, j: NaN };
     private last_pen_position?: [number, number];
-    protected metrics: GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
+    public metrics: GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
 
     private drawing_enabled: boolean = true;
     protected title_div?: HTMLElement;
@@ -143,20 +145,20 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         "removal-graphic": "x",
         "removal-scale": 1.0,
     };
-    private theme_black!: GobanTheme;
+    public theme_black!: GobanTheme;
     private theme_black_stones: Array<any> = [];
-    private theme_black_text_color: string = HOT_PINK;
+    public theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
     private theme_board!: GobanTheme;
-    private theme_faded_line_color: string = HOT_PINK;
-    private theme_faded_star_color: string = HOT_PINK;
+    public theme_faded_line_color: string = HOT_PINK;
+    public theme_faded_star_color: string = HOT_PINK;
     //private theme_faded_text_color:string;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
-    private theme_white!: GobanTheme;
+    public theme_white!: GobanTheme;
     private theme_white_stones: Array<any> = [];
-    private theme_white_text_color: string = HOT_PINK;
+    public theme_white_text_color: string = HOT_PINK;
 
     constructor(config: SVGRendererGobanConfig, preloaded_data?: AdHocFormat | JGOF) {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
@@ -206,7 +208,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.setTheme(this.getSelectedThemes(), true);
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
             if (!this.engine) {
-                console.error("Engine not initialized yet, ignoring theme change");
                 return;
             }
             delete __theme_cache.black?.["Custom"];
@@ -231,6 +232,20 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
     public disablePen(): void {
         this.detachPenLayer();
+    }
+
+    public cell(i: number, j: number): GCell {
+        if (!this.cells[j]) {
+            this.cells[j] = [];
+        }
+        if (!this.cells[j][i]) {
+            this.cells[j][i] = new GCell(this, i, j);
+        }
+        return this.cells[j][i];
+    }
+
+    public clearCells(): void {
+        this.cells = [];
     }
 
     public override destroy(): void {
@@ -1188,9 +1203,715 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (i < 0 || j < 0 || !this.drawing_enabled || this.no_display) {
             return;
         }
-        if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
-            this.__drawSquare(i, j);
+
+        if (!this.grid_layer) {
+            return;
         }
+
+        const CELLS = false;
+
+        if (CELLS) {
+            this.cellDraw(i, j);
+        } else {
+            if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
+                this.__drawSquare(i, j);
+            }
+        }
+    }
+    private cellDraw(i: number, j: number): void {
+        if (!this.drawing_enabled || this.no_display) {
+            return;
+        }
+        if (i < 0 || j < 0) {
+            return;
+        }
+
+        const cell = this.cell(i, j);
+
+        const removed_stone_scale = this.themes["removal-scale"];
+        const ss = this.square_size;
+        let ox = this.draw_left_labels ? ss : 0;
+        let oy = this.draw_top_labels ? ss : 0;
+        if (this.bounds.left > 0) {
+            ox = -ss * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -ss * this.bounds.top;
+        }
+
+        const l = i * ss + ox;
+        const t = j * ss + oy;
+
+        let transform = `translate(${l},${t})`;
+
+        let draw_last_move = !this.dont_draw_last_move;
+
+        let stone_color = 0;
+        if (this.engine) {
+            stone_color = this.engine.board[j][i];
+        }
+
+        /* Figure out marks for this spot */
+        let pos = this.getMarks(i, j);
+        if (!pos) {
+            console.error("No position for ", j, i);
+            pos = {};
+        }
+        let alt_marking: string | undefined;
+        if (
+            this.engine &&
+            this.engine.cur_move &&
+            (this.mode !== "play" ||
+                (typeof this.isInPushedAnalysis() !== "undefined" &&
+                    this.isInPushedAnalysis() &&
+                    this.show_variation_move_numbers))
+        ) {
+            let cur: MoveTree | null = this.engine.cur_move;
+            for (; cur && !cur.trunk; cur = cur.parent) {
+                if (cur.x === i && cur.y === j) {
+                    const move_diff = cur.getMoveNumberDifferenceFromTrunk();
+                    if (move_diff !== cur.move_number) {
+                        if (!cur.edited && this.show_variation_move_numbers) {
+                            alt_marking = cur.getMoveNumberDifferenceFromTrunk().toString();
+                        }
+                    }
+                }
+            }
+        }
+
+        let movetree_contains_this_square = false;
+        if (this.engine && this.engine.cur_move.lookupMove(i, j, this.engine.player, false)) {
+            movetree_contains_this_square = true;
+        }
+
+        let have_text_to_draw = false;
+        let text_color = this.theme_blank_text_color;
+        for (const key in pos) {
+            if (key.length <= 3) {
+                have_text_to_draw = true;
+            }
+        }
+        if (
+            pos.circle ||
+            pos.triangle ||
+            pos.chat_triangle ||
+            pos.sub_triangle ||
+            pos.cross ||
+            pos.square
+        ) {
+            have_text_to_draw = true;
+        }
+        if (pos.letter && pos.letter.length > 0) {
+            have_text_to_draw = true;
+        }
+        if (pos.subscript && pos.subscript.length > 0) {
+            have_text_to_draw = true;
+        }
+
+        /* Fade our lines if we have text to draw */
+        if (have_text_to_draw) {
+            let star_radius;
+            if (this.square_size < 5) {
+                star_radius = 0.5;
+            } else {
+                star_radius = Math.max(2, (this.metrics.mid - 1.5) * 0.16);
+            }
+            let draw_star_point = false;
+            if (
+                this.width === 19 &&
+                this.height === 19 &&
+                ((i === 3 && (j === 3 || j === 9 || j === 15)) ||
+                    (i === 9 && (j === 3 || j === 9 || j === 15)) ||
+                    (i === 15 && (j === 3 || j === 9 || j === 15)))
+            ) {
+                draw_star_point = true;
+            }
+
+            if (
+                this.width === 13 &&
+                this.height === 13 &&
+                ((i === 3 && (j === 3 || j === 9)) ||
+                    (i === 6 && j === 6) ||
+                    (i === 9 && (j === 3 || j === 9)))
+            ) {
+                draw_star_point = true;
+            }
+
+            if (
+                this.width === 9 &&
+                this.height === 9 &&
+                ((i === 2 && (j === 2 || j === 6)) ||
+                    (i === 4 && j === 4) ||
+                    (i === 6 && (j === 2 || j === 6)))
+            ) {
+                draw_star_point = true;
+            }
+
+            cell.drawFadedIntersectionLines(draw_star_point, star_radius);
+        } else {
+            cell.clearFadedLines();
+        }
+
+        /* Heatmap */
+        if (this.heatmap && this.heatmap[j][i] > 0.001) {
+            cell.heatmap(this.heatmap[j][i]);
+        } else {
+            cell.clearHeatmap();
+        }
+
+        /* Draw square highlights if any */
+        if (
+            pos.hint ||
+            (this.highlight_movetree_moves && movetree_contains_this_square) ||
+            pos.color
+        ) {
+            const color = pos.color ? pos.color : pos.hint ? "#8EFF0A" : "#FF8E0A";
+            cell.highlight(color);
+        } else {
+            cell.clearHighlight();
+        }
+
+        /* Colored stones */
+        const circle = this.colored_circles?.[j][i];
+        if (circle) {
+            cell.circle(circle);
+        } else {
+            cell.clearCircle();
+        }
+
+        /* Draw stones & hovers */
+        let draw_removal_x = false;
+        {
+            if (
+                stone_color /* if there is really a stone here */ ||
+                (this.stone_placement_enabled &&
+                    this.last_hover_square &&
+                    this.last_hover_square.x === i &&
+                    this.last_hover_square.y === j &&
+                    (this.mode !== "analyze" || this.analyze_tool === "stone") &&
+                    this.engine &&
+                    !this.scoring_mode &&
+                    (this.engine.phase === "play" ||
+                        (this.engine.phase === "finished" && this.mode === "analyze")) &&
+                    (this.engine.puzzle_player_move_mode !== "fixed" ||
+                        movetree_contains_this_square ||
+                        (this.getPuzzlePlacementSetting &&
+                            this.getPuzzlePlacementSetting().mode === "play"))) ||
+                (this.scoring_mode &&
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]) ||
+                (this.engine &&
+                    this.engine.phase === "stone removal" &&
+                    this.engine.board[j][i] &&
+                    this.engine.removal[j][i]) ||
+                pos.black ||
+                pos.white
+            ) {
+                //let color = stone_color ? stone_color : (this.move_selected ? this.engine.otherPlayer() : this.engine.player);
+                let translucent = false;
+                let stoneAlphaValue = 0.6;
+                let color;
+                if (
+                    this.scoring_mode &&
+                    this.score_estimator &&
+                    this.score_estimator.board[j][i] &&
+                    this.score_estimator.removal[j][i]
+                ) {
+                    color = this.score_estimator.board[j][i];
+                    translucent = true;
+                } else if (
+                    this.engine &&
+                    ((this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move) ||
+                        (this.engine.phase === "finished" && this.mode !== "analyze")) &&
+                    this.engine.board &&
+                    this.engine.removal &&
+                    this.engine.board[j][i] &&
+                    this.engine.removal[j][i]
+                ) {
+                    color = this.engine.board[j][i];
+                    translucent = true;
+                } else if (stone_color) {
+                    color = stone_color;
+                } else if (
+                    this.mode === "analyze" &&
+                    this.analyze_tool === "stone" &&
+                    this.analyze_subtool !== "alternate"
+                ) {
+                    color = this.edit_color === "black" ? 1 : 2;
+                    if (this.shift_key_is_down) {
+                        color = this.edit_color === "black" ? 2 : 1;
+                    }
+                } else if (this.move_selected) {
+                    if (this.engine.handicapMovesLeft() <= 0) {
+                        color = this.engine.otherPlayer();
+                    } else {
+                        color = this.engine.player;
+                    }
+                } else if (this.mode === "puzzle") {
+                    if (this.getPuzzlePlacementSetting) {
+                        const s = this.getPuzzlePlacementSetting();
+                        if (s.mode === "setup") {
+                            color = s.color;
+                            if (this.shift_key_is_down) {
+                                color = color === 1 ? 2 : 1;
+                            }
+                        } else {
+                            color = this.engine.player;
+                        }
+                    } else {
+                        color = this.engine.player;
+                    }
+                } else if (pos.black || pos.white) {
+                    color = pos.black ? 1 : 2;
+                    translucent = true;
+                    stoneAlphaValue = this.variation_stone_opacity;
+                } else {
+                    color = this.engine.player;
+                }
+
+                if (pos.stone_removed) {
+                    translucent = true;
+                }
+
+                if (!(this.autoplaying_puzzle_move && !stone_color)) {
+                    text_color =
+                        color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+
+                    if (!this.theme_black_stones) {
+                        const err = new Error(
+                            `Goban.theme_black_stones not set. Current themes is ${JSON.stringify(
+                                this.themes,
+                            )}`,
+                        );
+                        setTimeout(() => {
+                            throw err;
+                        }, 1);
+                        return;
+                    }
+                    if (!this.theme_white_stones) {
+                        const err = new Error(
+                            `Goban.theme_white_stones not set. Current themes is ${JSON.stringify(
+                                this.themes,
+                            )}`,
+                        );
+                        setTimeout(() => {
+                            throw err;
+                        }, 1);
+                        return;
+                    }
+
+                    const stone_transparent = translucent || !stone_color;
+
+                    cell.stone(
+                        color,
+                        stone_transparent,
+                        color === JGOFNumericPlayerColor.BLACK
+                            ? this.theme_black.getStone(i, j, this.theme_black_stones, this)
+                            : this.theme_white.getStone(i, j, this.theme_white_stones, this),
+                        this.theme_stone_radius,
+                        stoneAlphaValue,
+                    );
+                } else {
+                    cell.clearStone();
+                }
+
+                /** Draw the circle around the blue move */
+                const circle = this.colored_circles?.[j][i];
+                if (pos.blue_move && circle) {
+                    cell.blueMove(circle.border_color || "#000000", circle.border_width || 0.1);
+                } else {
+                    cell.clearBlueMove();
+                }
+
+                /* Red X if the stone is marked for removal */
+                if (
+                    (this.engine &&
+                        this.engine.phase === "stone removal" &&
+                        this.engine.last_official_move === this.engine.cur_move &&
+                        this.engine.board[j][i] &&
+                        this.engine.removal[j][i]) ||
+                    (this.scoring_mode &&
+                        this.score_estimator &&
+                        this.score_estimator.board[j][i] &&
+                        this.score_estimator.removal[j][i]) ||
+                    //(this.mode === "analyze" && pos.stone_removed)
+                    pos.stone_removed
+                ) {
+                    draw_removal_x = this.themes["removal-graphic"] === "x";
+                    transform = `translate(${l + this.metrics.mid * (1.0 - removed_stone_scale)}, ${
+                        t + this.metrics.mid * (1.0 - removed_stone_scale)
+                    }) scale(${removed_stone_scale})`;
+                }
+            } else {
+                cell.clearStone();
+                cell.clearBlueMove();
+            }
+        }
+
+        let red_x = false;
+        if (
+            draw_removal_x ||
+            (this.mode === "analyze" &&
+                this.analyze_tool === "removal" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j) ||
+            (this.engine.phase === "stone removal" &&
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j)
+        ) {
+            const color =
+                this.engine.board[j][i] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
+
+            let fill = "";
+            const mid = this.metrics.mid;
+            let r = Math.max(1, mid * 0.5);
+
+            if (pos.score === "black" && color === "white") {
+                fill = this.theme_white_text_color;
+            } else if (pos.score === "white" && color === "black") {
+                fill = this.theme_black_text_color;
+            } else if (
+                (pos.score === "white" && color === "white") ||
+                (pos.score === "black" && color === "black")
+            ) {
+                // score point for the same color where the stone is removed
+                // should call special attention to it
+                fill = "#ff0000";
+                red_x = true;
+                r = Math.max(1, mid * 0.65);
+            } else {
+                // otherwise, no score but removed stones can happen when
+                // territory isn't properly sealed, so we are going to mark
+                // it grey to avoid calling too much attention, but still
+                // denote that removing these stones doesn't result in
+                // the territory being territory yet.
+                fill = "#777777";
+            }
+            const opacity = this.engine.board[j][i] ? 1.0 : 0.2;
+            cell.removalCross(fill, r, opacity);
+        } else {
+            cell.clearRemovalCross();
+        }
+
+        /* Draw Scores */
+        if (
+            (pos.score &&
+                (!draw_removal_x || red_x) &&
+                (this.engine.phase !== "finished" ||
+                    this.mode === "play" ||
+                    this.mode === "analyze")) ||
+            (this.scoring_mode &&
+                this.score_estimator &&
+                (this.score_estimator.territory[j][i] ||
+                    (this.score_estimator.removal[j][i] &&
+                        this.score_estimator.board[j][i] === 0))) ||
+            ((this.engine.phase === "stone removal" ||
+                (this.engine.phase === "finished" && this.mode === "play")) &&
+                this.engine.board[j][i] === 0 &&
+                (this.engine.removal[j][i] || pos.needs_sealing)) ||
+            (this.mode === "analyze" &&
+                this.analyze_tool === "score" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j)
+        ) {
+            let color = pos.score;
+
+            if (
+                this.scoring_mode &&
+                this.score_estimator &&
+                (this.score_estimator.territory[j][i] ||
+                    (this.score_estimator.removal[j][i] && this.score_estimator.board[j][i] === 0))
+            ) {
+                color = this.score_estimator.territory[j][i] === 1 ? "black" : "white";
+                if (this.score_estimator.board[j][i] === 0 && this.score_estimator.removal[j][i]) {
+                    color = "dame";
+                }
+            }
+
+            if (
+                (this.engine.phase === "stone removal" ||
+                    (this.engine.phase === "finished" && this.mode === "play")) &&
+                this.engine.board[j][i] === 0 &&
+                this.engine.removal[j][i]
+            ) {
+                color = "dame";
+            }
+
+            if (pos.needs_sealing) {
+                color = "seal";
+            }
+
+            if (
+                this.mode === "analyze" &&
+                this.analyze_tool === "score" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j
+            ) {
+                color = this.analyze_subtool;
+            }
+
+            let opacity = 1.0;
+            let fill = "";
+            let stroke = "";
+            if (color === "white") {
+                fill = this.theme_black_text_color;
+                stroke = "#777777";
+            }
+            if (color === "black") {
+                fill = this.theme_white_text_color;
+                stroke = "#888888";
+            }
+            if (color === "dame") {
+                opacity = 0.2;
+                stroke = "#365FE6";
+            }
+            if (color === "seal") {
+                opacity = 0.8;
+                fill = "#ff4444";
+                stroke = "#E079CE";
+            }
+            if (color?.[0] === "#") {
+                fill = color;
+                stroke = color_blend("#888888", color);
+            }
+            cell.score(fill, stroke, opacity);
+        } else {
+            cell.clearScore();
+        }
+
+        /* Draw letters and numbers */
+        let letter_was_drawn = false;
+        {
+            let letter: string | undefined;
+            let subscript: string | undefined;
+            let transparent = false;
+            if (pos.letter) {
+                letter = pos.letter;
+            }
+            if (pos.subscript) {
+                subscript = pos.subscript;
+            }
+
+            if (
+                this.mode === "play" &&
+                this.byoyomi_label &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j
+            ) {
+                letter = this.byoyomi_label;
+            }
+            if (
+                this.mode === "analyze" &&
+                this.analyze_tool === "label" &&
+                (this.analyze_subtool === "letters" || this.analyze_subtool === "numbers") &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j
+            ) {
+                transparent = true;
+                letter = this.label_character;
+            }
+            if (!letter && alt_marking !== "triangle") {
+                letter = alt_marking;
+            }
+
+            if (
+                this.show_variation_move_numbers &&
+                !letter &&
+                !(
+                    pos.circle ||
+                    pos.triangle ||
+                    pos.chat_triangle ||
+                    pos.sub_triangle ||
+                    pos.cross ||
+                    pos.square
+                )
+            ) {
+                const m = this.engine.getMoveByLocation(i, j, false);
+                if (m && !m.trunk) {
+                    const move_diff = m.getMoveNumberDifferenceFromTrunk();
+                    if (move_diff !== m.move_number) {
+                        if (m.edited) {
+                            if (this.engine.board[j][i]) {
+                                alt_marking = "triangle";
+                            }
+                        } else {
+                            letter = move_diff.toString();
+                        }
+                    }
+                }
+            }
+
+            if (letter) {
+                letter_was_drawn = true;
+                draw_last_move = false;
+                cell.letter(
+                    letter,
+                    text_color,
+                    subscript ? this.square_size * 0.4 : this.square_size * 0.5,
+                    transparent ? 0.6 : 1.0,
+                    !!subscript,
+                );
+            } else {
+                cell.clearLetter();
+            }
+
+            if (subscript) {
+                letter_was_drawn = true;
+                draw_last_move = false;
+                cell.subscript(
+                    subscript,
+                    text_color,
+                    this.square_size * 0.4,
+                    transparent ? 0.6 : 1.0,
+                    !!letter,
+                    !!pos.sub_triangle,
+                );
+            } else {
+                cell.clearSubscript();
+            }
+        }
+
+        /* draw special symbols */
+        {
+            let transparent = letter_was_drawn;
+            let hover_mark: string | undefined;
+            const symbol_color =
+                stone_color === 1
+                    ? this.theme_black_text_color
+                    : stone_color === 2
+                      ? this.theme_white_text_color
+                      : text_color;
+
+            if (
+                this.analyze_tool === "label" &&
+                this.last_hover_square &&
+                this.last_hover_square.x === i &&
+                this.last_hover_square.y === j
+            ) {
+                if (
+                    this.analyze_subtool === "triangle" ||
+                    this.analyze_subtool === "square" ||
+                    this.analyze_subtool === "cross" ||
+                    this.analyze_subtool === "circle"
+                ) {
+                    transparent = true;
+                    hover_mark = this.analyze_subtool;
+                }
+            }
+
+            if (pos.circle || hover_mark === "circle") {
+                draw_last_move = false;
+                cell.circleSymbol(symbol_color, transparent ? 0.6 : 1.0);
+            } else {
+                cell.clearCircleSymbol();
+            }
+
+            if (
+                pos.triangle ||
+                pos.chat_triangle ||
+                pos.sub_triangle ||
+                alt_marking === "triangle" ||
+                hover_mark === "triangle"
+            ) {
+                draw_last_move = false;
+                cell.triangleSymbol(symbol_color, transparent ? 0.6 : 1.0, !!pos.sub_triangle);
+            } else {
+                cell.clearTriangleSymbol();
+            }
+
+            if (pos.cross || hover_mark === "cross") {
+                draw_last_move = false;
+                cell.crossSymbol(symbol_color, transparent ? 0.6 : 1.0);
+            } else {
+                cell.clearCrossSymbol();
+            }
+
+            if (pos.square || hover_mark === "square") {
+                draw_last_move = false;
+                cell.squareSymbol(symbol_color, transparent ? 0.6 : 1.0);
+            } else {
+                cell.clearSquareSymbol();
+            }
+        }
+
+        /* Clear last move */
+        if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
+            const m = this.last_move;
+            delete this.last_move;
+            this.cell(m.x, m.y).clearLastMove();
+        }
+
+        /* Draw last move */
+        if (draw_last_move && this.engine && this.engine.cur_move) {
+            if (
+                this.engine.cur_move.x === i &&
+                this.engine.cur_move.y === j &&
+                this.engine.board[j][i] &&
+                (this.engine.phase === "play" || this.engine.phase === "finished")
+            ) {
+                this.last_move = this.engine.cur_move;
+
+                if (i >= 0 && j >= 0) {
+                    const color =
+                        stone_color === 1
+                            ? this.theme_black_text_color
+                            : this.theme_white_text_color;
+
+                    if (this.submit_move) {
+                        draw_last_move = false;
+                        cell.lastMove("+", color, this.last_move_opacity);
+                    } else {
+                        if (
+                            this.engine.undo_requested &&
+                            this.getShowUndoRequestIndicator() &&
+                            this.engine.undo_requested === this.engine.cur_move.move_number
+                        ) {
+                            draw_last_move = false;
+                            cell.lastMove("?", color, 1.0);
+                        } else {
+                            cell.lastMove("o", color, this.last_move_opacity);
+                        }
+                    }
+                }
+            }
+        }
+
+        /* Score Estimation */
+        if (
+            (this.scoring_mode === true && this.score_estimator) ||
+            (this.scoring_mode === "stalling-scoring-mode" &&
+                this.stalling_score_estimate &&
+                this.mode !== "analyze")
+        ) {
+            const se =
+                this.scoring_mode === "stalling-scoring-mode"
+                    ? this.stalling_score_estimate
+                    : this.score_estimator;
+            const est = se!.ownership[j][i];
+            const color = est < 0 ? "white" : "black";
+            const color_num = color === "black" ? 1 : 2;
+
+            if (color_num !== stone_color) {
+                cell.scoreEstimate(color, est);
+            } else {
+                cell.clearScoreEstimate();
+            }
+        } else {
+            cell.clearScoreEstimate();
+        }
+
+        cell.transform = transform;
+        //this.__draw_state[j][i] = this.drawingHash(i, j);
     }
     private __drawSquare(i: number, j: number): void {
         if (!this.drawing_enabled || this.no_display || !this.grid || !this.grid[j]) {
@@ -3063,6 +3784,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.grid_layer.setAttribute("class", "grid");
             this.svg.appendChild(this.grid_layer);
 
+            this.clearCells();
+
             for (let j = 0; j < this.height; ++j) {
                 this.grid[j] = [];
                 this.shadow_grid[j] = [];
@@ -3793,5 +4516,1133 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.move_tree_drawPath(svg, node, viewport);
+    }
+}
+
+class GCell {
+    renderer: SVGRenderer;
+    i: number;
+    j: number;
+    _g?: SVGGraphicsElement;
+    _transform: string = "";
+
+    private _faded_lines?: SVGPathElement;
+    private _faded_star_point?: SVGCircleElement;
+
+    constructor(renderer: SVGRenderer, i: number, j: number) {
+        this.renderer = renderer;
+        this.i = i;
+        this.j = j;
+    }
+
+    public get g(): SVGGraphicsElement {
+        if (!this._g) {
+            this._g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            this.renderer.grid_layer!.appendChild(this._g);
+        }
+        return this._g;
+    }
+
+    public set transform(transform: string) {
+        if (this._transform === transform) {
+            return;
+        }
+
+        this._transform = transform;
+
+        this.g.setAttribute("transform", transform);
+
+        /* TODO: Deal with shadows *
+        /*
+        if (this.shadow_grid[j][i]) {
+            this.shadow_grid[j][i].setAttribute("transform", transform);
+        }
+        */
+    }
+
+    /*
+     * Faded intersection lines
+     */
+    private last_faded_intersection_line_parameters?: {
+        sx: number;
+        sy: number;
+        ex: number;
+        ey: number;
+        mx: number;
+        my: number;
+        draw_star_point: boolean;
+        star_radius: number;
+        cx: number;
+        cy: number;
+    };
+
+    public drawFadedIntersectionLines(draw_star_point: boolean, star_radius: number): void {
+        const mid = this.renderer.metrics.mid;
+        const ss = this.renderer.square_size;
+        const offset = this.renderer.metrics.offset;
+        const width = this.renderer.width;
+        const height = this.renderer.height;
+
+        let sx = 0;
+        let ex = ss;
+        const mx = ss / 2 - offset;
+        let sy = 0;
+        let ey = ss;
+        const my = ss / 2 - offset;
+
+        if (this.i === 0) {
+            sx += mid;
+        }
+        if (this.i === width - 1) {
+            ex -= mid;
+        }
+        if (this.j === 0) {
+            sy += mid;
+        }
+        if (this.j === height - 1) {
+            ey -= mid;
+        }
+
+        if (this.i === width - 1 && this.j === height - 1) {
+            if (mx === ex && my === ey) {
+                ex += 1;
+                ey += 1;
+            }
+        }
+
+        const cx = mid;
+        const cy = mid;
+
+        if (this.last_faded_intersection_line_parameters) {
+            if (
+                this.last_faded_intersection_line_parameters.sx === sx &&
+                this.last_faded_intersection_line_parameters.sy === sy &&
+                this.last_faded_intersection_line_parameters.ex === ex &&
+                this.last_faded_intersection_line_parameters.ey === ey &&
+                this.last_faded_intersection_line_parameters.mx === mx &&
+                this.last_faded_intersection_line_parameters.my === my &&
+                this.last_faded_intersection_line_parameters.draw_star_point === draw_star_point &&
+                this.last_faded_intersection_line_parameters.star_radius === star_radius &&
+                this.last_faded_intersection_line_parameters.cx === cx &&
+                this.last_faded_intersection_line_parameters.cy === cy
+            ) {
+                return;
+            }
+        }
+        this.last_faded_intersection_line_parameters = {
+            sx,
+            sy,
+            ex,
+            ey,
+            mx,
+            my,
+            draw_star_point,
+            star_radius,
+            cx,
+            cy,
+        };
+        this.clearFadedLines();
+        const g = this.g;
+
+        if (draw_star_point) {
+            const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            this._faded_star_point = circ;
+            circ.setAttribute("cx", cx.toString());
+            circ.setAttribute("cy", cy.toString());
+            circ.setAttribute("r", star_radius.toString());
+            circ.setAttribute("fill", this.renderer.theme_faded_star_color);
+            g.prepend(circ);
+        }
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        this._faded_lines = path;
+        path.setAttribute("stroke", this.renderer.theme_faded_line_color);
+        path.setAttribute("stroke-width", this.renderer.square_size < 5 ? "0.2" : "1");
+        path.setAttribute("fill", "none");
+        path.setAttribute(
+            "d",
+            `
+                M ${Math.floor(sx)} ${my} L ${Math.floor(ex)} ${my}
+                M ${mx} ${Math.floor(sy)} L ${mx} ${Math.floor(ey)} 
+            `,
+        );
+        g.prepend(path);
+    }
+
+    public clearFadedLines(): void {
+        if (this._faded_lines) {
+            this._faded_lines.remove();
+            delete this._faded_lines;
+        }
+        if (this._faded_star_point) {
+            this._faded_star_point.remove();
+            delete this._faded_star_point;
+        }
+    }
+
+    /*
+     * Heatmap
+     */
+    private last_heatmap_value?: number;
+    private last_heatmap_rect?: SVGRectElement;
+
+    public heatmap(value: number): void {
+        if (this.last_heatmap_value === value) {
+            return;
+        }
+
+        if (!this.last_heatmap_rect) {
+            const mid = this.renderer.metrics.mid;
+            const ss = this.renderer.square_size;
+            const cx = mid;
+            const cy = mid;
+            const color = "#00FF00";
+            const r = Math.floor(ss * 0.5) - 0.5;
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            this.last_heatmap_rect = rect;
+            rect.setAttribute("x", (cx - r).toFixed(1));
+            rect.setAttribute("y", (cy - r).toFixed(1));
+            rect.setAttribute("width", (r * 2).toFixed(1));
+            rect.setAttribute("height", (r * 2).toFixed(1));
+            this.last_heatmap_rect.setAttribute("fill", color);
+            this.g.appendChild(this.last_heatmap_rect);
+        }
+
+        this.last_heatmap_value = value;
+        this.last_heatmap_rect.setAttribute("fill-opacity", Math.min(value, 0.5).toFixed(2));
+    }
+    public clearHeatmap(): void {
+        if (this.last_heatmap_rect) {
+            this.last_heatmap_rect.remove();
+            delete this.last_heatmap_rect;
+            this.last_heatmap_value = undefined;
+        }
+    }
+
+    /*
+     * Highlights
+     */
+
+    private last_highlight_color?: string;
+    private last_highlight_rect?: SVGRectElement;
+    public highlight(color: string): void {
+        if (this.last_highlight_color === color) {
+            return;
+        }
+
+        if (!this.last_highlight_rect) {
+            const mid = this.renderer.metrics.mid;
+            const ss = this.renderer.square_size;
+            const cx = mid;
+            const cy = mid;
+            const r = Math.floor(ss * 0.5) - 0.5;
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            this.last_highlight_rect = rect;
+            rect.setAttribute("x", (cx - r).toFixed(1));
+            rect.setAttribute("y", (cy - r).toFixed(1));
+            rect.setAttribute("width", (r * 2).toFixed(1));
+            rect.setAttribute("height", (r * 2).toFixed(1));
+            rect.setAttribute("fill-opacity", "0.6");
+            this.g.appendChild(rect);
+        }
+
+        this.last_highlight_rect.setAttribute("fill", color);
+        this.last_highlight_color = color;
+    }
+    public clearHighlight(): void {
+        if (this.last_highlight_rect) {
+            this.last_highlight_rect.remove();
+            delete this.last_highlight_rect;
+            this.last_highlight_color = undefined;
+        }
+    }
+
+    /*
+     * Colored circles
+     */
+    private last_circle?: SVGCircleElement;
+    private last_circle_fill?: string;
+    private last_circle_radius?: number;
+    private last_circle_stroke?: string;
+    private last_circle_stroke_width?: number;
+    public circle(circle: ColoredCircle): void {
+        const ss = this.renderer.square_size;
+        const radius = Math.floor(ss * 0.5) - 0.5;
+
+        if (!this.last_circle) {
+            const mid = this.renderer.metrics.mid;
+            const cx = mid;
+            const cy = mid;
+
+            const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            this.last_circle = circ;
+            circ.setAttribute("class", "colored-circle");
+            circ.setAttribute("cx", cx.toString());
+            circ.setAttribute("cy", cy.toString());
+            this.g.appendChild(circ);
+        }
+
+        if (this.last_circle_fill !== circle.color) {
+            this.last_circle.setAttribute("fill", circle.color);
+            this.last_circle_fill = circle.color;
+        }
+        if (this.last_circle_stroke !== circle.border_color) {
+            if (circle.border_color) {
+                this.last_circle.setAttribute("stroke", circle.border_color);
+            } else {
+                this.last_circle.removeAttribute("stroke");
+            }
+            this.last_circle_stroke = circle.border_color;
+        }
+
+        let lineWidth = radius * (circle.border_width || 0.1);
+        if (lineWidth < 0.3) {
+            lineWidth = 0;
+        }
+
+        if (this.last_circle_stroke_width !== circle.border_width) {
+            if (lineWidth > 0) {
+                this.last_circle.setAttribute("stroke-width", lineWidth.toFixed(1));
+            } else {
+                this.last_circle.setAttribute("stroke-width", "1px");
+            }
+            this.last_circle_stroke_width = circle.border_width;
+        }
+        if (this.last_circle_radius !== radius) {
+            this.last_circle.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
+            this.last_circle_radius = radius;
+        }
+    }
+    public clearCircle(): void {
+        if (this.last_circle) {
+            this.last_circle.remove();
+            delete this.last_circle;
+            delete this.last_circle_fill;
+            delete this.last_circle_radius;
+            delete this.last_circle_stroke;
+            delete this.last_circle_stroke_width;
+        }
+    }
+
+    /*
+     * Stone
+     */
+    private last_stone?: SVGElement;
+    private last_stone_color?: JGOFNumericPlayerColor;
+    private last_stone_transparent?: boolean;
+    private last_stone_stone?: string;
+    private last_stone_radius?: number;
+    private last_stone_alpha_value?: number;
+
+    public stone(
+        color: JGOFNumericPlayerColor,
+        transparent: boolean,
+        stone: string,
+        radius: number,
+        stone_alpha_value: number,
+    ): void {
+        if (
+            this.last_stone &&
+            this.last_stone_color === color &&
+            this.last_stone_transparent === transparent &&
+            this.last_stone_stone === stone &&
+            this.last_stone_radius === radius &&
+            this.last_stone_alpha_value === stone_alpha_value
+        ) {
+            return;
+        }
+
+        this.clearStone();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        // TODO: Need to handle shadows
+        const [elt, shadow] =
+            color === JGOFNumericPlayerColor.BLACK
+                ? this.renderer.theme_black.placeBlackStoneSVG(
+                      this.g,
+                      //transparent ? undefined : this.shadow_layer,
+                      undefined,
+                      stone,
+                      cx,
+                      cy,
+                      radius,
+                  )
+                : this.renderer.theme_black.placeWhiteStoneSVG(
+                      this.g,
+                      //transparent ? undefined : this.shadow_layer,
+                      undefined,
+                      stone,
+                      cx,
+                      cy,
+                      radius,
+                  );
+        if (shadow) {
+            console.warn("Shadows not implemented");
+        }
+        //this.shadow_grid[j][i] = shadow;
+        if (transparent) {
+            elt.setAttribute("opacity", stone_alpha_value.toString());
+        }
+
+        this.last_stone = elt;
+        this.last_stone_color = color;
+        this.last_stone_transparent = transparent;
+        this.last_stone_stone = stone;
+        this.last_stone_radius = radius;
+        this.last_stone_alpha_value = stone_alpha_value;
+    }
+    public clearStone(): void {
+        if (this.last_stone) {
+            this.last_stone.remove();
+            delete this.last_stone;
+        }
+    }
+
+    /*
+     * Blue move
+     */
+    private last_blue_move?: SVGCircleElement;
+    private last_blue_move_color?: string;
+    private last_blue_move_border_width?: number;
+
+    public blueMove(color: string, border_width: number) {
+        if (
+            this.last_blue_move &&
+            this.last_blue_move_color === color &&
+            this.last_blue_move_border_width === border_width
+        ) {
+            return;
+        }
+
+        this.clearBlueMove();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        const radius = Math.floor(ss * 0.5) - 0.5;
+        let lineWidth = radius * (border_width || 0.1);
+        if (lineWidth < 0.3) {
+            lineWidth = 0;
+        }
+
+        const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circ.setAttribute("class", "colored-circle");
+        circ.setAttribute("stroke", color);
+        if (lineWidth > 0) {
+            circ.setAttribute("stroke-width", `${lineWidth.toFixed(1)}px`);
+        } else {
+            circ.setAttribute("stroke-width", "1px");
+        }
+        circ.setAttribute("fill", "none");
+        circ.setAttribute("cx", cx.toString());
+        circ.setAttribute("cy", cy.toString());
+        circ.setAttribute("r", Math.max(0.1, radius - lineWidth / 2).toString());
+        this.g.appendChild(circ);
+        this.last_blue_move = circ;
+        this.last_blue_move_color = color;
+        this.last_blue_move_border_width = border_width;
+    }
+    public clearBlueMove() {
+        if (this.last_blue_move) {
+            this.last_blue_move.remove();
+            delete this.last_blue_move;
+        }
+    }
+
+    /*
+     * Cross
+     */
+    private last_removal_cross?: SVGPathElement;
+    private last_removal_cross_fill?: string;
+    private last_removal_cross_radius?: number;
+    private last_removal_cross_opacity?: number;
+
+    public removalCross(fill: string, radius: number, opacity: number) {
+        if (
+            this.last_removal_cross &&
+            this.last_removal_cross_fill === fill &&
+            this.last_removal_cross_radius === radius &&
+            this.last_removal_cross_opacity === opacity
+        ) {
+            return;
+        }
+
+        this.clearRemovalCross();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+        const r = radius;
+
+        const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        cross.setAttribute("class", "removal-cross");
+        cross.setAttribute("fill", fill);
+
+        /* four dagger tip points with a square in the center. Start at top left going clockwise*/
+        const dx = r * 0.25; // tip width
+        const ir = r * 0.3; // inner radius for our box
+        const ir_dx = ir * 0.4; // offset to where our daggers meet the box
+
+        // prettier-ignore
+        const points = [
+                /* top half */
+                -r          , -r          ,
+                -r + dx     , -r          ,
+                -ir + ir_dx , -ir - ir_dx ,
+                ir - ir_dx  , -ir - ir_dx ,
+                r - dx      , -r          ,
+                r           , -r          ,
+
+                /* right half */
+                r          , -r + dx     ,
+                ir + ir_dx , -ir + ir_dx ,
+                ir + ir_dx , ir - ir_dx  ,
+                r          , r - dx      ,
+                r          , r           ,
+
+                /* bottom half */
+                r - dx      , r          ,
+                ir - ir_dx  , ir + ir_dx ,
+                -ir + ir_dx , ir + ir_dx ,
+                -r + dx     , r          ,
+                -r          , r          ,
+
+                /* left half */
+                -r          , r - dx      ,
+                -ir - ir_dx , ir - ir_dx  ,
+                -ir - ir_dx , -ir + ir_dx ,
+                -r          , -r + dx     ,
+                //-r          , -r          ,
+            ];
+
+        const path =
+            points
+                .map((v, i) => {
+                    return (i % 2 === 0 ? (i === 0 ? "M" : "L") : " ") + v;
+                })
+                .join(" ") + " Z";
+
+        cross.setAttribute("stroke", "#888888");
+        cross.setAttribute("stroke-width", `${ss * 0.0275}px`);
+        cross.setAttribute("d", path);
+        cross.setAttribute("stroke-opacity", opacity.toString());
+        cross.setAttribute("transform", `translate(${cx}, ${cy})`);
+
+        this.g.appendChild(cross);
+
+        this.last_removal_cross = cross;
+        this.last_removal_cross_fill = fill;
+        this.last_removal_cross_radius = radius;
+        this.last_removal_cross_opacity = opacity;
+    }
+
+    public clearRemovalCross() {
+        if (this.last_removal_cross) {
+            this.last_removal_cross.remove();
+            delete this.last_removal_cross;
+            delete this.last_removal_cross_fill;
+            delete this.last_removal_cross_radius;
+            delete this.last_removal_cross_opacity;
+        }
+    }
+
+    /*
+     * Score
+     */
+    private last_score?: SVGRectElement;
+    private last_score_fill?: string;
+    private last_score_stroke?: string;
+    private last_score_opacity?: number;
+
+    public score(fill: string, stroke: string, opacity: number): void {
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        if (
+            this.last_score &&
+            this.last_score_fill === fill &&
+            this.last_score_stroke === stroke &&
+            this.last_score_opacity === opacity
+        ) {
+            return;
+        }
+
+        this.clearScore();
+
+        const r = ss * 0.15;
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", (cx - r).toFixed(1));
+        rect.setAttribute("y", (cy - r).toFixed(1));
+        rect.setAttribute("width", (r * 2).toFixed(1));
+        rect.setAttribute("height", (r * 2).toFixed(1));
+        rect.setAttribute("stroke-width", (Math.ceil(ss * 0.065) - 0.5).toFixed(1));
+
+        rect.setAttribute("fill", fill);
+        rect.setAttribute("stroke", stroke);
+        if (opacity < 1) {
+            rect.setAttribute("fill-opacity", opacity.toString());
+        }
+
+        this.g.appendChild(rect);
+
+        this.last_score = rect;
+        this.last_score_fill = fill;
+        this.last_score_stroke = stroke;
+        this.last_score_opacity = opacity;
+    }
+
+    public clearScore(): void {
+        if (this.last_score) {
+            this.last_score.remove();
+            delete this.last_score;
+            delete this.last_score_fill;
+            delete this.last_score_stroke;
+            delete this.last_score_opacity;
+        }
+    }
+
+    /*
+     * Letter markings
+     */
+    private last_letter?: SVGTextElement;
+    private last_letter_letter?: string;
+    private last_letter_color?: string;
+    private last_letter_font_size?: number;
+    private last_letter_opacity?: number;
+    private last_letter_room_for_subscript?: boolean;
+
+    public letter(
+        letter: string,
+        color: string,
+        font_size: number,
+        opacity: number,
+        room_for_subscript: boolean,
+    ): void {
+        if (
+            this.last_letter &&
+            this.last_letter_letter === letter &&
+            this.last_letter_color === color &&
+            this.last_letter_font_size === font_size &&
+            this.last_letter_opacity === opacity &&
+            this.last_letter_room_for_subscript === room_for_subscript
+        ) {
+            return;
+        }
+
+        this.clearLetter();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", "letter");
+        text.setAttribute("fill", color);
+        text.setAttribute("font-size", `${font_size}px`);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("x", cx.toString());
+        let yy = cy;
+        yy += ss / 6;
+        if (room_for_subscript) {
+            yy -= ss * 0.15;
+        }
+        text.setAttribute("y", yy.toString());
+        text.textContent = letter;
+        if (opacity < 1) {
+            text.setAttribute("fill-opacity", opacity.toString());
+        }
+        this.g.appendChild(text);
+    }
+
+    public clearLetter(): void {
+        if (this.last_letter) {
+            this.last_letter.remove();
+            delete this.last_letter;
+            delete this.last_letter_letter;
+            delete this.last_letter_color;
+            delete this.last_letter_font_size;
+            delete this.last_letter_opacity;
+            delete this.last_letter_room_for_subscript;
+        }
+    }
+
+    /*
+     * Subscript markings
+     */
+    private last_subscript?: SVGTextElement;
+    private last_subscript_subscript?: string;
+    private last_subscript_color?: string;
+    private last_subscript_font_size?: number;
+    private last_subscript_opacity?: number;
+    private last_subscript_room_for_letter?: boolean;
+    private last_subscript_room_for_sub_triangle?: boolean;
+
+    public subscript(
+        subscript: string,
+        color: string,
+        font_size: number,
+        opacity: number,
+        room_for_letter: boolean,
+        room_for_sub_triangle: boolean,
+    ): void {
+        if (
+            this.last_subscript &&
+            this.last_subscript_subscript === subscript &&
+            this.last_subscript_color === color &&
+            this.last_subscript_font_size === font_size &&
+            this.last_subscript_opacity === opacity &&
+            this.last_subscript_room_for_letter === room_for_letter &&
+            this.last_subscript_room_for_sub_triangle === room_for_sub_triangle
+        ) {
+            return;
+        }
+
+        this.clearSubscript();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", "subscript");
+        text.setAttribute("fill", color);
+        text.setAttribute("font-size", `${font_size}px`);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("x", cx.toString());
+        let yy = cy;
+        yy -= ss / 6;
+        if (room_for_letter) {
+            yy += ss * 0.6;
+        } else {
+            yy += ss * 0.31;
+        }
+        if (room_for_sub_triangle) {
+            yy -= ss * 0.08;
+        }
+        text.setAttribute("y", yy.toString());
+        text.textContent = subscript;
+        if (opacity < 1) {
+            text.setAttribute("fill-opacity", opacity.toString());
+        }
+        this.g.appendChild(text);
+
+        this.last_subscript = text;
+        this.last_subscript_subscript = subscript;
+        this.last_subscript_color = color;
+        this.last_subscript_font_size = font_size;
+        this.last_subscript_opacity = opacity;
+        this.last_subscript_room_for_letter = room_for_letter;
+        this.last_subscript_room_for_sub_triangle = room_for_sub_triangle;
+    }
+
+    public clearSubscript(): void {
+        if (this.last_subscript) {
+            this.last_subscript.remove();
+            delete this.last_subscript;
+            delete this.last_subscript_subscript;
+            delete this.last_subscript_color;
+            delete this.last_subscript_font_size;
+            delete this.last_subscript_opacity;
+            delete this.last_subscript_room_for_letter;
+            delete this.last_subscript_room_for_sub_triangle;
+        }
+    }
+
+    /*
+     * Symbols
+     */
+    private last_circle_symbol?: SVGCircleElement;
+    private last_circle_symbol_color?: string;
+    private last_circle_symbol_opacity?: number;
+
+    public circleSymbol(color: string, opacity: number): void {
+        if (
+            this.last_circle_symbol &&
+            this.last_circle_symbol_color === color &&
+            this.last_circle_symbol_opacity === opacity
+        ) {
+            return;
+        }
+
+        this.clearCircleSymbol();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circ.setAttribute("class", "circle");
+        circ.setAttribute("fill", "none");
+        circ.setAttribute("stroke", color);
+        circ.setAttribute("stroke-width", `${ss * 0.075}px`);
+        circ.setAttribute("cx", cx.toString());
+        circ.setAttribute("cy", cy.toString());
+        circ.setAttribute("r", Math.max(0.1, ss * this.renderer.circle_radius).toFixed(2));
+        if (opacity < 1.0) {
+            circ.setAttribute("stroke-opacity", opacity.toString());
+        }
+        this.g.appendChild(circ);
+
+        this.last_circle_symbol = circ;
+        this.last_circle_symbol_color = color;
+        this.last_circle_symbol_opacity = opacity;
+    }
+
+    public clearCircleSymbol(): void {
+        if (this.last_circle_symbol) {
+            this.last_circle_symbol.remove();
+            delete this.last_circle_symbol;
+            delete this.last_circle_symbol_color;
+            delete this.last_circle_symbol_opacity;
+        }
+    }
+
+    private last_triangle_symbol?: SVGPathElement;
+    private last_triangle_symbol_color?: string;
+    private last_triangle_symbol_opacity?: number;
+    private last_triangle_symbol_as_subscript?: boolean;
+
+    public triangleSymbol(color: string, opacity: number, as_subscript: boolean): void {
+        if (
+            this.last_triangle_symbol &&
+            this.last_triangle_symbol_color === color &&
+            this.last_triangle_symbol_opacity === opacity &&
+            this.last_triangle_symbol_as_subscript === as_subscript
+        ) {
+            return;
+        }
+
+        this.clearTriangleSymbol();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        let scale = 1.0;
+        let oy = 0.0;
+        let line_width = ss * 0.075;
+        if (as_subscript) {
+            scale = 0.5;
+            oy = ss * 0.3;
+            opacity = 1.0;
+            line_width *= 0.5;
+        }
+
+        const triangle = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        triangle.setAttribute("class", "triangle");
+        triangle.setAttribute("fill", "none");
+        triangle.setAttribute("stroke", color);
+        triangle.setAttribute("stroke-width", `${line_width}px`);
+        const r = ss * 0.3 * scale;
+        let theta = -(Math.PI * 2) / 4;
+        const points = [];
+        points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
+        theta += (Math.PI * 2) / 3;
+        points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
+        theta += (Math.PI * 2) / 3;
+        points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
+        theta += (Math.PI * 2) / 3;
+        points.push([cx + r * Math.cos(theta), cy + oy + r * Math.sin(theta)]);
+        triangle.setAttribute(
+            "points",
+            points.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" "),
+        );
+        if (opacity < 1.0) {
+            triangle.setAttribute("stroke-opacity", opacity.toString());
+        }
+        this.g.appendChild(triangle);
+
+        this.last_triangle_symbol = triangle;
+        this.last_triangle_symbol_color = color;
+        this.last_triangle_symbol_opacity = opacity;
+        this.last_triangle_symbol_as_subscript = as_subscript;
+    }
+
+    public clearTriangleSymbol(): void {
+        if (this.last_triangle_symbol) {
+            this.last_triangle_symbol.remove();
+            delete this.last_triangle_symbol;
+            delete this.last_triangle_symbol_color;
+            delete this.last_triangle_symbol_opacity;
+            delete this.last_triangle_symbol_as_subscript;
+        }
+    }
+
+    /*
+     * Cross
+     */
+
+    private last_cross_symbol?: SVGPathElement;
+    private last_cross_symbol_color?: string;
+    private last_cross_symbol_opacity?: number;
+
+    public crossSymbol(color: string, opacity: number): void {
+        if (
+            this.last_cross_symbol &&
+            this.last_cross_symbol_color === color &&
+            this.last_cross_symbol_opacity === opacity
+        ) {
+            return;
+        }
+
+        this.clearCrossSymbol();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+        const r = Math.max(1, mid * 0.35);
+
+        const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        cross.setAttribute("class", "cross");
+        cross.setAttribute("fill", "none");
+        cross.setAttribute("stroke", color);
+        cross.setAttribute("stroke-width", `${ss * 0.075}px`);
+        if (opacity < 1.0) {
+            cross.setAttribute("stroke-opacity", opacity.toString());
+        }
+        cross.setAttribute(
+            "d",
+            `
+                M ${cx - r} ${cy - r}
+                L ${cx + r} ${cy + r}
+                M ${cx + r} ${cy - r}
+                L ${cx - r} ${cy + r}
+            `,
+        );
+        this.g.appendChild(cross);
+
+        this.last_cross_symbol = cross;
+        this.last_cross_symbol_color = color;
+        this.last_cross_symbol_opacity = opacity;
+    }
+
+    public clearCrossSymbol(): void {
+        if (this.last_cross_symbol) {
+            this.last_cross_symbol.remove();
+            delete this.last_cross_symbol;
+            delete this.last_cross_symbol_color;
+            delete this.last_cross_symbol_opacity;
+        }
+    }
+
+    /*
+     * Square
+     */
+    private last_square_symbol?: SVGRectElement;
+    private last_square_symbol_color?: string;
+    private last_square_symbol_opacity?: number;
+
+    public squareSymbol(color: string, opacity: number): void {
+        if (
+            this.last_square_symbol &&
+            this.last_square_symbol_color === color &&
+            this.last_square_symbol_opacity === opacity
+        ) {
+            return;
+        }
+
+        this.clearSquareSymbol();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+        const r = Math.max(1, mid * 0.4);
+
+        const square = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        square.setAttribute("class", "square");
+        square.setAttribute("fill", "none");
+        square.setAttribute("stroke", color);
+        square.setAttribute("stroke-width", `${ss * 0.075}px`);
+        if (opacity < 1.0) {
+            square.setAttribute("stroke-opacity", opacity.toString());
+        }
+        square.setAttribute("x", (cx - r).toFixed(2));
+        square.setAttribute("y", (cy - r).toFixed(2));
+        square.setAttribute("width", (r * 2).toFixed(2));
+        square.setAttribute("height", (r * 2).toFixed(2));
+        this.g.appendChild(square);
+
+        this.last_square_symbol = square;
+        this.last_square_symbol_color = color;
+        this.last_square_symbol_opacity = opacity;
+    }
+
+    public clearSquareSymbol(): void {
+        if (this.last_square_symbol) {
+            this.last_square_symbol.remove();
+            delete this.last_square_symbol;
+            delete this.last_square_symbol_color;
+            delete this.last_square_symbol_opacity;
+        }
+    }
+
+    /*
+     * Last move
+     */
+    private last_last_move?: SVGElement;
+    private last_last_move_symbol?: "+" | "?" | "o";
+    private last_last_move_color?: string;
+    private last_last_move_opacity?: number;
+
+    public lastMove(symbol: "+" | "?" | "o", color: string, opacity: number): void {
+        if (
+            this.last_last_move &&
+            this.last_last_move_symbol === symbol &&
+            this.last_last_move_color === color &&
+            this.last_last_move_opacity === opacity
+        ) {
+            return;
+        }
+
+        this.clearLastMove();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        switch (symbol) {
+            case "+":
+                {
+                    const r = Math.max(1, mid * 0.35) * 0.8;
+                    const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    cross.setAttribute("class", "last-move");
+                    cross.setAttribute("stroke", color);
+                    cross.setAttribute("stroke-width", `${ss * 0.075}px`);
+                    cross.setAttribute("fill", "none");
+                    cross.setAttribute(
+                        "d",
+                        `
+                        M ${cx - r} ${cy}
+                        L ${cx + r} ${cy}
+                        M ${cx} ${cy - r}
+                        L ${cx} ${cy + r}
+                    `,
+                    );
+                    this.g.appendChild(cross);
+                    this.last_last_move = cross;
+                }
+                break;
+
+            case "?":
+                {
+                    const letter = "?";
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("class", "letter");
+                    text.setAttribute("fill", color);
+                    text.setAttribute("font-size", `${ss * 0.5}px`);
+                    text.setAttribute("text-anchor", "middle");
+                    text.setAttribute("x", cx.toString());
+                    let yy = cy;
+                    yy += ss / 6;
+                    text.setAttribute("y", yy.toString());
+                    text.textContent = letter;
+                    this.g.appendChild(text);
+                    this.last_last_move = text;
+                }
+                break;
+
+            case "o":
+                {
+                    const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    let r = ss * this.renderer.last_move_radius;
+                    if (ss) {
+                        r = ss * 0.3;
+                    }
+
+                    r = Math.max(0.1, r);
+                    circ.setAttribute("class", "last-move");
+                    circ.setAttribute("fill", "none");
+                    circ.setAttribute("stroke", color);
+                    circ.setAttribute("stroke-width", `${ss * 0.075}px`);
+                    circ.setAttribute("cx", cx.toString());
+                    circ.setAttribute("cy", cy.toString());
+                    circ.setAttribute("r", r.toString());
+                    this.g.appendChild(circ);
+                    this.last_last_move = circ;
+                }
+                break;
+        }
+
+        if (opacity < 1.0) {
+            this.last_last_move?.setAttribute("opacity", opacity.toString());
+        }
+
+        this.last_last_move_symbol = symbol;
+        this.last_last_move_color = color;
+        this.last_last_move_opacity = opacity;
+    }
+
+    public clearLastMove(): void {
+        if (this.last_last_move) {
+            this.last_last_move.remove();
+            delete this.last_last_move;
+        }
+    }
+
+    /*
+     * Score estimate
+     */
+    private last_score_estimate?: SVGRectElement;
+    private last_score_estimate_color?: string;
+    private last_score_estimate_estimate?: number;
+
+    public scoreEstimate(color: string, estimate: number): void {
+        if (
+            this.last_score_estimate &&
+            this.last_score_estimate_color === color &&
+            this.last_score_estimate_estimate === estimate
+        ) {
+            return;
+        }
+
+        this.clearScoreEstimate();
+
+        const mid = this.renderer.metrics.mid;
+        const cx = mid;
+        const cy = mid;
+        const ss = this.renderer.square_size;
+
+        const r = ss * 0.2 * Math.abs(estimate);
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", (cx - r).toFixed(1));
+        rect.setAttribute("y", (cy - r).toFixed(1));
+        rect.setAttribute("width", (r * 2).toFixed(1));
+        rect.setAttribute("height", (r * 2).toFixed(1));
+        if (color === "white") {
+            rect.setAttribute("fill", this.renderer.theme_black_text_color);
+            rect.setAttribute("stroke", "#777777");
+        }
+        if (color === "black") {
+            rect.setAttribute("fill", this.renderer.theme_white_text_color);
+            rect.setAttribute("stroke", "#888888");
+        }
+        rect.setAttribute("stroke-width", (Math.ceil(ss * 0.035) - 0.5).toFixed(1));
+        this.g.appendChild(rect);
+
+        this.last_score_estimate = rect;
+        this.last_score_estimate_color = color;
+        this.last_score_estimate_estimate = estimate;
+    }
+
+    public clearScoreEstimate(): void {
+        if (this.last_score_estimate) {
+            this.last_score_estimate.remove();
+            delete this.last_score_estimate;
+            delete this.last_score_estimate_color;
+        }
     }
 }

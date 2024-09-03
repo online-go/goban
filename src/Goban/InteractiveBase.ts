@@ -239,8 +239,8 @@ export abstract class GobanInteractive extends GobanBase {
     protected display_width?: number;
     protected done_loading_review: boolean = false;
     protected dont_draw_last_move: boolean;
-    protected last_move_radius: number;
-    protected circle_radius: number;
+    public last_move_radius: number;
+    public circle_radius: number;
     protected edit_color?: "black" | "white";
     protected errorHandler: (e: Error) => void;
     protected heatmap?: NumberMatrix;
@@ -274,7 +274,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected shift_key_is_down: boolean;
     //protected show_move_numbers: boolean;
     protected show_variation_move_numbers: boolean;
-    protected square_size: number = 10;
+    public square_size: number = 10;
     protected stone_placement_enabled: boolean;
     protected sendLatencyTimer?: ReturnType<typeof niceInterval>;
 
