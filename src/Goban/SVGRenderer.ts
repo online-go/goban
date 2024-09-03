@@ -51,6 +51,8 @@ const __theme_cache: {
 
 declare let ResizeObserver: any;
 
+const USE_CELL_RENDERER = true;
+
 export interface SVGRendererGobanConfig extends GobanConfig {
     board_div?: HTMLElement;
     title_div?: HTMLElement;
@@ -201,7 +203,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 if (ev.shiftKey !== this.shift_key_is_down) {
                     this.shift_key_is_down = ev.shiftKey;
                     if (this.last_hover_square) {
-                        this.__drawSquare(this.last_hover_square.x, this.last_hover_square.y);
+                        if (USE_CELL_RENDERER) {
+                            this.cellDraw(this.last_hover_square.x, this.last_hover_square.y);
+                        } else {
+                            this.__drawSquare(this.last_hover_square.x, this.last_hover_square.y);
+                        }
                     }
                 }
             } catch (e) {
@@ -1214,9 +1220,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             return;
         }
 
-        const CELLS = true;
-
-        if (CELLS) {
+        if (USE_CELL_RENDERER) {
             this.cellDraw(i, j);
         } else {
             if (this.__draw_state[j][i] !== this.drawingHash(i, j)) {
@@ -1920,6 +1924,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         //this.__draw_state[j][i] = this.drawingHash(i, j);
     }
     private __drawSquare(i: number, j: number): void {
+        if (USE_CELL_RENDERER) {
+            throw new Error(`USE_CELL_RENDERER is set, this should not be called`);
+        }
+
         if (!this.drawing_enabled || this.no_display || !this.grid || !this.grid[j]) {
             return;
         }
@@ -5208,6 +5216,13 @@ class GCell {
             text.setAttribute("fill-opacity", opacity.toString());
         }
         this.g.appendChild(text);
+
+        this.last_letter = text;
+        this.last_letter_letter = letter;
+        this.last_letter_color = color;
+        this.last_letter_font_size = font_size;
+        this.last_letter_opacity = opacity;
+        this.last_letter_room_for_subscript = room_for_subscript;
     }
 
     public clearLetter(): void {
