@@ -103,7 +103,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private svg: SVGElement;
     private svg_defs: SVGDefsElement;
     //private loaded_pre_rendered_stones: { [radius: number]: boolean } = {};
-    public event_layer: HTMLDivElement;
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
     private ready_to_draw: boolean = false;
@@ -180,26 +179,20 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         //const shadow_root = this.parent.attachShadow({ mode: "closed" });
         shadow_root.appendChild(this.svg);
         const sheet = new CSSStyleSheet();
-        sheet.replaceSync(`text {
-            font-family: Verdana, Arial, sans-serif;
-            text-anchor: middle;
-            font-weight: bold;
-            user-select: none;
-        }`);
+        if (sheet?.replaceSync) {
+            sheet.replaceSync(`text {
+                font-family: Verdana, Arial, sans-serif;
+                text-anchor: middle;
+                font-weight: bold;
+                user-select: none;
+            }`);
+        }
         shadow_root.adoptedStyleSheets = [sheet];
 
         this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         this.svg.appendChild(this.svg_defs);
         this.last_move_opacity = config["last_move_opacity"] ?? 1;
-
-        this.event_layer = document.createElement("div");
-        this.event_layer.style.position = "absolute";
-        this.event_layer.style.top = "0";
-        this.event_layer.style.right = "0";
-        this.event_layer.style.left = "0";
-        this.event_layer.style.bottom = "0";
-        this.parent.appendChild(this.event_layer);
-        this.bindPointerBindings(this.event_layer);
+        this.bindPointerBindings(this.parent as any);
 
         this.move_tree_container = config.move_tree_container;
 
@@ -4108,12 +4101,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 this.move_tree_inner_container.attachShadow({ mode: "open" });
             shadow_root.appendChild(this.move_tree_svg);
             const sheet = new CSSStyleSheet();
-            sheet.replaceSync(`text {
-                font-family: Verdana, Arial, sans-serif;
-                text-anchor: middle;
-                font-weight: bold;
-                user-select: none;
-            }`);
+            if (sheet?.replaceSync) {
+                sheet.replaceSync(`text {
+                    font-family: Verdana, Arial, sans-serif;
+                    text-anchor: middle;
+                    font-weight: bold;
+                    user-select: none;
+                }`);
+            }
             shadow_root.adoptedStyleSheets = [sheet];
 
             this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius);
@@ -4923,9 +4918,6 @@ class GCell {
                       cy,
                       radius,
                   );
-        if (shadow) {
-            console.warn("Shadows not implemented");
-        }
         if (this.last_stone_shadow) {
             this.last_stone_shadow.remove();
         }
