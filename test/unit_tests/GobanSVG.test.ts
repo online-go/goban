@@ -106,7 +106,7 @@ describe("onTap", () => {
 
     test("clicking without enabling stone placement has no effect", () => {
         const goban = new SVGRenderer(basic3x3Config());
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         simulateMouseClick(event_layer, { x: 0, y: 0 });
 
@@ -119,7 +119,7 @@ describe("onTap", () => {
 
     test("clicking the top left intersection places a stone", () => {
         const goban = new SVGRenderer(basic3x3Config());
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         goban.enableStonePlacement();
         simulateMouseClick(event_layer, { x: 0, y: 0 });
@@ -133,7 +133,7 @@ describe("onTap", () => {
 
     test("clicking the midpoint of two intersections has no effect", () => {
         const goban = new SVGRenderer(basic3x3Config());
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         goban.enableStonePlacement();
         simulateMouseClick(event_layer, { x: 0.5, y: 0 });
@@ -156,7 +156,7 @@ describe("onTap", () => {
                 mode: "analyze",
             }),
         );
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
         const mouse_event = new MouseEvent("click", {
             clientX: 25,
             clientY: 15,
@@ -183,7 +183,7 @@ describe("onTap", () => {
 
     test("Clicking with the triangle subtool places a triangle", () => {
         const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         goban.enableStonePlacement();
         goban.setAnalyzeTool("label", "triangle");
@@ -199,7 +199,7 @@ describe("onTap", () => {
 
     test("Clicking submits a move in one-click-submit mode", async () => {
         const goban = new SVGRenderer(basic3x3Config({ one_click_submit: true }));
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         goban.enableStonePlacement();
         simulateMouseClick(event_layer, { x: 0, y: 0 });
@@ -219,7 +219,7 @@ describe("onTap", () => {
         jest.useFakeTimers();
         jest.setSystemTime(0);
         const goban = new SVGRenderer(basic3x3Config());
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         const log_spy = jest.spyOn(console, "info").mockImplementation(() => {});
 
@@ -255,7 +255,7 @@ describe("onTap", () => {
         jest.setSystemTime(0);
 
         const goban = new SVGRenderer(basic3x3Config({ server_socket: mock_socket }));
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         await socket_server.connected;
 
@@ -288,7 +288,7 @@ describe("onTap", () => {
 
     test("Right clicking in play mode should have no effect.", () => {
         const goban = new SVGRenderer(basic3x3Config());
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         goban.enableStonePlacement();
         event_layer.dispatchEvent(
@@ -308,7 +308,7 @@ describe("onTap", () => {
 
     test("Clicking during stone removal sends remove stones message", async () => {
         const goban = new SVGRenderer(basicScorableBoardConfig({ phase: "stone removal" }));
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         // Just some checks that our setup is correct
         expect(goban.engine.isActivePlayer(123)).toBe(true);
@@ -332,7 +332,7 @@ describe("onTap", () => {
 
     test("Shift-Clicking during stone removal toggles the group ", async () => {
         const goban = new SVGRenderer(basicScorableBoardConfig({ phase: "stone removal" }));
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         // Just some checks that our setup is correct
         expect(goban.engine.isActivePlayer(123)).toBe(true);
@@ -367,7 +367,7 @@ describe("onTap", () => {
         jest.useFakeTimers();
         jest.setSystemTime(0);
         const goban = new SVGRenderer(basicScorableBoardConfig({ phase: "stone removal" }));
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         const addCoordinatesToChatInput = jest.fn();
         GobanBase.setCallbacks({ addCoordinatesToChatInput });
@@ -391,7 +391,7 @@ describe("onTap", () => {
 
     test("Clicking on stones during stone removal sends a socket message", async () => {
         const goban = new SVGRenderer(basicScorableBoardConfig({ phase: "stone removal" }));
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         simulateMouseClick(event_layer, { x: 1, y: 0 });
 
@@ -412,7 +412,7 @@ describe("onTap", () => {
 
     test("Clicking while in scoring mode triggers score_estimate.handleClick()", () => {
         const goban = new SVGRenderer(basicScorableBoardConfig());
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         // The scoring API is a real pain to work with, mainly due to dependence
         // on the wasm module.  Therefore, we just mock estimateScore() and
@@ -453,7 +453,7 @@ describe("onTap", () => {
             }),
         );
         goban.enableStonePlacement();
-        const event_layer = goban.event_layer;
+        const event_layer = goban.parent;
 
         simulateMouseClick(event_layer, { x: 0, y: 0 });
 

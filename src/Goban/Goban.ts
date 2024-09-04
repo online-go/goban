@@ -58,7 +58,7 @@ export abstract class Goban extends OGSConnectivity {
 
     protected abstract setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void;
 
-    protected parent!: HTMLElement;
+    public parent!: HTMLElement;
     private analysis_scoring_color?: "black" | "white" | string;
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
 

@@ -299,7 +299,14 @@ export function renderShadow(
     clearAboveColor(shadow_ctx, sss, sss, 150, 150, 150);
 }
 
+const render_cache: { [key: string]: StoneTypeArray } = {};
+
 function preRenderStone(radius: number, seed: number, options: RenderOptions): StoneTypeArray {
+    const cache_key = `${radius}-${seed}-${options.base_color}-${options.light}-${options.ambient}-${options.specular_hardness}-${options.diffuse_light_distance}-${options.specular_light_distance}`;
+    if (render_cache[cache_key]) {
+        return render_cache[cache_key];
+    }
+
     // cspell: words dcsr
     const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
@@ -441,7 +448,8 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
 
     renderShadow(shadow_ctx, center, radius, sss);
 
-    return [{ stone: stone, shadow: shadow }];
+    render_cache[cache_key] = [{ stone: stone, shadow: shadow }];
+    return render_cache[cache_key];
 }
 function placeRenderedStone(
     ctx: CanvasRenderingContext2D,
