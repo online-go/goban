@@ -4611,6 +4611,9 @@ class GCell {
     public get g(): SVGGraphicsElement {
         if (!this._g) {
             this._g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            if (this._transform) {
+                this.g.setAttribute("transform", this._transform);
+            }
             this.renderer.grid_layer!.appendChild(this._g);
         }
         return this._g;
@@ -4622,6 +4625,11 @@ class GCell {
         }
 
         this._transform = transform;
+
+        if (!this._g) {
+            // be lazy if we haven't already created the g element
+            return;
+        }
 
         this.g.setAttribute("transform", transform);
 
