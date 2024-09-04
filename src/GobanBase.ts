@@ -214,6 +214,8 @@ export interface GobanEvents extends StateUpdateEvents {
     "stone-removal.accepted": () => void;
     "stone-removal.updated": () => void;
     "stone-removal.needs-sealing": (positions: undefined | JGOFSealingIntersection[]) => void;
+    "stone-removal.auto-scoring-started": () => void;
+    "stone-removal.auto-scoring-complete": () => void;
     "conditional-moves.updated": () => void;
     "puzzle-place": (obj: {
         x: number;

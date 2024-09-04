@@ -1385,6 +1385,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.stone_removal_auto_scoring_done = true;
 
         this.showMessage("processing", undefined, -1);
+        this.emit("stone-removal.auto-scoring-started");
         const do_score_estimation = () => {
             const se = new ScoreEstimator(
                 this.engine,
@@ -1430,6 +1431,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     });
 
                     this.clearMessage();
+                    this.emit("stone-removal.auto-scoring-complete");
                 })
                 .catch((err) => {
                     console.error(`Auto-scoring error: `, err);
