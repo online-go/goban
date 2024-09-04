@@ -178,6 +178,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
         const shadow_root = this.parent.shadowRoot ?? this.parent.attachShadow({ mode: "open" });
+        if (shadow_root.childNodes.length) {
+            throw new Error("Shadow root already has children");
+        }
         //const shadow_root = this.parent.attachShadow({ mode: "closed" });
         shadow_root.appendChild(this.svg);
         const sheet = new CSSStyleSheet();
@@ -190,6 +193,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }`);
         }
         shadow_root.adoptedStyleSheets = [sheet];
+        this.on("destroy", () => {
+            this.svg.remove();
+        });
 
         this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         this.svg.appendChild(this.svg_defs);
@@ -320,6 +326,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         div.setAttribute("data-pointers-bound", "true");
+
+        this.on("destroy", () => {
+            console.log("Clearing pointer bindings");
+            div.removeAttribute("data-pointers-bound");
+        });
 
         let dragging = false;
 
@@ -464,55 +475,72 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         let mouse_disabled: any = 0;
 
-        div.addEventListener("click", (ev) => {
+        const onClick = (ev: MouseEvent) => {
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, false);
             }
             ev.preventDefault();
             return false;
-        });
-        div.addEventListener("dblclick", (ev) => {
+        };
+        const onDblClick = (ev: MouseEvent) => {
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, true);
             }
             ev.preventDefault();
             return false;
-        });
-        div.addEventListener("mousedown", (ev) => {
+        };
+        const onMouseDown = (ev: MouseEvent) => {
             if (!mouse_disabled) {
                 pointerDown(ev);
             }
             ev.preventDefault();
             return false;
-        });
-        div.addEventListener("mousemove", (ev) => {
+        };
+        const onMouseMove = (ev: MouseEvent) => {
             if (!mouse_disabled) {
                 pointerMove(ev);
             }
             ev.preventDefault();
             return false;
-        });
-        div.addEventListener("mouseout", (ev) => {
+        };
+        const onMouseOut = (ev: MouseEvent) => {
             if (!mouse_disabled) {
                 pointerOut(ev);
             } else {
                 ev.preventDefault();
             }
             return false;
-        });
-        div.addEventListener("contextmenu", (ev) => {
+        };
+        const onContextMenu = (ev: MouseEvent) => {
             if (!mouse_disabled) {
                 pointerUp(ev, false);
             } else {
                 ev.preventDefault();
             }
             return false;
-        });
-        div.addEventListener("focus", (ev) => {
+        };
+        const onFocus = (ev: FocusEvent) => {
             ev.preventDefault();
             return false;
+        };
+
+        div.addEventListener("click", onClick);
+        div.addEventListener("dblclick", onDblClick);
+        div.addEventListener("mousedown", onMouseDown);
+        div.addEventListener("mousemove", onMouseMove);
+        div.addEventListener("mouseout", onMouseOut);
+        div.addEventListener("contextmenu", onContextMenu);
+        div.addEventListener("focus", onFocus);
+        this.on("destroy", () => {
+            div.removeEventListener("click", onClick);
+            div.removeEventListener("dblclick", onDblClick);
+            div.removeEventListener("mousedown", onMouseDown);
+            div.removeEventListener("mousemove", onMouseMove);
+            div.removeEventListener("mouseout", onMouseOut);
+            div.removeEventListener("contextmenu", onContextMenu);
+            div.removeEventListener("focus", onFocus);
         });
 
         let lastX = 0;
