@@ -4574,9 +4574,6 @@ class GCell {
     _g?: SVGGraphicsElement;
     _transform: string = "";
 
-    private _faded_lines?: SVGPathElement;
-    private _faded_star_point?: SVGCircleElement;
-
     constructor(renderer: SVGRenderer, i: number, j: number) {
         this.renderer = renderer;
         this.i = i;
@@ -4612,20 +4609,14 @@ class GCell {
     /*
      * Faded intersection lines
      */
-    private last_faded_intersection_line_parameters?: {
-        sx: number;
-        sy: number;
-        ex: number;
-        ey: number;
-        mx: number;
-        my: number;
-        draw_star_point: boolean;
-        star_radius: number;
-        cx: number;
-        cy: number;
-    };
+    private last_faded_lines?: SVGPathElement;
+    private last_faded_star_point?: SVGCircleElement;
 
     public drawFadedIntersectionLines(draw_star_point: boolean, star_radius: number): void {
+        if (this.last_faded_lines) {
+            return;
+        }
+
         const mid = this.renderer.metrics.mid;
         const ss = this.renderer.square_size;
         const offset = this.renderer.metrics.offset;
@@ -4662,40 +4653,11 @@ class GCell {
         const cx = mid;
         const cy = mid;
 
-        if (this.last_faded_intersection_line_parameters) {
-            if (
-                this.last_faded_intersection_line_parameters.sx === sx &&
-                this.last_faded_intersection_line_parameters.sy === sy &&
-                this.last_faded_intersection_line_parameters.ex === ex &&
-                this.last_faded_intersection_line_parameters.ey === ey &&
-                this.last_faded_intersection_line_parameters.mx === mx &&
-                this.last_faded_intersection_line_parameters.my === my &&
-                this.last_faded_intersection_line_parameters.draw_star_point === draw_star_point &&
-                this.last_faded_intersection_line_parameters.star_radius === star_radius &&
-                this.last_faded_intersection_line_parameters.cx === cx &&
-                this.last_faded_intersection_line_parameters.cy === cy
-            ) {
-                return;
-            }
-        }
-        this.last_faded_intersection_line_parameters = {
-            sx,
-            sy,
-            ex,
-            ey,
-            mx,
-            my,
-            draw_star_point,
-            star_radius,
-            cx,
-            cy,
-        };
-        this.clearFadedLines();
         const g = this.g;
 
         if (draw_star_point) {
             const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            this._faded_star_point = circ;
+            this.last_faded_star_point = circ;
             circ.setAttribute("cx", cx.toString());
             circ.setAttribute("cy", cy.toString());
             circ.setAttribute("r", star_radius.toString());
@@ -4704,7 +4666,7 @@ class GCell {
         }
 
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        this._faded_lines = path;
+        this.last_faded_lines = path;
         path.setAttribute("stroke", this.renderer.theme_faded_line_color);
         path.setAttribute("stroke-width", this.renderer.square_size < 5 ? "0.2" : "1");
         path.setAttribute("fill", "none");
@@ -4719,13 +4681,13 @@ class GCell {
     }
 
     public clearFadedLines(): void {
-        if (this._faded_lines) {
-            this._faded_lines.remove();
-            delete this._faded_lines;
+        if (this.last_faded_lines) {
+            this.last_faded_lines.remove();
+            delete this.last_faded_lines;
         }
-        if (this._faded_star_point) {
-            this._faded_star_point.remove();
-            delete this._faded_star_point;
+        if (this.last_faded_star_point) {
+            this.last_faded_star_point.remove();
+            delete this.last_faded_star_point;
         }
     }
 
