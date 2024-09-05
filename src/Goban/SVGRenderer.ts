@@ -52,6 +52,8 @@ const __theme_cache: {
 declare let ResizeObserver: any;
 
 const USE_CELL_RENDERER = true;
+// Shadow dom provided a bit of a performance boost, but older browsers don't support it yet.
+const USE_SHADOW_DOM = document.body.attachShadow !== undefined && CSSStyleSheet !== undefined;
 
 export interface SVGRendererGobanConfig extends GobanConfig {
     board_div?: HTMLElement;
@@ -139,6 +141,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
     private drawing_enabled: boolean = true;
     protected title_div?: HTMLElement;
+    public event_layer?: HTMLDivElement;
 
     private themes: GobanSelectedThemes = {
         "board": "Plain",
@@ -177,22 +180,28 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.title_div = config["title_div"];
         this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
-        const shadow_root = this.parent.shadowRoot ?? this.parent.attachShadow({ mode: "open" });
-        if (shadow_root.childNodes.length) {
-            throw new Error("Shadow root already has children");
-        }
-        //const shadow_root = this.parent.attachShadow({ mode: "closed" });
-        shadow_root.appendChild(this.svg);
-        const sheet = new CSSStyleSheet();
-        if (sheet?.replaceSync) {
-            sheet.replaceSync(`text {
+        if (USE_SHADOW_DOM) {
+            const shadow_root =
+                this.parent.shadowRoot ?? this.parent.attachShadow({ mode: "open" });
+            if (shadow_root.childNodes.length) {
+                throw new Error("Shadow root already has children");
+            }
+            //const shadow_root = this.parent.attachShadow({ mode: "closed" });
+            shadow_root.appendChild(this.svg);
+            const sheet = new CSSStyleSheet();
+            if (sheet?.replaceSync) {
+                sheet.replaceSync(`text {
                 font-family: Verdana, Arial, sans-serif;
                 text-anchor: middle;
                 font-weight: bold;
                 user-select: none;
             }`);
+            }
+            shadow_root.adoptedStyleSheets = [sheet];
+        } else {
+            this.parent.appendChild(this.svg);
         }
-        shadow_root.adoptedStyleSheets = [sheet];
+
         this.on("destroy", () => {
             this.svg.remove();
         });
@@ -200,7 +209,19 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.svg_defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         this.svg.appendChild(this.svg_defs);
         this.last_move_opacity = config["last_move_opacity"] ?? 1;
-        this.bindPointerBindings(this.parent as any);
+
+        if (USE_SHADOW_DOM) {
+            this.bindPointerBindings(this.parent as any);
+        } else {
+            this.event_layer = document.createElement("div");
+            this.event_layer.style.position = "absolute";
+            this.event_layer.style.top = "0";
+            this.event_layer.style.right = "0";
+            this.event_layer.style.left = "0";
+            this.event_layer.style.bottom = "0";
+            this.parent.appendChild(this.event_layer);
+            this.bindPointerBindings(this.event_layer);
+        }
 
         this.move_tree_container = config.move_tree_container;
 
@@ -4127,25 +4148,26 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (!this.move_tree_inner_container) {
             do_init = true;
             this.move_tree_inner_container = document.createElement("div");
-            //this.move_tree_canvas = allocateCanvasOrError();
             this.move_tree_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            //this.move_tree_inner_container.appendChild(this.move_tree_svg);
 
-            //const shadow_root = this.move_tree_inner_container.attachShadow({ mode: "closed" });
-            const shadow_root =
-                this.move_tree_inner_container.shadowRoot ??
-                this.move_tree_inner_container.attachShadow({ mode: "open" });
-            shadow_root.appendChild(this.move_tree_svg);
-            const sheet = new CSSStyleSheet();
-            if (sheet?.replaceSync) {
-                sheet.replaceSync(`text {
+            if (USE_SHADOW_DOM) {
+                const shadow_root =
+                    this.move_tree_inner_container.shadowRoot ??
+                    this.move_tree_inner_container.attachShadow({ mode: "open" });
+                shadow_root.appendChild(this.move_tree_svg);
+                const sheet = new CSSStyleSheet();
+                if (sheet?.replaceSync) {
+                    sheet.replaceSync(`text {
                     font-family: Verdana, Arial, sans-serif;
                     text-anchor: middle;
                     font-weight: bold;
                     user-select: none;
                 }`);
+                }
+                shadow_root.adoptedStyleSheets = [sheet];
+            } else {
+                this.move_tree_inner_container.appendChild(this.move_tree_svg);
             }
-            shadow_root.adoptedStyleSheets = [sheet];
 
             this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius);
             this.move_tree_container.appendChild(this.move_tree_inner_container);
