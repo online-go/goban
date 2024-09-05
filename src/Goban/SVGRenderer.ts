@@ -53,7 +53,18 @@ declare let ResizeObserver: any;
 
 const USE_CELL_RENDERER = true;
 // Shadow dom provided a bit of a performance boost, but older browsers don't support it yet.
-const USE_SHADOW_DOM = document.body.attachShadow !== undefined && CSSStyleSheet !== undefined;
+function canConstructStyleSheet() {
+    try {
+        new CSSStyleSheet();
+        return true;
+    } catch (e) {}
+
+    return false;
+}
+const USE_SHADOW_DOM =
+    document.body.attachShadow !== undefined &&
+    CSSStyleSheet !== undefined &&
+    canConstructStyleSheet();
 
 export interface SVGRendererGobanConfig extends GobanConfig {
     board_div?: HTMLElement;
