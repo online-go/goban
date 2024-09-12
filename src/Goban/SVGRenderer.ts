@@ -360,7 +360,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         div.setAttribute("data-pointers-bound", "true");
 
         this.on("destroy", () => {
-            console.log("Clearing pointer bindings");
             div.removeAttribute("data-pointers-bound");
         });
 
@@ -528,6 +527,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 pointerDown(ev);
             }
             ev.preventDefault();
+
+            return false;
+        };
+        const onMouseUp = (ev: MouseEvent) => {
+            if (!mouse_disabled) {
+                pointerUp(ev, false);
+            }
+            ev.preventDefault();
             return false;
         };
         const onMouseMove = (ev: MouseEvent) => {
@@ -561,6 +568,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         div.addEventListener("click", onClick);
         div.addEventListener("dblclick", onDblClick);
         div.addEventListener("mousedown", onMouseDown);
+        div.addEventListener("mouseup", onMouseUp);
         div.addEventListener("mousemove", onMouseMove);
         div.addEventListener("mouseout", onMouseOut);
         div.addEventListener("contextmenu", onContextMenu);
@@ -569,6 +577,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             div.removeEventListener("click", onClick);
             div.removeEventListener("dblclick", onDblClick);
             div.removeEventListener("mousedown", onMouseDown);
+            div.removeEventListener("mouseup", onMouseUp);
             div.removeEventListener("mousemove", onMouseMove);
             div.removeEventListener("mouseout", onMouseOut);
             div.removeEventListener("contextmenu", onContextMenu);
