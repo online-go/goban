@@ -1,6 +1,6 @@
 {
     "name": "goban",
-    "version": "8.3.50",
+    "version": "8.3.51",
     "description": "",
     "main": "build/goban.js",
     "types": "build/src/index.d.ts",

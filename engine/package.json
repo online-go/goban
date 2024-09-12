@@ -1,6 +1,6 @@
 {
     "name": "goban-engine",
-    "version": "8.3.50",
+    "version": "8.3.51",
     "description": "",
     "main": "build/goban-engine.js",
     "types": "build/engine/index.d.ts",

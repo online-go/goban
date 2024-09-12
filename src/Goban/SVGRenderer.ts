@@ -532,9 +532,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         };
         const onMouseUp = (ev: MouseEvent) => {
             if (!mouse_disabled) {
-                pointerUp(ev, false);
+                dragging = false;
+                //pointerUp(ev, false);
             }
-            ev.preventDefault();
+            //ev.preventDefault();
             return false;
         };
         const onMouseMove = (ev: MouseEvent) => {
