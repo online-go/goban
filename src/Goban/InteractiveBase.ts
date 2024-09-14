@@ -220,7 +220,7 @@ export abstract class GobanInteractive extends GobanBase {
         this.emit("review_controller_id", this.review_controller_id);
     }
 
-    public config: GobanConfig;    
+    public config: GobanConfig;
     public last_move_radius: number;
     public circle_radius: number;
     public square_size: number = 10;
