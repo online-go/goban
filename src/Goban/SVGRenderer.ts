@@ -1834,10 +1834,15 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             if (letter) {
                 letter_was_drawn = true;
                 draw_last_move = false;
+
+                let fontSize = this.square_size * 0.5 * this.stone_font_scale;
+                if (subscript) {
+                    fontSize *= 0.8;
+                }
                 cell.letter(
                     letter,
                     text_color,
-                    subscript ? this.square_size * 0.4 : this.square_size * 0.5,
+                    fontSize,
                     transparent ? 0.6 : 1.0,
                     !!subscript,
                 );
@@ -1851,7 +1856,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 cell.subscript(
                     subscript,
                     text_color,
-                    this.square_size * 0.4,
+                    this.square_size * 0.4 * this.stone_font_scale,
                     transparent ? 0.6 : 1.0,
                     !!letter,
                     !!pos.sub_triangle,
@@ -2744,19 +2749,23 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 }
             }
 
+            console.log("letter", letter, "subscript", subscript);
+
             if (letter) {
                 letter_was_drawn = true;
                 const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 text.setAttribute("class", "letter");
                 text.setAttribute("fill", text_color);
-                text.setAttribute(
-                    "font-size",
-                    subscript ? `${this.square_size * 0.4}px` : `${this.square_size * 0.5}px`,
-                );
+
+                let fontSize = this.square_size * 0.5 * this.stone_font_scale;
+                if (subscript) {
+                    fontSize *= 0.8;
+                }
+                text.setAttribute("font-size", `${fontSize}px`);
                 text.setAttribute("text-anchor", "middle");
                 text.setAttribute("x", cx.toString());
-                let yy = cy;
-                yy += this.square_size / 6;
+
+                let yy = cy + fontSize * 0.35;
                 if (subscript) {
                     yy -= this.square_size * 0.15;
                 }
@@ -2774,7 +2783,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 text.setAttribute("class", "subscript");
                 text.setAttribute("fill", text_color);
-                text.setAttribute("font-size", `${this.square_size * 0.4}px`);
+                const fontSize = this.square_size * 0.4 * this.stone_font_scale;
+                text.setAttribute("font-size", `${fontSize}px`);
                 text.setAttribute("text-anchor", "middle");
                 text.setAttribute("x", cx.toString());
                 let yy = cy;
@@ -2787,6 +2797,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 if (pos.sub_triangle) {
                     yy -= this.square_size * 0.08;
                 }
+                yy += fontSize * 0.35;
                 text.setAttribute("y", yy.toString());
                 text.textContent = subscript;
                 if (transparent) {
@@ -2830,12 +2841,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 circ.setAttribute("class", "circle");
                 circ.setAttribute("fill", "none");
                 circ.setAttribute("stroke", symbol_color);
-                circ.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                circ.setAttribute("stroke-width", `${this.square_size * 0.075 * this.stone_font_scale }px`);
                 circ.setAttribute("cx", cx.toString());
                 circ.setAttribute("cy", cy.toString());
                 circ.setAttribute(
                     "r",
-                    Math.max(0.1, this.square_size * this.circle_radius).toFixed(2),
+                    Math.max(0.1, this.square_size * this.circle_radius * this.stone_font_scale).toFixed(2),
                 );
                 if (transparent) {
                     circ.setAttribute("stroke-opacity", "0.6");
@@ -2850,11 +2861,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 alt_marking === "triangle" ||
                 hover_mark === "triangle"
             ) {
-                let scale = 1.0;
+                let scale = 1.0 * this.stone_font_scale;
                 let oy = 0.0;
-                let line_width = this.square_size * 0.075;
+                let line_width = this.square_size * 0.075 * scale
                 if (pos.sub_triangle) {
-                    scale = 0.5;
+                    scale = 0.5 * scale;
                     oy = this.square_size * 0.3;
                     transparent = false;
                     line_width *= 0.5;
@@ -2886,11 +2897,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 draw_last_move = false;
             }
             if (pos.cross || hover_mark === "cross") {
-                const r = Math.max(1, this.metrics.mid * 0.35);
+                const r = Math.max(1, this.metrics.mid * 0.35 * this.stone_font_scale);
                 const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 cross.setAttribute("class", "cross");
                 cross.setAttribute("stroke", symbol_color);
-                cross.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                cross.setAttribute("stroke-width", `${this.square_size * 0.075 * this.stone_font_scale}px`);
                 cross.setAttribute("fill", "none");
                 cross.setAttribute(
                     "d",
@@ -2916,8 +2927,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 square.setAttribute("class", "square");
                 square.setAttribute("fill", "none");
                 square.setAttribute("stroke", symbol_color);
-                square.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
-                const r = Math.max(1, this.metrics.mid * 0.4);
+                square.setAttribute("stroke-width", `${this.square_size * 0.075 * this.stone_font_scale}px`);
+                const r = Math.max(1, this.metrics.mid * 0.4 * this.stone_font_scale);
                 square.setAttribute("x", (cx - r).toFixed(2));
                 square.setAttribute("y", (cy - r).toFixed(2));
                 square.setAttribute("width", (r * 2).toFixed(2));
@@ -2955,14 +2966,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     if (this.submit_move) {
                         draw_last_move = false;
 
-                        const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
+                        const r = Math.max(1, this.metrics.mid * 0.35) * 0.8 * this.stone_font_scale;
                         const cross = document.createElementNS(
                             "http://www.w3.org/2000/svg",
                             "path",
                         );
                         cross.setAttribute("class", "last-move");
                         cross.setAttribute("stroke", color);
-                        cross.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                        cross.setAttribute("stroke-width", `${this.square_size * 0.075 * this.stone_font_scale}px`);
                         cross.setAttribute("fill", "none");
                         cross.setAttribute("opacity", this.last_move_opacity.toString());
                         cross.setAttribute(
@@ -2990,7 +3001,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                             );
                             text.setAttribute("class", "letter");
                             text.setAttribute("fill", color);
-                            text.setAttribute("font-size", `${this.square_size * 0.5}px`);
+                            text.setAttribute("font-size", `${this.square_size * 0.5 * this.stone_font_scale}px`);
                             text.setAttribute("text-anchor", "middle");
                             text.setAttribute("x", cx.toString());
                             let yy = cy;
@@ -3008,11 +3019,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                                 r = this.square_size * 0.3;
                             }
 
-                            r = Math.max(0.1, r);
+                            r = Math.max(0.1, r * this.stone_font_scale);
                             circ.setAttribute("class", "last-move");
                             circ.setAttribute("fill", "none");
                             circ.setAttribute("stroke", color);
-                            circ.setAttribute("stroke-width", `${this.square_size * 0.075}px`);
+                            circ.setAttribute("stroke-width", `${this.square_size * 0.075 * this.stone_font_scale}px`);
                             circ.setAttribute("cx", cx.toString());
                             circ.setAttribute("cy", cy.toString());
                             circ.setAttribute("opacity", this.last_move_opacity.toString());
@@ -5246,11 +5257,13 @@ class GCell {
         text.setAttribute("font-size", `${font_size}px`);
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("x", cx.toString());
-        let yy = cy;
-        yy += ss / 6;
+
+        // Adjust the y-coordinate to account for vertical centering based on the font size
+        let yy = cy + font_size * 0.35;
         if (room_for_subscript) {
             yy -= ss * 0.15;
         }
+
         text.setAttribute("y", yy.toString());
         text.textContent = letter;
         if (opacity < 1) {
@@ -5319,21 +5332,28 @@ class GCell {
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("class", "subscript");
         text.setAttribute("fill", color);
+
         text.setAttribute("font-size", `${font_size}px`);
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("x", cx.toString());
+
         let yy = cy;
-        yy -= ss / 6;
+
+        // Adjust baseline based on the provided font size
+        yy += font_size * 0.35;
         if (room_for_letter) {
             yy += ss * 0.6;
         } else {
             yy += ss * 0.31;
         }
+
         if (room_for_sub_triangle) {
             yy -= ss * 0.08;
         }
+
         text.setAttribute("y", yy.toString());
         text.textContent = subscript;
+
         if (opacity < 1) {
             text.setAttribute("fill-opacity", opacity.toString());
         }
@@ -5382,7 +5402,7 @@ class GCell {
         const mid = this.renderer.metrics.mid;
         const cx = mid;
         const cy = mid;
-        const ss = this.renderer.square_size;
+        const ss = this.renderer.square_size * this.renderer.stone_font_scale;
 
         const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circ.setAttribute("class", "circle");
@@ -5391,7 +5411,7 @@ class GCell {
         circ.setAttribute("stroke-width", `${ss * 0.075}px`);
         circ.setAttribute("cx", cx.toString());
         circ.setAttribute("cy", cy.toString());
-        circ.setAttribute("r", Math.max(0.1, ss * this.renderer.circle_radius).toFixed(2));
+        circ.setAttribute("r", Math.max(0.1, ss * this.renderer.circle_radius * this.renderer.stone_font_scale).toFixed(2));
         if (opacity < 1.0) {
             circ.setAttribute("stroke-opacity", opacity.toString());
         }
@@ -5433,11 +5453,11 @@ class GCell {
         const cy = mid;
         const ss = this.renderer.square_size;
 
-        let scale = 1.0;
+        let scale = 1.0 * this.renderer.stone_font_scale;
         let oy = 0.0;
-        let line_width = ss * 0.075;
+        let line_width = ss * 0.075 * scale;
         if (as_subscript) {
-            scale = 0.5;
+            scale = 0.5 * scale;
             oy = ss * 0.3;
             opacity = 1.0;
             line_width *= 0.5;
@@ -5505,8 +5525,8 @@ class GCell {
         const mid = this.renderer.metrics.mid;
         const cx = mid;
         const cy = mid;
-        const ss = this.renderer.square_size;
-        const r = Math.max(1, mid * 0.35);
+        const ss = this.renderer.square_size  * this.renderer.stone_font_scale;
+        const r = Math.max(1, mid * 0.35 * this.renderer.stone_font_scale);
 
         const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
         cross.setAttribute("class", "cross");
@@ -5562,8 +5582,8 @@ class GCell {
         const mid = this.renderer.metrics.mid;
         const cx = mid;
         const cy = mid;
-        const ss = this.renderer.square_size;
-        const r = Math.max(1, mid * 0.4);
+        const ss = this.renderer.square_size * this.renderer.stone_font_scale;
+        const r = Math.max(1, mid * 0.4 * this.renderer.stone_font_scale);
 
         const square = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         square.setAttribute("class", "square");
@@ -5616,12 +5636,12 @@ class GCell {
         const mid = this.renderer.metrics.mid;
         const cx = mid;
         const cy = mid;
-        const ss = this.renderer.square_size;
+        const ss = this.renderer.square_size * this.renderer.stone_font_scale;
 
         switch (symbol) {
             case "+":
                 {
-                    const r = Math.max(1, mid * 0.35) * 0.8;
+                    const r = Math.max(1, mid * 0.35) * 0.8 * this.renderer.stone_font_scale;
                     const cross = document.createElementNS("http://www.w3.org/2000/svg", "path");
                     cross.setAttribute("class", "last-move");
                     cross.setAttribute("stroke", color);
@@ -5662,7 +5682,7 @@ class GCell {
             case "o":
                 {
                     const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                    let r = ss * this.renderer.last_move_radius;
+                    let r = ss * this.renderer.last_move_radius * this.renderer.stone_font_scale;
                     if (ss) {
                         r = ss * 0.3;
                     }
@@ -5718,7 +5738,7 @@ class GCell {
         const mid = this.renderer.metrics.mid;
         const cx = mid;
         const cy = mid;
-        const ss = this.renderer.square_size;
+        const ss = this.renderer.square_size * this.renderer.stone_font_scale;
 
         const r = ss * 0.2 * Math.abs(estimate);
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
