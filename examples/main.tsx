@@ -185,6 +185,26 @@ function GobanTestPage(): JSX.Element {
                     </div>
 
                     <div className="setting">
+                        <span>Stone font scale:</span>
+                        <input
+                            type="range"
+                            value={base_config.stone_font_scale as number}
+                            min="0.1"
+                            max="2"
+                            step="0.1"
+                            onChange={(ev) => {
+                                let ss = parseFloat(ev.target.value);
+                                if (!ss) {
+                                    ss = 1;
+                                }
+                                base_config.stone_font_scale = ss;
+                                forceUpdate();
+                                fiddler.emit("setStoneFontScale", ss);
+                            }}
+                        />
+                    </div>
+
+                    <div className="setting">
                         <span>Top labels:</span>
                         <input
                             type="checkbox"
@@ -354,6 +374,13 @@ function ReactGoban<GobanClass extends Goban>(
             goban.setSquareSize(ss);
             const end = Date.now();
             console.log("SSS time: ", end - start);
+        });
+
+        fiddler.on("setStoneFontScale", (ss) => {
+            const start = Date.now();
+            goban.setStoneFontScale(ss);
+            const end = Date.now();
+            console.log("SFS time: ", end - start);
         });
 
         fiddler.on("redraw", () => {
