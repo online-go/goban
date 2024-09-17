@@ -5353,15 +5353,10 @@ class GCell {
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("x", cx.toString());
 
-        let yy = cy;
+        let yy = cy + ss * 0.3; /// subscript offset
 
         // Adjust baseline based on the provided font size
         yy += font_size * 0.35;
-        if (room_for_letter) {
-            yy += ss * 0.6;
-        } else {
-            yy += ss * 0.31;
-        }
 
         if (room_for_sub_triangle) {
             yy -= ss * 0.08;
