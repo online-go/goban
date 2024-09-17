@@ -220,6 +220,12 @@ export abstract class GobanInteractive extends GobanBase {
         this.emit("review_controller_id", this.review_controller_id);
     }
 
+    public config: GobanConfig;
+    public last_move_radius: number;
+    public circle_radius: number;
+    public square_size: number = 10;
+    public stone_font_scale: number;
+
     protected __board_redraw_pen_layer_timer: any = null;
     protected __clock_timer?: ReturnType<typeof setTimeout>;
     protected __draw_state: string[][];
@@ -231,7 +237,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected bounded_width: number;
     protected bounds: GobanBounds;
     protected conditional_path: string = "";
-    public config: GobanConfig;
+
     protected current_cmove?: ConditionalMoveTree;
     protected currently_my_cmove: boolean = false;
     protected dirty_redraw: any = null; // timer
@@ -239,8 +245,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected display_width?: number;
     protected done_loading_review: boolean = false;
     protected dont_draw_last_move: boolean;
-    public last_move_radius: number;
-    public circle_radius: number;
+
     protected edit_color?: "black" | "white";
     protected errorHandler: (e: Error) => void;
     protected heatmap?: NumberMatrix;
@@ -274,7 +279,6 @@ export abstract class GobanInteractive extends GobanBase {
     protected shift_key_is_down: boolean;
     //protected show_move_numbers: boolean;
     protected show_variation_move_numbers: boolean;
-    public square_size: number = 10;
     protected stone_placement_enabled: boolean;
     protected sendLatencyTimer?: ReturnType<typeof niceInterval>;
 
@@ -407,6 +411,7 @@ export abstract class GobanInteractive extends GobanBase {
             "draw_bottom_labels" in config ? !!config.draw_bottom_labels : true;
         //this.show_move_numbers = this.getShowMoveNumbers();
         this.show_variation_move_numbers = this.getShowVariationMoveNumbers();
+        this.stone_font_scale = this.getStoneFontScale();
 
         if (this.bounds.left > 0) {
             this.draw_left_labels = false;
@@ -489,6 +494,13 @@ export abstract class GobanInteractive extends GobanBase {
             return callbacks.getShowVariationMoveNumbers();
         }
         return false;
+    }
+    // scale relative to the "OGS default"
+    protected getStoneFontScale(): number {
+        if (callbacks.getStoneFontScale) {
+            return callbacks.getStoneFontScale();
+        }
+        return 1.0;
     }
     public static getMoveTreeNumbering(): string {
         if (callbacks.getMoveTreeNumbering) {

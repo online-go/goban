@@ -27,6 +27,7 @@ export interface GobanCallbacks {
     getLocation?: () => string;
     // getShowMoveNumbers?: () => boolean;
     getShowVariationMoveNumbers?: () => boolean;
+    getStoneFontScale?: () => number;
     getShowUndoRequestIndicator?: () => boolean;
     getMoveTreeNumbering?: () => "move-coordinates" | "none" | "move-number";
     getCDNReleaseBase?: () => string;

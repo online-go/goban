@@ -289,6 +289,15 @@ export abstract class Goban extends OGSConnectivity {
             this.redraw(true);
         }
     }
+
+    public setStoneFontScale(new_ss: number, suppress_redraw = false): void {
+        const redraw = this.stone_font_scale !== new_ss && !suppress_redraw;
+        this.stone_font_scale = new_ss;
+        if (redraw) {
+            this.redraw(true);
+        }
+    }
+
     public computeMetrics(): GobanMetrics {
         if (!this.square_size || this.square_size <= 0) {
             this.square_size = 12;
