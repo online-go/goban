@@ -6,6 +6,8 @@ const webpack = require("webpack");
 const pkg = require("./package.json");
 const TerserPlugin = require("terser-webpack-plugin");
 
+const DEV_SERVER_PORT = 9000;
+
 let plugins = [];
 
 plugins.push(
@@ -162,7 +164,7 @@ module.exports = (env, argv) => {
             devServer: {
                 compress: true,
                 host: "0.0.0.0",
-                port: 9000,
+                port: DEV_SERVER_PORT,
                 allowedHosts: ["all"],
 
                 static: [
@@ -182,6 +184,14 @@ module.exports = (env, argv) => {
                     writeToDisk: true,
                 },
                 hot: false,
+                setupMiddlewares: (middlewares, devServer) => {
+                    console.log("------------------");
+                    console.log("Demo board is served at http://localhost:" + DEV_SERVER_PORT);
+
+                    console.log("Check your changes there!");
+                    console.log("------------------");
+                    return middlewares;
+                  },
             },
         }),
     ];
