@@ -3646,7 +3646,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
 
             if (hoshi) {
-                const r = this.square_size * 0.075;
+                const r = this.square_size < 5 ? 0.5 : Math.max(2, this.square_size * 0.075);
+
                 for (let i = 0; i < hoshi.length; ++i) {
                     const [hx, hy] = hoshi[i];
                     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
