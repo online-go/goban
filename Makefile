@@ -42,6 +42,10 @@ beta_npm: build publish-beta
 pack: build
 	yarn pack
 
+restore-dev-versions:
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"dev\",/" package.json
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"dev\",/" engine/package.json
+
 publish-beta: build
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" package.json
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" engine/package.json
@@ -52,6 +56,7 @@ publish-beta: build
 	echo "" && \
 	echo "Published version $(GIT_VERSION)-beta to the beta tag successfully." && \
 	echo ""
+	@make restore-dev-versions
 
 publish-production: build
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)\",/" package.json
@@ -63,6 +68,7 @@ publish-production: build
 	echo "" && \
 	echo "Published version $(GIT_VERSION) successfully." && \
 	echo ""
+	@make restore-dev-versions
 
 notify:
 	MSG=`git log -1 --pretty="%B" | sed s/\"//g | sed s/\'//g `; \
