@@ -589,6 +589,12 @@ export interface ClientToServer extends ClientToServerBase {
     /** Cancel a match request */
     "automatch/cancel": (data: { uuid: string }) => void;
 
+    /** Subscribe to automatch offers */
+    "automatch/available/subscribe": () => void;
+
+    /** Unsubscribe from automatch offers */
+    "automatch/available/unsubscribe": () => void;
+
     /** Updates the config for the bot */
     "bot/config": (config: any) => void;
 

@@ -132,6 +132,20 @@ export interface ServerToClient {
         game_id: number;
     }) => void;
 
+    /** An automatch offer was added */
+    "automatch/available/add": (data: {
+        uuid: string;
+        preferences: AutomatchPreferences;
+        player: {
+            id: number;
+            username: string;
+        };
+        created: number;
+    }) => void;
+
+    /** An automatch offer was removed */
+    "automatch/available/remove": (uuid: string) => void;
+
     /** User(s) joined a chat channel */
     "chat-join": (data: {
         /** The channel */
