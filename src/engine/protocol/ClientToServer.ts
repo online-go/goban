@@ -613,7 +613,7 @@ export type RuleSet = "japanese" | "chinese" | "aga" | "korean" | "nz" | "ing";
 
 export interface AutomatchPreferences {
     uuid: string;
-    size_speed_options: Array<{ size: Size; speed: Speed }>;
+    size_speed_options: Array<{ size: Size; speed: Speed; system: "fischer" | "byoyomi" }>;
 
     timestamp?: number;
     lower_rank_diff: number;
@@ -621,21 +621,6 @@ export interface AutomatchPreferences {
     rules: {
         condition: AutomatchCondition;
         value: "japanese" | "chinese" | "aga" | "korean" | "nz" | "ing";
-    };
-    time_control: {
-        condition: AutomatchCondition;
-        value: {
-            system: "byoyomi" | "fischer" | "simple" | "canadian";
-            initial_time?: number;
-            time_increment?: number;
-            max_time?: number;
-            main_time?: number;
-            period_time?: number;
-            periods?: number;
-            stones_per_period?: number;
-            per_move?: number;
-            pause_on_weekends?: boolean;
-        };
     };
     handicap: {
         condition: AutomatchCondition;
