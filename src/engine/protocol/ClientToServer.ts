@@ -650,7 +650,7 @@ export interface BotConfigV1 {
     bot_id: number;
     username: string;
     allowed_time_control_systems: ("simple" | "byoyomi" | "fischer")[];
-    allowed_board_sizes: number[]; // special case of [0] means all sizes, even non square
+    allowed_board_sizes: number[] | "all" | "square" | number;
     allowed_blitz_settings?: BotAllowedClockSettingsV1;
     allowed_rapid_settings?: BotAllowedClockSettingsV1;
     allowed_live_settings?: BotAllowedClockSettingsV1;
@@ -672,7 +672,7 @@ export interface BotConfigV2 {
     bot_id: number;
     username: string;
     allowed_time_control_systems: ("simple" | "byoyomi" | "fischer")[];
-    allowed_board_sizes: number[]; // special case of [0] means all sizes, even non square
+    allowed_board_sizes: number[] | "all" | "square" | number;
     allowed_blitz_settings?: BotAllowedClockSettingsV2;
     allowed_rapid_settings?: BotAllowedClockSettingsV2;
     allowed_live_settings?: BotAllowedClockSettingsV2;
