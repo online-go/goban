@@ -657,7 +657,7 @@ export interface BotConfigV1 {
     allowed_correspondence_settings?: BotAllowedClockSettingsV1;
     allow_ranked: boolean;
     allow_unranked: boolean;
-    allowed_rank_ranges: [string, string];
+    allowed_rank_range: [string, string];
     allow_ranked_handicap: boolean;
     allow_unranked_handicap: boolean;
     allowed_komi_range: [number, number];
@@ -679,7 +679,7 @@ export interface BotConfigV2 {
     allowed_correspondence_settings?: BotAllowedClockSettingsV2;
     allow_ranked: boolean;
     allow_unranked: boolean;
-    allowed_rank_ranges: [string, string];
+    allowed_rank_range: [string, string];
     allow_ranked_handicap: boolean;
     allow_unranked_handicap: boolean;
     allowed_komi_range: [number, number];
