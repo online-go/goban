@@ -19,6 +19,7 @@ import type {
     User,
     AutomatchPreferences,
     RemoteStorageReplication,
+    BotConfig,
 } from "./ClientToServer";
 import type { JGOFTimeControl } from "../formats/JGOF";
 import type { ConditionalMoveResponse } from "../ConditionalMoveTree";
@@ -113,7 +114,7 @@ export interface ServerToClient {
     "active_game": (data: GameListEntry) => void;
 
     /** Updates the list of bots that are connected and ready to the server */
-    "active-bots": (data: { [id: number]: User }) => void;
+    "active-bots": (data: { [id: number]: User & { config: BotConfig } }) => void;
 
     /** An automatch request was canceled */
     "automatch/cancel": (data: {

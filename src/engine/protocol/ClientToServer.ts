@@ -596,7 +596,7 @@ export interface ClientToServer extends ClientToServerBase {
     "automatch/available/unsubscribe": () => void;
 
     /** Updates the config for the bot */
-    "bot/config": (config: any) => void;
+    "bot/config": (config: BotConfig) => void;
 
     /** Update the number of games that the bot is currently playing */
     "bot/status": (data: {
@@ -605,6 +605,90 @@ export interface ClientToServer extends ClientToServerBase {
         ongoing_correspondence_count: number;
     }) => void;
 }
+
+export interface BotAllowedClockSettingsV1 {
+    simple?: {
+        per_move_time_range: [number, number];
+    };
+    byoyomi?: {
+        main_time_range: [number, number];
+        period_time_range: [number, number];
+        periods_range: [number, number];
+    };
+    fischer?: {
+        max_time_range: [number, number];
+        time_increment_range: [number, number];
+    };
+
+    concurrent_games?: number;
+}
+
+export interface BotAllowedClockSettingsV2 {
+    simple?: {
+        per_move_time_range: [number, number];
+    };
+    byoyomi?: {
+        main_time_range: [number, number];
+        period_time_range: [number, number];
+        periods_range: [number, number];
+    };
+    fischer?: {
+        initial_time_range: [number, number];
+        max_time_range: [number, number];
+        time_increment_range: [number, number];
+    };
+
+    concurrent_games?: number;
+}
+
+export interface BotConfigV0 {
+    _config_version: 0;
+}
+export interface BotConfigV1 {
+    _config_version: 1;
+    hidden: boolean;
+    bot_id: number;
+    username: string;
+    allowed_time_control_systems: ("simple" | "byoyomi" | "fischer")[];
+    allowed_board_sizes: number[]; // special case of [0] means all sizes, even non square
+    allowed_blitz_settings?: BotAllowedClockSettingsV1;
+    allowed_rapid_settings?: BotAllowedClockSettingsV1;
+    allowed_live_settings?: BotAllowedClockSettingsV1;
+    allowed_correspondence_settings?: BotAllowedClockSettingsV1;
+    allow_ranked: boolean;
+    allow_unranked: boolean;
+    allowed_rank_ranges: [string, string];
+    allow_ranked_handicap: boolean;
+    allow_unranked_handicap: boolean;
+    allowed_komi_range: [number, number];
+    decline_new_challenges: boolean;
+    min_move_time: number; // ms
+    max_games_per_player: number;
+}
+
+export interface BotConfigV2 {
+    _config_version: 2;
+    hidden: boolean;
+    bot_id: number;
+    username: string;
+    allowed_time_control_systems: ("simple" | "byoyomi" | "fischer")[];
+    allowed_board_sizes: number[]; // special case of [0] means all sizes, even non square
+    allowed_blitz_settings?: BotAllowedClockSettingsV2;
+    allowed_rapid_settings?: BotAllowedClockSettingsV2;
+    allowed_live_settings?: BotAllowedClockSettingsV2;
+    allowed_correspondence_settings?: BotAllowedClockSettingsV2;
+    allow_ranked: boolean;
+    allow_unranked: boolean;
+    allowed_rank_ranges: [string, string];
+    allow_ranked_handicap: boolean;
+    allow_unranked_handicap: boolean;
+    allowed_komi_range: [number, number];
+    decline_new_challenges: boolean;
+    min_move_time: number; // ms
+    max_games_per_player: number;
+}
+
+export type BotConfig = BotConfigV0 | BotConfigV1 | BotConfigV2;
 
 export type Speed = "blitz" | "rapid" | "live" | "correspondence";
 export type Size = "9x9" | "13x13" | "19x19";

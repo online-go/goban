@@ -33,7 +33,7 @@ publish_docs: typedoc
 clean:
 	rm -Rf lib node build engine/build
 
-publish push: publish-production publish_docs upload_to_cdn notify
+publish push: publish-production publish_docs upload_to_cdn notify restore-dev-versions
 
 beta: beta_npm upload_to_cdn
 
@@ -46,9 +46,16 @@ restore-dev-versions:
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"dev\",/" package.json
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"dev\",/" engine/package.json
 
-publish-beta: build
+set-beta-versions:
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" package.json
 	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)-beta\",/" engine/package.json
+
+set-versions:
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)\",/" package.json
+	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)\",/" engine/package.json
+
+
+publish-beta: build set-beta-versions
 	@read -p "Publishing version $(GIT_VERSION) to the beta tag. Enter OTP : " otp; \
 	npm publish --tag beta --otp $$otp engine/ && \
 	npm publish --tag beta --otp $$otp ./ && \
@@ -58,9 +65,7 @@ publish-beta: build
 	echo ""
 	@make restore-dev-versions
 
-publish-production: build
-	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)\",/" package.json
-	sed -i'.tmp' "s/\"version\": .*/\"version\": \"$(GIT_VERSION)\",/" engine/package.json
+publish-production: build set-versions
 	@read -p "Publishing version $(GIT_VERSION). Enter OTP : " otp; \
 	npm publish --otp $$otp engine/ && \
 	npm publish --otp $$otp ./ && \
@@ -76,7 +81,7 @@ notify:
 	curl -X POST -H 'Content-type: application/json' --data '{"text":"'"[GOBAN] $$VERSION $$MSG"'"}' $(SLACK_WEBHOOK)
 
 
-upload_to_cdn:
+upload_to_cdn: set-versions
 	rm -Rf deployment-staging-area;
 	mkdir deployment-staging-area;
 	cp build/goban.js* deployment-staging-area
