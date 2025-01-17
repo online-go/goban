@@ -195,8 +195,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             const shadow_root =
                 this.parent.shadowRoot ?? this.parent.attachShadow({ mode: "open" });
             if (shadow_root.childNodes.length) {
-                throw new Error("Shadow root already has children");
+                shadow_root.childNodes.forEach((child) => child.remove());
             }
+            //throw new Error("Shadow root already has children");
             //const shadow_root = this.parent.attachShadow({ mode: "closed" });
             shadow_root.appendChild(this.svg);
             const sheet = new CSSStyleSheet();
