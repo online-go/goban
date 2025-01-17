@@ -297,7 +297,7 @@ export class GobanSocket<
                     data: event?.data,
                     exception: e,
                 });
-                throw e;
+                throw new Error("Error parsing message: " + event?.data);
             }
             const [id_or_command, data, err] = payload;
 
