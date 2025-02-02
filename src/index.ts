@@ -39,7 +39,7 @@ import { SVGRenderer, SVGRendererGobanConfig } from "./Goban/SVGRenderer";
 export type GobanRenderer = GobanCanvas | SVGRenderer;
 export type GobanRendererConfig = CanvasRendererGobanConfig | SVGRendererGobanConfig;
 
-(window as any)["goban"] = module.exports;
+//(window as any)["goban"] = module.exports;
 
 let renderer: "svg" | "canvas" = "canvas";
 

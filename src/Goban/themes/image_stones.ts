@@ -21,9 +21,10 @@ import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils
 import { renderShadow } from "./rendered_stones";
 import { renderPlainStone } from "./plain_stones";
 import { callbacks } from "../callbacks";
+import { raw_anime_black_svg, raw_anime_white_svg } from "./raw_image_stone_data";
 
-const anime_black_imagedata = makeSvgImageData(require("../../../assets/img/anime_black.svg"));
-const anime_white_imagedata = makeSvgImageData(require("../../../assets/img/anime_white.svg"));
+const anime_black_imagedata = makeSvgImageData(raw_anime_black_svg);
+const anime_white_imagedata = makeSvgImageData(raw_anime_white_svg);
 
 function getCDNReleaseBase() {
     if (callbacks.getCDNReleaseBase) {
