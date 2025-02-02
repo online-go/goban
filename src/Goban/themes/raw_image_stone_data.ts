@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) Online-Go.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /* cspell:disable */
 
 export const raw_anime_white_svg = `<?xml version="1.0" encoding="UTF-8"?><svg version="1.1" viewBox="0 0 112.55 112.55" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><radialGradient id="e" cx="48.811" cy="105.22" r="14.537" gradientTransform="matrix(2.5347 4.1859 -5.6281 3.4079 539.58 -505.5)" gradientUnits="userSpaceOnUse"><stop stop-color="#e7e7e7" offset="0"/><stop stop-color="#cbcbcb" offset=".81395"/><stop stop-color="#494949" offset="1"/></radialGradient><clipPath id="k"><path d="m1 1h106v95h-106z"/></clipPath><clipPath id="j"><path d="m111.22 56.277c0 30.344-24.602 54.945-54.945 54.945s-54.945-24.602-54.945-54.945 24.602-54.945 54.945-54.945 54.945 24.602 54.945 54.945z"/></clipPath><filter id="a" x="0%" y="0%" width="100%" height="100%"><feColorMatrix in="SourceGraphic" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0"/></filter><mask id="g"><g filter="url(#a)"><rect width="112.55" height="112.55" fill-opacity=".826"/></g></mask><radialGradient id="d" cx="18.733" cy="17.819" r="14.537" gradientTransform="matrix(3.7795 0 0 3.7795 -14.526 -11.071)" gradientUnits="userSpaceOnUse"><stop stop-color="#f9f9f9" stop-opacity="0" offset="0"/><stop stop-color="#edd996" stop-opacity="0" offset=".87411"/><stop stop-color="#e1ba31" stop-opacity=".18431" offset=".95474"/><stop stop-color="#c48800" stop-opacity=".32549" offset="1"/></radialGradient><clipPath id="i"><rect width="113" height="113"/></clipPath><g id="c" clip-path="url(#i)"><path d="m111.22 56.277c0 30.344-24.602 54.945-54.945 54.945s-54.945-24.602-54.945-54.945 24.602-54.945 54.945-54.945 54.945 24.602 54.945 54.945z" fill="url(#d)"/></g><mask id="f"><g filter="url(#a)"><rect width="112.55" height="112.55" fill-opacity=".601"/></g></mask><clipPath id="h"><rect width="113" height="113"/></clipPath><g id="b" clip-path="url(#h)"><path transform="matrix(3.7795 0 0 3.7795 -14.526 -11.071)" d="m33.271 17.819c0 8.0285-6.5092 14.538-14.538 14.538-8.0285 0-14.538-6.5092-14.538-14.538 0-8.0284 6.5092-14.538 14.538-14.538 8.0284 0 14.538 6.5092 14.538 14.538zm0 0" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".70556"/></g></defs><path d="m111.22 56.277c0 30.344-24.602 54.945-54.945 54.945s-54.945-24.602-54.945-54.945 24.602-54.945 54.945-54.945 54.945 24.602 54.945 54.945z" fill="url(#e)"/><g clip-path="url(#k)"><g clip-path="url(#j)"><path d="m106.26 40.789c0 30.344-24.598 54.945-54.945 54.945-30.344 0-54.941-24.602-54.941-54.945s24.598-54.945 54.941-54.945c30.348 0 54.945 24.602 54.945 54.945z" fill="#f9f9f9"/></g></g><use mask="url(#g)" xlink:href="#c"/><path d="m56.305 2.7969c-29.207 0-52.887 24.621-52.887 54.996 0.003906 8.7617 2.0195 17.398 5.8828 25.184-2.707-6.7031-3.125-14.504-3.1406-21.777-1.6289-31.211 19.723-55.926 49.176-55.801 20.207-2.1016 41.305 15.227 49.723 31.211-8.2109-20.461-27.434-33.789-48.754-33.812z" fill="#fff"/><use mask="url(#f)" xlink:href="#b"/></svg>`;
