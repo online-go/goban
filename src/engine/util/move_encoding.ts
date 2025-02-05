@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { type MoveTree } from "../MoveTree";
 import { JGOFMove, JGOFNumericPlayerColor, AdHocPackedMove } from "../formats";
 import {
     decodeCoordinate,
@@ -170,19 +171,25 @@ export function num2char(num: number): string {
     return encodeCoordinate(num);
 }
 
-export function encodeMove(x: number | JGOFMove, y?: number): string {
+export function encodeMove(x: number | JGOFMove | MoveTree, y?: number): string {
     if (typeof x === "number") {
         if (typeof y !== "number") {
             throw new Error(`Invalid y parameter to encodeMove y = ${y}`);
         }
         return num2char(x) + num2char(y);
     } else {
-        const mv: JGOFMove = x;
+        const mv: JGOFMove | MoveTree = x;
 
         if (!mv.edited) {
             return num2char(mv.x) + num2char(mv.y);
         } else {
-            return "!" + mv.color + num2char(mv.x) + num2char(mv.y);
+            if ("color" in mv) {
+                return "!" + (mv as JGOFMove).color + num2char(mv.x) + num2char(mv.y);
+            } else if ("player" in mv) {
+                return "!" + (mv as MoveTree).player + num2char(mv.x) + num2char(mv.y);
+            } else {
+                throw new Error(`Invalid move object to encodeMove: ${mv}`);
+            }
         }
     }
 }

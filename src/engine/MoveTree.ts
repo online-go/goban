@@ -867,7 +867,7 @@ export class MoveTree {
         }
     }
     getMoveStringToThisPoint(): string {
-        let move_stack = [];
+        let move_stack: MoveTree[] = [];
         let cur: MoveTree | null = this;
         let ret = "";
         while (cur) {
