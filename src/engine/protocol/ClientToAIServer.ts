@@ -15,7 +15,7 @@
  */
 
 import { ClientToServerBase, RuleSet } from "./ClientToServer";
-import { JGOFNumericPlayerColor } from "../formats/JGOF";
+import { JGOFMove, JGOFNumericPlayerColor } from "../formats/JGOF";
 
 /** This is an exhaustive list of the messages that the client can send
  *  to the AI servers. */
@@ -79,6 +79,12 @@ export interface ClientToAIServer extends ClientToServerBase {
 
         /** Whose turn it is */
         player: JGOFNumericPlayerColor;
+
+        /** Moves to replay */
+        moves?: JGOFMove[];
+
+        /** Unique board string used to relay to other clients */
+        board_string?: string;
     }) => any;
 
     /** Relay an already analyzed position out to any other viewers */

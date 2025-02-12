@@ -24,7 +24,7 @@ import {
     prettyCoordinates,
 } from "./util";
 import { AdHocPackedMove } from "./formats/AdHocFormat";
-import { JGOFNumericPlayerColor, JGOFPlayerSummary } from "./formats/JGOF";
+import { JGOFMove, JGOFNumericPlayerColor, JGOFPlayerSummary } from "./formats/JGOF";
 import { escapeSGFText, newlines_to_spaces } from "./util";
 
 export interface MarkInterface {
@@ -794,6 +794,15 @@ export class MoveTree {
                 return "empty";
         }
         throw new Error("Invalid stone color");
+    }
+
+    toJGOFMove(): JGOFMove {
+        return {
+            x: this.x,
+            y: this.y,
+            color: this.player,
+            edited: this.edited,
+        };
     }
 
     /* Returns the node in the main trunk which is our ancestor. May be this node. */
