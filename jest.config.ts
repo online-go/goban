@@ -202,7 +202,7 @@ export default {
     // A map from regular expressions to paths to transformers
     transform: {
         "^.+\\.ts?$": "ts-jest",
-        "^.+goscorer.js$": "ts-jest",
+        "^.+goscorer.mjs$": "ts-jest",
         "^.+\\.svg$": "jest-transform-stub",
     },
 

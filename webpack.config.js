@@ -44,7 +44,7 @@ module.exports = (env, argv) => {
 
         resolve: {
             modules: ["src", "node_modules", "src/third_party/goscorer"],
-            extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
+            extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js", ".mjs"],
         },
 
         performance: {
@@ -191,7 +191,7 @@ module.exports = (env, argv) => {
                     console.log("Check your changes there!");
                     console.log("------------------");
                     return middlewares;
-                  },
+                },
             },
         }),
     ];
