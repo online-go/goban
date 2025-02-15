@@ -269,17 +269,26 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.last_phase !== "finished" &&
                         obj.phase === "finished"
                     ) {
-                        const winner = obj.winner;
-                        let winner_color: "black" | "white" | undefined;
-                        if (typeof winner === "number") {
-                            winner_color = winner === obj.black_player_id ? "black" : "white";
-                        } else if (winner === "black" || winner === "white") {
+                       const winner = obj.winner;
+                        let winner_color: "black" | "white" | "tie" | undefined;
+
+                        if (typeof winner === "string") {
                             winner_color = winner;
+                        } else if (typeof winner === "number") {
+                            switch (winner) {
+                                case 0:
+                                    winner_color = "tie";
+                                    break;
+                                case obj.black_player_id:
+                                    winner_color = "black";
+                                    break;
+                                case obj.white_player_id:
+                                    winner_color = "white";
+                                    break;
+                            }
                         }
 
-                        if (winner_color) {
-                            this.emit("audio-game-ended", winner_color);
-                        }
+                        if (winner_color) this.emit("audio-game-ended", winner_color);
                     }
                     if (obj.phase) {
                         this.last_phase = obj.phase;
