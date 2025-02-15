@@ -269,7 +269,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.last_phase !== "finished" &&
                         obj.phase === "finished"
                     ) {
-                       const winner = obj.winner;
+                        const winner = obj.winner;
                         let winner_color: "black" | "white" | "tie" | undefined;
 
                         if (typeof winner === "string") {
@@ -288,8 +288,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                             }
                         }
 
-                        if (winner_color) { 
-                            this.emit("audio-game-ended", winner_color); 
+                        if (winner_color){
+                            this.emit("audio-game-ended", winner_color);
                         }
                     }
                     if (obj.phase) {
