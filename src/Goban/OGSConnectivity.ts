@@ -288,7 +288,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
                             }
                         }
 
-                        if (winner_color) this.emit("audio-game-ended", winner_color);
+                        if (winner_color) { 
+                            this.emit("audio-game-ended", winner_color); 
+                        }
                     }
                     if (obj.phase) {
                         this.last_phase = obj.phase;
