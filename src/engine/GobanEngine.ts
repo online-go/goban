@@ -138,7 +138,7 @@ export interface GobanEngineConfig extends BoardConfig {
     free_handicap_placement?: boolean;
     score?: Score;
     outcome?: string;
-    winner?: number | "black" | "white"; // Player ID of the winner
+    winner?: number | "black" | "white" | "tie"; // Player ID of the winner
 
     start_time?: number;
     end_time?: number;
