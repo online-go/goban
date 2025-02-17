@@ -1948,7 +1948,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     if (m.edited) {
                         //letter = "triangle";
                         if (this.engine.board[j][i]) {
-                            alt_marking = "triangle";
+                            //alt_marking = "triangle";
                         }
                     } else {
                         letter = m.getMoveNumberDifferenceFromTrunk().toString();
@@ -2610,7 +2610,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     if (m.edited) {
                         //letter = "triangle";
                         if (this.engine.board[j][i]) {
-                            alt_marking = "triangle";
+                            //alt_marking = "triangle";
                         }
                     } else {
                         letter = m.getMoveNumberDifferenceFromTrunk().toString();

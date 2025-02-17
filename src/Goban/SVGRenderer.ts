@@ -1823,7 +1823,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     if (move_diff !== m.move_number) {
                         if (m.edited) {
                             if (this.engine.board[j][i]) {
-                                alt_marking = "triangle";
+                                //alt_marking = "triangle";
                             }
                         } else {
                             letter = move_diff.toString();
@@ -2735,7 +2735,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     if (move_diff !== m.move_number) {
                         if (m.edited) {
                             if (this.engine.board[j][i]) {
-                                alt_marking = "triangle";
+                                //alt_marking = "triangle";
                             }
                         } else {
                             letter = move_diff.toString();
@@ -3459,7 +3459,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     if (m.edited) {
                         //letter = "triangle";
                         if (this.engine.board[j][i]) {
-                            alt_marking = "triangle";
+                            //alt_marking = "triangle";
                         }
                     } else {
                         letter = m.getMoveNumberDifferenceFromTrunk().toString();
