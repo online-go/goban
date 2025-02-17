@@ -5259,6 +5259,12 @@ class GCell {
             this.last_letter_opacity === opacity &&
             this.last_letter_room_for_subscript === room_for_subscript
         ) {
+            // if we already have an element here but we are not currently the
+            // last element, move ourselves to the end of the list
+            if (this.last_letter.nextSibling) {
+                this.g.appendChild(this.last_letter);
+            }
+
             return;
         }
 
