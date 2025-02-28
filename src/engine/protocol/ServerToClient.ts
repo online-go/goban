@@ -26,6 +26,12 @@ import type { ConditionalMoveResponse } from "../ConditionalMoveTree";
 import type { GobanEngineConfig, Score, ReviewMessage } from "../GobanEngine";
 import type { AdHocPackedMove } from "../formats/AdHocFormat";
 
+interface Vote {
+    voter_id: number;
+    action: string;
+    updated: string;
+}
+
 /* NOTE: The reason for the :id non template literal key variants of our
  *       messages is to allow typedoc generate documentation for them,
  *       as documentation is not generated for template literal keys
@@ -264,6 +270,8 @@ export interface ServerToClient {
         created: string;
         updated: string;
         state: "pending" | "claimed" | "resolved";
+        escalated: boolean;
+        escalated_at: string;
         source: string;
         report_type: string;
         reporting_user?: User;
@@ -284,6 +292,7 @@ export interface ServerToClient {
         };
         moderator_note: string;
         system_note: string;
+        voters: Vote[]; 
     }) => void;
 
     /** A private message was received */
