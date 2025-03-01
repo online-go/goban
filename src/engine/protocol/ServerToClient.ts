@@ -292,7 +292,7 @@ export interface ServerToClient {
         };
         moderator_note: string;
         system_note: string;
-        voters: Vote[]; 
+        voters: Vote[];
     }) => void;
 
     /** A private message was received */
