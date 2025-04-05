@@ -321,6 +321,33 @@ export class BoardState extends EventEmitter<GobanEvents> implements BoardConfig
         return ct;
     }
 
+    /**
+     * Compute the liberty map for the current board.
+     * This is used by kidsgo
+     */
+    public computeLibertyMap(): Array<Array<number>> {
+        const liberties = makeMatrix(this.width, this.height, 0);
+
+        if (!this.board) {
+            return liberties;
+        }
+
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                if (this.board[y][x] && !liberties[y][x]) {
+                    const group = this.getRawStoneString(x, y, true);
+                    const count = this.countLiberties(group);
+
+                    for (const e of group) {
+                        liberties[e.y][e.x] = count;
+                    }
+                }
+            }
+        }
+
+        return liberties;
+    }
+
     public foreachNeighbor(
         pt_or_raw_stone_string: JGOFIntersection | RawStoneString,
         callback: (x: number, y: number) => void,
