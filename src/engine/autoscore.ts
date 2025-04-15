@@ -1117,41 +1117,37 @@ function debug_group_map(title: string, board: string[][]) {
     end_board();
 }
 
-function white(str: string) {
+export function white(str: string) {
     return `\x1b[37m${str}\x1b[0m`;
 }
-function red(str: string) {
+export function red(str: string) {
     return `\x1b[31m${str}\x1b[0m`;
 }
-/*
-function green(str: string) {
+export function green(str: string) {
     return `\x1b[32m${str}\x1b[0m`;
 }
-*/
-function yellow(str: string) {
+export function yellow(str: string) {
     return `\x1b[33m${str}\x1b[0m`;
 }
-function blue(str: string) {
+export function blue(str: string) {
     return `\x1b[34m${str}\x1b[0m`;
 }
-function magenta(str: string) {
+export function magenta(str: string) {
     return `\x1b[35m${str}\x1b[0m`;
 }
-/*
-function cyan(str: string) {
+export function cyan(str: string) {
     return `\x1b[36m${str}\x1b[0m`;
 }
-*/
-function black(str: string) {
+export function black(str: string) {
     return `\x1b[30m${str}\x1b[0m`;
 }
-function whiteBright(str: string) {
+export function whiteBright(str: string) {
     return `\x1b[97m${str}\x1b[0m`;
 }
-function cyanBright(str: string) {
+export function cyanBright(str: string) {
     return `\x1b[96m${str}\x1b[0m`;
 }
-function blackBright(str: string) {
+export function blackBright(str: string) {
     return `\x1b[90m${str}\x1b[0m`;
 }
 
