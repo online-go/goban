@@ -41,16 +41,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "fs";
-import {
-    autoscore,
-    red,
-    blue,
-    yellow,
-    magenta,
-    green,
-    black,
-    white,
-} from "../src/engine/autoscore";
+import { autoscore, red, blue, yellow, magenta, black, white } from "../src/engine/autoscore";
 import {
     GobanEngine,
     GobanEngineInitialState,
