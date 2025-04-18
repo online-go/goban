@@ -63,6 +63,9 @@ export default function (THEMES: ThemesInterface) {
         override getLabelTextColor(): string {
             return hexToRgba("#000000", 0.75);
         }
+        override getShadowColor(): string {
+            return "#482200";
+        }
     }
 
     _("Plain"); // ensure translation exists
@@ -114,6 +117,9 @@ export default function (THEMES: ThemesInterface) {
                 0.75,
             );
         }
+        override getShadowColor(): string {
+            return "#221100";
+        }
     }
 
     _("Custom"); // ensure translation exists
@@ -133,7 +139,7 @@ export default function (THEMES: ThemesInterface) {
             };
         }
         override getLineColor(): string {
-            return "#555555";
+            return "#777777";
         }
         override getFadedLineColor(): string {
             return "#333333";
@@ -149,6 +155,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#555555";
+        }
+        override getShadowColor(): string {
+            return "#000000";
         }
     }
 
@@ -188,6 +197,9 @@ export default function (THEMES: ThemesInterface) {
         override getLabelTextColor(): string {
             return HNG.C2;
         }
+        override getShadowColor(): string {
+            return "#181840";
+        }
     }
 
     _("HNG"); // ensure translation exists
@@ -225,6 +237,9 @@ export default function (THEMES: ThemesInterface) {
         override getLabelTextColor(): string {
             return "#4481B5";
         }
+        override getShadowColor(): string {
+            return "#000000";
+        }
     }
 
     _("HNG Night"); // ensure translation exists
@@ -244,7 +259,7 @@ export default function (THEMES: ThemesInterface) {
             };
         }
         override getLineColor(): string {
-            return "#555555";
+            return "#777777";
         }
         override getFadedLineColor(): string {
             return "#999999";
@@ -260,6 +275,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#555555";
+        }
+        override getShadowColor(): string {
+            return "#888888";
         }
     }
 
