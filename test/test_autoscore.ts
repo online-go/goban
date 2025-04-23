@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env bun
 /*
  * Copyright (C) Online-Go.com
  *
@@ -15,6 +15,20 @@
  * limitations under the License.
  */
 
+/*** HOW TO ADD A NEW TEST:
+ *
+ * Go into ../scripts and run:
+ *
+ *    ./fetch_game_for_autoscore_testing.ts <game_id>
+ *
+ * This will download the game, edit and move into the autoscore_test_files directory.
+ *
+ * You can then run the test with:
+ *
+ *    ./test_autoscore.ts <game_id>
+ *
+ */
+
 /* This script is for development, debugging, and manual testing of the
  * autoscore functionality
  *
@@ -27,8 +41,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "fs";
-import { autoscore } from "../src/engine/autoscore";
-import * as clc from "cli-color";
+import { autoscore, red, blue, yellow, magenta, black, white } from "../src/engine/autoscore";
 import {
     GobanEngine,
     GobanEngineInitialState,
@@ -369,7 +382,7 @@ function print_mismatches(board: boolean[][]) {
     for (let y = 0; y < board.length; ++y) {
         out += ` ${board.length - y} `.substr(-3);
         for (let x = 0; x < board[y].length; ++x) {
-            out += board[y][x] ? clc.black(".") : clc.red("X");
+            out += board[y][x] ? black(".") : red("X");
         }
 
         out += " " + ` ${board.length - y} `.substr(-3);
@@ -401,17 +414,17 @@ function print_expected(board: string[]) {
         for (let x = 0; x < board[y].length; ++x) {
             const c = board[y][x];
             if (c === "W") {
-                out += clc.white.bold("W");
+                out += white("W");
             } else if (c === "B") {
-                out += clc.black("B");
+                out += black("B");
             } else if (c === " ") {
-                out += clc.blue(".");
+                out += blue(".");
             } else if (c === "*") {
-                out += clc.yellow("*");
+                out += yellow("*");
             } else if (c === "s") {
-                out += clc.magenta("s");
+                out += magenta("s");
             } else {
-                out += clc.red(c);
+                out += red(c);
             }
         }
 

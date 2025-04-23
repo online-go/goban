@@ -408,6 +408,9 @@ function markConnectionBlocks(
                                     continue;
 
                                 [ty, tx] = getTargetYX(pdy, pdx);
+                                if(!isOnBoard(ty, tx, ysize, xsize))
+                                    continue;
+
                                 if(c === 'p') {
                                     if(!(stones[ty][tx] === pla && !markedDead[ty][tx])) {
                                         mismatch = true;

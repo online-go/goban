@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env bun
 /*
  * Copyright (C) Online-Go.com
  *
