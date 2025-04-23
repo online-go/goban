@@ -151,11 +151,7 @@ export class GobanTheme {
         return ret;
     }
 
-    public preRenderShadowSVG(
-        defs: SVGDefsElement,
-        color: string,
-        shadow_color: string
-    ): void {
+    public preRenderShadowSVG(defs: SVGDefsElement, color: string, shadow_color: string): void {
         /* Radial gradient for shadow */
         const radial_gradient = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -163,7 +159,10 @@ export class GobanTheme {
         );
         radial_gradient.setAttribute("id", "shadow-" + color);
         radial_gradient.setAttribute("r", "1.0");
-        radial_gradient.setAttribute("gradientTransform", "rotate(45) scale(1.15 .9) translate(0.05 -0.45)");
+        radial_gradient.setAttribute(
+            "gradientTransform",
+            "rotate(45) scale(1.15 .9) translate(0.05 -0.45)",
+        );
 
         // solid stone color
         const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
