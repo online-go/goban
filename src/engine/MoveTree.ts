@@ -1059,6 +1059,17 @@ export class MoveTree {
         return branch.branches.some((item) => this.isBranchWithCorrectAnswer(item));
     }
 
+    private isBranchWithWrongAnswer(branch: MoveTree): boolean {
+        if (branch.wrong_answer) {
+            return true;
+        }
+        if (!branch.branches || branch.branches.length === 0) {
+            return false;
+        }
+
+        return branch.branches.some((item) => this.isBranchWithWrongAnswer(item));
+    }
+
     public hoistFirstBranchToTrunk(): void {
         if (this.trunk_next) {
             this.trunk_next.hoistFirstBranchToTrunk();
@@ -1080,6 +1091,13 @@ export class MoveTree {
      */
     findBranchesWithCorrectAnswer(): Array<MoveTree> {
         return this.branches.filter((branch) => this.isBranchWithCorrectAnswer(branch));
+    }
+
+    /**
+     * Find branches containing node with wrong_answer === true
+     */
+    findBranchesWithWrongAnswer(): Array<MoveTree> {
+        return this.branches.filter((branch) => this.isBranchWithWrongAnswer(branch));
     }
 
     public clearBranchesExceptFor(node: MoveTree): void {
