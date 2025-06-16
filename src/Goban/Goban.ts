@@ -198,10 +198,6 @@ export abstract class Goban extends OGSConnectivity {
     }
 
     public setSquareSizeBasedOnDisplayWidth(display_width: number, suppress_redraw = false): void {
-        let n_squares = Math.max(
-            this.bounded_width + +this.draw_left_labels + +this.draw_right_labels,
-            this.bounded_height + +this.draw_bottom_labels + +this.draw_top_labels,
-        );
         this.display_width = display_width;
 
         if (isNaN(this.display_width)) {
@@ -209,18 +205,54 @@ export abstract class Goban extends OGSConnectivity {
             this.display_width = 320;
         }
 
-        if (isNaN(n_squares)) {
-            console.error("Invalid n_squares: ", n_squares);
-            console.error("bounded_width: ", this.bounded_width);
-            console.error("this.draw_left_labels: ", this.draw_left_labels);
-            console.error("this.draw_right_labels: ", this.draw_right_labels);
-            console.error("bounded_height: ", this.bounded_height);
-            console.error("this.draw_top_labels: ", this.draw_top_labels);
-            console.error("this.draw_bottom_labels: ", this.draw_bottom_labels);
-            n_squares = 19;
+        const square_size = Goban.computeSquareSizeFromDisplayWidth(this.display_width, {
+            bounded_width: this.bounded_width,
+            bounded_height: this.bounded_height,
+            draw_left_labels: this.draw_left_labels,
+            draw_right_labels: this.draw_right_labels,
+            draw_top_labels: this.draw_top_labels,
+            draw_bottom_labels: this.draw_bottom_labels,
+        });
+        this.setSquareSize(square_size, suppress_redraw);
+    }
+
+    public static computeSquareSizeFromDisplayWidth(
+        display_width: number,
+        config: {
+            bounded_width: number;
+            bounded_height: number;
+            draw_left_labels: boolean;
+            draw_right_labels: boolean;
+            draw_top_labels: boolean;
+            draw_bottom_labels: boolean;
+        },
+    ): number {
+        const {
+            bounded_width,
+            bounded_height,
+            draw_left_labels,
+            draw_right_labels,
+            draw_top_labels,
+            draw_bottom_labels,
+        } = config;
+
+        const n_squares = Math.max(
+            bounded_width + +draw_left_labels + +draw_right_labels,
+            bounded_height + +draw_bottom_labels + +draw_top_labels,
+        );
+
+        if (isNaN(display_width) || display_width <= 0) {
+            console.warn("Invalid display width, using default");
+            display_width = 320;
         }
 
-        this.setSquareSize(Math.floor(this.display_width / n_squares), suppress_redraw);
+        if (isNaN(n_squares) || n_squares <= 0) {
+            console.warn("Invalid n_squares, falling back to board size with no labels");
+            const fallback_n_squares = Math.max(bounded_width, bounded_height);
+            return Math.floor(display_width / fallback_n_squares);
+        }
+
+        return Math.floor(display_width / n_squares);
     }
 
     public setLabelPosition(label_position: LabelPosition) {
