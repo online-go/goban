@@ -280,6 +280,8 @@ export interface JGOFAIReview {
     network: string;
     network_size: string;
     strength: number;
+    playouts?: number;
+    visits?: number;
 
     /** millisecond epoch time (ms from 1970 UTC) */
     date: number;
