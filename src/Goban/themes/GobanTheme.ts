@@ -151,7 +151,7 @@ export class GobanTheme {
         return ret;
     }
 
-    public preRenderShadowSVG(defs: SVGDefsElement, color: string): void {
+    public preRenderShadowSVG(defs: SVGDefsElement, color: string, shadow_color: string): void {
         /* Radial gradient for shadow */
         const radial_gradient = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -159,41 +159,42 @@ export class GobanTheme {
         );
         radial_gradient.setAttribute("id", "shadow-" + color);
         radial_gradient.setAttribute("r", "1.0");
+        radial_gradient.setAttribute(
+            "gradientTransform",
+            "rotate(45) scale(1.15 .9) translate(0.05 -0.45)",
+        );
 
         // solid stone color
         const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
         stop1.setAttribute("offset", "0");
-        stop1.setAttribute("stop-color", color);
+        stop1.setAttribute("stop-color", shadow_color);
         stop1.setAttribute("stop-opacity", "1.0");
         radial_gradient.appendChild(stop1);
         const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-        stop2.setAttribute("offset", "30%");
-        stop2.setAttribute("stop-color", color);
-        stop2.setAttribute("stop-opacity", "1.0");
+        stop2.setAttribute("offset", "0%");
+        stop2.setAttribute("stop-color", shadow_color);
+        stop2.setAttribute("stop-opacity", "1");
         radial_gradient.appendChild(stop2);
 
-        const shadow_color = "#333333";
-
         {
             const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-            shadow_stop.setAttribute("offset", "31%");
+            shadow_stop.setAttribute("offset", "25%");
             shadow_stop.setAttribute("stop-color", shadow_color);
-            shadow_stop.setAttribute("stop-opacity", "0.6");
-            radial_gradient.appendChild(shadow_stop);
-        }
-
-        {
-            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-            shadow_stop.setAttribute("offset", "34%");
-            shadow_stop.setAttribute("stop-color", shadow_color);
-            shadow_stop.setAttribute("stop-opacity", "0.50");
+            shadow_stop.setAttribute("stop-opacity", "0.8");
             radial_gradient.appendChild(shadow_stop);
         }
         {
             const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-            shadow_stop.setAttribute("offset", "40%");
+            shadow_stop.setAttribute("offset", "35%");
             shadow_stop.setAttribute("stop-color", shadow_color);
-            shadow_stop.setAttribute("stop-opacity", "0.5");
+            shadow_stop.setAttribute("stop-opacity", "0.4");
+            radial_gradient.appendChild(shadow_stop);
+        }
+        {
+            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            shadow_stop.setAttribute("offset", "45%");
+            shadow_stop.setAttribute("stop-color", shadow_color);
+            shadow_stop.setAttribute("stop-opacity", "0.1");
             radial_gradient.appendChild(shadow_stop);
         }
         {
@@ -254,9 +255,9 @@ export class GobanTheme {
             "circle",
         );
         circle_to_cast_shadow.setAttribute("fill", `url(#shadow-${color})`);
-        circle_to_cast_shadow.setAttribute("cx", (cx * 1.2).toString());
-        circle_to_cast_shadow.setAttribute("cy", (cy * 1.2).toString());
-        circle_to_cast_shadow.setAttribute("r", (radius * 0.95).toString());
+        circle_to_cast_shadow.setAttribute("cx", (cx * 1.5).toString());
+        circle_to_cast_shadow.setAttribute("cy", (cy * 1.5).toString());
+        circle_to_cast_shadow.setAttribute("r", (radius * 1.1).toString());
         shadow_cell.appendChild(circle_to_cast_shadow);
         return circle_to_cast_shadow;
     }
@@ -402,6 +403,11 @@ export class GobanTheme {
 
     /** Returns the color that should be used for labels */
     public getLabelTextColor(): string {
+        return "#000000";
+    }
+
+    /* Returns the color to be used to build the shadow the stone casts */
+    public getShadowColor(_color?: string): string {
         return "#000000";
     }
 
