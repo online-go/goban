@@ -19,16 +19,27 @@ import { ThemesInterface } from "./";
 import { callbacks } from "../callbacks";
 import { _ } from "../../engine/translate";
 
-// Converts a six-digit hex string to rgba() notation
-function hexToRgba(raw: string, alpha: number = 1): string {
+// Generates a color blended with its inverse by the provided alpha, returning a standard 6-digit hex color string.
+function blendWithInverseColor(raw: string, alpha: number = 1): string {
+    alpha = Math.max(0, Math.min(1, alpha));
+
     const hex = raw.replace("#", "");
     if (hex.length !== 6) {
-        return raw;
+        throw new Error(`Invalid color: ${raw}`);
     }
-    const r = parseInt(`0x${hex.substr(0, 2)}`);
-    const g = parseInt(`0x${hex.substr(2, 2)}`);
-    const b = parseInt(`0x${hex.substr(4, 2)}`);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    const invR = 255 - r;
+    const invG = 255 - g;
+    const invB = 255 - b;
+
+    const blend = (c: number, inv: number) => Math.round(inv * (1 - alpha) + c * alpha);
+
+    const toHex = (n: number) => n.toString(16).padStart(2, "0");
+    return `#${toHex(blend(r, invR))}${toHex(blend(g, invG))}${toHex(blend(b, invB))}`;
 }
 
 export default function (THEMES: ThemesInterface) {
@@ -49,19 +60,19 @@ export default function (THEMES: ThemesInterface) {
             return "#000000";
         }
         override getFadedLineColor(): string {
-            return hexToRgba("#000000", 0.5);
+            return blendWithInverseColor("#888888", 0.5);
         }
         override getStarColor(): string {
             return "#000000";
         }
         override getFadedStarColor(): string {
-            return hexToRgba("#000000", 0.5);
+            return blendWithInverseColor("#000000", 0.5);
         }
         override getBlankTextColor(): string {
             return "#000000";
         }
         override getLabelTextColor(): string {
-            return hexToRgba("#000000", 0.75);
+            return blendWithInverseColor("#000000", 0.75);
         }
         override getShadowColor(): string {
             return "#482200";
@@ -94,7 +105,7 @@ export default function (THEMES: ThemesInterface) {
             return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
         override getFadedLineColor(): string {
-            return hexToRgba(
+            return blendWithInverseColor(
                 callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.5,
             );
@@ -103,7 +114,7 @@ export default function (THEMES: ThemesInterface) {
             return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
         override getFadedStarColor(): string {
-            return hexToRgba(
+            return blendWithInverseColor(
                 callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.5,
             );
@@ -112,7 +123,7 @@ export default function (THEMES: ThemesInterface) {
             return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
         override getLabelTextColor(): string {
-            return hexToRgba(
+            return blendWithInverseColor(
                 callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.75,
             );
