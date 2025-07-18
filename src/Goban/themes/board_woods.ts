@@ -261,13 +261,13 @@ export default function (THEMES: ThemesInterface) {
             return "#FFFFFF";
         }
         override getFadedLineColor(): string {
-            return "#FFFFFF";
+            return "#888888";
         }
         override getStarColor(): string {
             return "#FFFFFF";
         }
         override getFadedStarColor(): string {
-            return "#999999";
+            return "#888888";
         }
         override getBlankTextColor(): string {
             return "#FFFFFF";
