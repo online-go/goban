@@ -1,6 +1,6 @@
 VERSION=$(shell node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version')
 GIT_VERSION=$(shell git describe --long | sed 's/\-g.*//' | sed 's/\-/\./')
-SLACK_WEBHOOK=$(shell cat ../ogs/.slack-webhook)
+SLACK_WEBHOOK=$(shell cat ~/meta/ogs/Makefile | grep SLACK_WEBHOOK= | cut -d '=' -f 2)
 
 all dev: 
 	yarn run dev
