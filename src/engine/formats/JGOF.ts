@@ -333,6 +333,12 @@ export interface JGOFAIReviewMove {
 
     /** A width*height array of ownership values */
     ownership?: Array<Array<number>>;
+
+    /** For debug */
+    debug?: {
+        /** For debug */
+        note?: string;
+    };
 }
 
 export interface JGOFAIReviewMoveVariation {
