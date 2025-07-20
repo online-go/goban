@@ -29,6 +29,7 @@ export interface GobanSelectedThemes {
     "black": string;
     "removal-graphic": "square" | "x";
     "removal-scale": number;
+    "disable-stone-shadows": boolean;
 }
 export type LabelPosition =
     | "all"
@@ -93,6 +94,7 @@ export abstract class Goban extends OGSConnectivity {
             "board": "Kaya",
             "removal-graphic": "square",
             "removal-scale": 1.0,
+            "disable-stone-shadows": false,
         };
     }
 
