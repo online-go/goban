@@ -151,3 +151,32 @@ test("toSGF() simple path && tree subsets", () => {
     expect(mt3.containsOtherTreeAsSubset(mt1)).toBe(false);
     expect(mt3.containsOtherTreeAsSubset(mt2)).toBe(false);
 });
+
+test("test for comments being attached to right nodes", () => {
+    // Test case 1: Comment after move property (expected to work correctly)
+    const sgfStr1 =
+        "(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]RU[Japanese]SZ[19]KM[0.00];W[aa]C[Comment after move property];W[pd]C[second comment])";
+    const goban1 = new TestGoban({ original_sgf: sgfStr1, removed: "" });
+
+    // Go to first move (W[aa])
+    goban1.engine.jumpToOfficialMoveNumber(1);
+    expect(goban1.engine.cur_move.text).toBe("Comment after move property");
+
+    // Go to second move (W[pd])
+    goban1.engine.jumpToOfficialMoveNumber(2);
+    expect(goban1.engine.cur_move.text).toBe("second comment");
+
+    // Test case 2: Comment before move property (potentially incorrect)
+    const sgfStr2 =
+        "(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]RU[Japanese]SZ[19]KM[0.00];C[Comment before move property]W[aa];W[pd]C[second comment])";
+    const goban2 = new TestGoban({ original_sgf: sgfStr2, removed: "" });
+
+    // Go to first move (W[aa])
+    goban2.engine.jumpToOfficialMoveNumber(1);
+    // The comment should be attached to this move (W[aa]), not the root
+    expect(goban2.engine.cur_move.text).toBe("Comment before move property");
+
+    // Go to second move (W[pd])
+    goban2.engine.jumpToOfficialMoveNumber(2);
+    expect(goban2.engine.cur_move.text).toBe("second comment");
+});
