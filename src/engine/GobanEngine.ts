@@ -2469,6 +2469,11 @@ export class GobanEngine extends BoardState {
         prefer_remote: boolean = false,
         should_autoscore: boolean = false,
     ): ScoreEstimator {
+        // When estimating score, we should start with a clean removal state
+        // to avoid inheriting potentially incorrect removal markings from
+        // the game's stone removal phase
+        const clean_removal = makeMatrix(this.width, this.height, false);
+
         const se = new ScoreEstimator(
             this,
             this.goban_callback,
@@ -2476,6 +2481,7 @@ export class GobanEngine extends BoardState {
             tolerance,
             prefer_remote,
             should_autoscore,
+            clean_removal,
         );
         return se.score();
     }
