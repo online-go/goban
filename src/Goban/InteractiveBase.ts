@@ -1368,12 +1368,12 @@ export abstract class GobanInteractive extends GobanBase {
     }
     */
 
-    public setMarks(marks: { [mark: string]: string }, dont_draw?: boolean): void {
+    public setMarks(marks: { [mark: string]: string }, dont_draw?: boolean, ai_annotation?: boolean): void {
         for (const key in marks) {
             const locations = this.engine.decodeMoves(marks[key]);
             for (let i = 0; i < locations.length; ++i) {
                 const pt = locations[i];
-                this.setMark(pt.x, pt.y, key, dont_draw);
+                this.setMark(pt.x, pt.y, key, dont_draw, ai_annotation);
             }
         }
     }
@@ -1422,7 +1422,10 @@ export abstract class GobanInteractive extends GobanBase {
             this.drawSquare(x, y);
         }
     }
-    public setSubscriptMark(x: number, y: number, mark: string, drawSquare: boolean = true): void {
+    public setSubscriptMark(x: number, y: number, mark: string, drawSquare: boolean = true, ai_annotation: boolean = true): void {
+        if (ai_annotation) {
+            this.savePreAIMarks(this.getMarks(x, y));
+        }
         this.engine.cur_move.getMarks(x, y).subscript = mark;
         if (drawSquare) {
             this.drawSquare(x, y);
@@ -1482,11 +1485,15 @@ export abstract class GobanInteractive extends GobanBase {
             this.setMark(mv.x, mv.y, mark, dont_draw);
         }
     }
-    public setMark(x: number, y: number, mark: number | string, dont_draw?: boolean): void {
+    public setMark(x: number, y: number, mark: number | string, dont_draw?: boolean, ai_annotation?: boolean): void {
         try {
             if (x >= 0 && y >= 0) {
                 if (typeof mark === "number") {
                     mark = "" + mark;
+                }
+
+                if (ai_annotation) {
+                    this.savePreAIMarks(this.getMarks(x, y));
                 }
 
                 if (mark.startsWith("score-")) {
@@ -1744,6 +1751,13 @@ export abstract class GobanInteractive extends GobanBase {
                 this.emit("captured-stones", { removed_stones });
             }
         }
+    }
+
+    private savePreAIMarks(marks: MarkInterface): void {
+        if (marks.before_ai !== undefined) {
+            return
+        }
+        marks.before_ai = JSON.stringify(marks!);
     }
 }
 
