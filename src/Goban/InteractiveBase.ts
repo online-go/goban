@@ -1368,7 +1368,11 @@ export abstract class GobanInteractive extends GobanBase {
     }
     */
 
-    public setMarks(marks: { [mark: string]: string }, dont_draw?: boolean, ai_annotation?: boolean): void {
+    public setMarks(
+        marks: { [mark: string]: string },
+        dont_draw?: boolean,
+        ai_annotation?: boolean,
+    ): void {
         for (const key in marks) {
             const locations = this.engine.decodeMoves(marks[key]);
             for (let i = 0; i < locations.length; ++i) {
@@ -1422,7 +1426,13 @@ export abstract class GobanInteractive extends GobanBase {
             this.drawSquare(x, y);
         }
     }
-    public setSubscriptMark(x: number, y: number, mark: string, drawSquare: boolean = true, ai_annotation: boolean = true): void {
+    public setSubscriptMark(
+        x: number,
+        y: number,
+        mark: string,
+        drawSquare: boolean = true,
+        ai_annotation: boolean = true,
+    ): void {
         if (ai_annotation) {
             this.savePreAIMarks(this.getMarks(x, y));
         }
@@ -1485,7 +1495,13 @@ export abstract class GobanInteractive extends GobanBase {
             this.setMark(mv.x, mv.y, mark, dont_draw);
         }
     }
-    public setMark(x: number, y: number, mark: number | string, dont_draw?: boolean, ai_annotation?: boolean): void {
+    public setMark(
+        x: number,
+        y: number,
+        mark: number | string,
+        dont_draw?: boolean,
+        ai_annotation?: boolean,
+    ): void {
         try {
             if (x >= 0 && y >= 0) {
                 if (typeof mark === "number") {
@@ -1755,7 +1771,7 @@ export abstract class GobanInteractive extends GobanBase {
 
     private savePreAIMarks(marks: MarkInterface): void {
         if (marks.before_ai !== undefined) {
-            return
+            return;
         }
         marks.before_ai = JSON.stringify(marks!);
     }
