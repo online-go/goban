@@ -614,8 +614,8 @@ export class MoveTree {
         } else {
             marks = this.marks;
         }
-        for (var i = 0; i < this.engine.height; i++) {
-            for (var j = 0; j < this.engine.width; j++) {
+        for (let i = 0; i < this.engine.height; i++) {
+            for (let j = 0; j < this.engine.width; j++) {
                 if (marks[i][j].before_ai !== undefined) {
                     marks[i][j] = JSON.parse(marks[i][j].before_ai!);
                 }
