@@ -48,6 +48,7 @@ export interface MarkInterface {
     white?: boolean;
     color?: string;
     needs_sealing?: boolean;
+    before_ai?: string;
 
     [label: string]: string | boolean | undefined;
 }
@@ -604,6 +605,23 @@ export class MoveTree {
     }
     setAllMarks(marks: MarkInterface[][]): void {
         this.marks = marks;
+    }
+    clearAIMarks(): MarkInterface[][] {
+        let marks: MarkInterface[][];
+        if (this.marks === undefined) {
+            marks = makeObjectMatrix<MarkInterface>(this.engine.width, this.engine.height);
+            this.marks = marks;
+        } else {
+            marks = this.marks;
+        }
+        for (var i = 0; i < this.engine.height; i++) {
+            for (var j = 0; j < this.engine.width; j++) {
+                if (marks[i][j].before_ai !== undefined) {
+                    marks[i][j] = JSON.parse(marks[i][j].before_ai!);
+                }
+            }
+        }
+        return this.marks;
     }
     clearMarks(): MarkInterface[][] {
         this.marks = makeObjectMatrix<MarkInterface>(this.engine.width, this.engine.height);
