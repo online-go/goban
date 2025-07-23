@@ -41,7 +41,7 @@ export default function (THEMES: ThemesInterface) {
             };
         }
         override getLineColor(): string {
-            return "#000000";
+            return "#442211";
         }
         override getFadedLineColor(): string {
             return "#888888";
@@ -57,6 +57,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#444444";
+        }
+        override getShadowColor(): string {
+            return "#482200";
         }
     }
 
@@ -77,7 +80,7 @@ export default function (THEMES: ThemesInterface) {
             };
         }
         override getLineColor(): string {
-            return "#000000";
+            return "#331800";
         }
         override getFadedLineColor(): string {
             return "#888888";
@@ -93,6 +96,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#000000";
+        }
+        override getShadowColor(): string {
+            return "#482200";
         }
     }
 
@@ -113,7 +119,7 @@ export default function (THEMES: ThemesInterface) {
             };
         }
         override getLineColor(): string {
-            return "#000000";
+            return "#331f00";
         }
         override getFadedLineColor(): string {
             return "#888888";
@@ -129,6 +135,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#000000";
+        }
+        override getShadowColor(): string {
+            return "#302200";
         }
     }
 
@@ -149,7 +158,7 @@ export default function (THEMES: ThemesInterface) {
             };
         }
         override getLineColor(): string {
-            return "#000000";
+            return "#330000";
         }
         override getFadedLineColor(): string {
             return "#4A2F24";
@@ -165,6 +174,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#000000";
+        }
+        override getShadowColor(): string {
+            return "#220000";
         }
     }
 
@@ -202,6 +214,9 @@ export default function (THEMES: ThemesInterface) {
         override getLabelTextColor(): string {
             return "#cccccc";
         }
+        override getShadowColor(): string {
+            return "#222211";
+        }
     }
 
     _("Granite"); // ensure translation
@@ -222,7 +237,7 @@ export default function (THEMES: ThemesInterface) {
             };
         }
         override getLineColor(): string {
-            return "#000000";
+            return "#331800";
         }
         override getFadedLineColor(): string {
             return "#888888";
@@ -238,6 +253,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#444444";
+        }
+        override getShadowColor(): string {
+            return "#482200";
         }
     }
 
@@ -274,6 +292,9 @@ export default function (THEMES: ThemesInterface) {
         }
         override getLabelTextColor(): string {
             return "#FFFFFF";
+        }
+        override getShadowColor(): string {
+            return "#482200";
         }
     }
 
