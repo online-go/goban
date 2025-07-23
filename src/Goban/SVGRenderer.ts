@@ -3577,7 +3577,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             // get crisp lines
             const line_width =
                 ss > TINY_SQUARE_SIZE
-                    ? Math.round(3 * Math.round(Math.max(1, ss * 0.02))) * 0.5
+                    ? Math.round(2 * Math.round(Math.max(1, ss * 0.02))) * 0.5
                     : // for very small boards, like puzzle icons, have faint lines
                       ss * 0.08;
             ox -= line_width * 0.5;
