@@ -282,6 +282,7 @@ export interface JGOFAIReview {
     strength: number;
     playouts?: number;
     visits?: number;
+    cheat_detection?: boolean;
 
     /** millisecond epoch time (ms from 1970 UTC) */
     date: number;
