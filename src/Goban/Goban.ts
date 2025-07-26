@@ -29,7 +29,7 @@ export interface GobanSelectedThemes {
     "black": string;
     "removal-graphic": "square" | "x";
     "removal-scale": number;
-    "disable-stone-shadows": boolean;
+    "disable-stone-shadows"?: boolean;
 }
 export type LabelPosition =
     | "all"

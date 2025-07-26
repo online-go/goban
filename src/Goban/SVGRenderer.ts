@@ -3889,7 +3889,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         if (force_clear || !this.grid_layer || !this.shadow_layer) {
             this.shadow_layer?.remove();
-            if (!this.themes["disable-stone-shadows"]) {
+            if (this.themes["disable-stone-shadows"] !== true) {
                 this.shadow_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
                 this.shadow_layer.setAttribute("class", "shadow-layer");
                 this.svg.appendChild(this.shadow_layer);
@@ -4983,9 +4983,10 @@ class GCell {
         const cx = mid;
         const cy = mid;
         // Handle shadows based on preference
-        const shadow_layer = transparent || this.renderer.themes["disable-stone-shadows"]
-            ? undefined
-            : this.renderer.shadow_layer;
+        const shadow_layer =
+            transparent || this.renderer.themes["disable-stone-shadows"] === true
+                ? undefined
+                : this.renderer.shadow_layer;
         const [elt, shadow] =
             color === JGOFNumericPlayerColor.BLACK
                 ? this.renderer.theme_black.placeBlackStoneSVG(
