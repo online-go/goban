@@ -4983,8 +4983,8 @@ class GCell {
         const cx = mid;
         const cy = mid;
         // Handle shadows based on preference
-        const shadow_layer = transparent || this.renderer.themes["disable-stone-shadows"] 
-            ? undefined 
+        const shadow_layer = transparent || this.renderer.themes["disable-stone-shadows"]
+            ? undefined
             : this.renderer.shadow_layer;
         const [elt, shadow] =
             color === JGOFNumericPlayerColor.BLACK
