@@ -2037,14 +2037,34 @@ export class GobanEngine extends BoardState {
 
         function node(): Array<Array<string>> {
             const ret: Array<Array<string>> = [];
+            const deferredProperties: Array<Array<string>> = [];
             if (sgf[pos] !== ";") {
                 throw new Error("Expecting ';' to start a Node");
             }
             ++pos;
             whitespace();
+
+            // First, collect all properties without processing them
             while (/[A-Za-z]/.test(sgf[pos])) {
-                ret.push(property());
+                const prop = property();
+                ret.push(prop);
+
+                // Check if this node has a move property
+                const ident = prop[0];
+                if (ident === "W" || ident === "B") {
+                    // Process the move first
+                    processProperty(ident, prop);
+                } else {
+                    // Defer other properties to be processed after moves
+                    deferredProperties.push(prop);
+                }
             }
+
+            // Now process deferred properties (like comments) after moves
+            for (const prop of deferredProperties) {
+                processProperty(prop[0], prop);
+            }
+
             return ret;
         }
 
@@ -2087,7 +2107,6 @@ export class GobanEngine extends BoardState {
                 whitespace();
             }
 
-            processProperty(ident, ret);
             return ret;
         }
 
@@ -2469,6 +2488,11 @@ export class GobanEngine extends BoardState {
         prefer_remote: boolean = false,
         should_autoscore: boolean = false,
     ): ScoreEstimator {
+        // When estimating score, we should start with a clean removal state
+        // to avoid inheriting potentially incorrect removal markings from
+        // the game's stone removal phase
+        const clean_removal = makeMatrix(this.width, this.height, false);
+
         const se = new ScoreEstimator(
             this,
             this.goban_callback,
@@ -2476,6 +2500,7 @@ export class GobanEngine extends BoardState {
             tolerance,
             prefer_remote,
             should_autoscore,
+            clean_removal,
         );
         return se.score();
     }
