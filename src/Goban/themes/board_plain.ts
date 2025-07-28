@@ -25,7 +25,8 @@ function blendWithInverseColor(raw: string, alpha: number = 1): string {
 
     const hex = raw.replace("#", "");
     if (hex.length !== 6) {
-        throw new Error(`Invalid color: ${raw}`);
+        console.error(`Invalid color: ${raw}`);
+        return raw;
     }
 
     const r = parseInt(hex.substr(0, 2), 16);
