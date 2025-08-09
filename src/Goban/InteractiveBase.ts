@@ -1715,7 +1715,7 @@ export abstract class GobanInteractive extends GobanBase {
             if (this.previous_mode === "analyze" || this.previous_mode === "conditional") {
                 this.setToPreviousMode(true);
             } else {
-                this.setMode("play");
+                this.setMode("play", true);
             }
             this.redraw(true);
         }
