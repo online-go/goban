@@ -154,12 +154,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     protected title_div?: HTMLElement;
     public event_layer?: HTMLDivElement;
 
-    private themes: GobanSelectedThemes = {
+    public themes: GobanSelectedThemes = {
         "board": "Plain",
         "black": "Plain",
         "white": "Plain",
         "removal-graphic": "x",
         "removal-scale": 1.0,
+        "disable-stone-shadows": false,
     };
     public theme_black!: GobanTheme;
     private theme_black_stones: Array<any> = [];
@@ -3889,9 +3890,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         if (force_clear || !this.grid_layer || !this.shadow_layer) {
             this.shadow_layer?.remove();
-            this.shadow_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            this.shadow_layer.setAttribute("class", "shadow-layer");
-            this.svg.appendChild(this.shadow_layer);
+            if (this.themes["disable-stone-shadows"] !== true) {
+                this.shadow_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                this.shadow_layer.setAttribute("class", "shadow-layer");
+                this.svg.appendChild(this.shadow_layer);
+            } else {
+                this.shadow_layer = undefined;
+            }
 
             this.grid_layer?.remove();
             this.grid_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -4979,12 +4984,16 @@ class GCell {
         const mid = this.renderer.metrics.mid;
         const cx = mid;
         const cy = mid;
-        // TODO: Need to handle shadows
+        // Handle shadows based on preference
+        const shadow_layer =
+            transparent || this.renderer.themes["disable-stone-shadows"] === true
+                ? undefined
+                : this.renderer.shadow_layer;
         const [elt, shadow] =
             color === JGOFNumericPlayerColor.BLACK
                 ? this.renderer.theme_black.placeBlackStoneSVG(
                       this.g,
-                      transparent ? undefined : this.renderer.shadow_layer,
+                      shadow_layer,
                       stone,
                       cx,
                       cy,
@@ -4992,7 +5001,7 @@ class GCell {
                   )
                 : this.renderer.theme_black.placeWhiteStoneSVG(
                       this.g,
-                      transparent ? undefined : this.renderer.shadow_layer,
+                      shadow_layer,
                       stone,
                       cx,
                       cy,
