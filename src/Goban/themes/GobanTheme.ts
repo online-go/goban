@@ -161,7 +161,7 @@ export class GobanTheme {
         radial_gradient.setAttribute("r", "1.0");
         radial_gradient.setAttribute(
             "gradientTransform",
-            "rotate(45) scale(1.15 .9) translate(0.05 -0.45)",
+            "rotate(45) scale(1.10 1.0) translate(0.05 -0.50)",
         );
 
         // solid stone color
