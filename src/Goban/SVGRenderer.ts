@@ -169,6 +169,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     public theme_faded_line_color: string = HOT_PINK;
     public theme_faded_star_color: string = HOT_PINK;
     //private theme_faded_text_color:string;
+    private theme_shadow_color: string = HOT_PINK;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
@@ -4022,8 +4023,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             __theme_cache.black[themes.black] = {};
         }
 
-        this.theme_black.preRenderShadowSVG(defs, "black");
-        this.theme_white.preRenderShadowSVG(defs, "white");
+        this.theme_black.preRenderShadowSVG(defs, "black", this.theme_shadow_color);
+        this.theme_white.preRenderShadowSVG(defs, "white", this.theme_shadow_color);
 
         __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
             defs,
@@ -4106,6 +4107,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
+        this.theme_shadow_color = this.theme_board.getShadowColor();
         const bg_css = this.theme_board.getBackgroundCSS();
         if (this.parent) {
             for (const key in bg_css) {
