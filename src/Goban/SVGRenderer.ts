@@ -36,7 +36,7 @@ import {
     makeMatrix,
 } from "../engine/util";
 import { callbacks } from "./callbacks";
-import { Goban, GobanMetrics, GobanSelectedThemes } from "./Goban";
+import { Goban, GobanMetrics, GobanSelectedThemes, ShadowTheme } from "./Goban";
 import { ColoredCircle } from "./InteractiveBase";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
@@ -160,7 +160,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         "white": "Plain",
         "removal-graphic": "x",
         "removal-scale": 1.0,
-        "disable-stone-shadows": false,
+        "stone-shadows": "default",
     };
     public theme_black!: GobanTheme;
     private theme_black_stones: Array<any> = [];
@@ -2399,6 +2399,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                             cx,
                             cy,
                             this.theme_stone_radius,
+                            this.resolveShadowTheme(this.themes["stone-shadows"] || "default"),
                         );
                         this.shadow_grid[j][i] = shadow;
                         if (stone_transparent) {
@@ -2418,6 +2419,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                             cx,
                             cy,
                             this.theme_stone_radius,
+                            this.resolveShadowTheme(this.themes["stone-shadows"] || "default"),
                         );
                         this.shadow_grid[j][i] = shadow;
                         if (stone_transparent) {
@@ -3890,7 +3892,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         if (force_clear || !this.grid_layer || !this.shadow_layer) {
             this.shadow_layer?.remove();
-            if (this.themes["disable-stone-shadows"] !== true) {
+            if (this.resolveShadowTheme(this.themes["stone-shadows"] || "default") !== "none") {
                 this.shadow_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
                 this.shadow_layer.setAttribute("class", "shadow-layer");
                 this.svg.appendChild(this.shadow_layer);
@@ -4028,8 +4030,22 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             __theme_cache.black[themes.black] = {};
         }
 
-        this.theme_black.preRenderShadowSVG(defs, "black", this.theme_shadow_color);
-        this.theme_white.preRenderShadowSVG(defs, "white", this.theme_shadow_color);
+        const shadowTheme = this.resolveShadowTheme(this.themes["stone-shadows"] || "default");
+        const customConfig = this.themes["custom-shadow-config"];
+        this.theme_black.preRenderShadowSVG(
+            defs,
+            "black",
+            this.theme_shadow_color,
+            shadowTheme,
+            customConfig,
+        );
+        this.theme_white.preRenderShadowSVG(
+            defs,
+            "white",
+            this.theme_shadow_color,
+            shadowTheme,
+            customConfig,
+        );
 
         __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
             defs,
@@ -4172,6 +4188,15 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.putOrClearLabel(cur.i, cur.j, this.labeling_mode);
             this.setLabelCharacterFromMarks();
         }
+    }
+
+    public resolveShadowTheme(shadowTheme: ShadowTheme): ShadowTheme {
+        if (shadowTheme === "default") {
+            // For "default", use the stone theme's preferred shadow theme
+            // Use the black theme's preference (both black and white themes should typically agree)
+            return this.theme_black?.getPreferredShadowTheme() || "mid";
+        }
+        return shadowTheme;
     }
     protected setTitle(title: string): void {
         this.title = title;
@@ -4452,10 +4477,26 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         if (color === 1) {
             const stone = theme_black_stones[stone_idx % theme_black_stones.length];
-            this.theme_black.placeBlackStoneSVG(cell, undefined, stone, cx, cy, r);
+            this.theme_black.placeBlackStoneSVG(
+                cell,
+                undefined,
+                stone,
+                cx,
+                cy,
+                r,
+                this.themes["stone-shadows"] || "mid",
+            );
         } else if (color === 2) {
             const stone = theme_white_stones[stone_idx % theme_white_stones.length];
-            this.theme_white.placeWhiteStoneSVG(cell, undefined, stone, cx, cy, r);
+            this.theme_white.placeWhiteStoneSVG(
+                cell,
+                undefined,
+                stone,
+                cx,
+                cy,
+                r,
+                this.themes["stone-shadows"] || "mid",
+            );
         } else {
             return;
         }
@@ -4986,7 +5027,9 @@ class GCell {
         const cy = mid;
         // Handle shadows based on preference
         const shadow_layer =
-            transparent || this.renderer.themes["disable-stone-shadows"] === true
+            transparent ||
+            this.renderer.resolveShadowTheme(this.renderer.themes["stone-shadows"] || "default") ===
+                "none"
                 ? undefined
                 : this.renderer.shadow_layer;
         const [elt, shadow] =
@@ -4998,14 +5041,20 @@ class GCell {
                       cx,
                       cy,
                       radius,
+                      this.renderer.resolveShadowTheme(
+                          this.renderer.themes["stone-shadows"] || "default",
+                      ),
                   )
-                : this.renderer.theme_black.placeWhiteStoneSVG(
+                : this.renderer.theme_white.placeWhiteStoneSVG(
                       this.g,
                       shadow_layer,
                       stone,
                       cx,
                       cy,
                       radius,
+                      this.renderer.resolveShadowTheme(
+                          this.renderer.themes["stone-shadows"] || "default",
+                      ),
                   );
         if (this.last_stone_shadow) {
             this.last_stone_shadow.remove();

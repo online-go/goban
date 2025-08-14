@@ -15,6 +15,8 @@
  */
 
 import { GobanBase } from "../../GobanBase";
+import { ShadowTheme, CustomShadowConfig } from "../Goban";
+import { callbacks } from "../callbacks";
 
 let last_def_uid = 0;
 
@@ -54,6 +56,18 @@ export interface SVGStoneParameters {
         fy?: number;
     };
     url?: string;
+}
+
+export interface GradientStopConfig {
+    offset: string;
+    color: string;
+    opacity: string;
+}
+
+export interface ShadowConfig {
+    gradientTransform: string;
+    actualShadowColor: string;
+    stops: GradientStopConfig[];
 }
 
 export class GobanTheme {
@@ -151,61 +165,139 @@ export class GobanTheme {
         return ret;
     }
 
-    public preRenderShadowSVG(defs: SVGDefsElement, color: string, shadow_color: string): void {
-        /* Radial gradient for shadow */
-        const radial_gradient = document.createElementNS(
+    public preRenderShadowSVG(
+        defs: SVGDefsElement,
+        color: string,
+        shadow_color: string,
+        shadow_theme: ShadowTheme = "mid",
+        custom_config?: CustomShadowConfig,
+    ): void {
+        if (shadow_theme === "none") {
+            return; // No shadow to render
+        }
+
+        // For anime theme, we don't need to pre-render gradients as it uses image shadows
+        if (shadow_theme === "anime") {
+            return; // Anime shadows are handled by placeStoneShadowSVG with images
+        }
+
+        const shadowConfig = this.getShadowConfig(shadow_theme, color, shadow_color, custom_config);
+        const radialGradient = this.createRadialGradient("shadow-" + color, shadowConfig);
+
+        defs.appendChild(radialGradient);
+    }
+
+    /**
+     * Gets the shadow configuration for a given theme
+     */
+    private getShadowConfig(
+        shadow_theme: ShadowTheme,
+        color: string,
+        shadow_color: string,
+        custom_config?: CustomShadowConfig,
+    ): ShadowConfig {
+        if (shadow_theme === "custom" && custom_config) {
+            // Get color-specific config with fallback to default shadow_color
+            const colorSpecificConfig =
+                color === "black" ? custom_config.black : custom_config.white;
+
+            const customGradientTransform =
+                colorSpecificConfig?.gradientTransform ||
+                "rotate(45) scale(1.10 1.0) translate(0.05 -0.50)";
+
+            const customColor = colorSpecificConfig?.shadow_color || shadow_color;
+
+            return {
+                gradientTransform: customGradientTransform,
+                actualShadowColor: customColor,
+                stops: [
+                    { offset: "0", color: customColor, opacity: "1.0" },
+                    { offset: "0%", color: customColor, opacity: "1" },
+                    { offset: "25%", color: customColor, opacity: "0.8" },
+                    { offset: "35%", color: customColor, opacity: "0.4" },
+                    { offset: "45%", color: customColor, opacity: "0.1" },
+                    { offset: "50%", color: customColor, opacity: "0.0" },
+                ],
+            };
+        } else if (shadow_theme === "low") {
+            // Old pre-2025 shadow implementation (low theme)
+            return {
+                gradientTransform: "", // No gradient transform for low theme
+                actualShadowColor: "#333333",
+                stops: [
+                    { offset: "0", color: color, opacity: "1.0" },
+                    { offset: "30%", color: color, opacity: "1.0" },
+                    { offset: "31%", color: "#333333", opacity: "0.6" },
+                    { offset: "34%", color: "#333333", opacity: "0.50" },
+                    { offset: "40%", color: "#333333", opacity: "0.30" },
+                    { offset: "50%", color: "#333333", opacity: "0.0" },
+                ],
+            };
+        } else if (shadow_theme === "high") {
+            // High theme
+            return {
+                gradientTransform: "rotate(45) scale(1.10 1.0) translate(0.05 -0.50)",
+                actualShadowColor: shadow_color,
+                stops: [
+                    { offset: "0", color: shadow_color, opacity: "1.0" },
+                    { offset: "0%", color: shadow_color, opacity: "1" },
+                    { offset: "25%", color: shadow_color, opacity: "0.8" },
+                    { offset: "35%", color: shadow_color, opacity: "0.4" },
+                    { offset: "45%", color: shadow_color, opacity: "0.1" },
+                    { offset: "50%", color: shadow_color, opacity: "0.0" },
+                ],
+            };
+        } else {
+            // Mid theme: same as high but with smaller scale (default)
+            return {
+                gradientTransform: "rotate(45) scale(1.0 1.0) translate(0.05 -0.50)",
+                actualShadowColor: shadow_color,
+                stops: [
+                    { offset: "0", color: shadow_color, opacity: "1.0" },
+                    { offset: "0%", color: shadow_color, opacity: "1" },
+                    { offset: "25%", color: shadow_color, opacity: "0.8" },
+                    { offset: "35%", color: shadow_color, opacity: "0.4" },
+                    { offset: "45%", color: shadow_color, opacity: "0.1" },
+                    { offset: "50%", color: shadow_color, opacity: "0.0" },
+                ],
+            };
+        }
+    }
+
+    /**
+     * Creates a radial gradient SVG element with the given configuration
+     */
+    private createRadialGradient(id: string, config: ShadowConfig): SVGRadialGradientElement {
+        const radialGradient = document.createElementNS(
             "http://www.w3.org/2000/svg",
             "radialGradient",
         );
-        radial_gradient.setAttribute("id", "shadow-" + color);
-        radial_gradient.setAttribute("r", "1.0");
-        radial_gradient.setAttribute(
-            "gradientTransform",
-            "rotate(45) scale(1.10 1.0) translate(0.05 -0.50)",
-        );
 
-        // solid stone color
-        const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-        stop1.setAttribute("offset", "0");
-        stop1.setAttribute("stop-color", shadow_color);
-        stop1.setAttribute("stop-opacity", "1.0");
-        radial_gradient.appendChild(stop1);
-        const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-        stop2.setAttribute("offset", "0%");
-        stop2.setAttribute("stop-color", shadow_color);
-        stop2.setAttribute("stop-opacity", "1");
-        radial_gradient.appendChild(stop2);
+        radialGradient.setAttribute("id", id);
+        radialGradient.setAttribute("r", "1.0");
 
-        {
-            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-            shadow_stop.setAttribute("offset", "25%");
-            shadow_stop.setAttribute("stop-color", shadow_color);
-            shadow_stop.setAttribute("stop-opacity", "0.8");
-            radial_gradient.appendChild(shadow_stop);
-        }
-        {
-            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-            shadow_stop.setAttribute("offset", "35%");
-            shadow_stop.setAttribute("stop-color", shadow_color);
-            shadow_stop.setAttribute("stop-opacity", "0.4");
-            radial_gradient.appendChild(shadow_stop);
-        }
-        {
-            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-            shadow_stop.setAttribute("offset", "45%");
-            shadow_stop.setAttribute("stop-color", shadow_color);
-            shadow_stop.setAttribute("stop-opacity", "0.1");
-            radial_gradient.appendChild(shadow_stop);
-        }
-        {
-            const shadow_stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-            shadow_stop.setAttribute("offset", "50%");
-            shadow_stop.setAttribute("stop-color", shadow_color);
-            shadow_stop.setAttribute("stop-opacity", "0.0");
-            radial_gradient.appendChild(shadow_stop);
+        if (config.gradientTransform) {
+            radialGradient.setAttribute("gradientTransform", config.gradientTransform);
         }
 
-        defs.appendChild(radial_gradient);
+        // Add all stop elements
+        config.stops.forEach((stopConfig) => {
+            const stop = this.createGradientStop(stopConfig);
+            radialGradient.appendChild(stop);
+        });
+
+        return radialGradient;
+    }
+
+    /**
+     * Creates a single SVG stop element
+     */
+    private createGradientStop(config: GradientStopConfig): SVGStopElement {
+        const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop.setAttribute("offset", config.offset);
+        stop.setAttribute("stop-color", config.color);
+        stop.setAttribute("stop-opacity", config.opacity);
+        return stop;
     }
 
     /* Places a pre rendered stone onto the canvas, centered at cx, cy */
@@ -245,9 +337,27 @@ export class GobanTheme {
         cy: number,
         radius: number,
         color: string,
+        shadow_theme: ShadowTheme = "mid",
     ): SVGElement | undefined {
-        if (!shadow_cell) {
+        if (!shadow_cell || shadow_theme === "none") {
             return;
+        }
+
+        // For anime theme, use image-based shadow like the Anime stone theme
+        if (shadow_theme === "anime") {
+            const shadow = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            shadow.setAttribute("class", "stone");
+            shadow.setAttribute("x", `${cx - radius * 0.98}`);
+            shadow.setAttribute("y", `${cy - radius * 1.05}`);
+            shadow.setAttribute("width", `${radius * 2 * 1.05}`);
+            shadow.setAttribute("height", `${radius * 2 * 1.14}`);
+            shadow.setAttributeNS(
+                "http://www.w3.org/1999/xlink",
+                "href",
+                this.getCDNReleaseBase() + "/img/anime_shadow.svg",
+            );
+            shadow_cell.appendChild(shadow);
+            return shadow;
         }
 
         const circle_to_cast_shadow = document.createElementNS(
@@ -255,9 +365,18 @@ export class GobanTheme {
             "circle",
         );
         circle_to_cast_shadow.setAttribute("fill", `url(#shadow-${color})`);
-        circle_to_cast_shadow.setAttribute("cx", (cx * 1.5).toString());
-        circle_to_cast_shadow.setAttribute("cy", (cy * 1.5).toString());
-        circle_to_cast_shadow.setAttribute("r", (radius * 1.1).toString());
+
+        // Set shadow position and size based on theme
+        if (shadow_theme === "low") {
+            circle_to_cast_shadow.setAttribute("cx", (cx * 1.2).toString());
+            circle_to_cast_shadow.setAttribute("cy", (cy * 1.2).toString());
+            circle_to_cast_shadow.setAttribute("r", (radius * 0.95).toString());
+        } else {
+            circle_to_cast_shadow.setAttribute("cx", (cx * 1.5).toString());
+            circle_to_cast_shadow.setAttribute("cy", (cy * 1.5).toString());
+            circle_to_cast_shadow.setAttribute("r", (radius * 1.1).toString());
+        }
+
         shadow_cell.appendChild(circle_to_cast_shadow);
         return circle_to_cast_shadow;
     }
@@ -270,8 +389,16 @@ export class GobanTheme {
         cy: number,
         radius: number,
         shadow_circle_color: string,
+        shadow_theme: ShadowTheme = "mid",
     ): [SVGElement, SVGElement | undefined] {
-        const shadow = this.placeStoneShadowSVG(shadow_cell, cx, cy, radius, shadow_circle_color);
+        const shadow = this.placeStoneShadowSVG(
+            shadow_cell,
+            cx,
+            cy,
+            radius,
+            shadow_circle_color,
+            shadow_theme,
+        );
 
         const ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
         ref.setAttribute("href", `#${stone}`);
@@ -289,8 +416,9 @@ export class GobanTheme {
         cx: number,
         cy: number,
         radius: number,
+        shadow_theme: ShadowTheme = "mid",
     ): [SVGElement, SVGElement | undefined] {
-        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "white");
+        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "white", shadow_theme);
     }
 
     public placeBlackStoneSVG(
@@ -300,8 +428,9 @@ export class GobanTheme {
         cx: number,
         cy: number,
         radius: number,
+        shadow_theme: ShadowTheme = "mid",
     ): [SVGElement, SVGElement | undefined] {
-        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "black");
+        return this.placeStoneSVG(cell, shadow_cell, stone, cx, cy, radius, "black", shadow_theme);
     }
 
     /* Resolve which stone graphic we should use. By default we just pick a
@@ -334,6 +463,11 @@ export class GobanTheme {
      * speeds up rendering typically */
     public stoneCastsShadow(_radius: number): boolean {
         return false;
+    }
+
+    /* Returns the preferred shadow theme for this stone theme when "default" is selected */
+    public getPreferredShadowTheme(): ShadowTheme {
+        return "mid"; // Default to mid shadow theme for most stone themes
     }
 
     /* Returns the color that should be used for white stones */
@@ -500,5 +634,13 @@ export class GobanTheme {
         const uid = last_def_uid++;
 
         return `${base}-${uid}`;
+    }
+
+    /* Helper method to get CDN release base URL */
+    protected getCDNReleaseBase(): string {
+        if (callbacks.getCDNReleaseBase) {
+            return callbacks.getCDNReleaseBase();
+        }
+        return "";
     }
 }
