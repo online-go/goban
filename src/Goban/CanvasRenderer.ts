@@ -137,7 +137,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         "white": "Plain",
         "removal-graphic": "x",
         "removal-scale": 1.0,
-        "disable-stone-shadows": false,
+        "stone-shadows": "default",
     };
     private theme_black!: GobanTheme;
     private theme_black_stones: Array<any> = [];

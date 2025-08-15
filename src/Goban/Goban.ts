@@ -23,13 +23,27 @@ import { getRelativeEventPosition } from "./canvas_utils";
 import { THEMES, THEMES_SORTED } from "./themes";
 
 export const GOBAN_FONT = "Verdana,Arial,sans-serif";
+export type ShadowTheme = "none" | "low" | "mid" | "high" | "custom" | "default" | "anime";
+
+export interface CustomShadowConfig {
+    black?: {
+        gradientTransform?: string;
+        shadow_color?: string;
+    };
+    white?: {
+        gradientTransform?: string;
+        shadow_color?: string;
+    };
+}
+
 export interface GobanSelectedThemes {
     "board": string;
     "white": string;
     "black": string;
     "removal-graphic": "square" | "x";
     "removal-scale": number;
-    "disable-stone-shadows"?: boolean;
+    "stone-shadows"?: ShadowTheme;
+    "custom-shadow-config"?: CustomShadowConfig;
 }
 export type LabelPosition =
     | "all"
@@ -94,7 +108,7 @@ export abstract class Goban extends OGSConnectivity {
             "board": "Kaya",
             "removal-graphic": "square",
             "removal-scale": 1.0,
-            "disable-stone-shadows": false,
+            "stone-shadows": "default",
         };
     }
 

@@ -17,6 +17,7 @@
 import { GobanTheme } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { _ } from "../../engine/translate";
+import { ShadowTheme } from "../Goban";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 import { renderShadow } from "./rendered_stones";
 import { renderPlainStone } from "./plain_stones";
@@ -236,30 +237,8 @@ export default function (THEMES: ThemesInterface) {
             return "#000000";
         }
 
-        public override placeStoneShadowSVG(
-            shadow_cell: SVGGraphicsElement | undefined,
-            cx: number,
-            cy: number,
-            radius: number,
-        ): SVGElement | undefined {
-            if (!shadow_cell) {
-                return;
-            }
-
-            const shadow = document.createElementNS("http://www.w3.org/2000/svg", "image");
-            shadow.setAttribute("class", "stone");
-            shadow.setAttribute("x", `${cx - radius * 0.98}`);
-            shadow.setAttribute("y", `${cy - radius * 1.05}`);
-            shadow.setAttribute("width", `${radius * 2 * 1.05}`);
-            shadow.setAttribute("height", `${radius * 2 * 1.14}`);
-            shadow.setAttributeNS(
-                "http://www.w3.org/1999/xlink",
-                "href",
-                getCDNReleaseBase() + "/img/anime_shadow.svg",
-            );
-            shadow_cell.appendChild(shadow);
-
-            return shadow;
+        override getPreferredShadowTheme(): ShadowTheme {
+            return "anime";
         }
 
         public override preRenderBlackSVG(
