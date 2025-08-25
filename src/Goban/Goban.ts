@@ -74,8 +74,12 @@ export abstract class Goban extends OGSConnectivity {
     protected abstract setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void;
 
     public parent!: HTMLElement;
+    protected title_div?: HTMLElement;
+    public evaluation_bar_container?: HTMLDivElement;
+    public evaluation_bar_div?: HTMLDivElement;
     private analysis_scoring_color?: "black" | "white" | string;
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
+    private _evaluation: number = 0.5;
 
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super(config, preloaded_data);
@@ -91,9 +95,56 @@ export abstract class Goban extends OGSConnectivity {
                 this.setSquareSizeBasedOnDisplayWidth(this.display_width, suppress_redraw);
             }
         });
+
+        if (config.board_div) {
+            this.parent = config["board_div"];
+        } else {
+            this.no_display = true;
+            // unattached div dangle prevent null pointer refs
+            this.parent = document.createElement("div");
+        }
+        this.title_div = config["title_div"];
+
+        if (config.evaluation_bar) {
+            this.parent.style.position = "relative";
+            this.evaluation_bar_container = document.createElement("div");
+            this.evaluation_bar_container.style.position = "absolute";
+            this.evaluation_bar_container.style.top = "0";
+            this.evaluation_bar_container.style.left = "-1rem";
+            this.evaluation_bar_container.style.bottom = "0";
+            this.evaluation_bar_container.style.width = "0.5rem";
+            this.evaluation_bar_container.style.backgroundColor = "white";
+            this.evaluation_bar_container.style.marginRight = "4px";
+            this.evaluation_bar_container.style.overflow = "hidden";
+            //this.evaluation_bar_container.style.border = "1px solid #333";
+            this.evaluation_bar_div = document.createElement("div");
+            this.evaluation_bar_div.style.position = "absolute";
+            this.evaluation_bar_div.style.right = "0";
+            this.evaluation_bar_div.style.left = "0";
+            this.evaluation_bar_div.style.bottom = "0";
+            this.evaluation_bar_div.style.backgroundColor = "#112";
+            this.evaluation_bar_div.style.height = `${this._evaluation * 100}%`;
+            this.evaluation_bar_div.style.transition = "height 0.3s ease-in-out";
+            this.evaluation_bar_div.style.zIndex = "1000";
+            this.evaluation_bar_div.style.width = "100%";
+            this.evaluation_bar_container.appendChild(this.evaluation_bar_div);
+            this.evaluation_bar_container.style.border = "1px solid #666";
+            this.parent.appendChild(this.evaluation_bar_container);
+        }
     }
     public override destroy(): void {
         super.destroy();
+    }
+
+    set evaluation(value: number) {
+        value = Math.max(0, Math.min(1, value));
+        if (this.evaluation_bar_div) {
+            this.evaluation_bar_div.style.height = `${value * 100}%`;
+        }
+    }
+
+    get evaluation(): number {
+        return this._evaluation;
     }
 
     protected getSelectedThemes(): GobanSelectedThemes {
@@ -228,6 +279,7 @@ export abstract class Goban extends OGSConnectivity {
             draw_right_labels: this.draw_right_labels,
             draw_top_labels: this.draw_top_labels,
             draw_bottom_labels: this.draw_bottom_labels,
+            evaluation_bar: !!this.evaluation_bar_container,
         });
         this.setSquareSize(square_size, suppress_redraw);
     }
@@ -241,6 +293,7 @@ export abstract class Goban extends OGSConnectivity {
             draw_right_labels: boolean;
             draw_top_labels: boolean;
             draw_bottom_labels: boolean;
+            evaluation_bar: boolean;
         },
     ): number {
         const {
@@ -266,6 +319,10 @@ export abstract class Goban extends OGSConnectivity {
             console.warn("Invalid n_squares, falling back to board size with no labels");
             const fallback_n_squares = Math.max(bounded_width, bounded_height);
             return Math.floor(display_width / fallback_n_squares);
+        }
+
+        if (config.evaluation_bar) {
+            display_width -= 16 * 2;
         }
 
         return Math.floor(display_width / n_squares);

@@ -51,12 +51,7 @@ const __theme_cache: {
 
 declare let ResizeObserver: any;
 
-export interface CanvasRendererGobanConfig extends GobanConfig {
-    board_div?: HTMLElement;
-    title_div?: HTMLElement;
-    move_tree_container?: HTMLElement;
-    last_move_opacity?: number;
-}
+export interface CanvasRendererGobanConfig extends GobanConfig {}
 
 interface ViewPortInterface {
     offset_x: number;
