@@ -80,6 +80,7 @@ export abstract class Goban extends OGSConnectivity {
     private analysis_scoring_color?: "black" | "white" | string;
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
     private _evaluation: number = 0.5;
+    private _evaluation_bar_width: number = 8;
 
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super(config, preloaded_data);
@@ -282,6 +283,24 @@ export abstract class Goban extends OGSConnectivity {
             evaluation_bar: !!this.evaluation_bar_container,
         });
         this.setSquareSize(square_size, suppress_redraw);
+        this.evaluation_bar_width = Goban.computeEvaluationBarWidth(this.display_width);
+    }
+
+    set evaluation_bar_width(width: number) {
+        this._evaluation_bar_width = Math.max(0, Math.round(width));
+        if (this.evaluation_bar_container && this.evaluation_bar_div) {
+            this.evaluation_bar_container.style.width = `${this._evaluation_bar_width}px`;
+            this.evaluation_bar_container.style.left = `-${this._evaluation_bar_width + 8}px`;
+            this.evaluation_bar_div.style.width = `${this._evaluation_bar_width}px`;
+        }
+    }
+
+    get evaluation_bar_width(): number {
+        return this._evaluation_bar_width;
+    }
+
+    public static computeEvaluationBarWidth(display_width: number): number {
+        return Math.max(8, Math.round(display_width * 0.03));
     }
 
     public static computeSquareSizeFromDisplayWidth(
@@ -322,7 +341,7 @@ export abstract class Goban extends OGSConnectivity {
         }
 
         if (config.evaluation_bar) {
-            display_width -= 16 * 2;
+            display_width -= Goban.computeEvaluationBarWidth(display_width) * 2;
         }
 
         return Math.floor(display_width / n_squares);
