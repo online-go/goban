@@ -66,12 +66,7 @@ const USE_SHADOW_DOM =
     CSSStyleSheet !== undefined &&
     canConstructStyleSheet();
 
-export interface SVGRendererGobanConfig extends GobanConfig {
-    board_div?: HTMLElement;
-    title_div?: HTMLElement;
-    move_tree_container?: HTMLElement;
-    last_move_opacity?: number;
-}
+export interface SVGRendererGobanConfig extends GobanConfig {}
 
 interface MoveTreeViewPortInterface {
     offset_x: number;
@@ -151,7 +146,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     public metrics: GobanMetrics = { width: NaN, height: NaN, mid: NaN, offset: NaN };
 
     private drawing_enabled: boolean = true;
-    protected title_div?: HTMLElement;
     public event_layer?: HTMLDivElement;
 
     public themes: GobanSelectedThemes = {
@@ -182,15 +176,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
 
-        if (config.board_div) {
-            this.parent = config["board_div"];
-        } else {
-            this.no_display = true;
-            // unattached div dangle prevent null pointer refs
-            this.parent = document.createElement("div");
-        }
-
-        this.title_div = config["title_div"];
         this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
         if (USE_SHADOW_DOM) {
@@ -199,6 +184,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             if (shadow_root.childNodes.length) {
                 shadow_root.childNodes.forEach((child) => child.remove());
             }
+
+            if (this.evaluation_bar_container) {
+                shadow_root.appendChild(this.evaluation_bar_container);
+            }
+
             //throw new Error("Shadow root already has children");
             //const shadow_root = this.parent.attachShadow({ mode: "closed" });
             shadow_root.appendChild(this.svg);

@@ -67,11 +67,16 @@ export interface GobanBounds {
 export type GobanChatLog = Array<GameChatLine>;
 
 export interface GobanConfig extends GobanEngineConfig, PuzzleConfig {
+    board_div?: HTMLElement;
+    title_div?: HTMLElement;
+    move_tree_container?: HTMLElement;
+    last_move_opacity?: number;
     display_width?: number;
 
     interactive?: boolean;
     mode?: GobanModes;
     square_size?: number | ((goban: GobanBase) => number) | "auto";
+    evaluation_bar?: boolean;
 
     getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
 

@@ -51,12 +51,7 @@ const __theme_cache: {
 
 declare let ResizeObserver: any;
 
-export interface CanvasRendererGobanConfig extends GobanConfig {
-    board_div?: HTMLElement;
-    title_div?: HTMLElement;
-    move_tree_container?: HTMLElement;
-    last_move_opacity?: number;
-}
+export interface CanvasRendererGobanConfig extends GobanConfig {}
 
 interface ViewPortInterface {
     offset_x: number;
@@ -129,7 +124,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private drawing_enabled: boolean = true;
     private pen_ctx?: CanvasRenderingContext2D;
     private pen_layer?: HTMLCanvasElement;
-    protected title_div?: HTMLElement;
 
     private themes: GobanSelectedThemes = {
         "board": "Plain",
@@ -158,18 +152,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
 
-        // console.log("Goban canvas v 0.5.74.debug 5"); // GaJ: I use this to be sure I have linked & loaded the updates
-        if (config.board_div) {
-            this.parent = config["board_div"];
-        } else {
-            this.no_display = true;
-            this.parent =
-                document.createElement(
-                    "div",
-                ); /* let a div dangle in no-mans land to prevent null pointer refs */
-        }
-
-        this.title_div = config["title_div"];
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
