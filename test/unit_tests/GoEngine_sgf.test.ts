@@ -180,3 +180,21 @@ test("test for comments being attached to right nodes", () => {
     goban2.engine.jumpToOfficialMoveNumber(2);
     expect(goban2.engine.cur_move.text).toBe("second comment");
 });
+
+// See https://github.com/online-go/online-go.com/issues/2005
+test("MoveTree.toSgf() does not emit parentheses for linear sequence", () => {
+    // Create a goban with just a few moves in the main trunk
+    const goban = new TestGoban({ moves: [] });
+
+    // Play a sequence of moves
+    goban.engine.place(3, 3); // Black [dd]
+    goban.engine.place(15, 15); // White [pp]
+    goban.engine.place(3, 15); // Black [dp]
+    goban.engine.place(15, 3); // White [pd]
+
+    // Get the SGF output from the move tree
+    const sgf = goban.engine.move_tree.toSGF();
+
+    expect(sgf.includes("(")).toBe(false);
+    expect(sgf.includes(")")).toBe(false);
+});
