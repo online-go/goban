@@ -90,7 +90,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         const ret = super.post_config_constructor();
 
         if ("server_socket" in this.config && this.config["server_socket"]) {
-            if (!this.preloaded_data) {
+            if (!this.preloaded_data && this.interactive) {
                 this.showMessage("loading", undefined, -1);
             }
             this.connect(this.config["server_socket"]);
