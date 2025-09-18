@@ -47,6 +47,12 @@ const __theme_cache: {
     black: {},
     white: {},
 };
+const __move_tree_theme_cache: {
+    [color: string]: { [name: string]: { [size: string]: any } };
+} = {
+    black: {},
+    white: {},
+};
 //const __theme_defs_cache: { [radius: number]: SVGDefsElement } = {};
 
 declare let ResizeObserver: any;
@@ -4009,15 +4015,17 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.emit("clear-message");
     }
 
-    protected generateSvgDefs(radius: number): SVGDefsElement {
+    protected generateSvgDefs(radius: number, for_move_tree: boolean): SVGDefsElement {
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         const themes = this.themes;
 
-        if (!(themes.white in __theme_cache.white)) {
-            __theme_cache.white[themes.white] = {};
+        const cache = for_move_tree ? __move_tree_theme_cache : __theme_cache;
+
+        if (!(themes.white in cache.white)) {
+            cache.white[themes.white] = {};
         }
-        if (!(themes.black in __theme_cache.black)) {
-            __theme_cache.black[themes.black] = {};
+        if (!(themes.black in cache.black)) {
+            cache.black[themes.black] = {};
         }
 
         const shadowTheme = this.resolveShadowTheme(this.themes["stone-shadows"] || "default");
@@ -4037,13 +4045,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             customConfig,
         );
 
-        __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
+        cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
             defs,
             radius,
             23434,
             () => {},
         );
-        __theme_cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
+        cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
             defs,
             radius,
             2081,
@@ -4088,12 +4096,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         try {
             this.svg_defs?.remove();
-            this.svg_defs = this.generateSvgDefs(this.theme_stone_radius);
+            this.svg_defs = this.generateSvgDefs(this.theme_stone_radius, false);
             this.svg.appendChild(this.svg_defs);
 
             if (this.move_tree_svg) {
                 this.move_tree_svg_defs?.remove();
-                this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius);
+                this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius, true);
                 this.move_tree_svg.appendChild(this.move_tree_svg_defs);
             }
         } catch (e) {
@@ -4241,7 +4249,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 this.move_tree_inner_container.appendChild(this.move_tree_svg);
             }
 
-            this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius);
+            this.move_tree_svg_defs = this.generateSvgDefs(MoveTree.stone_radius, true);
             this.move_tree_container.appendChild(this.move_tree_inner_container);
             this.move_tree_bindEvents(this.move_tree_svg);
             this.move_tree_container.style.position = "relative";
@@ -4456,8 +4464,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             cell.setAttribute("opacity", "0.6");
         }
 
-        const theme_white_stones = __theme_cache.white[this.themes.white][r];
-        const theme_black_stones = __theme_cache.black[this.themes.black][r];
+        const theme_white_stones = __move_tree_theme_cache.white[this.themes.white][r];
+        const theme_black_stones = __move_tree_theme_cache.black[this.themes.black][r];
 
         if (!theme_white_stones || !theme_black_stones) {
             throw new Error(
