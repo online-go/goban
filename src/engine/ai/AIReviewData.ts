@@ -21,6 +21,13 @@ import * as protocol from "../protocol";
 import { MoveTree } from "../MoveTree";
 import { deepClone } from "../util";
 import { GobanMoveErrorMessageId } from "../GobanError";
+import { GobanEngine } from "../GobanEngine";
+import {
+    AiReviewCategorization,
+    AIReviewData_categorize,
+    DEFAULT_SCORE_DIFF_THRESHOLDS,
+    ScoreDiffThresholds,
+} from "./categorize";
 
 export interface AIReviewDataEvents {
     connected: () => void;
@@ -29,11 +36,17 @@ export interface AIReviewDataEvents {
     update: () => void;
 }
 
+/**
+ * AI Review data management class.
+ *
+ * Takes care of socket communication and updating AI review data as it streams in.
+ * */
 export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JGOFAIReview {
     public readonly socket: GobanSocket<protocol.ClientToAIServer, protocol.AIServerToClient>;
     public readonly uuid: string;
     private ai_review: JGOFAIReview;
     public readonly move_tree: MoveTree;
+    private analysis_requests_made: { [id: string]: boolean } = {};
 
     constructor(
         socket: GobanSocket<protocol.ClientToAIServer, protocol.AIServerToClient>,
@@ -310,5 +323,57 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
                 this.emit("update");
             }, 100);
         }
+    }
+
+    public analyze_variation(
+        uuid: string,
+        game_id: number,
+        ai_review_id: number,
+        cur_move: MoveTree,
+        trunk_move: MoveTree,
+    ): void {
+        if (!this.socket.connected) {
+            console.warn(
+                "Not sending request for variation analysis since we weren't connected to the AI server",
+            );
+            return;
+        }
+
+        const trunk_move_string = trunk_move.getMoveStringToThisPoint();
+        const cur_move_string = cur_move.getMoveStringToThisPoint();
+        const variation = cur_move_string.slice(trunk_move_string.length);
+        const key = `${uuid}-${game_id}-${ai_review_id}-${trunk_move.move_number}-${variation}`;
+        if (key in this.analysis_requests_made) {
+            return;
+        }
+
+        if (trunk_move_string.includes("undefined")) {
+            console.error("Trunk move string includes undefined", trunk_move_string);
+        } else if (cur_move_string.includes("undefined")) {
+            console.error("Current move string includes undefined", cur_move_string);
+        } else if (variation.includes("undefined")) {
+            console.error("Variation includes undefined", variation);
+        } else {
+            console.debug("Sending request for variation analysis", variation);
+        }
+
+        this.analysis_requests_made[key] = true;
+
+        const req = {
+            uuid: uuid,
+            game_id: game_id,
+            ai_review_id: ai_review_id,
+            from: trunk_move.move_number,
+            variation: variation,
+        };
+        this.socket.send("ai-analyze-variation", req);
+    }
+
+    public categorize(
+        engine: GobanEngine,
+        thresholds: ScoreDiffThresholds = DEFAULT_SCORE_DIFF_THRESHOLDS,
+        include_negative_score_loss: boolean = false,
+    ): AiReviewCategorization | null {
+        return AIReviewData_categorize(this, engine, thresholds, include_negative_score_loss);
     }
 }

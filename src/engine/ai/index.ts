@@ -15,4 +15,9 @@
  */
 
 export * from "./AIReviewData";
-export * from "./ai_request_variation_analysis";
+export {
+    type AiReviewCategorization,
+    type ScoreDiffThresholds,
+    type MoveCategory,
+    DEFAULT_SCORE_DIFF_THRESHOLDS,
+} from "./categorize";
