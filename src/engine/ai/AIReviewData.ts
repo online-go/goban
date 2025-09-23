@@ -178,22 +178,22 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
         this.emit("metadata", ai_review);
     }
 
-    private deferred_update_timeout?: ReturnType<typeof setTimeout>;
-    private deferred_queue?: { [key: string]: any };
+    private debounce_update?: ReturnType<typeof requestAnimationFrame>;
+    private debounce_queue?: { [key: string]: any };
 
     private processUpdate(data: { [key: string]: any }) {
         const move_tree = this.move_tree;
 
-        if (this.deferred_queue) {
+        if (this.debounce_queue) {
             for (const key in data) {
-                this.deferred_queue[key] = data[key];
+                this.debounce_queue[key] = data[key];
             }
         } else {
-            this.deferred_queue = data;
-            this.deferred_update_timeout = setTimeout(() => {
-                const data = this.deferred_queue;
-                delete this.deferred_update_timeout;
-                delete this.deferred_queue;
+            this.debounce_queue = data;
+            this.debounce_update = requestAnimationFrame(() => {
+                const data = this.debounce_queue;
+                delete this.debounce_update;
+                delete this.debounce_queue;
 
                 for (const key in data) {
                     const value = data[key];
@@ -321,7 +321,7 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
                 }
 
                 this.emit("update");
-            }, 100);
+            });
         }
     }
 
