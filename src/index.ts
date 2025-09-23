@@ -17,6 +17,7 @@
 export * from "./engine";
 export * from "./engine/protocol";
 export * from "./engine/formats";
+export * from "./engine/ai";
 export * from "./GobanBase";
 export * from "./Goban/callbacks";
 export * from "./Goban/canvas_utils";
