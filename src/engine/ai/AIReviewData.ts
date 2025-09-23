@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import EventEmitter from "eventemitter3";
+import { EventEmitter } from "eventemitter3";
 import { GobanSocket, GobanSocketEvents } from "../GobanSocket";
 import { JGOFAIReview, JGOFAIReviewMove } from "../formats/JGOF";
 import * as protocol from "../protocol";
