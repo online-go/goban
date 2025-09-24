@@ -27,7 +27,7 @@
  *
  *    `[command: string, data: any, id?: number]`
  *
- * where command is one of the commands listed in the [[ClientToServer]] protocol,
+ * where command is one of the commands listed in the {@link ClientToServer} protocol,
  * data is the data associated with that command, and id is an optional
  * request id that will be echoed in a response if a response is requested.
  *
@@ -39,7 +39,7 @@
  *
  *    `[id: number, data?: any, error?: {code: string, message: string}]`
  *
- * where event_name/data is listed in the [[ServerToClient]] protocol, or if
+ * where event_name/data is listed in the {@link ServerToClient} protocol, or if
  * the message is a response to a command sent by the client, the id
  * and the data for the response. Exactly one response will be sent for
  * a given command if an id was sent with the request. If no id was sent,
