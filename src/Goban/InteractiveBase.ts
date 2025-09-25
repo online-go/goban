@@ -266,7 +266,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected last_review_message: ReviewMessage;
     protected last_sound_played_for_a_stone_placement?: string;
     protected last_stone_sound: number;
-    protected move_selected?: JGOFIntersection;
+    public move_selected?: JGOFIntersection;
     protected no_display: boolean;
     protected onError?: (error: Error) => void;
     protected on_game_screen: boolean;
@@ -622,11 +622,6 @@ export abstract class GobanInteractive extends GobanBase {
         if (tool === "draw") {
             this.enablePen();
         }
-    }
-
-    protected setSubmit(fn?: () => void): void {
-        this.submit_move = fn;
-        this.emit("submit_move", fn);
     }
 
     public markDirty(): void {
@@ -1263,7 +1258,7 @@ export abstract class GobanInteractive extends GobanBase {
             return false;
         }
 
-        this.setSubmit();
+        this.submit_move = undefined;
 
         if (
             ["play", "analyze", "conditional", "edit", "score estimation", "puzzle"].indexOf(
@@ -1717,6 +1712,7 @@ export abstract class GobanInteractive extends GobanBase {
             } else {
                 this.setMode("play", true);
             }
+            this.enableStonePlacement();
             this.redraw(true);
         }
 

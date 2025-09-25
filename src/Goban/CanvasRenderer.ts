@@ -799,7 +799,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return;
         }
 
-        this.setSubmit(undefined);
+        this.submit_move = undefined;
 
         const tap_time = Date.now();
         let removed_count = 0;
@@ -1114,7 +1114,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         if (this.one_click_submit || double_tap) {
                             submit();
                         } else {
-                            this.setSubmit(submit);
+                            this.submit_move = submit;
                         }
                         break;
                     case "analyze":
