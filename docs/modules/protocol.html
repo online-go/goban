@@ -6,14 +6,14 @@ a third party client.</p>
 messages.</p>
 <p>Messages sent from the client to the server have the following format</p>
 <p>   <code>[command: string, data: any, id?: number]</code></p>
-<p>where command is one of the commands listed in the [[ClientToServer]] protocol,
+<p>where command is one of the commands listed in the <a href="../interfaces/protocol.ClientToServer.html" class="tsd-kind-interface">ClientToServer</a> protocol,
 data is the data associated with that command, and id is an optional
 request id that will be echoed in a response if a response is requested.</p>
 <p>Messages sent from the server to the client have the format</p>
 <p>   <code>[event_name: string, data: any]</code></p>
 <p>   or</p>
 <p>   <code>[id: number, data?: any, error?: {code: string, message: string}]</code></p>
-<p>where event_name/data is listed in the [[ServerToClient]] protocol, or if
+<p>where event_name/data is listed in the <a href="../interfaces/protocol.ServerToClient.html" class="tsd-kind-interface">ServerToClient</a> protocol, or if
 the message is a response to a command sent by the client, the id
 and the data for the response. Exactly one response will be sent for
 a given command if an id was sent with the request. If no id was sent,
@@ -59,7 +59,7 @@ consistency. Old clients that send raw numeric array will still work.</p>
 for backwards compatibility.</p>
 </li>
 </ul>
-</div><div class="tsd-comment tsd-typography"></div></section><aside class="tsd-sources"><ul><li>Defined in <a href="https://github.com/online-go/goban/blob/85d10c7f848e8eadbf92f6656017cf2032b13759/src/engine/protocol/index.ts#L1">engine/protocol/index.ts:1</a></li></ul></aside><section class="tsd-panel-group tsd-index-group"><section class="tsd-panel tsd-index-panel"><h3 class="tsd-index-heading uppercase">Index</h3><section class="tsd-index-section"><h3 class="tsd-index-heading">Enumerations</h3><div class="tsd-index-list"><a href="../enums/protocol.RemoteStorageReplication.html" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="../assets/icons.svg#icon-8"></use></svg><span>Remote<wbr/>Storage<wbr/>Replication</span></a>
+</div><div class="tsd-comment tsd-typography"></div></section><aside class="tsd-sources"><ul><li>Defined in <a href="https://github.com/online-go/goban/blob/0cab046737c6e8121f7ad1be529ef129d7284f0f/src/engine/protocol/index.ts#L1">engine/protocol/index.ts:1</a></li></ul></aside><section class="tsd-panel-group tsd-index-group"><section class="tsd-panel tsd-index-panel"><h3 class="tsd-index-heading uppercase">Index</h3><section class="tsd-index-section"><h3 class="tsd-index-heading">Enumerations</h3><div class="tsd-index-list"><a href="../enums/protocol.RemoteStorageReplication.html" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="../assets/icons.svg#icon-8"></use></svg><span>Remote<wbr/>Storage<wbr/>Replication</span></a>
 </div></section><section class="tsd-index-section"><h3 class="tsd-index-heading">Interfaces</h3><div class="tsd-index-list"><a href="../interfaces/protocol.AIServerToClient.html" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="../assets/icons.svg#icon-256"></use></svg><span>AIServer<wbr/>To<wbr/>Client</span></a>
 <a href="../interfaces/protocol.AutomatchPreferences.html" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="../assets/icons.svg#icon-256"></use></svg><span>Automatch<wbr/>Preferences</span></a>
 <a href="../interfaces/protocol.BotAllowedClockSettingsV1.html" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="../assets/icons.svg#icon-256"></use></svg><span>Bot<wbr/>Allowed<wbr/>Clock<wbr/>Settings<wbr/>V1</span></a>
