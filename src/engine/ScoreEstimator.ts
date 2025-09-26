@@ -65,6 +65,12 @@ export interface ScoreEstimateResponse {
 
     /** Coordinates that still need sealing */
     autoscored_needs_sealing?: JGOFSealingIntersection[];
+
+    /** Recommended moves for the player to move */
+    recommended_moves?: {
+        black: JGOFMove;
+        white: JGOFMove;
+    };
 }
 
 /**
