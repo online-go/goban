@@ -39,18 +39,17 @@ yarn run dev
 (`yarn install` is only necessary the first time you start working on the project,
 or whenever dependencies are updated)
 
-## 2. Using local clone of `goban` while working on online-go.com
+## 2. Using local fork of `goban` while working on online-go.com
 
-From your `goban` directory run
+The online-go.com repo uses a goban submodule (in `submodules/goban`). To configure this to use your fork/branch, you can do the following from within your online-go.com repo clone:
+```
+cd submodules/goban
+git remote add myFork https://github.com/<your_username>/goban.git
+git fetch myFork
+git checkout -b <local_branch_name> myFork/<remote_branch_name>
+```
 
-`yarn link`
-
-From the `online-go.com` directory run
-
-`yarn link goban`
-
-Once done, your online-go.com development environment will use your development
-`goban` code.
+Once done, your online-go.com development environment will use your goban fork's `goban` code.
 
 # Before PR
 
