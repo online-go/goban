@@ -41,7 +41,7 @@ or whenever dependencies are updated)
 
 ## 2. Using local fork of `goban` while working on online-go.com
 
-The online-go.com repo uses a goban submodule (in `submodules/goban`). To configure this to use your fork/branch, you can do the following from within your online-go.com repo clone:
+The online-go.com repo uses a goban submodule (in `submodules/goban`). To configure this to use your fork/branch, you can do the following from within your online-go.com repo clone root:
 ```
 cd submodules/goban
 git remote add myFork https://github.com/<your_username>/goban.git
@@ -50,6 +50,11 @@ git checkout -b <local_branch_name> myFork/<remote_branch_name>
 ```
 
 Once done, your online-go.com development environment will use your goban fork's `goban` code.
+
+To reset the submodule, run from online-go.com repo clone root:
+```
+git submodule update --force --checkout submodules/goban
+```
 
 # Before PR
 
