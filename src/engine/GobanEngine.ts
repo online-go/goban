@@ -1609,6 +1609,13 @@ export class GobanEngine extends BoardState {
             }
         }
 
+        // Handle non-standard Fox SGF komi value of 375. This value represents 3.75 in half-point
+        // counting which is equivalent to 7.5 in standard counting. An actual komi value of 375 is
+        // so nonsensical that always forcing this conversion is likely safe.
+        if (config.komi === 375) {
+            config.komi = 7.5;
+        }
+
         return config;
     }
     /**
