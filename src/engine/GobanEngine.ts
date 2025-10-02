@@ -164,6 +164,12 @@ export interface GobanEngineConfig extends BoardConfig {
     // This is used in gtp2ogs
     clock?: GameClock;
 
+    /** Optional bot parameters */
+    bot_parameters?: {
+        slug: string; // slug to identify the target bot persona
+        [key: string]: number | string | boolean;
+    };
+
     /** When loading initial state or moves, by default GobanEngine will try and
      *  handle bad data by just resorting to 'edit placing' moves. If this is
      *  true, then those errors are thrown instead.
