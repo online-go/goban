@@ -501,7 +501,7 @@ export interface ServerToClient {
             black: User | { accepted_stones: string; accepted_strict_seki_mode: boolean };
             white: User | { accepted_stones: string; accepted_strict_seki_mode: boolean };
         };
-        /** Game phase
+        /** Game phase */
         phase: "stone removal" | "finished";
         /** Score */
         score: Score;
