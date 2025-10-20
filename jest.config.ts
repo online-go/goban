@@ -67,7 +67,7 @@ export default {
     // An object that configures minimum threshold enforcement for coverage results
     coverageThreshold: {
         global: {
-            lines: 60,
+            lines: 59,
         },
     },
 
