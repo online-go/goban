@@ -1797,10 +1797,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             const metrics = ctx.measureText(letter);
             const xx = cx - metrics.width / 2;
             const yy =
-                cy +
-                (/WebKit|Trident/.test(navigator.userAgent)
-                    ? this.square_size * -0.03
-                    : 1);
+                cy + (/WebKit|Trident/.test(navigator.userAgent) ? this.square_size * -0.03 : 1);
             ctx.textBaseline = "middle";
             ctx.fillText(letter, xx, yy);
             draw_last_move = false;
@@ -2664,10 +2661,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
-                if (
-                    this.getShowUndoRequestIndicator() &&
-                    this.engine.isStoneInUndoRequest(i, j)
-                ) {
+                if (this.getShowUndoRequestIndicator() && this.engine.isStoneInUndoRequest(i, j)) {
                     ret += "?" + ",";
                 }
             }

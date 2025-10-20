@@ -3523,10 +3523,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
-                if (
-                    this.getShowUndoRequestIndicator() &&
-                    this.engine.isStoneInUndoRequest(i, j)
-                ) {
+                if (this.getShowUndoRequestIndicator() && this.engine.isStoneInUndoRequest(i, j)) {
                     ret += "↶" + ",";
                 }
             }
