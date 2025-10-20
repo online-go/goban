@@ -1249,6 +1249,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             console.error("No position for ", j, i);
             pos = {};
         }
+        const should_draw_undo_question =
+            this.engine &&
+            this.getShowUndoRequestIndicator() &&
+            this.engine.isStoneInUndoRequest(i, j);
         let alt_marking: string | undefined;
         if (
             this.engine &&
@@ -1785,6 +1789,24 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             draw_last_move = false;
         }
 
+        if (should_draw_undo_question) {
+            const letter = "↶";
+            ctx.save();
+            ctx.fillStyle =
+                stone_color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+            const metrics = ctx.measureText(letter);
+            const xx = cx - metrics.width / 2;
+            const yy =
+                cy +
+                (/WebKit|Trident/.test(navigator.userAgent)
+                    ? this.square_size * -0.03
+                    : 1);
+            ctx.textBaseline = "middle";
+            ctx.fillText(letter, xx, yy);
+            draw_last_move = false;
+            ctx.restore();
+        }
+
         /* Draw Scores */
         {
             if (
@@ -2168,25 +2190,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         ctx.restore();
                         draw_last_move = false;
                     } else {
-                        if (
-                            this.engine.undo_requested &&
-                            this.getShowUndoRequestIndicator() &&
-                            this.engine.undo_requested === this.engine.cur_move.move_number
-                        ) {
-                            const letter = "?";
-                            ctx.save();
-                            ctx.fillStyle = color;
-                            const metrics = ctx.measureText(letter);
-                            const xx = cx - metrics.width / 2;
-                            const yy =
-                                cy +
-                                (/WebKit|Trident/.test(navigator.userAgent)
-                                    ? this.square_size * -0.03
-                                    : 1); /* middle centering is different on firefox */
-                            ctx.textBaseline = "middle";
-                            ctx.fillText(letter, xx, yy);
+                        if (should_draw_undo_question) {
                             draw_last_move = false;
-                            ctx.restore();
                         } else {
                             ctx.save();
                             ctx.beginPath();
@@ -2305,6 +2310,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         if (this.engine && this.engine.cur_move.lookupMove(i, j, this.engine.player, false)) {
             movetree_contains_this_square = true;
         }
+
+        const should_draw_undo_question =
+            this.engine &&
+            this.getShowUndoRequestIndicator() &&
+            this.engine.isStoneInUndoRequest(i, j);
 
         /* Draw stones & hovers */
         let draw_removal_x = false;
@@ -2431,6 +2441,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             } else {
                 ret += "redX";
             }
+        }
+
+        if (should_draw_undo_question) {
+            ret += "undo↶";
         }
 
         /* Draw square highlights if any */
@@ -2651,9 +2665,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             ) {
                 ret += "last_move,";
                 if (
-                    this.engine.undo_requested &&
                     this.getShowUndoRequestIndicator() &&
-                    this.engine.undo_requested === this.engine.cur_move.move_number
+                    this.engine.isStoneInUndoRequest(i, j)
                 ) {
                     ret += "?" + ",";
                 }

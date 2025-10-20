@@ -32,6 +32,21 @@ interface Vote {
     updated: string;
 }
 
+export type UndoRequestedMessage =
+    | number
+    | {
+          move_number: number;
+          requested_by?: number;
+          undo_move_count?: number;
+      };
+
+export type UndoAcceptedMessage =
+    | number
+    | {
+          move_number: number;
+          undo_move_count?: number;
+      };
+
 /* NOTE: The reason for the :id non template literal key variants of our
  *       messages is to allow typedoc generate documentation for them,
  *       as documentation is not generated for template literal keys
@@ -521,7 +536,7 @@ export interface ServerToClient {
     [k: `game/${number}/reset-chats`]: ServerToClient["game/:id/reset-chats"];
 
     /** Undo move has been accepted, the parameter is the new move number */
-    "game/:id/undo_accepted": (data: number) => void;
+    "game/:id/undo_accepted": (data: UndoAcceptedMessage) => void;
     [k: `game/${number}/undo_accepted`]: ServerToClient["game/:id/undo_accepted"];
 
     /** Undo request has been canceled, the parameter is the move number of the original request */
@@ -529,7 +544,7 @@ export interface ServerToClient {
     [k: `game/${number}/undo_canceled`]: ServerToClient["game/:id/undo_canceled"];
 
     /** Undo request has been requested, the parameter is the move number that we want to go back to */
-    "game/:id/undo_requested": (data: number) => void;
+    "game/:id/undo_requested": (data: UndoRequestedMessage) => void;
     [k: `game/${number}/undo_requested`]: ServerToClient["game/:id/undo_requested"];
 
     /** A score estimation result has been broadcast, this is used for avoiding game stalling */

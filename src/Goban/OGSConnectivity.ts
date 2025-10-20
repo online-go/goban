@@ -393,12 +393,52 @@ export abstract class OGSConnectivity extends GobanInteractive {
             );
             this._socket_on(
                 (prefix + "undo_requested") as keyof GobanSocketEvents,
-                (move_number: string): void => {
+                (payload: any): void => {
                     if (this.disconnectedFromGame) {
                         return;
                     }
 
-                    this.engine.undo_requested = parseInt(move_number);
+                    let move_number: number | undefined;
+                    let requested_by: number | undefined;
+                    let undo_move_count: number | undefined;
+
+                    if (typeof payload === "number") {
+                        move_number = payload;
+                    } else if (typeof payload === "string") {
+                        const parsed = parseInt(payload, 10);
+                        if (!Number.isNaN(parsed)) {
+                            move_number = parsed;
+                        }
+                    } else if (payload && typeof payload === "object") {
+                        const data = payload as {
+                            move_number?: number | string;
+                            requested_by?: number;
+                            undo_move_count?: number;
+                        };
+                        if (typeof data.move_number === "number") {
+                            move_number = data.move_number;
+                        } else if (typeof data.move_number === "string") {
+                            const parsed = parseInt(data.move_number, 10);
+                            if (!Number.isNaN(parsed)) {
+                                move_number = parsed;
+                            }
+                        }
+                        if (typeof data.requested_by === "number") {
+                            requested_by = data.requested_by;
+                        }
+                        if (typeof data.undo_move_count === "number") {
+                            undo_move_count = data.undo_move_count;
+                        }
+                    }
+
+                    if (move_number === undefined || Number.isNaN(move_number)) {
+                        console.warn("Invalid undo_requested payload", payload);
+                        return;
+                    }
+
+                    this.engine.undo_requested_by = requested_by;
+                    this.engine.undo_requested_move_count = undo_move_count;
+                    this.engine.undo_requested = move_number;
                     this.emit("update");
                     this.emit("audio-undo-requested");
                     if (this.getShowUndoRequestIndicator()) {
@@ -412,42 +452,73 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 }
 
                 this.engine.undo_requested = undefined; // can't call delete here because this is a getter/setter
+                this.engine.undo_requested_by = undefined;
+                this.engine.undo_requested_move_count = undefined;
                 this.emit("update");
                 this.emit("undo_canceled");
                 if (this.getShowUndoRequestIndicator()) {
                     this.redraw(true);
                 }
             });
-            this._socket_on((prefix + "undo_accepted") as keyof GobanSocketEvents, (): void => {
-                if (this.disconnectedFromGame) {
-                    return;
-                }
-
-                if (!this.engine.undo_requested) {
-                    console.warn("Undo accepted, but no undo requested, we might be out of sync");
-                    try {
-                        swal.fire(
-                            "Game synchronization error related to undo, please reload your game page",
-                        );
-                    } catch (e) {
-                        console.error(e);
+            this._socket_on(
+                (prefix + "undo_accepted") as keyof GobanSocketEvents,
+                (payload: any): void => {
+                    if (this.disconnectedFromGame) {
+                        return;
                     }
-                    return;
-                }
 
-                this.engine.undo_requested = undefined;
+                    if (!this.engine.undo_requested) {
+                        console.warn(
+                            "Undo accepted, but no undo requested, we might be out of sync",
+                        );
+                        try {
+                            swal.fire(
+                                "Game synchronization error related to undo, please reload your game page",
+                            );
+                        } catch (e) {
+                            console.error(e);
+                        }
+                        return;
+                    }
 
-                this.setMode("play");
-                this.engine.showPrevious();
-                this.engine.setLastOfficialMove();
+                    let undo_move_count: number | undefined;
+                    if (typeof payload === "number") {
+                        // legacy payload - count inferred below
+                    } else if (typeof payload === "string") {
+                        const parsed = parseInt(payload, 10);
+                        if (!Number.isNaN(parsed)) {
+                            // When server sends string we don't get count, rely on stored value
+                        }
+                    } else if (payload && typeof payload === "object") {
+                        const data = payload as { undo_move_count?: number };
+                        if (typeof data.undo_move_count === "number") {
+                            undo_move_count = data.undo_move_count;
+                        }
+                    }
 
-                this.setConditionalTree();
+                    const steps =
+                        typeof undo_move_count === "number" && undo_move_count > 0
+                            ? undo_move_count
+                            : this.engine.undo_requested_move_count;
 
-                this.engine.undo_requested = undefined;
-                this.updateTitleAndStonePlacement();
-                this.emit("update");
-                this.emit("audio-undo-granted");
-            });
+                    this.engine.undo_requested = undefined;
+                    this.engine.undo_requested_by = undefined;
+                    this.engine.undo_requested_move_count = undefined;
+
+                    this.setMode("play");
+                    for (let i = 0; i < steps; i++) {
+                        this.engine.showPrevious();
+                    }
+                    this.engine.setLastOfficialMove();
+
+                    this.setConditionalTree();
+
+                    this.engine.undo_requested = undefined;
+                    this.updateTitleAndStonePlacement();
+                    this.emit("update");
+                    this.emit("audio-undo-granted");
+                },
+            );
             this._socket_on((prefix + "move") as keyof GobanSocketEvents, (move_obj: any): void => {
                 try {
                     if (this.disconnectedFromGame) {

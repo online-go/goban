@@ -449,6 +449,99 @@ export class GobanEngine extends BoardState {
         this._undo_requested = undo_requested;
         this.emit("undo_requested", this.undo_requested);
     }
+    private _undo_requested_by?: number;
+    public get undo_requested_by(): number | undefined {
+        return this._undo_requested_by;
+    }
+    public set undo_requested_by(undo_requested_by: number | undefined) {
+        if (this._undo_requested_by === undo_requested_by) {
+            return;
+        }
+        this._undo_requested_by = undo_requested_by;
+        this.emit("undo_requested_by", this.undo_requested_by);
+    }
+    private _undo_requested_move_count?: number;
+    public get undo_requested_move_count(): number {
+        return this._undo_requested_move_count ?? 1;
+    }
+    public set undo_requested_move_count(undo_requested_move_count: number | undefined) {
+        const normalized =
+            undo_requested_move_count && undo_requested_move_count > 0
+                ? undo_requested_move_count
+                : undefined;
+        if (this._undo_requested_move_count === normalized) {
+            return;
+        }
+        this._undo_requested_move_count = normalized;
+        this.emit("undo_requested_move_count", this.undo_requested_move_count);
+    }
+
+    public getUndoRequestStones(): Array<{ x: number; y: number; move_number: number }> {
+        const requestedMoveNumber = this.undo_requested;
+        if (requestedMoveNumber === undefined || !this.cur_move) {
+            return [];
+        }
+
+        // If we are viewing an earlier branch, do not attempt to render markers.
+        if (this.cur_move.move_number < requestedMoveNumber) {
+            return [];
+        }
+
+        const remainingToMark = Math.max(1, this.undo_requested_move_count);
+        const stones: Array<{ x: number; y: number; move_number: number }> = [];
+
+        let node: MoveTree | null = this.cur_move;
+        let remaining = remainingToMark;
+
+        // First, navigate to the requested move if we're viewing a later position
+        while (node && node.move_number > requestedMoveNumber) {
+            node = node.parent;
+        }
+
+        // Now mark the requested number of moves going backwards
+        while (node && remaining > 0) {
+            if (node.x >= 0 && node.y >= 0) {
+                stones.push({ x: node.x, y: node.y, move_number: node.move_number });
+            }
+            remaining -= 1;
+            node = node.parent;
+        }
+
+        return stones;
+    }
+
+    public isStoneInUndoRequest(x: number, y: number): boolean {
+        const requestedMoveNumber = this.undo_requested;
+        if (requestedMoveNumber === undefined || !this.cur_move) {
+            return false;
+        }
+
+        // If we are viewing an earlier branch, do not attempt to render markers.
+        if (this.cur_move.move_number < requestedMoveNumber) {
+            return false;
+        }
+
+        // Walk backwards from current move to find the requested move
+        let node: MoveTree | null = this.cur_move;
+        while (node && node.move_number > requestedMoveNumber) {
+            node = node.parent;
+        }
+
+        // Now walk backwards from the requested move for N moves
+        let remaining = this.undo_requested_move_count;
+        while (node && remaining > 0) {
+            if (node.x === x && node.y === y) {
+                return true;
+            }
+            // Only count actual moves (not passes)
+            if (node.x >= 0 && node.y >= 0) {
+                remaining -= 1;
+            }
+            node = node.parent;
+        }
+
+        return false;
+    }
 
     private _outcome: string = "";
     public get outcome(): string {
