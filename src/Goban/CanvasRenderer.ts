@@ -1249,7 +1249,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             console.error("No position for ", j, i);
             pos = {};
         }
-        const should_draw_undo_question =
+        const should_draw_undo =
             this.engine &&
             this.getShowUndoRequestIndicator() &&
             this.engine.isStoneInUndoRequest(i, j);
@@ -1789,7 +1789,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             draw_last_move = false;
         }
 
-        if (should_draw_undo_question) {
+        if (should_draw_undo) {
             const letter = "↶";
             ctx.save();
             ctx.fillStyle =
@@ -2187,7 +2187,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         ctx.restore();
                         draw_last_move = false;
                     } else {
-                        if (should_draw_undo_question) {
+                        if (should_draw_undo) {
                             draw_last_move = false;
                         } else {
                             ctx.save();
@@ -2308,7 +2308,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             movetree_contains_this_square = true;
         }
 
-        const should_draw_undo_question =
+        const should_draw_undo =
             this.engine &&
             this.getShowUndoRequestIndicator() &&
             this.engine.isStoneInUndoRequest(i, j);
@@ -2440,7 +2440,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             }
         }
 
-        if (should_draw_undo_question) {
+        if (should_draw_undo) {
             ret += "undo↶";
         }
 

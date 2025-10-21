@@ -1335,7 +1335,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             console.error("No position for ", j, i);
             pos = {};
         }
-        const should_draw_undo_question =
+        const should_draw_undo =
             this.engine &&
             this.getShowUndoRequestIndicator() &&
             this.engine.isStoneInUndoRequest(i, j);
@@ -1681,7 +1681,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             cell.clearRemovalCross();
         }
 
-        if (should_draw_undo_question) {
+        if (should_draw_undo) {
             const color =
                 stone_color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
             cell.lastMove("↶", color, 1.0);
@@ -1961,7 +1961,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                         draw_last_move = false;
                         cell.lastMove("+", color, this.last_move_opacity);
                     } else {
-                        if (should_draw_undo_question) {
+                        if (should_draw_undo) {
                             draw_last_move = false;
                             cell.lastMove("↶", color, 1.0);
                         } else {
@@ -5705,11 +5705,11 @@ class GCell {
      * Last move
      */
     private last_last_move?: SVGElement;
-    private last_last_move_symbol?: "+" | "?" | "↶" | "o";
+    private last_last_move_symbol?: "+" | "↶" | "o";
     private last_last_move_color?: string;
     private last_last_move_opacity?: number;
 
-    public lastMove(symbol: "+" | "?" | "↶" | "o", color: string, opacity: number): void {
+    public lastMove(symbol: "+" | "↶" | "o", color: string, opacity: number): void {
         if (
             this.last_last_move &&
             this.last_last_move_symbol === symbol &&
@@ -5749,7 +5749,6 @@ class GCell {
                 }
                 break;
 
-            case "?":
             case "↶":
                 {
                     const letter = "↶";

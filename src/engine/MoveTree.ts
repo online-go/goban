@@ -49,7 +49,7 @@ export interface MarkInterface {
     color?: string;
     needs_sealing?: boolean;
     before_ai?: string;
-    undo_question?: boolean;
+    undo?: boolean;
 
     [label: string]: string | boolean | undefined;
 }

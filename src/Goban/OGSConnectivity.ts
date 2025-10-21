@@ -398,6 +398,13 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         return;
                     }
 
+                    /* NOTE: We're transitioning to only sending the object style undo
+                     * requests but there are likely a number of correspondence games
+                     * that will still have the number based requests floating around,
+                     * so this logic handles both for the time being but we should eventually
+                     * (after Jan 2026) clean up the non-object support as it should no longer
+                     * be necessary. */
+
                     let move_number: number | undefined;
                     let requested_by: number | undefined;
                     let undo_move_count: number | undefined;

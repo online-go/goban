@@ -455,14 +455,8 @@ export class GobanEngine extends BoardState {
         return this._undo_requested_move_count ?? 1;
     }
     public set undo_requested_move_count(undo_requested_move_count: number | undefined) {
-        const normalized =
-            undo_requested_move_count && undo_requested_move_count > 0
-                ? undo_requested_move_count
-                : undefined;
-        if (this._undo_requested_move_count === normalized) {
-            return;
-        }
-        this._undo_requested_move_count = normalized;
+        this._undo_requested_move_count =
+            (undo_requested_move_count ?? 0) > 0 ? undo_requested_move_count : undefined;
     }
 
     public getUndoRequestStones(): Array<{ x: number; y: number; move_number: number }> {
