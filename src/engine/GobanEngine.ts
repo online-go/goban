@@ -449,17 +449,7 @@ export class GobanEngine extends BoardState {
         this._undo_requested = undo_requested;
         this.emit("undo_requested", this.undo_requested);
     }
-    private _undo_requested_by?: number;
-    public get undo_requested_by(): number | undefined {
-        return this._undo_requested_by;
-    }
-    public set undo_requested_by(undo_requested_by: number | undefined) {
-        if (this._undo_requested_by === undo_requested_by) {
-            return;
-        }
-        this._undo_requested_by = undo_requested_by;
-        this.emit("undo_requested_by", this.undo_requested_by);
-    }
+    public undo_requested_by?: number;
     private _undo_requested_move_count?: number;
     public get undo_requested_move_count(): number {
         return this._undo_requested_move_count ?? 1;
@@ -473,7 +463,6 @@ export class GobanEngine extends BoardState {
             return;
         }
         this._undo_requested_move_count = normalized;
-        this.emit("undo_requested_move_count", this.undo_requested_move_count);
     }
 
     public getUndoRequestStones(): Array<{ x: number; y: number; move_number: number }> {
@@ -533,10 +522,7 @@ export class GobanEngine extends BoardState {
             if (node.x === x && node.y === y) {
                 return true;
             }
-            // Only count actual moves (not passes)
-            if (node.x >= 0 && node.y >= 0) {
-                remaining -= 1;
-            }
+            remaining -= 1;
             node = node.parent;
         }
 

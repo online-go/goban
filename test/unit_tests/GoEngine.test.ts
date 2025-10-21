@@ -761,38 +761,24 @@ describe("multi-move undo", () => {
             expect(engine.undo_requested_by).toBeUndefined();
         });
 
-        test("can be set and emits event", () => {
+        test("can be set", () => {
             const engine = new GobanEngine({});
-            const on_undo_requested_by = jest.fn();
-            engine.addListener("undo_requested_by", on_undo_requested_by);
-
             engine.undo_requested_by = 123;
             expect(engine.undo_requested_by).toBe(123);
-            expect(on_undo_requested_by).toBeCalledWith(123);
-            expect(on_undo_requested_by).toBeCalledTimes(1);
         });
 
-        test("does not emit event when set to same value", () => {
+        test("can be changed", () => {
             const engine = new GobanEngine({});
             engine.undo_requested_by = 123;
-
-            const on_undo_requested_by = jest.fn();
-            engine.addListener("undo_requested_by", on_undo_requested_by);
-
-            engine.undo_requested_by = 123;
-            expect(on_undo_requested_by).not.toBeCalled();
+            engine.undo_requested_by = 456;
+            expect(engine.undo_requested_by).toBe(456);
         });
 
         test("can be cleared", () => {
             const engine = new GobanEngine({});
-            const on_undo_requested_by = jest.fn();
-            engine.addListener("undo_requested_by", on_undo_requested_by);
-
             engine.undo_requested_by = 123;
             engine.undo_requested_by = undefined;
-
             expect(engine.undo_requested_by).toBeUndefined();
-            expect(on_undo_requested_by).toBeCalledTimes(2);
         });
     });
 
@@ -802,15 +788,10 @@ describe("multi-move undo", () => {
             expect(engine.undo_requested_move_count).toBe(1);
         });
 
-        test("can be set and emits event", () => {
+        test("can be set", () => {
             const engine = new GobanEngine({});
-            const on_undo_requested_move_count = jest.fn();
-            engine.addListener("undo_requested_move_count", on_undo_requested_move_count);
-
             engine.undo_requested_move_count = 3;
             expect(engine.undo_requested_move_count).toBe(3);
-            expect(on_undo_requested_move_count).toBeCalledWith(3);
-            expect(on_undo_requested_move_count).toBeCalledTimes(1);
         });
 
         test("normalizes zero to undefined and returns 1", () => {
@@ -825,27 +806,20 @@ describe("multi-move undo", () => {
             expect(engine.undo_requested_move_count).toBe(1);
         });
 
-        test("does not emit event when set to same value", () => {
+        test("does not update when set to same value", () => {
             const engine = new GobanEngine({});
             engine.undo_requested_move_count = 3;
-
-            const on_undo_requested_move_count = jest.fn();
-            engine.addListener("undo_requested_move_count", on_undo_requested_move_count);
-
+            expect(engine.undo_requested_move_count).toBe(3);
             engine.undo_requested_move_count = 3;
-            expect(on_undo_requested_move_count).not.toBeCalled();
+            expect(engine.undo_requested_move_count).toBe(3);
         });
 
         test("can be cleared to return to default", () => {
             const engine = new GobanEngine({});
-            const on_undo_requested_move_count = jest.fn();
-            engine.addListener("undo_requested_move_count", on_undo_requested_move_count);
-
             engine.undo_requested_move_count = 5;
+            expect(engine.undo_requested_move_count).toBe(5);
             engine.undo_requested_move_count = undefined;
-
             expect(engine.undo_requested_move_count).toBe(1);
-            expect(on_undo_requested_move_count).toBeCalledTimes(2);
         });
     });
 
