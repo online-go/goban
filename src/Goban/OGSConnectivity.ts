@@ -521,6 +521,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.setConditionalTree();
 
                     this.engine.undo_requested = undefined;
+                    this.engine.undo_requested_by = undefined;
+                    this.engine.undo_requested_move_count = undefined;
                     this.updateTitleAndStonePlacement();
                     this.emit("update");
                     this.emit("audio-undo-granted");
@@ -548,6 +550,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
                     /* clear any undo state that may be hanging around */
                     this.engine.undo_requested = undefined;
+                    this.engine.undo_requested_by = undefined;
+                    this.engine.undo_requested_move_count = undefined;
 
                     const mv = this.engine.decodeMoves(move);
 
