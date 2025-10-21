@@ -177,6 +177,8 @@ export interface StateUpdateEvents {
     rules: (d: GobanEngineRules) => void;
     winner: (d: number | undefined) => void;
     undo_requested: (d: number | undefined) => void; // move number of the last undo request
+    //undo_requested_by: (d: number | undefined) => void;
+    //undo_requested_move_count: (d: number) => void;
     undo_canceled: () => void;
     paused: (d: boolean) => void;
     outcome: (d: string) => void;

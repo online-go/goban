@@ -1329,13 +1329,16 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (this.engine) {
             stone_color = this.engine.board[j][i];
         }
-
         /* Figure out marks for this spot */
         let pos = this.getMarks(i, j);
         if (!pos) {
             console.error("No position for ", j, i);
             pos = {};
         }
+        const should_draw_undo =
+            this.engine &&
+            this.getShowUndoRequestIndicator() &&
+            this.engine.isStoneInUndoRequest(i, j);
         let alt_marking: string | undefined;
         if (
             this.engine &&
@@ -1678,6 +1681,15 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             cell.clearRemovalCross();
         }
 
+        if (should_draw_undo) {
+            const color =
+                stone_color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
+            cell.lastMove("↶", color, 1.0);
+            draw_last_move = false;
+        } else {
+            cell.clearLastMove();
+        }
+
         /* Draw Scores */
         if (
             (pos.score &&
@@ -1949,13 +1961,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                         draw_last_move = false;
                         cell.lastMove("+", color, this.last_move_opacity);
                     } else {
-                        if (
-                            this.engine.undo_requested &&
-                            this.getShowUndoRequestIndicator() &&
-                            this.engine.undo_requested === this.engine.cur_move.move_number
-                        ) {
+                        if (should_draw_undo) {
                             draw_last_move = false;
-                            cell.lastMove("?", color, 1.0);
+                            cell.lastMove("↶", color, 1.0);
                         } else {
                             cell.lastMove("o", color, this.last_move_opacity);
                         }
@@ -2999,11 +3007,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                         cell.appendChild(cross);
                     } else {
                         if (
-                            this.engine.undo_requested &&
                             this.getShowUndoRequestIndicator() &&
-                            this.engine.undo_requested === this.engine.cur_move.move_number
+                            this.engine.isStoneInUndoRequest(i, j)
                         ) {
-                            const letter = "?";
+                            const letter = "↶";
                             draw_last_move = false;
 
                             const text = document.createElementNS(
@@ -3516,12 +3523,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
-                if (
-                    this.engine.undo_requested &&
-                    this.getShowUndoRequestIndicator() &&
-                    this.engine.undo_requested === this.engine.cur_move.move_number
-                ) {
-                    ret += "?" + ",";
+                if (this.getShowUndoRequestIndicator() && this.engine.isStoneInUndoRequest(i, j)) {
+                    ret += "↶" + ",";
                 }
             }
         }
@@ -5702,11 +5705,11 @@ class GCell {
      * Last move
      */
     private last_last_move?: SVGElement;
-    private last_last_move_symbol?: "+" | "?" | "o";
+    private last_last_move_symbol?: "+" | "↶" | "o";
     private last_last_move_color?: string;
     private last_last_move_opacity?: number;
 
-    public lastMove(symbol: "+" | "?" | "o", color: string, opacity: number): void {
+    public lastMove(symbol: "+" | "↶" | "o", color: string, opacity: number): void {
         if (
             this.last_last_move &&
             this.last_last_move_symbol === symbol &&
@@ -5746,9 +5749,9 @@ class GCell {
                 }
                 break;
 
-            case "?":
+            case "↶":
                 {
-                    const letter = "?";
+                    const letter = "↶";
                     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
                     text.setAttribute("class", "letter");
                     text.setAttribute("fill", color);

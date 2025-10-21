@@ -753,3 +753,389 @@ describe("state", () => {
     expect(engine.removal[1][1]).toBe(true);
     expect(engine.getStoneRemovalString()).toBe("bb");
 });
+
+describe("multi-move undo", () => {
+    describe("undo_requested_by", () => {
+        test("defaults to undefined", () => {
+            const engine = new GobanEngine({});
+            expect(engine.undo_requested_by).toBeUndefined();
+        });
+
+        test("can be set", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_by = 123;
+            expect(engine.undo_requested_by).toBe(123);
+        });
+
+        test("can be changed", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_by = 123;
+            engine.undo_requested_by = 456;
+            expect(engine.undo_requested_by).toBe(456);
+        });
+
+        test("can be cleared", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_by = 123;
+            engine.undo_requested_by = undefined;
+            expect(engine.undo_requested_by).toBeUndefined();
+        });
+    });
+
+    describe("undo_requested_move_count", () => {
+        test("defaults to 1", () => {
+            const engine = new GobanEngine({});
+            expect(engine.undo_requested_move_count).toBe(1);
+        });
+
+        test("can be set", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_move_count = 3;
+            expect(engine.undo_requested_move_count).toBe(3);
+        });
+
+        test("normalizes zero to undefined and returns 1", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_move_count = 0;
+            expect(engine.undo_requested_move_count).toBe(1);
+        });
+
+        test("normalizes negative values to undefined and returns 1", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_move_count = -5;
+            expect(engine.undo_requested_move_count).toBe(1);
+        });
+
+        test("does not update when set to same value", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_move_count = 3;
+            expect(engine.undo_requested_move_count).toBe(3);
+            engine.undo_requested_move_count = 3;
+            expect(engine.undo_requested_move_count).toBe(3);
+        });
+
+        test("can be cleared to return to default", () => {
+            const engine = new GobanEngine({});
+            engine.undo_requested_move_count = 5;
+            expect(engine.undo_requested_move_count).toBe(5);
+            engine.undo_requested_move_count = undefined;
+            expect(engine.undo_requested_move_count).toBe(1);
+        });
+    });
+
+    describe("getUndoRequestStones", () => {
+        test("returns empty array when no undo requested", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(2, 2);
+            engine.place(3, 3);
+
+            expect(engine.getUndoRequestStones()).toEqual([]);
+        });
+
+        test("returns empty array when cur_move is undefined", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.undo_requested = 1;
+
+            expect(engine.getUndoRequestStones()).toEqual([]);
+        });
+
+        test("returns single stone for single move undo", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(2, 2);
+            engine.place(3, 3);
+
+            engine.undo_requested = 2;
+            engine.undo_requested_move_count = 1;
+
+            const stones = engine.getUndoRequestStones();
+            expect(stones).toEqual([{ x: 3, y: 3, move_number: 2 }]);
+        });
+
+        test("returns multiple stones for multi-move undo", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+            engine.place(2, 2);
+            engine.place(3, 3);
+
+            engine.undo_requested = 4;
+            engine.undo_requested_move_count = 3;
+
+            const stones = engine.getUndoRequestStones();
+            expect(stones).toEqual([
+                { x: 3, y: 3, move_number: 4 },
+                { x: 2, y: 2, move_number: 3 },
+                { x: 1, y: 1, move_number: 2 },
+            ]);
+        });
+
+        test("handles passes by not including them in output", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(-1, -1);
+            engine.place(2, 2);
+
+            engine.undo_requested = 3;
+            engine.undo_requested_move_count = 2;
+
+            const stones = engine.getUndoRequestStones();
+            expect(stones).toEqual([{ x: 2, y: 2, move_number: 3 }]);
+        });
+
+        test("returns empty array when viewing earlier branch", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            const move1 = engine.cur_move;
+            engine.place(1, 1);
+            engine.place(2, 2);
+
+            engine.undo_requested = 3;
+            engine.undo_requested_move_count = 2;
+
+            engine.jumpTo(move1);
+
+            expect(engine.getUndoRequestStones()).toEqual([]);
+        });
+
+        test("navigates from later position to requested move", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+            engine.place(2, 2);
+            engine.place(3, 3);
+            engine.place(4, 4);
+
+            engine.undo_requested = 3;
+            engine.undo_requested_move_count = 2;
+
+            const stones = engine.getUndoRequestStones();
+            expect(stones).toEqual([
+                { x: 2, y: 2, move_number: 3 },
+                { x: 1, y: 1, move_number: 2 },
+            ]);
+        });
+
+        test("handles requesting more moves than available", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+
+            engine.undo_requested = 2;
+            engine.undo_requested_move_count = 10;
+
+            const stones = engine.getUndoRequestStones();
+            expect(stones).toEqual([
+                { x: 1, y: 1, move_number: 2 },
+                { x: 0, y: 0, move_number: 1 },
+            ]);
+        });
+    });
+
+    describe("isStoneInUndoRequest", () => {
+        test("returns false when no undo requested", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(2, 2);
+
+            expect(engine.isStoneInUndoRequest(2, 2)).toBe(false);
+        });
+
+        test("returns false when cur_move is undefined", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.undo_requested = 1;
+
+            expect(engine.isStoneInUndoRequest(0, 0)).toBe(false);
+        });
+
+        test("returns true for stone in single move undo", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(2, 2);
+            engine.place(3, 3);
+
+            engine.undo_requested = 2;
+            engine.undo_requested_move_count = 1;
+
+            expect(engine.isStoneInUndoRequest(3, 3)).toBe(true);
+            expect(engine.isStoneInUndoRequest(2, 2)).toBe(false);
+        });
+
+        test("returns true for all stones in multi-move undo", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+            engine.place(2, 2);
+            engine.place(3, 3);
+
+            engine.undo_requested = 4;
+            engine.undo_requested_move_count = 3;
+
+            expect(engine.isStoneInUndoRequest(3, 3)).toBe(true);
+            expect(engine.isStoneInUndoRequest(2, 2)).toBe(true);
+            expect(engine.isStoneInUndoRequest(1, 1)).toBe(true);
+            expect(engine.isStoneInUndoRequest(0, 0)).toBe(false);
+        });
+
+        test("returns false when viewing earlier branch", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            const move1 = engine.cur_move;
+            engine.place(1, 1);
+            engine.place(2, 2);
+
+            engine.undo_requested = 3;
+            engine.undo_requested_move_count = 2;
+
+            engine.jumpTo(move1);
+
+            expect(engine.isStoneInUndoRequest(2, 2)).toBe(false);
+            expect(engine.isStoneInUndoRequest(1, 1)).toBe(false);
+        });
+
+        test("correctly identifies stones from later position", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+            engine.place(2, 2);
+            engine.place(3, 3);
+            engine.place(4, 4);
+
+            engine.undo_requested = 3;
+            engine.undo_requested_move_count = 2;
+
+            expect(engine.isStoneInUndoRequest(2, 2)).toBe(true);
+            expect(engine.isStoneInUndoRequest(1, 1)).toBe(true);
+            expect(engine.isStoneInUndoRequest(3, 3)).toBe(false);
+            expect(engine.isStoneInUndoRequest(4, 4)).toBe(false);
+        });
+
+        test("handles stones that do not exist in move tree", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+
+            engine.undo_requested = 2;
+            engine.undo_requested_move_count = 1;
+
+            expect(engine.isStoneInUndoRequest(4, 4)).toBe(false);
+        });
+    });
+
+    describe("consistency and edge cases", () => {
+        test("getUndoRequestStones and isStoneInUndoRequest are consistent with passes", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+            engine.place(-1, -1);
+            engine.place(2, 2);
+
+            engine.undo_requested = 4;
+            engine.undo_requested_move_count = 3;
+
+            const stones = engine.getUndoRequestStones();
+
+            for (const stone of stones) {
+                expect(engine.isStoneInUndoRequest(stone.x, stone.y)).toBe(true);
+            }
+        });
+
+        test("handles multiple consecutive passes", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(-1, -1);
+            engine.place(-1, -1);
+            engine.place(1, 1);
+
+            engine.undo_requested = 4;
+            engine.undo_requested_move_count = 3;
+
+            const stones = engine.getUndoRequestStones();
+
+            for (const stone of stones) {
+                expect(engine.isStoneInUndoRequest(stone.x, stone.y)).toBe(true);
+            }
+        });
+
+        test("handles move tree branches correctly", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+            const fork = engine.cur_move;
+
+            engine.place(2, 2);
+            engine.place(3, 3);
+
+            engine.jumpTo(fork);
+            engine.place(4, 4);
+            engine.place(0, 1);
+
+            engine.undo_requested = 4;
+            engine.undo_requested_move_count = 2;
+
+            expect(engine.isStoneInUndoRequest(0, 1)).toBe(true);
+            expect(engine.isStoneInUndoRequest(4, 4)).toBe(true);
+            expect(engine.isStoneInUndoRequest(3, 3)).toBe(false);
+            expect(engine.isStoneInUndoRequest(2, 2)).toBe(false);
+        });
+
+        test("handles undo_requested at move 0", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+
+            engine.undo_requested = 0;
+            engine.undo_requested_move_count = 1;
+
+            expect(engine.getUndoRequestStones()).toEqual([]);
+        });
+
+        test("handles same position with capture and retake", () => {
+            const engine = new GobanEngine({ width: 3, height: 3 });
+            engine.place(0, 0);
+            engine.place(1, 0);
+            engine.place(0, 1);
+            engine.place(1, 1);
+
+            engine.undo_requested = 4;
+            engine.undo_requested_move_count = 3;
+
+            const stones = engine.getUndoRequestStones();
+
+            for (const stone of stones) {
+                expect(engine.isStoneInUndoRequest(stone.x, stone.y)).toBe(true);
+            }
+
+            expect(stones.length).toBe(3);
+        });
+
+        test("getUndoRequestStones and isStoneInUndoRequest are always consistent", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            engine.place(0, 0);
+            engine.place(1, 1);
+            engine.place(2, 2);
+            engine.place(3, 3);
+            engine.place(4, 4);
+
+            for (let moveCount = 1; moveCount <= 5; moveCount++) {
+                engine.undo_requested = 5;
+                engine.undo_requested_move_count = moveCount;
+
+                const stones = engine.getUndoRequestStones();
+
+                for (const stone of stones) {
+                    expect(engine.isStoneInUndoRequest(stone.x, stone.y)).toBe(true);
+                }
+
+                const allPositions = [
+                    [0, 0],
+                    [1, 1],
+                    [2, 2],
+                    [3, 3],
+                    [4, 4],
+                ];
+                for (const [x, y] of allPositions) {
+                    const isInStones = stones.some((s) => s.x === x && s.y === y);
+                    const isInRequest = engine.isStoneInUndoRequest(x, y);
+                    expect(isInRequest).toBe(isInStones);
+                }
+            }
+        });
+    });
+});
