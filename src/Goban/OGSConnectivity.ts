@@ -184,6 +184,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         return;
                     }
 
+                    if (!this.socket.connected) {
+                        return;
+                    }
+
                     this.socket.send("game/latency", {
                         game_id: this.game_id,
                         latency: this.getNetworkLatency(),
