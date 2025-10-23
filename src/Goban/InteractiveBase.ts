@@ -1099,6 +1099,7 @@ export abstract class GobanInteractive extends GobanBase {
         }
 
         delete this.move_selected;
+        this.submit_move = undefined;
         this.engine.jumpTo(this.engine.last_official_move);
         this.updateTitleAndStonePlacement();
         this.emit("update");
