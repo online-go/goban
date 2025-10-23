@@ -1089,6 +1089,22 @@ export abstract class GobanInteractive extends GobanBase {
 
         this.emit("update");
     }
+    public unstagePendingMove(): boolean {
+        if (!this.move_selected) {
+            return false;
+        }
+
+        if (this.mode === "play") {
+            this.engine.cur_move.removeIfNoChildren();
+        }
+
+        delete this.move_selected;
+        this.submit_move = undefined;
+        this.engine.jumpTo(this.engine.last_official_move);
+        this.updateTitleAndStonePlacement();
+        this.emit("update");
+        return true;
+    }
     protected setLastOfficialMove(): void {
         this.engine.setLastOfficialMove();
         this.updateTitleAndStonePlacement();
