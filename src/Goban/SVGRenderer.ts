@@ -818,18 +818,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         right_click: boolean,
         press_duration_ms: number,
     ): void {
-        if (
-            !(
-                this.stone_placement_enabled &&
-                (this.player_id ||
-                    !this.engine.players.black.id ||
-                    this.mode === "analyze" ||
-                    this.mode === "puzzle")
-            )
-        ) {
-            return;
-        }
-
         // If there are modes where right click should not behave as if you clicked a placement on the svg
         // then return here instead of proceeding.
         if (right_click && this.mode === "play") {
@@ -844,10 +832,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         const x = pt.i;
         const y = pt.j;
 
-        if (x < 0 || y < 0 || x >= this.engine.width || y >= this.engine.height) {
-            return;
-        }
-
         this.tapAtImpl(x, y, double_tap, right_click, event.shiftKey, press_duration_ms);
     }
     private tapAtImpl(
@@ -858,6 +842,24 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         shift_key: boolean,
         press_duration_ms: number,
     ): void {
+        // Validate stone placement is enabled
+        if (
+            !(
+                this.stone_placement_enabled &&
+                (this.player_id ||
+                    !this.engine.players.black.id ||
+                    this.mode === "analyze" ||
+                    this.mode === "puzzle")
+            )
+        ) {
+            return;
+        }
+
+        // Validate bounds
+        if (x < 0 || y < 0 || x >= this.engine.width || y >= this.engine.height) {
+            return;
+        }
+
         if (!this.double_click_submit) {
             double_tap = false;
         }
