@@ -736,6 +736,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             this.pen_ctx.stroke();
         }
     }
+    protected tapAt(x: number, y: number, double_tap: boolean): void {
+        this.tapAtImpl(x, y, double_tap, false, false, 0);
+    }
     private onTap(
         event: MouseEvent | TouchEvent,
         double_tap: boolean,
@@ -772,13 +775,23 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return;
         }
 
+        this.tapAtImpl(x, y, double_tap, right_click, event.shiftKey, press_duration_ms);
+    }
+    private tapAtImpl(
+        x: number,
+        y: number,
+        double_tap: boolean,
+        right_click: boolean,
+        shift_key: boolean,
+        press_duration_ms: number,
+    ): void {
         if (!this.double_click_submit) {
             double_tap = false;
         }
 
         if (
             this.mode === "analyze" &&
-            event.shiftKey &&
+            shift_key &&
             /* don't warp to move tree position when shift clicking in stone edit mode */
             !(
                 this.analyze_tool === "stone" &&
@@ -850,7 +863,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 const { removed, group } = this.engine.toggleSingleGroupRemoval(
                     x,
                     y,
-                    event.shiftKey || press_duration_ms > 500,
+                    shift_key || press_duration_ms > 500,
                 );
 
                 if (group.length) {
@@ -1067,10 +1080,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         }
 
                         let edit_color = this.engine.playerByColor(this.edit_color);
-                        if (event.shiftKey && edit_color === 1) {
+                        if (shift_key && edit_color === 1) {
                             /* if we're going to place a black on an empty square but we're holding down shift, place white */
                             edit_color = 2;
-                        } else if (event.shiftKey && edit_color === 2) {
+                        } else if (shift_key && edit_color === 2) {
                             /* if we're going to place a black on an empty square but we're holding down shift, place white */
                             edit_color = 1;
                         }
