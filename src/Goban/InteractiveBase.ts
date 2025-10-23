@@ -1100,7 +1100,7 @@ export abstract class GobanInteractive extends GobanBase {
 
         delete this.move_selected;
         this.engine.jumpTo(this.engine.last_official_move);
-        this.updatePlayerToMoveTitle();
+        this.updateTitleAndStonePlacement();
         this.emit("update");
         return true;
     }
