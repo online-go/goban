@@ -51,4 +51,5 @@ export class TestGoban extends Goban {
     protected setTitle(title: string): void {}
     protected enableDrawing(): void {}
     protected disableDrawing(): void {}
+    protected tapAt(x: number, y: number, double_tap: boolean): void {}
 }

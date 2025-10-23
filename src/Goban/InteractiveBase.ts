@@ -1481,6 +1481,15 @@ export abstract class GobanInteractive extends GobanBase {
             }
         }
     }
+    public tapByPrettyCoordinates(coordinates: string): void {
+        const moves = this.engine.decodeMoves(coordinates);
+        if (moves.length === 0) {
+            throw new Error("Invalid coordinates");
+        }
+        const mv = moves[0];
+        this.tapAt(mv.x, mv.y, false);
+    }
+    protected abstract tapAt(x: number, y: number, double_tap: boolean): void;
     public setMarkByPrettyCoordinates(
         coordinates: string,
         mark: number | string,
