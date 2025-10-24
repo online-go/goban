@@ -60,6 +60,20 @@ export interface GobanMetrics {
     offset: number;
 }
 
+export interface CaptureDisplayConfig {
+    stone_color: "black" | "white";
+    stone_count: number;
+    stone_radius?: number;
+    stone_overlap?: number;
+    max_stones?: number;
+}
+
+export interface CaptureDisplay {
+    readonly element: HTMLCanvasElement | SVGSVGElement;
+    updateStoneCount(count: number): void;
+    destroy(): void;
+}
+
 /**
  * Goban serves as a base class for our renderers as well as a namespace for various
  * classes, types, and enums.
@@ -508,5 +522,29 @@ export abstract class Goban extends OGSConnectivity {
             this.analysis_scoring_last_position = cur;
             this.putAnalysisScoreColorAtLocation(cur.i, cur.j, this.analysis_scoring_color);
         }
+    }
+
+    protected normalizeCaptureConfig(config: CaptureDisplayConfig): Required<CaptureDisplayConfig> {
+        const stone_radius = Math.round(config.stone_radius ?? 11);
+        const stone_overlap = config.stone_overlap ?? 0.8;
+        const max_stones = config.max_stones ?? 10;
+
+        if (stone_radius <= 0) {
+            throw new Error(`Invalid stone radius: ${stone_radius}. Must be positive.`);
+        }
+        if (stone_overlap < 0 || stone_overlap >= 1) {
+            throw new Error(`Invalid stone overlap: ${stone_overlap}. Must be in range [0, 1).`);
+        }
+        if (max_stones <= 0) {
+            throw new Error(`Invalid max_stones: ${max_stones}. Must be positive.`);
+        }
+
+        return {
+            stone_color: config.stone_color,
+            stone_count: Math.max(0, Math.round(config.stone_count)),
+            stone_radius,
+            stone_overlap,
+            max_stones,
+        };
     }
 }

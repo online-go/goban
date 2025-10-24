@@ -40,7 +40,14 @@ import {
     makeMatrix,
 } from "../engine/util";
 import { callbacks } from "./callbacks";
-import { Goban, GobanMetrics, GobanSelectedThemes, GOBAN_FONT } from "./Goban";
+import {
+    Goban,
+    GobanMetrics,
+    GobanSelectedThemes,
+    GOBAN_FONT,
+    CaptureDisplayConfig,
+    CaptureDisplay,
+} from "./Goban";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -3762,6 +3769,139 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         //if (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx) {
         this.move_tree_drawPath(ctx, node, viewport);
         //}
+    }
+
+    //
+    // Score display (captured stones)
+    //
+    public createCaptureDisplay(config: CaptureDisplayConfig): CaptureDisplay {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+            throw new Error("Failed to get 2d context for score display canvas");
+        }
+
+        const normalizedConfig = this.normalizeCaptureConfig(config);
+        let currentCount = normalizedConfig.stone_count;
+
+        const render = () => {
+            this.renderCaptureDisplay(canvas, ctx, normalizedConfig, currentCount);
+        };
+
+        render();
+
+        return {
+            element: canvas,
+            updateStoneCount: (count: number) => {
+                currentCount = Math.max(0, Math.round(count));
+                normalizedConfig.stone_count = currentCount;
+                render();
+            },
+            destroy: () => {
+                if (canvas.parentNode) {
+                    canvas.parentNode.removeChild(canvas);
+                }
+            },
+        };
+    }
+
+    private renderCaptureDisplay(
+        canvas: HTMLCanvasElement,
+        ctx: CanvasRenderingContext2D,
+        config: Required<CaptureDisplayConfig>,
+        count: number,
+    ): void {
+        const { radius, displayCount, stone_spacing, width, height } =
+            this.calculateCaptureDisplayDimensions(config, count);
+
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
+        ctx.clearRect(0, 0, width, height);
+
+        if (displayCount === 0) {
+            return;
+        }
+
+        const stones = this.getCaptureDisplayStones(config);
+        if (!stones || stones.length === 0) {
+            return;
+        }
+
+        const theme = config.stone_color === "black" ? this.theme_black : this.theme_white;
+        const placeStone =
+            config.stone_color === "black"
+                ? theme.placeBlackStone.bind(theme)
+                : theme.placeWhiteStone.bind(theme);
+
+        const cy = radius;
+
+        for (let i = 0; i < displayCount; i++) {
+            const cx = radius + i * stone_spacing;
+            const stone_idx = (i * 31) % stones.length;
+            const stone = stones[stone_idx];
+            placeStone(ctx, null, stone, cx, cy, radius);
+        }
+    }
+
+    private calculateCaptureDisplayDimensions(
+        config: Required<CaptureDisplayConfig>,
+        count: number,
+    ): {
+        radius: number;
+        displayCount: number;
+        stone_spacing: number;
+        width: number;
+        height: number;
+    } {
+        const radius = config.stone_radius;
+        const overlap = config.stone_overlap;
+        const displayCount = Math.max(0, Math.min(count, config.max_stones));
+
+        const stone_diameter = radius * 2;
+        const stone_spacing = Math.round(stone_diameter * (1 - overlap));
+        const width =
+            displayCount === 0
+                ? 0
+                : Math.round(stone_diameter + (displayCount - 1) * stone_spacing);
+        const height = Math.round(stone_diameter);
+
+        return { radius, displayCount, stone_spacing, width, height };
+    }
+
+    private getCaptureDisplayStones(config: Required<CaptureDisplayConfig>): any[] {
+        const color = config.stone_color;
+        const themeName = color === "black" ? this.themes.black : this.themes.white;
+        const radius = config.stone_radius;
+
+        this.ensureCaptureDisplayStonesPreRendered(config);
+
+        return __theme_cache[color][themeName][radius];
+    }
+
+    private ensureCaptureDisplayStonesPreRendered(config: Required<CaptureDisplayConfig>): void {
+        const color = config.stone_color;
+        const themeName = color === "black" ? this.themes.black : this.themes.white;
+        const theme = color === "black" ? this.theme_black : this.theme_white;
+        const radius = config.stone_radius;
+
+        if (!__theme_cache[color][themeName]) {
+            __theme_cache[color][themeName] = {
+                creation_order: [],
+            };
+        }
+
+        if (!__theme_cache[color][themeName][radius]) {
+            const callback = () => {
+                /* Stones are pre-rendered, no need for deferred callback */
+            };
+            __theme_cache[color][themeName][radius] =
+                color === "black"
+                    ? theme.preRenderBlack(radius, Math.random(), callback)
+                    : theme.preRenderWhite(radius, Math.random(), callback);
+        }
     }
 }
 

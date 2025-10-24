@@ -36,7 +36,14 @@ import {
     makeMatrix,
 } from "../engine/util";
 import { callbacks } from "./callbacks";
-import { Goban, GobanMetrics, GobanSelectedThemes, ShadowTheme } from "./Goban";
+import {
+    Goban,
+    GobanMetrics,
+    GobanSelectedThemes,
+    ShadowTheme,
+    CaptureDisplayConfig,
+    CaptureDisplay,
+} from "./Goban";
 import { ColoredCircle } from "./InteractiveBase";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
@@ -4728,6 +4735,165 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.move_tree_drawPath(svg, node, viewport);
+    }
+
+    //
+    // Score display (captured stones)
+    //
+    public createCaptureDisplay(config: CaptureDisplayConfig): CaptureDisplay {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svg_stones = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+        svg.appendChild(svg_stones);
+        svg.style.background = "transparent";
+
+        const normalizedConfig = this.normalizeCaptureConfig(config);
+        let currentCount = normalizedConfig.stone_count;
+
+        // Generate fresh defs for this score display SVG
+        // This creates new stone definitions that belong to this SVG document
+        const svg_defs = this.generateCaptureDisplayDefs(normalizedConfig.stone_radius);
+        svg.insertBefore(svg_defs, svg_stones);
+
+        const render = () => {
+            this.renderCaptureDisplay(svg, svg_stones, normalizedConfig, currentCount);
+        };
+
+        render();
+
+        return {
+            element: svg,
+            updateStoneCount: (count: number) => {
+                currentCount = Math.max(0, Math.round(count));
+                normalizedConfig.stone_count = currentCount;
+                render();
+            },
+            destroy: () => {
+                if (svg.parentNode) {
+                    svg.parentNode.removeChild(svg);
+                }
+            },
+        };
+    }
+
+    private renderCaptureDisplay(
+        svg: SVGSVGElement,
+        svg_stones: SVGGElement,
+        config: Required<CaptureDisplayConfig>,
+        count: number,
+    ): void {
+        const { radius, displayCount, stone_spacing, width, height } =
+            this.calculateCaptureDisplayDimensions(config, count);
+
+        svg.setAttribute("width", `${width}`);
+        svg.setAttribute("height", `${height}`);
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+        svg_stones.replaceChildren();
+
+        if (displayCount === 0) {
+            return;
+        }
+
+        const stone_ids = this.getCaptureDisplayStones(config);
+        if (!stone_ids || stone_ids.length === 0) {
+            return;
+        }
+
+        const cy = radius;
+
+        for (let i = 0; i < displayCount; i++) {
+            const cx = radius + i * stone_spacing;
+            const stone_idx = (i * 31) % stone_ids.length;
+            const stone_id = stone_ids[stone_idx];
+
+            const stone_ref = document.createElementNS("http://www.w3.org/2000/svg", "use");
+            stone_ref.setAttribute("href", `#${stone_id}`);
+            stone_ref.setAttribute("x", `${cx - radius}`);
+            stone_ref.setAttribute("y", `${cy - radius}`);
+            svg_stones.appendChild(stone_ref);
+        }
+    }
+
+    private calculateCaptureDisplayDimensions(
+        config: Required<CaptureDisplayConfig>,
+        count: number,
+    ): {
+        radius: number;
+        displayCount: number;
+        stone_spacing: number;
+        width: number;
+        height: number;
+    } {
+        const radius = config.stone_radius;
+        const overlap = config.stone_overlap;
+        const displayCount = Math.max(0, Math.min(count, config.max_stones));
+
+        const stone_diameter = radius * 2;
+        const stone_spacing = Math.round(stone_diameter * (1 - overlap));
+        const width =
+            displayCount === 0
+                ? 0
+                : Math.round(stone_diameter + (displayCount - 1) * stone_spacing);
+        const height = Math.round(stone_diameter);
+
+        return { radius, displayCount, stone_spacing, width, height };
+    }
+
+    private generateCaptureDisplayDefs(radius: number): SVGDefsElement {
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        const themes = this.themes;
+
+        // Create a temporary cache entry for this score display
+        // We use __theme_cache (not __move_tree_theme_cache) since these are regular stones
+        if (!(themes.white in __theme_cache.white)) {
+            __theme_cache.white[themes.white] = {};
+        }
+        if (!(themes.black in __theme_cache.black)) {
+            __theme_cache.black[themes.black] = {};
+        }
+
+        // Pre-render shadows into the defs
+        const shadowTheme = this.resolveShadowTheme(this.themes["stone-shadows"] || "default");
+        const customConfig = this.themes["custom-shadow-config"];
+        this.theme_black.preRenderShadowSVG(
+            defs,
+            "black",
+            this.theme_shadow_color,
+            shadowTheme,
+            customConfig,
+        );
+        this.theme_white.preRenderShadowSVG(
+            defs,
+            "white",
+            this.theme_shadow_color,
+            shadowTheme,
+            customConfig,
+        );
+
+        // Pre-render stones into the defs and cache the IDs
+        __theme_cache.white[themes.white][radius] = this.theme_white.preRenderWhiteSVG(
+            defs,
+            radius,
+            Math.random(),
+            () => {},
+        );
+        __theme_cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
+            defs,
+            radius,
+            Math.random(),
+            () => {},
+        );
+
+        return defs;
+    }
+
+    private getCaptureDisplayStones(config: Required<CaptureDisplayConfig>): string[] {
+        const color = config.stone_color;
+        const themeName = color === "black" ? this.themes.black : this.themes.white;
+        const radius = config.stone_radius;
+
+        return __theme_cache[color][themeName][radius];
     }
 }
 
