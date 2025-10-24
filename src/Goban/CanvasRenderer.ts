@@ -3901,6 +3901,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 color === "black"
                     ? theme.preRenderBlack(radius, Math.random(), callback)
                     : theme.preRenderWhite(radius, Math.random(), callback);
+            __theme_cache[color][themeName].creation_order.push(radius);
         }
     }
 }

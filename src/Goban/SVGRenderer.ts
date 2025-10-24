@@ -4749,6 +4749,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         const normalizedConfig = this.normalizeCaptureConfig(config);
         let currentCount = normalizedConfig.stone_count;
+        let previousDisplayCount = -1; // Track to avoid unnecessary DOM updates
 
         // Generate fresh defs for this score display SVG
         // This creates new stone definitions that belong to this SVG document
@@ -4756,7 +4757,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         svg.insertBefore(svg_defs, svg_stones);
 
         const render = () => {
-            this.renderCaptureDisplay(svg, svg_stones, normalizedConfig, currentCount);
+            const newDisplayCount = Math.min(currentCount, normalizedConfig.max_stones);
+            // Only update DOM if display count actually changed
+            if (newDisplayCount !== previousDisplayCount) {
+                this.renderCaptureDisplay(svg, svg_stones, normalizedConfig, currentCount);
+                previousDisplayCount = newDisplayCount;
+            }
         };
 
         render();
@@ -4769,9 +4775,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 render();
             },
             destroy: () => {
+                // Remove the SVG element from DOM
                 if (svg.parentNode) {
                     svg.parentNode.removeChild(svg);
                 }
+                // Clear internal references to help with GC
+                svg_stones.replaceChildren();
+                svg.replaceChildren();
             },
         };
     }
@@ -4847,10 +4857,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         // Create a temporary cache entry for this score display
         // We use __theme_cache (not __move_tree_theme_cache) since these are regular stones
         if (!(themes.white in __theme_cache.white)) {
-            __theme_cache.white[themes.white] = {};
+            __theme_cache.white[themes.white] = {
+                creation_order: [],
+            };
         }
         if (!(themes.black in __theme_cache.black)) {
-            __theme_cache.black[themes.black] = {};
+            __theme_cache.black[themes.black] = {
+                creation_order: [],
+            };
         }
 
         // Pre-render shadows into the defs
@@ -4878,12 +4892,15 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             Math.random(),
             () => {},
         );
+        __theme_cache.white[themes.white].creation_order.push(radius);
+
         __theme_cache.black[themes.black][radius] = this.theme_black.preRenderBlackSVG(
             defs,
             radius,
             Math.random(),
             () => {},
         );
+        __theme_cache.black[themes.black].creation_order.push(radius);
 
         return defs;
     }
