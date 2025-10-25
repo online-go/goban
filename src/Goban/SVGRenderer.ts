@@ -4825,31 +4825,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
 
-    private calculateCaptureDisplayDimensions(
-        config: Required<CaptureDisplayConfig>,
-        count: number,
-    ): {
-        radius: number;
-        displayCount: number;
-        stone_spacing: number;
-        width: number;
-        height: number;
-    } {
-        const radius = config.stone_radius;
-        const overlap = config.stone_overlap;
-        const displayCount = Math.max(0, Math.min(count, config.max_stones));
-
-        const stone_diameter = radius * 2;
-        const stone_spacing = Math.round(stone_diameter * (1 - overlap));
-        const width =
-            displayCount === 0
-                ? 0
-                : Math.round(stone_diameter + (displayCount - 1) * stone_spacing);
-        const height = Math.round(stone_diameter);
-
-        return { radius, displayCount, stone_spacing, width, height };
-    }
-
     private generateCaptureDisplayDefs(radius: number): SVGDefsElement {
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         const themes = this.themes;
