@@ -4047,10 +4047,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         const cache = for_move_tree ? __move_tree_theme_cache : __theme_cache;
 
         if (!(themes.white in cache.white)) {
-            cache.white[themes.white] = {};
+            cache.white[themes.white] = {
+                creation_order: [],
+            };
         }
         if (!(themes.black in cache.black)) {
-            cache.black[themes.black] = {};
+            cache.black[themes.black] = {
+                creation_order: [],
+            };
         }
 
         const shadowTheme = this.resolveShadowTheme(this.themes["stone-shadows"] || "default");
