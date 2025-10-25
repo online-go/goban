@@ -3902,6 +3902,28 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     ? theme.preRenderBlack(radius, Math.random(), callback)
                     : theme.preRenderWhite(radius, Math.random(), callback);
             __theme_cache[color][themeName].creation_order.push(radius);
+
+            // Evict old cache entries if we've exceeded the cache size
+            let max_cache_size = 24;
+            try {
+                // iOS devices have memory constraints, use smaller cache
+                if (
+                    /iP(ad|hone|od).+(Version\/[\d.]|OS \d.*like mac os x)+.*Safari/i.test(
+                        navigator.userAgent,
+                    )
+                ) {
+                    max_cache_size = 12;
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+
+            if (__theme_cache[color][themeName].creation_order.length > max_cache_size) {
+                const old_radius = __theme_cache[color][themeName].creation_order.shift();
+                if (old_radius) {
+                    delete __theme_cache[color][themeName][old_radius];
+                }
+            }
         }
     }
 }

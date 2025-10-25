@@ -4902,6 +4902,34 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         );
         __theme_cache.black[themes.black].creation_order.push(radius);
 
+        // Evict old cache entries if we've exceeded the cache size
+        let max_cache_size = 24;
+        try {
+            // iOS devices have memory constraints, use smaller cache
+            if (
+                /iP(ad|hone|od).+(Version\/[\d.]|OS \d.*like mac os x)+.*Safari/i.test(
+                    navigator.userAgent,
+                )
+            ) {
+                max_cache_size = 12;
+            }
+        } catch (e) {
+            // Ignore errors
+        }
+
+        if (__theme_cache.white[themes.white].creation_order.length > max_cache_size) {
+            const old_radius = __theme_cache.white[themes.white].creation_order.shift();
+            if (old_radius) {
+                delete __theme_cache.white[themes.white][old_radius];
+            }
+        }
+        if (__theme_cache.black[themes.black].creation_order.length > max_cache_size) {
+            const old_radius = __theme_cache.black[themes.black].creation_order.shift();
+            if (old_radius) {
+                delete __theme_cache.black[themes.black][old_radius];
+            }
+        }
+
         return defs;
     }
 
