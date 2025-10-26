@@ -548,7 +548,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     }
                     const move = move_obj.move;
 
-                    if (this.isInPushedAnalysis()) {
+                    if (
+                        typeof this.isInPushedAnalysis === "function" &&
+                        this.isInPushedAnalysis()
+                    ) {
                         this.leavePushedAnalysis();
                     }
 
@@ -1166,7 +1169,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 (this.isPlayerOwner() && msg_override && msg_override.controller)) &&
             this.done_loading_review
         ) {
-            if (this.isInPushedAnalysis()) {
+            if (typeof this.isInPushedAnalysis === "function" && this.isInPushedAnalysis()) {
                 return;
             }
 
