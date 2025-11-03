@@ -941,8 +941,28 @@ export class GobanEngine extends BoardState {
             throw new Error("updatePlayers called with no player_pool available");
         }
 
+        // Preserve accepted_stones and accepted_strict_seki_mode when updating players
+        const old_black_accepted_stones = this.players.black?.accepted_stones;
+        const old_black_accepted_strict_seki_mode = this.players.black?.accepted_strict_seki_mode;
+        const old_white_accepted_stones = this.players.white?.accepted_stones;
+        const old_white_accepted_strict_seki_mode = this.players.white?.accepted_strict_seki_mode;
+
         this.players.black = this.player_pool[player_update.players.black];
         this.players.white = this.player_pool[player_update.players.white];
+
+        // Restore stone removal phase data if it was present
+        if (old_black_accepted_stones !== undefined) {
+            this.players.black.accepted_stones = old_black_accepted_stones;
+        }
+        if (old_black_accepted_strict_seki_mode !== undefined) {
+            this.players.black.accepted_strict_seki_mode = old_black_accepted_strict_seki_mode;
+        }
+        if (old_white_accepted_stones !== undefined) {
+            this.players.white.accepted_stones = old_white_accepted_stones;
+        }
+        if (old_white_accepted_strict_seki_mode !== undefined) {
+            this.players.white.accepted_strict_seki_mode = old_white_accepted_strict_seki_mode;
+        }
 
         try {
             if (this.config.rengo && player_update.rengo_teams) {
