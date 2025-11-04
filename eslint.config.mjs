@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
 import { FlatCompat } from "@eslint/eslintrc";
+import stylistic from "@stylistic/eslint-plugin";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,7 @@ export default [
             "@typescript-eslint": typescriptEslint,
             prettier,
             header,
+            "@stylistic": stylistic,
         },
 
         languageOptions: {
@@ -58,6 +60,7 @@ export default [
             "@typescript-eslint/no-this-alias": "off",
             "@typescript-eslint/no-unused-vars": "off",
             "@typescript-eslint/no-empty-interface": "off",
+            "@typescript-eslint/no-empty-object-type": "off",
             "eqeqeq": ["error", "smart"],
             "no-case-declarations": "off",
             "no-constant-condition": "off",
@@ -67,7 +70,7 @@ export default [
             "@typescript-eslint/no-var-requires": "off",
             "@typescript-eslint/adjacent-overload-signatures": "error",
             "@typescript-eslint/consistent-type-assertions": "error",
-            "@typescript-eslint/member-delimiter-style": "error",
+            "@stylistic/member-delimiter-style": "error",
             "@typescript-eslint/no-floating-promises": "error",
 
             "@typescript-eslint/no-inferrable-types": [
@@ -79,8 +82,8 @@ export default [
             ],
 
             "@typescript-eslint/prefer-namespace-keyword": "error",
-            "@typescript-eslint/semi": "error",
-            "@typescript-eslint/type-annotation-spacing": "error",
+            "@stylistic/semi": "error",
+            "@stylistic/type-annotation-spacing": "error",
             "computed-property-spacing": ["error", "never"],
             "curly": "error",
             "eol-last": "error",

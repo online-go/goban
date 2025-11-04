@@ -378,7 +378,7 @@ describe("GobanEngine.place()", () => {
          */
         goban_callback.set.mockClear();
         expect(engine.place(0, 0)).toBe(1);
-        expect(goban_callback.set).toBeCalledWith(0, 0, 0);
+        expect(goban_callback.set).toHaveBeenCalledWith(0, 0, 0);
     });
 
     test("removed_stones parameter", () => {
@@ -408,13 +408,13 @@ describe("moves", () => {
         engine.setAsCurrentReviewMove();
 
         expect(engine.cur_review_move).toBe(engine.cur_move);
-        expect(on_cur_review_move).toBeCalledTimes(1);
+        expect(on_cur_review_move).toHaveBeenCalledTimes(1);
 
         on_cur_review_move.mockClear();
         engine.setAsCurrentReviewMove();
 
         // the signal shouldn't be emitted if the value doesn't actually change
-        expect(on_cur_review_move).not.toBeCalled();
+        expect(on_cur_review_move).not.toHaveBeenCalled();
     });
 
     test("cur_move", () => {
@@ -429,7 +429,7 @@ describe("moves", () => {
 
         expect(engine.cur_move.x).toBe(2);
         expect(engine.cur_move.y).toBe(3);
-        expect(on_cur_move).toBeCalledTimes(1);
+        expect(on_cur_move).toHaveBeenCalledTimes(1);
     });
 
     describe("setLastOfficialMove", () => {
@@ -442,19 +442,19 @@ describe("moves", () => {
 
             engine.place(10, 10, false, false, false, false, true /* isTrunkMove */);
 
-            expect(on_last_official_move).not.toBeCalled();
+            expect(on_last_official_move).not.toHaveBeenCalled();
             expect(engine.last_official_move).not.toBe(engine.cur_move);
 
             engine.setLastOfficialMove();
 
             expect(engine.last_official_move).toBe(engine.cur_move);
-            expect(on_last_official_move).toBeCalledTimes(1);
+            expect(on_last_official_move).toHaveBeenCalledTimes(1);
 
             on_last_official_move.mockClear();
 
             engine.setLastOfficialMove();
             // nothing changed, so no message is emitted
-            expect(on_last_official_move).toBeCalledTimes(0);
+            expect(on_last_official_move).toHaveBeenCalledTimes(0);
         });
 
         test("cur_move not on trunk is an error", () => {
@@ -635,7 +635,7 @@ describe("groups", () => {
 
         engine.toggleSingleGroupRemoval(0, 0);
 
-        expect(on_removal_updated).toBeCalledTimes(1);
+        expect(on_removal_updated).toHaveBeenCalledTimes(1);
 
         expect(engine.removal).toEqual([
             [true, false, false, false],
@@ -667,7 +667,7 @@ describe("groups", () => {
         engine.addListener("stone-removal.updated", on_removal_updated);
 
         expect(engine.toggleSingleGroupRemoval(0, 4)).toEqual({ removed: false, group: [] });
-        expect(on_removal_updated).toBeCalledTimes(0);
+        expect(on_removal_updated).toHaveBeenCalledTimes(0);
     });
 
     test("toggleSingleGroupRemoval empty area doesn't do anything", () => {
@@ -686,7 +686,7 @@ describe("groups", () => {
         engine.addListener("stone-removal.updated", on_removal_updated);
 
         expect(engine.toggleSingleGroupRemoval(0, 1)).toEqual({ removed: false, group: [] });
-        expect(on_removal_updated).toBeCalledTimes(0);
+        expect(on_removal_updated).toHaveBeenCalledTimes(0);
     });
 
     test("clearRemoved", () => {
@@ -706,7 +706,7 @@ describe("groups", () => {
         engine.addListener("stone-removal.updated", on_removal_updated);
         engine.clearRemoved();
 
-        expect(on_removal_updated).toBeCalledTimes(1);
+        expect(on_removal_updated).toHaveBeenCalledTimes(1);
         expect(engine.removal).toEqual(makeMatrix(4, 2, false));
     });
 
