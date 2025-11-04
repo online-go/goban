@@ -893,8 +893,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 if ("f" in obj && typeof obj.m === "string") {
                     /* specifying node */
                     const t = this.done_loading_review;
-                    this.done_loading_review =
-                        false; /* this prevents drawing from being drawn when we do a follow path. */
+                    this.done_loading_review = false; /* this prevents drawing from being drawn when we do a follow path. */
                     this.engine.followPath(obj.f || 0, obj.m);
                     this.drawSquare(this.engine.cur_move.x, this.engine.cur_move.y);
                     this.done_loading_review = t;

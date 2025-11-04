@@ -84,7 +84,7 @@ test.each(SGF_TEST_CASES)(
         expect(rmNewlines(moves_gen)).toBe(rmNewlines(moves));
         expect(goban.engine.move_tree.size()).toBe(size);
         if (num_errors) {
-            expect(log_spy).toBeCalledTimes(num_errors);
+            expect(log_spy).toHaveBeenCalledTimes(num_errors);
         }
     },
 );

@@ -283,10 +283,10 @@ describe("ScoreEstimator", () => {
         const se = new ScoreEstimator(engine, fake_goban as any, 10, 0.5, false);
         await se.when_ready;
 
-        expect(fake_goban.updateScoreEstimation).toBeCalled();
+        expect(fake_goban.updateScoreEstimation).toHaveBeenCalled();
 
         se.setRemoved(1, 0, true);
-        expect(fake_goban.setForRemoval).toBeCalledWith(1, 0, true, true);
+        expect(fake_goban.setForRemoval).toHaveBeenCalledWith(1, 0, true, true);
     });
 
     test("getProbablyDead", async () => {
@@ -317,7 +317,7 @@ describe("ScoreEstimator", () => {
         const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
         await se.when_ready;
 
-        expect(mock_local_scorer).toBeCalled();
+        expect(mock_local_scorer).toHaveBeenCalled();
         expect(se.ownership).toEqual([
             [1, 0, 0, -1],
             [1, 0, 0, -1],

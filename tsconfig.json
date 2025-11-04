@@ -31,7 +31,8 @@
         "allowJs": true,
 
         "sourceMap": true,
-        "jsx": "react"
+        "jsx": "react",
+        "skipLibCheck": true
     },
     "files": ["src/index.ts", "src/engine/index.ts", "jest.config.ts"],
     "include": ["test/**/*.ts", "scripts/**/*.ts", "examples/**/*.tsx"],

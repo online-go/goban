@@ -241,7 +241,7 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
-        expect(log_spy).toBeCalledWith(
+        expect(log_spy).toHaveBeenCalledWith(
             "Submit button pressed only ",
             40,
             "ms after stone was placed, presuming bad click",
@@ -382,10 +382,10 @@ describe("onTap", () => {
 
         // Unmodified clicks in stone removal send a "game/removed_stones/set" message
         jest.setSystemTime(50);
-        expect(addCoordinatesToChatInput).toBeCalledTimes(1);
+        expect(addCoordinatesToChatInput).toHaveBeenCalledTimes(1);
         // Note: "A2" is the correct pretty coordinate for (0,0) on a 2x4 board
         // because the y coordinate is flipped
-        expect(addCoordinatesToChatInput).toBeCalledWith("A2");
+        expect(addCoordinatesToChatInput).toHaveBeenCalledWith("A2");
         jest.useRealTimers();
     });
 
@@ -429,8 +429,8 @@ describe("onTap", () => {
 
         goban.setScoringMode(true);
 
-        expect(goban.engine.estimateScore).toBeCalledTimes(1);
-        expect(goban.engine.estimateScore).toBeCalledWith(
+        expect(goban.engine.estimateScore).toHaveBeenCalledTimes(1);
+        expect(goban.engine.estimateScore).toHaveBeenCalledWith(
             SCORE_ESTIMATION_TRIALS,
             SCORE_ESTIMATION_TOLERANCE,
             false,
@@ -441,8 +441,8 @@ describe("onTap", () => {
         simulateMouseClick(event_layer, { x: 1, y: 0 });
 
         // estimateScore is NOT called on tap
-        expect(goban.engine.estimateScore).toBeCalledTimes(0);
-        expect(mock_score_estimate.handleClick).toBeCalledTimes(1);
+        expect(goban.engine.estimateScore).toHaveBeenCalledTimes(0);
+        expect(mock_score_estimate.handleClick).toHaveBeenCalledTimes(1);
     });
 
     test("puzzle mode", () => {

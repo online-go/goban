@@ -140,7 +140,7 @@ function clear() {
 
 const fiddler = new EventEmitter();
 
-function GobanTestPage(): JSX.Element {
+function GobanTestPage(): React.JSX.Element {
     const [_update, _setUpdate] = React.useState(1);
     const [svg_or_canvas, setSVGOrCanvas] = React.useState("svg");
     function forceUpdate() {
@@ -341,7 +341,7 @@ interface ReactGobanProps {}
 function ReactGoban<GobanClass extends Goban>(
     ctor: { new (x: CanvasRendererGobanConfig | SVGRendererGobanConfig): GobanClass },
     props: ReactGobanProps,
-): JSX.Element {
+): React.JSX.Element {
     const [elapsed, setElapsed] = React.useState(0);
     const container = React.useRef(null);
     const move_tree_container = React.useRef(null);
@@ -549,7 +549,7 @@ function ReactGoban<GobanClass extends Goban>(
     );
 }
 
-function StoneSamples(): JSX.Element {
+function StoneSamples(): React.JSX.Element {
     const div = React.useRef(null);
 
     React.useEffect(() => {
@@ -721,15 +721,15 @@ function StoneSamples(): JSX.Element {
     return <div ref={div} />;
 }
 
-function ReactGobanCanvas(props: ReactGobanProps): JSX.Element {
+function ReactGobanCanvas(props: ReactGobanProps): React.JSX.Element {
     return ReactGoban<GobanCanvas>(GobanCanvas, props);
 }
 
-function ReactGobanSVG(props: ReactGobanProps): JSX.Element {
+function ReactGobanSVG(props: ReactGobanProps): React.JSX.Element {
     return ReactGoban<SVGRenderer>(SVGRenderer, props);
 }
 
-function Main(props: { children: any }): JSX.Element {
+function Main(props: { children: any }): React.JSX.Element {
     return <div className="Main">{props.children}</div>;
 }
 
@@ -745,7 +745,7 @@ new Goban({
 });
 `;
 
-function Examples(): JSX.Element {
+function Examples(): React.JSX.Element {
     /*
     return (
         <div className="Default">
@@ -773,7 +773,7 @@ function CodeExample({
 }: {
     source: string;
     scope: { [key: string]: any };
-}): JSX.Element {
+}): React.JSX.Element {
     const [output, setOutput] = React.useState(null);
     const goban_container = React.useRef(null);
 
@@ -805,7 +805,7 @@ function CodeExample({
     );
 }
 
-export function LeftNav(): JSX.Element {
+export function LeftNav(): React.JSX.Element {
     return (
         <div className="LeftNav">
             <Link to="/">Home</Link>
