@@ -36,7 +36,7 @@ describe("OGSConnectivity isInPushedAnalysis guard", () => {
         expect(consoleErrorSpy).not.toHaveBeenCalledWith(
             expect.objectContaining({
                 message: expect.stringContaining("isInPushedAnalysis is not a function"),
-            })
+            }),
         );
 
         consoleErrorSpy.mockRestore();

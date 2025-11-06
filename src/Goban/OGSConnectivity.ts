@@ -548,11 +548,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     }
                     const move = move_obj.move;
 
-                    if (
-                        typeof this.isInPushedAnalysis === "function" &&
-                        this.isInPushedAnalysis()
-                    ) {
-                        this.leavePushedAnalysis();
+                    if (this.isInPushedAnalysis?.()) {
+                        this.leavePushedAnalysis?.();
                     }
 
                     /* clear any undo state that may be hanging around */
@@ -1168,7 +1165,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 (this.isPlayerOwner() && msg_override && msg_override.controller)) &&
             this.done_loading_review
         ) {
-            if (typeof this.isInPushedAnalysis === "function" && this.isInPushedAnalysis()) {
+            if (this.isInPushedAnalysis?.()) {
                 return;
             }
 

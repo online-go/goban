@@ -254,8 +254,8 @@ export abstract class GobanInteractive extends GobanBase {
     protected getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
     protected highlight_movetree_moves: boolean;
     protected interactive: boolean;
-    protected isInPushedAnalysis: () => boolean;
-    protected leavePushedAnalysis: () => void;
+    protected isInPushedAnalysis?: () => boolean;
+    protected leavePushedAnalysis?: () => void;
     protected isPlayerController: () => boolean;
     protected isPlayerOwner: () => boolean;
     protected label_character: string;
@@ -356,14 +356,8 @@ export abstract class GobanInteractive extends GobanBase {
         this.puzzle_autoplace_delay = config.puzzle_autoplace_delay || 300;
         this.isPlayerOwner = config.isPlayerOwner || (() => false); /* for reviews  */
         this.isPlayerController = config.isPlayerController || (() => false); /* for reviews  */
-        this.isInPushedAnalysis = config.isInPushedAnalysis
-            ? config.isInPushedAnalysis
-            : () => false;
-        this.leavePushedAnalysis = config.leavePushedAnalysis
-            ? config.leavePushedAnalysis
-            : () => {
-                  return;
-              };
+        this.isInPushedAnalysis = config.isInPushedAnalysis ?? (() => false);
+        this.leavePushedAnalysis = config.leavePushedAnalysis ?? (() => {});
         //this.onPendingResignation = config.onPendingResignation;
         //this.onPendingResignationCleared = config.onPendingResignationCleared;
         if ("onError" in config) {
