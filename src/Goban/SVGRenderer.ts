@@ -1366,9 +1366,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.engine &&
             this.engine.cur_move &&
             (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" &&
-                    this.isInPushedAnalysis() &&
-                    this.show_variation_move_numbers))
+                (this.isInPushedAnalysis?.() && this.show_variation_move_numbers))
         ) {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {
@@ -2087,9 +2085,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.engine &&
             this.engine.cur_move &&
             (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" &&
-                    this.isInPushedAnalysis() &&
-                    this.show_variation_move_numbers))
+                (this.isInPushedAnalysis?.() && this.show_variation_move_numbers))
         ) {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {
@@ -3169,8 +3165,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (
             this.engine &&
             this.engine.cur_move &&
-            (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" && this.isInPushedAnalysis()))
+            (this.mode !== "play" || this.isInPushedAnalysis?.())
         ) {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {

@@ -1279,8 +1279,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         if (
             this.engine &&
             this.engine.cur_move &&
-            (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" && this.isInPushedAnalysis()))
+            (this.mode !== "play" || this.isInPushedAnalysis?.())
         ) {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {
@@ -2309,8 +2308,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         if (
             this.engine &&
             this.engine.cur_move &&
-            (this.mode !== "play" ||
-                (typeof this.isInPushedAnalysis() !== "undefined" && this.isInPushedAnalysis()))
+            (this.mode !== "play" || this.isInPushedAnalysis?.())
         ) {
             let cur: MoveTree | null = this.engine.cur_move;
             for (; cur && !cur.trunk; cur = cur.parent) {
