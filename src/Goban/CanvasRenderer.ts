@@ -176,6 +176,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.move_tree_container = config.move_tree_container;
 
         this.handleShiftKey = (ev) => {
+            if (this.destroyed) {
+                return;
+            }
             try {
                 if (ev.shiftKey !== this.shift_key_is_down) {
                     this.shift_key_is_down = ev.shiftKey;
@@ -1228,6 +1231,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
     }
     public drawSquare(i: number, j: number): void {
+        if (this.destroyed) {
+            return;
+        }
         if (i < 0 || j < 0 || !this.drawing_enabled || this.no_display) {
             return;
         }
@@ -1665,7 +1671,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         }, 1);
                         return;
                     }
-
                     ctx.save();
                     let shadow_ctx: CanvasRenderingContext2D | null | undefined = this.shadow_ctx;
                     if (!stone_color || translucent) {

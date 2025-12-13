@@ -243,6 +243,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.move_tree_container = config.move_tree_container;
 
         this.handleShiftKey = (ev) => {
+            if (this.destroyed) {
+                return;
+            }
             try {
                 if (ev.shiftKey !== this.shift_key_is_down) {
                     this.shift_key_is_down = ev.shiftKey;
@@ -1303,6 +1306,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
     public drawSquare(i: number, j: number): void {
+        if (this.destroyed) {
+            return;
+        }
         if (i < 0 || j < 0 || !this.drawing_enabled || this.no_display) {
             return;
         }
@@ -1603,7 +1609,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                         }, 1);
                         return;
                     }
-
                     const stone_transparent = translucent || !stone_color;
 
                     cell.stone(
@@ -2404,7 +2409,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                         }, 1);
                         return;
                     }
-
                     const stone_transparent = translucent || !stone_color;
 
                     if (color === 1) {
