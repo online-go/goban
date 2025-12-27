@@ -1698,7 +1698,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 }
                 clock.pause_state = AdHocPauseControl2JGOFPauseState(this.pause_control);
                 if (clock.pause_state.stone_removal) {
-                    clock.stone_removal_time_left = original_clock.expiration - current_server_time;
+                    clock.stone_removal_time_left =
+                        (original_clock.stone_removal_expiration ?? original_clock.expiration) -
+                        current_server_time;
                 }
             }
 
