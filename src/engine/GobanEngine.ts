@@ -38,7 +38,7 @@ import {
     JGOFIntersection,
     JGOFSealingIntersection,
 } from "./formats/JGOF";
-import { AdHocPackedMove } from "./formats/AdHocFormat";
+import { AdHocPackedMove, AdHocPauseControl } from "./formats/AdHocFormat";
 import { _ } from "./translate";
 import { EventEmitter } from "eventemitter3";
 import { GameClock, StallingScoreEstimate } from "./protocol";
@@ -163,6 +163,11 @@ export interface GobanEngineConfig extends BoardConfig {
 
     // This is used in gtp2ogs
     clock?: GameClock;
+
+    pause_control?: AdHocPauseControl;
+
+    /** a bit confusing — this reflects the last time a pause was started, even if the game is not currently paused */
+    paused_since?: number;
 
     /** Optional bot parameters */
     bot_parameters?: {

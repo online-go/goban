@@ -37,7 +37,7 @@ import {
     JGOFNumericPlayerColor,
     JGOFMove,
 } from "./engine/formats/JGOF";
-import { AdHocPackedMove, AdHocPauseControl } from "./engine/formats/AdHocFormat";
+import { AdHocPackedMove } from "./engine/formats/AdHocFormat";
 import { MessageID } from "./engine/messages";
 import type { GobanSocket } from "./engine/GobanSocket";
 import type { ServerToClient, GameChatLine } from "./engine/protocol";
@@ -83,10 +83,6 @@ export interface GobanConfig extends GobanEngineConfig, PuzzleConfig {
     chat_log?: GobanChatLog;
     spectator_log?: GobanChatLog;
     malkovich_log?: GobanChatLog;
-
-    // pause control
-    pause_control?: AdHocPauseControl;
-    paused_since?: number;
 
     // settings
     draw_top_labels?: boolean;
