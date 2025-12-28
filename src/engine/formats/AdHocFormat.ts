@@ -89,6 +89,13 @@ export interface AdHocClock {
      *  `expiration` (in ms) */
     start_mode?: boolean;
 
+    /** If true, the game is in stone removal phase */
+    stone_removal_mode?: boolean;
+
+    /** Time the stone removal phase will end if no action is taken,
+     *  in milliseconds since 1970. Only set when stone_removal_mode is true. */
+    stone_removal_expiration?: number;
+
     /** If set, this AdHocClock is updating the pause state */
     pause?: {
         paused: boolean;
