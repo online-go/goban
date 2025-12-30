@@ -272,6 +272,7 @@ function buildScoreLossList(
     const score_loss_list: ScoreLossList = { black: [], white: [] };
     const total_score_loss = { black: 0, white: 0 };
     let moves_pending = 0;
+    const is_full_review = ai_review.type === "full";
 
     for (
         let move_index = handicap_offset;
@@ -283,11 +284,12 @@ function buildScoreLossList(
 
         let score_loss: number;
 
-        // Use full calculation if branch data is available, otherwise use simple score difference
-        if (
+        const has_branch_data =
             ai_review?.moves[move_index]?.branches?.[0]?.score !== undefined &&
-            ai_review?.moves[move_index + 1]?.score !== undefined
-        ) {
+            ai_review?.moves[move_index + 1]?.score !== undefined;
+
+        if (has_branch_data) {
+            // Full calculation with blue move adjustment
             const score_after_last_move = ai_review.moves[move_index].score!;
             const predicted_score_after_blue_move = ai_review.moves[move_index].branches[0].score!;
             const blue_score_loss = score_after_last_move - predicted_score_after_blue_move;
@@ -295,12 +297,15 @@ function buildScoreLossList(
             const effective_score_loss =
                 score_after_last_move - score_after_players_move - blue_score_loss;
             score_loss = is_b_player ? effective_score_loss : -1 * effective_score_loss;
+        } else if (is_full_review) {
+            // Full review but data not available yet - skip this move (wait for data)
+            moves_pending++;
+            continue;
         } else {
-            // Simple calculation from scores array
+            // Fast review - use simple score difference (this is the expected/complete data)
             const scores = ai_review.scores!;
             const score_diff = scores[move_index + 1] - scores[move_index];
             score_loss = is_b_player ? -1 * score_diff : score_diff;
-            moves_pending++;
         }
 
         if (includeNegativeScoreLoss || score_loss >= 0) {
