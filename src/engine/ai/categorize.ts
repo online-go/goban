@@ -25,7 +25,14 @@ export const DEFAULT_SCORE_DIFF_THRESHOLDS: ScoreDiffThresholds = {
     Mistake: 5.0,
 };
 
-export type MoveCategory = "Excellent" | "Great" | "Good" | "Inaccuracy" | "Mistake" | "Blunder";
+export type MoveCategory =
+    | "Excellent"
+    | "Great"
+    | "Joseki"
+    | "Good"
+    | "Inaccuracy"
+    | "Mistake"
+    | "Blunder";
 
 export type ScoreDiffThresholds = {
     Excellent: number;
@@ -34,6 +41,10 @@ export type ScoreDiffThresholds = {
     Inaccuracy: number;
     Mistake: number;
 };
+
+// Joseki detection constants
+const STRONG_MOVE_SCORE_LOSS_THRESHOLD = 1.2;
+const SINGLE_MOVE_LOSS_THRESHOLD = STRONG_MOVE_SCORE_LOSS_THRESHOLD * 2;
 
 export interface AiReviewCategorization {
     uuid: string;
@@ -90,6 +101,147 @@ function handicapOffset(engine: GobanEngine): number {
     return 0;
 }
 
+// Joseki zone detection functions
+interface JosekiZoneState {
+    still_joseki: boolean[];
+    moves_in_zone: number[];
+    zone_loss: number[];
+}
+
+function getMoveCutoff(size: number): number {
+    if (size === 9) {
+        return 10;
+    } else if (size === 13) {
+        return 15;
+    }
+    return 20;
+}
+
+function getZonesQuadrant(x: number, y: number, width: number, height: number): number[] {
+    // 4 quadrants with overlap on center lines
+    const centerX = Math.floor((width - 1) / 2);
+    const centerY = Math.floor((height - 1) / 2);
+    const zones: number[] = [];
+
+    if (x <= centerX) {
+        if (y <= centerY) {
+            zones.push(0);
+        }
+        if (y >= centerY) {
+            zones.push(2);
+        }
+    }
+    if (x >= centerX) {
+        if (y <= centerY) {
+            zones.push(1);
+        }
+        if (y >= centerY) {
+            zones.push(3);
+        }
+    }
+
+    return zones;
+}
+
+function getZones(x: number, y: number, width: number, height: number): number[] {
+    return getZonesQuadrant(x, y, width, height);
+}
+
+function getNumZones(size: number): number {
+    return size === 19 ? 8 : 4;
+}
+
+interface MoveCoordinate {
+    move_number: number;
+    x: number;
+    y: number;
+    player: "black" | "white";
+}
+
+function getMoveCoordinates(engine: GobanEngine): MoveCoordinate[] {
+    const moves: MoveCoordinate[] = [];
+    let cur_move = engine.move_tree.trunk_next;
+
+    while (cur_move !== undefined) {
+        // Skip pass moves (x = -1 or y = -1)
+        if (cur_move.x >= 0 && cur_move.y >= 0) {
+            moves.push({
+                move_number: cur_move.move_number,
+                x: cur_move.x,
+                y: cur_move.y,
+                player: cur_move.player === JGOFNumericPlayerColor.BLACK ? "black" : "white",
+            });
+        }
+        cur_move = cur_move.trunk_next;
+    }
+
+    return moves;
+}
+
+interface JosekiMoves {
+    black: Set<number>;
+    white: Set<number>;
+}
+
+function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList): JosekiMoves {
+    const width = engine.width;
+    const height = engine.height;
+    const maxDimension = Math.max(width, height);
+
+    const move_cutoff = getMoveCutoff(maxDimension);
+    const accumulated_loss_threshold = STRONG_MOVE_SCORE_LOSS_THRESHOLD * move_cutoff;
+    const num_zones = getNumZones(maxDimension);
+
+    // Track zones (shared between both players - either player breaking joseki ends it)
+    const zoneState: JosekiZoneState = {
+        still_joseki: Array(num_zones).fill(true),
+        moves_in_zone: Array(num_zones).fill(0),
+        zone_loss: Array(num_zones).fill(0),
+    };
+
+    // Build a map of move_number -> score_loss for quick lookup
+    const scoreLossMap: { black: Map<number, number>; white: Map<number, number> } = {
+        black: new Map(score_loss_list.black.map((m) => [m.move, m.scoreLoss])),
+        white: new Map(score_loss_list.white.map((m) => [m.move, m.scoreLoss])),
+    };
+
+    const josekiMoves: JosekiMoves = { black: new Set(), white: new Set() };
+    const moveCoords = getMoveCoordinates(engine);
+
+    for (const move of moveCoords) {
+        const { move_number, x, y, player } = move;
+        const move_loss = scoreLossMap[player].get(move_number) ?? 0;
+
+        const zones = getZones(x, y, width, height);
+        let is_joseki = false;
+
+        for (const zone of zones) {
+            if (!zoneState.still_joseki[zone]) {
+                continue;
+            }
+
+            zoneState.moves_in_zone[zone] += 1;
+            zoneState.zone_loss[zone] += move_loss;
+
+            if (
+                zoneState.zone_loss[zone] > accumulated_loss_threshold ||
+                move_loss > SINGLE_MOVE_LOSS_THRESHOLD ||
+                zoneState.moves_in_zone[zone] > move_cutoff
+            ) {
+                zoneState.still_joseki[zone] = false;
+            } else {
+                is_joseki = true;
+            }
+        }
+
+        if (is_joseki) {
+            josekiMoves[player].add(move_number);
+        }
+    }
+
+    return josekiMoves;
+}
+
 function getPlayerColorsMoveList(engine: GobanEngine) {
     const init_move = engine.move_tree;
     const move_list: any[] = [];
@@ -102,125 +254,51 @@ function getPlayerColorsMoveList(engine: GobanEngine) {
     return move_list;
 }
 
-type CategorizationResult = {
-    move_counters: MoveCounters;
+type ScoreLossResult = {
     score_loss_list: ScoreLossList;
     total_score_loss: { black: number; white: number };
-    categorized_moves: MoveNumbers;
     moves_pending: number;
 };
 
-function categorizeFastReview(
+function buildScoreLossList(
     ai_review: JGOFAIReview,
     handicap_offset: number,
-    move_player_list: any[],
-    scoreDiffThresholds: ScoreDiffThresholds = DEFAULT_SCORE_DIFF_THRESHOLDS,
-): CategorizationResult {
-    const scores = ai_review.scores;
-    if (!scores) {
-        throw new Error("Scores are required for fast review categorization");
-    }
-
-    const move_counters: MoveCounters = {
-        black: { Excellent: 0, Great: 0, Good: 0, Inaccuracy: 0, Mistake: 0, Blunder: 0 },
-        white: { Excellent: 0, Great: 0, Good: 0, Inaccuracy: 0, Mistake: 0, Blunder: 0 },
-    };
-    const score_loss_list: ScoreLossList = { black: [], white: [] };
-    const total_score_loss = { black: 0, white: 0 };
-    const categorized_moves: MoveNumbers = {
-        black: { Excellent: [], Great: [], Good: [], Inaccuracy: [], Mistake: [], Blunder: [] },
-        white: { Excellent: [], Great: [], Good: [], Inaccuracy: [], Mistake: [], Blunder: [] },
-    };
-    const worst_move_keys = Object.keys(ai_review.moves);
-
-    for (let j = 0; j < worst_move_keys.length; j++) {
-        (scores as any)[worst_move_keys[j]] = ai_review.moves[worst_move_keys[j]].score;
-    }
-
-    for (let move_index = handicap_offset; move_index < scores.length - 1; move_index++) {
-        let score_diff = scores[move_index + 1] - scores[move_index];
-        const is_b_player = move_player_list[move_index] === JGOFNumericPlayerColor.BLACK;
-        const player = is_b_player ? "black" : "white";
-        score_diff = is_b_player ? -1 * score_diff : score_diff;
-        total_score_loss[player] += score_diff;
-        score_loss_list[player].push({ move: move_index + 1, scoreLoss: score_diff });
-
-        const thresholds = {
-            Good: scoreDiffThresholds.Good,
-            Inaccuracy: scoreDiffThresholds.Inaccuracy,
-            Mistake: scoreDiffThresholds.Mistake,
-        };
-
-        if (score_diff < thresholds.Good) {
-            move_counters[player].Good += 1;
-            categorized_moves[player].Good.push(move_index + 1);
-        } else if (score_diff < thresholds.Inaccuracy) {
-            move_counters[player].Inaccuracy += 1;
-            categorized_moves[player].Inaccuracy.push(move_index + 1);
-        } else if (score_diff < thresholds.Mistake) {
-            move_counters[player].Mistake += 1;
-            categorized_moves[player].Mistake.push(move_index + 1);
-        } else if (score_diff >= thresholds.Mistake) {
-            move_counters[player].Blunder += 1;
-            categorized_moves[player].Blunder.push(move_index + 1);
-        }
-    }
-
-    return {
-        move_counters,
-        score_loss_list,
-        total_score_loss,
-        categorized_moves,
-        moves_pending: 0,
-    };
-}
-
-function categorizeFullReview(
-    ai_review: JGOFAIReview,
-    handicap_offset: number,
-    move_player_list: any[],
-    scoreDiffThresholds: ScoreDiffThresholds = DEFAULT_SCORE_DIFF_THRESHOLDS,
+    move_player_list: (typeof JGOFNumericPlayerColor)[keyof typeof JGOFNumericPlayerColor][],
     includeNegativeScoreLoss: boolean = false,
-): CategorizationResult {
-    const move_counters: MoveCounters = {
-        black: { Excellent: 0, Great: 0, Good: 0, Inaccuracy: 0, Mistake: 0, Blunder: 0 },
-        white: { Excellent: 0, Great: 0, Good: 0, Inaccuracy: 0, Mistake: 0, Blunder: 0 },
-    };
+): ScoreLossResult {
     const score_loss_list: ScoreLossList = { black: [], white: [] };
     const total_score_loss = { black: 0, white: 0 };
-    const categorized_moves: MoveNumbers = {
-        black: { Excellent: [], Great: [], Good: [], Inaccuracy: [], Mistake: [], Blunder: [] },
-        white: { Excellent: [], Great: [], Good: [], Inaccuracy: [], Mistake: [], Blunder: [] },
-    };
-
     let moves_pending = 0;
+
     for (
         let move_index = handicap_offset;
         move_index < (ai_review?.scores?.length ?? 0) - 1;
         move_index++
     ) {
-        if (
-            ai_review?.moves[move_index] === undefined ||
-            ai_review?.moves[move_index + 1] === undefined
-        ) {
-            moves_pending++;
-            continue;
-        }
-
         const is_b_player = move_player_list[move_index] === JGOFNumericPlayerColor.BLACK;
         const player = is_b_player ? "black" : "white";
 
-        const score_after_last_move = ai_review.moves[move_index].score!;
-        const predicted_score_after_blue_move = ai_review.moves[move_index].branches[0].score!;
+        let score_loss: number;
 
-        const blue_score_loss = score_after_last_move - predicted_score_after_blue_move;
-
-        const score_after_players_move = ai_review.moves[move_index + 1].score!;
-
-        const effective_score_loss =
-            score_after_last_move - score_after_players_move - blue_score_loss;
-
-        const score_loss = is_b_player ? effective_score_loss : -1 * effective_score_loss;
+        // Use full calculation if branch data is available, otherwise use simple score difference
+        if (
+            ai_review?.moves[move_index]?.branches?.[0]?.score !== undefined &&
+            ai_review?.moves[move_index + 1]?.score !== undefined
+        ) {
+            const score_after_last_move = ai_review.moves[move_index].score!;
+            const predicted_score_after_blue_move = ai_review.moves[move_index].branches[0].score!;
+            const blue_score_loss = score_after_last_move - predicted_score_after_blue_move;
+            const score_after_players_move = ai_review.moves[move_index + 1].score!;
+            const effective_score_loss =
+                score_after_last_move - score_after_players_move - blue_score_loss;
+            score_loss = is_b_player ? effective_score_loss : -1 * effective_score_loss;
+        } else {
+            // Simple calculation from scores array
+            const scores = ai_review.scores!;
+            const score_diff = scores[move_index + 1] - scores[move_index];
+            score_loss = is_b_player ? -1 * score_diff : score_diff;
+            moves_pending++;
+        }
 
         if (includeNegativeScoreLoss || score_loss >= 0) {
             total_score_loss[player] += score_loss;
@@ -228,37 +306,103 @@ function categorizeFullReview(
         } else {
             score_loss_list[player].push({ move: move_index + 1, scoreLoss: 0 });
         }
+    }
 
-        const thresholds = {
-            Excellent: scoreDiffThresholds.Excellent,
-            Great: scoreDiffThresholds.Great,
-            Good: scoreDiffThresholds.Good,
-            Inaccuracy: scoreDiffThresholds.Inaccuracy,
-            Mistake: scoreDiffThresholds.Mistake,
-        };
+    return { score_loss_list, total_score_loss, moves_pending };
+}
 
-        if (score_loss < thresholds.Excellent) {
-            move_counters[player].Excellent += 1;
-            categorized_moves[player].Excellent.push(move_index + 1);
-        } else if (score_loss < thresholds.Great) {
-            move_counters[player].Great += 1;
-            categorized_moves[player].Great.push(move_index + 1);
-        } else if (score_loss < thresholds.Good) {
-            move_counters[player].Good += 1;
-            categorized_moves[player].Good.push(move_index + 1);
-        } else if (score_loss < thresholds.Inaccuracy) {
-            move_counters[player].Inaccuracy += 1;
-            categorized_moves[player].Inaccuracy.push(move_index + 1);
-        } else if (score_loss < thresholds.Mistake) {
-            move_counters[player].Mistake += 1;
-            categorized_moves[player].Mistake.push(move_index + 1);
-        } else {
-            move_counters[player].Blunder += 1;
-            categorized_moves[player].Blunder.push(move_index + 1);
+type CategorizationResult = {
+    move_counters: MoveCounters;
+    categorized_moves: MoveNumbers;
+};
+
+function categorizeMoves(
+    score_loss_list: ScoreLossList,
+    josekiMoves: JosekiMoves,
+    scoreDiffThresholds: ScoreDiffThresholds = DEFAULT_SCORE_DIFF_THRESHOLDS,
+): CategorizationResult {
+    const move_counters: MoveCounters = {
+        black: {
+            Excellent: 0,
+            Great: 0,
+            Joseki: 0,
+            Good: 0,
+            Inaccuracy: 0,
+            Mistake: 0,
+            Blunder: 0,
+        },
+        white: {
+            Excellent: 0,
+            Great: 0,
+            Joseki: 0,
+            Good: 0,
+            Inaccuracy: 0,
+            Mistake: 0,
+            Blunder: 0,
+        },
+    };
+    const categorized_moves: MoveNumbers = {
+        black: {
+            Excellent: [],
+            Great: [],
+            Joseki: [],
+            Good: [],
+            Inaccuracy: [],
+            Mistake: [],
+            Blunder: [],
+        },
+        white: {
+            Excellent: [],
+            Great: [],
+            Joseki: [],
+            Good: [],
+            Inaccuracy: [],
+            Mistake: [],
+            Blunder: [],
+        },
+    };
+
+    const thresholds = {
+        Excellent: scoreDiffThresholds.Excellent,
+        Great: scoreDiffThresholds.Great,
+        Good: scoreDiffThresholds.Good,
+        Inaccuracy: scoreDiffThresholds.Inaccuracy,
+        Mistake: scoreDiffThresholds.Mistake,
+    };
+
+    for (const player of ["black", "white"] as const) {
+        for (const { move, scoreLoss } of score_loss_list[player]) {
+            // Check if this is a joseki move first
+            if (josekiMoves[player].has(move)) {
+                move_counters[player].Joseki += 1;
+                categorized_moves[player].Joseki.push(move);
+                continue;
+            }
+
+            // Categorize based on score loss
+            if (scoreLoss < thresholds.Excellent) {
+                move_counters[player].Excellent += 1;
+                categorized_moves[player].Excellent.push(move);
+            } else if (scoreLoss < thresholds.Great) {
+                move_counters[player].Great += 1;
+                categorized_moves[player].Great.push(move);
+            } else if (scoreLoss < thresholds.Good) {
+                move_counters[player].Good += 1;
+                categorized_moves[player].Good.push(move);
+            } else if (scoreLoss < thresholds.Inaccuracy) {
+                move_counters[player].Inaccuracy += 1;
+                categorized_moves[player].Inaccuracy.push(move);
+            } else if (scoreLoss < thresholds.Mistake) {
+                move_counters[player].Mistake += 1;
+                categorized_moves[player].Mistake.push(move);
+            } else {
+                move_counters[player].Blunder += 1;
+                categorized_moves[player].Blunder.push(move);
+            }
         }
     }
 
-    return { move_counters, score_loss_list, total_score_loss, categorized_moves, moves_pending };
+    return { move_counters, categorized_moves };
 }
 
 function validateReviewData(
@@ -300,7 +444,7 @@ function validateReviewData(
 }
 
 /*
- * Categorizes the moves in an AI review as Excellent, Great, Good, Inaccuracy, Mistake, or Blunder.
+ * Categorizes the moves in an AI review as Excellent, Great, Good, Joseki, Inaccuracy, Mistake, or Blunder.
  *
  * Called by AIReviewData.categorize to perform actual categorization work.
  *
@@ -326,21 +470,18 @@ export function AIReviewData_categorize(
         return null;
     }
 
-    const { move_counters, score_loss_list, total_score_loss, categorized_moves, moves_pending } =
-        ai_review.type === "fast"
-            ? categorizeFastReview(
-                  ai_review,
-                  handicap_offset,
-                  move_player_list,
-                  scoreDiffThresholds,
-              )
-            : categorizeFullReview(
-                  ai_review,
-                  handicap_offset,
-                  move_player_list,
-                  scoreDiffThresholds,
-                  includeNegativeScoreLoss,
-              );
+    const { score_loss_list, total_score_loss, moves_pending } = buildScoreLossList(
+        ai_review,
+        handicap_offset,
+        move_player_list,
+        includeNegativeScoreLoss,
+    );
+    const josekiMoves = detectJosekiMoves(engine, score_loss_list);
+    const { move_counters, categorized_moves } = categorizeMoves(
+        score_loss_list,
+        josekiMoves,
+        scoreDiffThresholds,
+    );
 
     const avg_score_loss = {
         black:
