@@ -163,15 +163,12 @@ function getMoveCoordinates(engine: GobanEngine): MoveCoordinate[] {
     let cur_move = engine.move_tree.trunk_next;
 
     while (cur_move !== undefined) {
-        // Skip pass moves (x = -1 or y = -1)
-        if (cur_move.x >= 0 && cur_move.y >= 0) {
-            moves.push({
-                move_number: cur_move.move_number,
-                x: cur_move.x,
-                y: cur_move.y,
-                player: cur_move.player === JGOFNumericPlayerColor.BLACK ? "black" : "white",
-            });
-        }
+        moves.push({
+            move_number: cur_move.move_number,
+            x: cur_move.x,
+            y: cur_move.y,
+            player: cur_move.player === JGOFNumericPlayerColor.BLACK ? "black" : "white",
+        });
         cur_move = cur_move.trunk_next;
     }
 
@@ -210,6 +207,12 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
 
     for (const move of moveCoords) {
         const { move_number, x, y, player } = move;
+
+        // Skip pass moves - they don't belong to any zone
+        if (x < 0 || y < 0) {
+            continue;
+        }
+
         const move_loss = scoreLossMap[player].get(move_number) ?? 0;
 
         const zones = getZones(x, y, width, height);
