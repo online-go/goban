@@ -16,6 +16,7 @@
 
 import { JGOFAIReview, JGOFNumericPlayerColor } from "../formats/JGOF";
 import { GobanEngine } from "../GobanEngine";
+import { MoveTree } from "../MoveTree";
 
 export const DEFAULT_SCORE_DIFF_THRESHOLDS: ScoreDiffThresholds = {
     Excellent: 0.2,
@@ -44,7 +45,7 @@ export type ScoreDiffThresholds = {
 
 // Joseki detection constants
 const STRONG_MOVE_SCORE_LOSS_THRESHOLD = 1.2;
-const SINGLE_MOVE_LOSS_THRESHOLD = STRONG_MOVE_SCORE_LOSS_THRESHOLD * 2;
+const SINGLE_MOVE_LOSS_THRESHOLD = 1.2;
 
 export interface AiReviewCategorization {
     uuid: string;
@@ -117,38 +118,205 @@ function getMoveCutoff(size: number): number {
     return 20;
 }
 
-function getZonesQuadrant(x: number, y: number, width: number, height: number): number[] {
-    // 4 quadrants with overlap on center lines
-    const centerX = Math.floor((width - 1) / 2);
-    const centerY = Math.floor((height - 1) / 2);
-    const zones: number[] = [];
-
-    if (x <= centerX) {
-        if (y <= centerY) {
-            zones.push(0);
-        }
-        if (y >= centerY) {
-            zones.push(2);
-        }
+/**
+ * Get the half-width of the center band based on board size.
+ * Returns -1 for 9x9 (no middle zones), 0 for 13x13 (single line), 1 for 19x19 (3 lines).
+ */
+function getCenterHalfWidth(size: number): number {
+    if (size <= 9) {
+        return -1; // No middle zones for small boards
+    } else if (size <= 13) {
+        return 0; // Single center line
     }
-    if (x >= centerX) {
-        if (y <= centerY) {
-            zones.push(1);
-        }
-        if (y >= centerY) {
-            zones.push(3);
-        }
-    }
-
-    return zones;
+    return 1; // 3 center lines
 }
 
+/**
+ * Zone adjacency map for propagation.
+ * When a zone exits joseki, these adjacent zones also exit.
+ *
+ * Zone layout for 13x13+:
+ *     0  |  4  |  1
+ *    ----+-----+----
+ *     7  |  *  |  5
+ *    ----+-----+----
+ *     2  |  6  |  3
+ */
+const ZONE_ADJACENCY: { [key: number]: number[] } = {
+    0: [4, 7], // top-left corner → top middle, left middle
+    1: [4, 5], // top-right corner → top middle, right middle
+    2: [6, 7], // bottom-left corner → bottom middle, left middle
+    3: [5, 6], // bottom-right corner → bottom middle, right middle
+    4: [0, 1], // top middle → top-left corner, top-right corner
+    5: [1, 3], // right middle → top-right corner, bottom-right corner
+    6: [2, 3], // bottom middle → bottom-left corner, bottom-right corner
+    7: [0, 2], // left middle → top-left corner, bottom-left corner
+};
+
+/**
+ * Propagate joseki exit from a zone to its adjacent zones.
+ */
+function propagateJosekiExit(zone: number, stillJoseki: boolean[]): void {
+    for (const adjacentZone of ZONE_ADJACENCY[zone] ?? []) {
+        stillJoseki[adjacentZone] = false;
+    }
+}
+
+// Distance from zone boundary to be considered "on the edge"
+const EDGE_DISTANCE = 2;
+
+// Zone regions relative to center band: -1 = left/top, 0 = in center, 1 = right/bottom
+const ZONE_X_REGION: readonly number[] = [-1, 1, -1, 1, 0, 1, 0, -1];
+const ZONE_Y_REGION: readonly number[] = [-1, -1, 1, 1, -1, 0, 1, 0];
+
+/**
+ * Get adjacent zones that this position is near (within EDGE_DISTANCE of the boundary).
+ *
+ * Computes the shared boundary between adjacent zones geometrically based on
+ * their relative positions, rather than enumerating cases per zone.
+ */
+function getNearbyAdjacentZones(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    zone: number,
+): number[] {
+    const maxSize = Math.max(width, height);
+    const halfWidth = getCenterHalfWidth(maxSize);
+
+    if (halfWidth < 0) {
+        return []; // No edge detection for 9x9
+    }
+
+    const centerX = Math.floor((width - 1) / 2);
+    const centerY = Math.floor((height - 1) / 2);
+
+    const left = centerX - halfWidth;
+    const right = centerX + halfWidth;
+    const top = centerY - halfWidth;
+    const bottom = centerY + halfWidth;
+
+    const nearby: number[] = [];
+    const zx = ZONE_X_REGION[zone];
+    const zy = ZONE_Y_REGION[zone];
+
+    for (const adj of ZONE_ADJACENCY[zone] ?? []) {
+        const ax = ZONE_X_REGION[adj];
+        const ay = ZONE_Y_REGION[adj];
+
+        let near: boolean;
+        if (zx !== ax) {
+            // Zones differ in X - check distance to vertical boundary
+            const boundary = zx < 0 || ax < 0 ? left : right;
+            const approachFromLow = zx < 0 || (zx === 0 && ax > 0);
+            near = approachFromLow ? x >= boundary - EDGE_DISTANCE : x <= boundary + EDGE_DISTANCE;
+        } else {
+            // Zones differ in Y - check distance to horizontal boundary
+            const boundary = zy < 0 || ay < 0 ? top : bottom;
+            const approachFromLow = zy < 0 || (zy === 0 && ay > 0);
+            near = approachFromLow ? y >= boundary - EDGE_DISTANCE : y <= boundary + EDGE_DISTANCE;
+        }
+
+        if (near) {
+            nearby.push(adj);
+        }
+    }
+
+    return nearby;
+}
+
+/**
+ * Get the zone indices that contain a given position.
+ *
+ * The board is divided into 8 zones: 4 corner zones (0-3) and 4 middle zones (4-7).
+ * Center handling varies by size:
+ * - 9x9: No middle zones, center included in corner zones with overlap
+ * - 13x13+: Middle zones are the center bands, center intersection is ignored
+ *
+ * Zone layout for 13x13+:
+ *     0  |  4  |  1      (corners 0-3, middles 4-7)
+ *    ----+-----+----
+ *     7  |  *  |  5      (* = center intersection, ignored)
+ *    ----+-----+----
+ *     2  |  6  |  3
+ *
+ * For 9x9, only corner zones (0-3) are used with overlap at center.
+ */
 function getZones(x: number, y: number, width: number, height: number): number[] {
-    return getZonesQuadrant(x, y, width, height);
+    const maxSize = Math.max(width, height);
+    const halfWidth = getCenterHalfWidth(maxSize);
+    const centerX = Math.floor((width - 1) / 2);
+    const centerY = Math.floor((height - 1) / 2);
+
+    // For 9x9, only corner zones with overlap at center
+    if (halfWidth < 0) {
+        const zones: number[] = [];
+        if (x <= centerX) {
+            if (y <= centerY) {
+                zones.push(0); // top-left
+            }
+            if (y >= centerY) {
+                zones.push(2); // bottom-left
+            }
+        }
+        if (x >= centerX) {
+            if (y <= centerY) {
+                zones.push(1); // top-right
+            }
+            if (y >= centerY) {
+                zones.push(3); // bottom-right
+            }
+        }
+        return zones;
+    }
+
+    // For larger boards, check center bands for middle zones
+    const inVerticalBand = Math.abs(x - centerX) <= halfWidth;
+    const inHorizontalBand = Math.abs(y - centerY) <= halfWidth;
+
+    // Center intersection is ignored (no zones)
+    if (inVerticalBand && inHorizontalBand) {
+        return [];
+    }
+
+    // Vertical band (top middle or bottom middle)
+    if (inVerticalBand) {
+        if (y < centerY - halfWidth) {
+            return [4]; // top middle
+        } else {
+            return [6]; // bottom middle
+        }
+    }
+
+    // Horizontal band (left middle or right middle)
+    if (inHorizontalBand) {
+        if (x < centerX - halfWidth) {
+            return [7]; // left middle
+        } else {
+            return [5]; // right middle
+        }
+    }
+
+    // Corner zones (outside center bands)
+    if (x < centerX - halfWidth) {
+        if (y < centerY - halfWidth) {
+            return [0]; // top-left corner
+        } else {
+            return [2]; // bottom-left corner
+        }
+    } else {
+        if (y < centerY - halfWidth) {
+            return [1]; // top-right corner
+        } else {
+            return [3]; // bottom-right corner
+        }
+    }
 }
 
 function getNumZones(size: number): number {
-    return size === 19 ? 8 : 4;
+    const halfWidth = getCenterHalfWidth(size);
+    return halfWidth < 0 ? 4 : 8; // 4 zones for 9x9, 8 zones for larger boards
 }
 
 interface MoveCoordinate {
@@ -180,6 +348,22 @@ interface JosekiMoves {
     white: Set<number>;
 }
 
+/**
+ * Detect joseki moves using zone-based heuristics.
+ *
+ * This algorithm tracks 8 zones (4 corners + 4 middles for larger boards)
+ * and determines which moves are part of joseki (opening patterns).
+ * A zone remains "joseki" until:
+ * - Accumulated score loss in the zone exceeds threshold
+ * - A single move has very high score loss (> 2.4)
+ * - Too many moves have been played in the zone
+ *
+ * When a zone exits joseki, it propagates to adjacent zones:
+ * - Corner zones propagate to their two adjacent middle zones
+ * - Middle zones propagate to their two adjacent corner zones
+ *
+ * For 9x9, only corner zones (0-3) are used with overlap at center.
+ */
 function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList): JosekiMoves {
     const width = engine.width;
     const height = engine.height;
@@ -223,15 +407,42 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
                 continue;
             }
 
+            // Check if move is on the edge near an adjacent zone that's not in joseki
+            if (num_zones === 8) {
+                const nearbyAdjacent = getNearbyAdjacentZones(x, y, width, height, zone);
+                const adjacentNotJoseki = nearbyAdjacent.some(
+                    (adj) => !zoneState.still_joseki[adj],
+                );
+                if (adjacentNotJoseki) {
+                    // Bust this zone out of joseki and propagate
+                    zoneState.still_joseki[zone] = false;
+                    propagateJosekiExit(zone, zoneState.still_joseki);
+                    continue;
+                }
+            }
+
             zoneState.moves_in_zone[zone] += 1;
             zoneState.zone_loss[zone] += move_loss;
 
+            // First move in a zone gets 2x threshold tolerance
+            const effectiveSingleMoveThreshold =
+                zoneState.moves_in_zone[zone] === 1
+                    ? SINGLE_MOVE_LOSS_THRESHOLD * 2
+                    : SINGLE_MOVE_LOSS_THRESHOLD;
+
+            // Middle zones (4-7) only allow 2 joseki moves
+            const zoneLimit = zone >= 4 ? 2 : move_cutoff;
+
             if (
                 zoneState.zone_loss[zone] > accumulated_loss_threshold ||
-                move_loss > SINGLE_MOVE_LOSS_THRESHOLD ||
-                zoneState.moves_in_zone[zone] > move_cutoff
+                move_loss > effectiveSingleMoveThreshold ||
+                zoneState.moves_in_zone[zone] > zoneLimit
             ) {
                 zoneState.still_joseki[zone] = false;
+                // Propagate to adjacent zones (only for 8-zone boards)
+                if (num_zones === 8) {
+                    propagateJosekiExit(zone, zoneState.still_joseki);
+                }
             } else {
                 is_joseki = true;
             }
@@ -413,10 +624,23 @@ function categorizeMoves(
     return { move_counters, categorized_moves };
 }
 
+/**
+ * Gets the number of moves in the main line (trunk) of the move tree.
+ * This excludes variations/branches but includes pass moves.
+ */
+function getTrunkLength(moveTree: MoveTree): number {
+    let count = 0;
+    let current: MoveTree | undefined = moveTree.trunk_next; // Start from first move, not root
+    while (current) {
+        count++;
+        current = current.trunk_next;
+    }
+    return count;
+}
+
 function validateReviewData(
     ai_review: JGOFAIReview,
     engine: GobanEngine,
-    b_player: number,
 ): { isValid: boolean; shouldShowTable: boolean } {
     const is_uploaded = engine.config.original_sgf !== undefined;
     const scores = ai_review.scores;
@@ -425,10 +649,13 @@ function validateReviewData(
         return { isValid: false, shouldShowTable: true };
     }
 
+    // For uploaded SGFs, use the trunk length (main line only, excluding variations)
+    // For regular games, use the moves array length
+    // Both should satisfy: moves_count === scores.length - 1
+    // (scores includes the initial position, so there's one more score than moves)
+    const trunk_length = is_uploaded ? getTrunkLength(engine.move_tree) : 0;
     const check1 = !is_uploaded && engine.config.moves?.length !== scores.length - 1;
-    const check2 =
-        is_uploaded &&
-        (engine.config as any)["all_moves"]?.split("!").length - b_player !== scores.length;
+    const check2 = is_uploaded && trunk_length !== scores.length - 1;
 
     if (check1 || check2) {
         return { isValid: false, shouldShowTable: true };
@@ -467,13 +694,11 @@ export function AIReviewData_categorize(
         return null;
     }
 
-    const handicap = engine.handicap;
     let handicap_offset = handicapOffset(engine);
     handicap_offset = handicap_offset === 1 ? 0 : handicap_offset;
-    const b_player = handicap_offset > 0 || handicap > 1 ? 1 : 0;
     const move_player_list = getPlayerColorsMoveList(engine);
 
-    const { isValid } = validateReviewData(ai_review, engine, b_player);
+    const { isValid } = validateReviewData(ai_review, engine);
     if (!isValid) {
         return null;
     }
