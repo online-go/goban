@@ -22,8 +22,8 @@ export const DEFAULT_SCORE_DIFF_THRESHOLDS: ScoreDiffThresholds = {
     Excellent: 0.2,
     Great: 0.6,
     Good: 1.2,
-    Inaccuracy: 2.0,
-    Mistake: 5.0,
+    Inaccuracy: 4.0,
+    Mistake: 10.0,
 };
 
 export type MoveCategory =
