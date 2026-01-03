@@ -409,6 +409,10 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
                 continue;
             }
 
+            // Always count the move in this zone before any exit checks
+            zoneState.moves_in_zone[zone] += 1;
+            zoneState.zone_loss[zone] += move_loss;
+
             // Check if move is on the edge near an adjacent zone that's not in joseki
             if (num_zones === 8) {
                 const nearbyAdjacent = getNearbyAdjacentZones(x, y, width, height, zone);
@@ -423,9 +427,6 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
                     continue;
                 }
             }
-
-            zoneState.moves_in_zone[zone] += 1;
-            zoneState.zone_loss[zone] += move_loss;
 
             // First move in a zone gets 2x threshold tolerance
             const effectiveSingleMoveThreshold =
