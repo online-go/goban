@@ -400,10 +400,12 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
         const move_loss = scoreLossMap[player].get(move_number) ?? 0;
 
         const zones = getZones(x, y, width, height);
-        let is_joseki = false;
+        // AND semantics: move is joseki only if ALL zones are (and remain) in joseki
+        let is_joseki = zones.length > 0;
 
         for (const zone of zones) {
             if (!zoneState.still_joseki[zone]) {
+                is_joseki = false;
                 continue;
             }
 
@@ -417,6 +419,7 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
                     // Bust this zone out of joseki and propagate
                     zoneState.still_joseki[zone] = false;
                     propagateJosekiExit(zone, zoneState.still_joseki);
+                    is_joseki = false;
                     continue;
                 }
             }
@@ -443,8 +446,7 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
                 if (num_zones === 8) {
                     propagateJosekiExit(zone, zoneState.still_joseki);
                 }
-            } else {
-                is_joseki = true;
+                is_joseki = false;
             }
         }
 
