@@ -29,7 +29,6 @@ export const DEFAULT_SCORE_DIFF_THRESHOLDS: ScoreDiffThresholds = {
 export type MoveCategory =
     | "Excellent"
     | "Great"
-    | "Joseki"
     | "Good"
     | "Inaccuracy"
     | "Mistake"
@@ -43,7 +42,7 @@ export type ScoreDiffThresholds = {
     Mistake: number;
 };
 
-// Joseki detection constants
+// Opening detection constants
 const STRONG_MOVE_SCORE_LOSS_THRESHOLD = 1.2;
 const SINGLE_MOVE_LOSS_THRESHOLD = 1.2;
 
@@ -53,6 +52,7 @@ export interface AiReviewCategorization {
     score_loss_list: ScoreLossList;
     total_score_loss: { black: number; white: number };
     categorized_moves: MoveNumbers;
+    opening_moves: { black: Set<number>; white: Set<number> };
     avg_score_loss: { black: number; white: number };
     median_score_loss: { black: number; white: number };
     strong_move_rate: { black: number; white: number };
@@ -102,9 +102,9 @@ function handicapOffset(engine: GobanEngine): number {
     return 0;
 }
 
-// Joseki zone detection functions
-interface JosekiZoneState {
-    still_joseki: boolean[];
+// Opening zone detection functions
+interface OpeningZoneState {
+    still_opening: boolean[];
     moves_in_zone: number[];
     zone_loss: number[];
 }
@@ -154,11 +154,11 @@ const ZONE_ADJACENCY: { [key: number]: number[] } = {
 };
 
 /**
- * Propagate joseki exit from a zone to its adjacent zones.
+ * Propagate opening exit from a zone to its adjacent zones.
  */
-function propagateJosekiExit(zone: number, stillJoseki: boolean[]): void {
+function propagateOpeningExit(zone: number, stillOpening: boolean[]): void {
     for (const adjacentZone of ZONE_ADJACENCY[zone] ?? []) {
-        stillJoseki[adjacentZone] = false;
+        stillOpening[adjacentZone] = false;
     }
 }
 
@@ -343,28 +343,28 @@ function getMoveCoordinates(engine: GobanEngine): MoveCoordinate[] {
     return moves;
 }
 
-interface JosekiMoves {
+interface OpeningMoves {
     black: Set<number>;
     white: Set<number>;
 }
 
 /**
- * Detect joseki moves using zone-based heuristics.
+ * Detect opening moves using zone-based heuristics.
  *
  * This algorithm tracks 8 zones (4 corners + 4 middles for larger boards)
- * and determines which moves are part of joseki (opening patterns).
- * A zone remains "joseki" until:
+ * and determines which moves are part of the opening.
+ * A zone remains "opening" until:
  * - Accumulated score loss in the zone exceeds threshold
  * - A single move has very high score loss (> 2.4)
  * - Too many moves have been played in the zone
  *
- * When a zone exits joseki, it propagates to adjacent zones:
+ * When a zone exits opening, it propagates to adjacent zones:
  * - Corner zones propagate to their two adjacent middle zones
  * - Middle zones propagate to their two adjacent corner zones
  *
  * For 9x9, only corner zones (0-3) are used with overlap at center.
  */
-function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList): JosekiMoves {
+function detectOpeningMoves(engine: GobanEngine, score_loss_list: ScoreLossList): OpeningMoves {
     const width = engine.width;
     const height = engine.height;
     const maxDimension = Math.max(width, height);
@@ -373,9 +373,9 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
     const accumulated_loss_threshold = STRONG_MOVE_SCORE_LOSS_THRESHOLD * move_cutoff;
     const num_zones = getNumZones(maxDimension);
 
-    // Track zones (shared between both players - either player breaking joseki ends it)
-    const zoneState: JosekiZoneState = {
-        still_joseki: Array(num_zones).fill(true),
+    // Track zones (shared between both players - either player breaking opening ends it)
+    const zoneState: OpeningZoneState = {
+        still_opening: Array(num_zones).fill(true),
         moves_in_zone: Array(num_zones).fill(0),
         zone_loss: Array(num_zones).fill(0),
     };
@@ -386,7 +386,7 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
         white: new Map(score_loss_list.white.map((m) => [m.move, m.scoreLoss])),
     };
 
-    const josekiMoves: JosekiMoves = { black: new Set(), white: new Set() };
+    const openingMoves: OpeningMoves = { black: new Set(), white: new Set() };
     const moveCoords = getMoveCoordinates(engine);
 
     for (const move of moveCoords) {
@@ -400,12 +400,12 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
         const move_loss = scoreLossMap[player].get(move_number) ?? 0;
 
         const zones = getZones(x, y, width, height);
-        // AND semantics: move is joseki only if ALL zones are (and remain) in joseki
-        let is_joseki = zones.length > 0;
+        // AND semantics: move is opening only if ALL zones are (and remain) in opening
+        let is_opening = zones.length > 0;
 
         for (const zone of zones) {
-            if (!zoneState.still_joseki[zone]) {
-                is_joseki = false;
+            if (!zoneState.still_opening[zone]) {
+                is_opening = false;
                 continue;
             }
 
@@ -413,17 +413,17 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
             zoneState.moves_in_zone[zone] += 1;
             zoneState.zone_loss[zone] += move_loss;
 
-            // Check if move is on the edge near an adjacent zone that's not in joseki
+            // Check if move is on the edge near an adjacent zone that's not in opening
             if (num_zones === 8) {
                 const nearbyAdjacent = getNearbyAdjacentZones(x, y, width, height, zone);
-                const adjacentNotJoseki = nearbyAdjacent.some(
-                    (adj) => !zoneState.still_joseki[adj],
+                const adjacentNotOpening = nearbyAdjacent.some(
+                    (adj) => !zoneState.still_opening[adj],
                 );
-                if (adjacentNotJoseki) {
-                    // Bust this zone out of joseki and propagate
-                    zoneState.still_joseki[zone] = false;
-                    propagateJosekiExit(zone, zoneState.still_joseki);
-                    is_joseki = false;
+                if (adjacentNotOpening) {
+                    // Bust this zone out of opening and propagate
+                    zoneState.still_opening[zone] = false;
+                    propagateOpeningExit(zone, zoneState.still_opening);
+                    is_opening = false;
                     continue;
                 }
             }
@@ -434,7 +434,7 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
                     ? SINGLE_MOVE_LOSS_THRESHOLD * 2
                     : SINGLE_MOVE_LOSS_THRESHOLD;
 
-            // Middle zones (4-7) only allow 2 joseki moves
+            // Middle zones (4-7) only allow 2 opening moves
             const zoneLimit = zone >= 4 ? 2 : move_cutoff;
 
             if (
@@ -442,21 +442,21 @@ function detectJosekiMoves(engine: GobanEngine, score_loss_list: ScoreLossList):
                 move_loss > effectiveSingleMoveThreshold ||
                 zoneState.moves_in_zone[zone] > zoneLimit
             ) {
-                zoneState.still_joseki[zone] = false;
+                zoneState.still_opening[zone] = false;
                 // Propagate to adjacent zones (only for 8-zone boards)
                 if (num_zones === 8) {
-                    propagateJosekiExit(zone, zoneState.still_joseki);
+                    propagateOpeningExit(zone, zoneState.still_opening);
                 }
-                is_joseki = false;
+                is_opening = false;
             }
         }
 
-        if (is_joseki) {
-            josekiMoves[player].add(move_number);
+        if (is_opening) {
+            openingMoves[player].add(move_number);
         }
     }
 
-    return josekiMoves;
+    return openingMoves;
 }
 
 function getPlayerColorsMoveList(engine: GobanEngine) {
@@ -536,18 +536,18 @@ function buildScoreLossList(
 type CategorizationResult = {
     move_counters: MoveCounters;
     categorized_moves: MoveNumbers;
+    opening_moves: { black: Set<number>; white: Set<number> };
 };
 
 function categorizeMoves(
     score_loss_list: ScoreLossList,
-    josekiMoves: JosekiMoves,
+    openingMoves: OpeningMoves,
     scoreDiffThresholds: ScoreDiffThresholds = DEFAULT_SCORE_DIFF_THRESHOLDS,
 ): CategorizationResult {
     const move_counters: MoveCounters = {
         black: {
             Excellent: 0,
             Great: 0,
-            Joseki: 0,
             Good: 0,
             Inaccuracy: 0,
             Mistake: 0,
@@ -556,7 +556,6 @@ function categorizeMoves(
         white: {
             Excellent: 0,
             Great: 0,
-            Joseki: 0,
             Good: 0,
             Inaccuracy: 0,
             Mistake: 0,
@@ -567,7 +566,6 @@ function categorizeMoves(
         black: {
             Excellent: [],
             Great: [],
-            Joseki: [],
             Good: [],
             Inaccuracy: [],
             Mistake: [],
@@ -576,7 +574,6 @@ function categorizeMoves(
         white: {
             Excellent: [],
             Great: [],
-            Joseki: [],
             Good: [],
             Inaccuracy: [],
             Mistake: [],
@@ -594,14 +591,6 @@ function categorizeMoves(
 
     for (const player of ["black", "white"] as const) {
         for (const { move, scoreLoss } of score_loss_list[player]) {
-            // Check if this is a joseki move first
-            if (josekiMoves[player].has(move)) {
-                move_counters[player].Joseki += 1;
-                categorized_moves[player].Joseki.push(move);
-                continue;
-            }
-
-            // Categorize based on score loss
             if (scoreLoss < thresholds.Excellent) {
                 move_counters[player].Excellent += 1;
                 categorized_moves[player].Excellent.push(move);
@@ -624,7 +613,7 @@ function categorizeMoves(
         }
     }
 
-    return { move_counters, categorized_moves };
+    return { move_counters, categorized_moves, opening_moves: openingMoves };
 }
 
 /**
@@ -682,7 +671,8 @@ function validateReviewData(
 }
 
 /*
- * Categorizes the moves in an AI review as Excellent, Great, Good, Joseki, Inaccuracy, Mistake, or Blunder.
+ * Categorizes the moves in an AI review as Excellent, Great, Good, Inaccuracy, Mistake, or Blunder.
+ * Opening moves are tracked separately.
  *
  * Called by AIReviewData.categorize to perform actual categorization work.
  *
@@ -712,10 +702,10 @@ export function AIReviewData_categorize(
         move_player_list,
         includeNegativeScoreLoss,
     );
-    const josekiMoves = detectJosekiMoves(engine, score_loss_list);
-    const { move_counters, categorized_moves } = categorizeMoves(
+    const detectedOpeningMoves = detectOpeningMoves(engine, score_loss_list);
+    const { move_counters, categorized_moves, opening_moves } = categorizeMoves(
         score_loss_list,
-        josekiMoves,
+        detectedOpeningMoves,
         scoreDiffThresholds,
     );
 
@@ -772,6 +762,7 @@ export function AIReviewData_categorize(
         score_loss_list,
         total_score_loss,
         categorized_moves,
+        opening_moves,
         avg_score_loss,
         median_score_loss,
         strong_move_rate,
