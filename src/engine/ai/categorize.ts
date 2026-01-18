@@ -26,13 +26,7 @@ export const DEFAULT_SCORE_DIFF_THRESHOLDS: ScoreDiffThresholds = {
     Mistake: 10.0,
 };
 
-export type MoveCategory =
-    | "Excellent"
-    | "Great"
-    | "Good"
-    | "Inaccuracy"
-    | "Mistake"
-    | "Blunder";
+export type MoveCategory = "Excellent" | "Great" | "Good" | "Inaccuracy" | "Mistake" | "Blunder";
 
 export type ScoreDiffThresholds = {
     Excellent: number;
