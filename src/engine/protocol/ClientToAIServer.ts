@@ -100,4 +100,10 @@ export interface ClientToAIServer extends ClientToServerBase {
 
     /** Un-subscribers to analyze position calls */
     "ai-analyze-unsubscribe": (data: { channel_id: string }) => void;
+
+    /** Subscribe to AI nexus status updates (admin only) */
+    "ai-nexus-status-subscribe": (data: Record<string, never>) => void;
+
+    /** Unsubscribe from AI nexus status updates */
+    "ai-nexus-status-unsubscribe": (data: Record<string, never>) => void;
 }

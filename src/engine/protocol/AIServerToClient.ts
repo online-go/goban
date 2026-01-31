@@ -20,6 +20,36 @@ export interface AIServerToClient {
     /** Pong response from a ping */
     "net/pong": ServerToClient["net/pong"];
 
+    /** AI nexus status updates (admin only) */
+    "ai-nexus-status": (data: {
+        timestamp: number;
+        foreman_stats: Record<string, unknown>;
+        in_flight_work: Array<{
+            uuid: string;
+            game_id?: number;
+            ai_review_id?: number;
+            move_number: number;
+            type: string;
+            strength: number;
+            engine: string;
+            gpu_node: string;
+            requester_user_id?: number | string;
+            started_at: number;
+        }>;
+        queued_work: Array<{
+            uuid: string;
+            game_id?: number;
+            ai_review_id?: number;
+            move_number: number;
+            type: string;
+            strength: number;
+            engine: string;
+            priority: number;
+            queued_at: number;
+            requester_user_id?: number | string;
+        }>;
+    }) => void;
+
     /** AI review messages are streamed back to the AI review UUID. */
     [uuid: string]: (data: any) => void;
 
