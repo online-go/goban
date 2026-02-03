@@ -6,7 +6,7 @@ all dev:
 	yarn run dev
 	
 build: build-debug build-production
-	cp src/Goban.styl build/Goban.styl
+	cp src/Goban.css build/Goban.css
 	
 build-debug:
 	yarn run build-debug
