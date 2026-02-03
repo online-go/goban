@@ -29,11 +29,21 @@ import {
     ScoreDiffThresholds,
 } from "./categorize";
 
+export interface AIReviewUpdateContext {
+    /** Type of update: "move" for trunk moves, "variation" for analyzed variations */
+    type: "move" | "variation";
+    /** For move updates, the move number that was updated */
+    move_number?: number;
+    /** For variation updates, the variation key (e.g., "5-aa.bb.cc") */
+    variation_key?: string;
+}
+
 export interface AIReviewDataEvents {
     connected: () => void;
     destroy: () => void;
     metadata: (ai_review: JGOFAIReview) => void;
-    update: () => void;
+    /** Emitted when review data is updated. Context describes what was updated. */
+    update: (context: AIReviewUpdateContext) => void;
 }
 
 /**
@@ -70,8 +80,8 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
             this.emit("connected");
         };
         const onMessage = (data: JGOFAIReviewMove) => {
+            // processUpdate handles debouncing and emits "update" with context
             this.processUpdate(data);
-            this.emit("update");
         };
 
         this.socket.on(this.uuid as keyof GobanSocketEvents, onMessage as any);
@@ -195,6 +205,10 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
                 delete this.debounce_update;
                 delete this.debounce_queue;
 
+                // Track what was updated so we can emit targeted update events
+                const updated_moves: number[] = [];
+                const updated_variations: string[] = [];
+
                 for (const key in data) {
                     const value = data[key];
                     if (key === "metadata") {
@@ -215,6 +229,7 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
 
                         const m = key.match(/move-([0-9]+)/) as string[];
                         const move_number = parseInt(m[1]);
+                        updated_moves.push(move_number);
 
                         // Store the new move data
                         this.ai_review.moves[move_number] = value;
@@ -315,12 +330,20 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
                         const m = key.match(/variation-([!0-9a-z.A-Z-]+)/) as string[];
                         const var_key = m[1];
                         this.ai_review.analyzed_variations[var_key] = value;
+                        updated_variations.push(var_key);
                     } else {
                         console.warn(`Unrecognized key in updateAiReview data: ${key}`, value);
                     }
                 }
 
-                this.emit("update");
+                // Emit update events with context about what was updated
+                // This allows consumers to filter updates that aren't relevant to current view
+                for (const move_number of updated_moves) {
+                    this.emit("update", { type: "move", move_number });
+                }
+                for (const variation_key of updated_variations) {
+                    this.emit("update", { type: "variation", variation_key });
+                }
             });
         }
     }
