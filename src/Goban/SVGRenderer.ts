@@ -160,6 +160,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
     private drawing_enabled: boolean = true;
     public event_layer?: HTMLDivElement;
+    private activeTouchCompleter?: () => void;
 
     public themes: GobanSelectedThemes = {
         "board": "Plain",
@@ -613,6 +614,18 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     startX = ev.touches[0].clientX;
                     startY = ev.touches[0].clientY;
                     pointerDown(ev);
+
+                    this.activeTouchCompleter = () => {
+                        if (
+                            Math.sqrt(
+                                (startX - lastX) * (startX - lastX) +
+                                    (startY - lastY) * (startY - lastY),
+                            ) <= 10
+                        ) {
+                            pointerUp(ev, false);
+                        }
+                        this.activeTouchCompleter = undefined;
+                    };
                 } else if (dragging) {
                     pointerOut(ev);
                 }
@@ -622,6 +635,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         };
         const onTouchEnd = (ev: TouchEvent) => {
             try {
+                this.activeTouchCompleter = undefined;
+
                 // Stop a touch screen device always auto scrolling to the chat input box if it is active when you make a move
                 const currentElement = document.activeElement;
                 if (
@@ -3876,6 +3891,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (this.no_display) {
             return;
         }
+
+        this.activeTouchCompleter?.();
 
         const metrics = (this.metrics = this.computeMetrics());
         if (
