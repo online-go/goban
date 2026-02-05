@@ -53,7 +53,7 @@
         "@types/cli-color": "^2.0.6",
         "@types/jest": "^29.5.12",
         "@types/node": "^24.9.1",
-        "@types/react": "^19.2.6",
+        "@types/react": "^19.2.13",
         "@types/react-dom": "^19.2.3",
         "@typescript-eslint/eslint-plugin": "^8.46.2",
         "@typescript-eslint/parser": "^8.46.2",
@@ -80,8 +80,8 @@
         "lint-staged": "^16.2.6",
         "prettier": "3.6.2",
         "prettier-eslint": "^16.4.2",
-        "react": "19.2.0",
-        "react-dom": "19.2.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
         "react-router": "^7.9.4",
         "react-router-dom": "7.9.4",
         "svg-inline-loader": "0.8.2",
@@ -99,8 +99,8 @@
         "webpack-dev-server": "^4.13.1"
     },
     "overrides": {
-        "react": "=19.2.0",
-        "react-dom": "=19.2.0"
+        "react": "=19.2.4",
+        "react-dom": "=19.2.4"
     },
     "dependencies": {
         "eventemitter3": "^5.0.0"
