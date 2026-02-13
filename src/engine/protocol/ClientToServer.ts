@@ -69,6 +69,57 @@ export interface ClientToServerBase {
         /** Last latency measurement, or `0` */
         latency: number;
     }) => void;
+
+    /** Report connection count and device info for analytics.
+     *  Sent on each (re)connect to track route reliability. */
+    "net/connects": (data: {
+        /** Network route name (e.g. "cloudflare", "google", "public") */
+        route: string;
+        /** How many times the client has connected this session */
+        times_connected: number;
+        /** Device information for analytics segmentation */
+        device_info: DeviceInfo;
+        /** Duration in ms of the previous connection, or 0 if first connect */
+        previous_connection_duration_ms: number;
+    }) => void;
+
+    /** Report measured latency for a specific network route */
+    "net/route_latency": (data: {
+        /** Network route name */
+        route: string;
+        /** Measured latency in milliseconds */
+        latency: number;
+        /** Whether the client is on a mobile device */
+        mobile: boolean;
+    }) => void;
+
+    /** Report an unrecoverable WebSocket error (e.g. close code 1014/1015) */
+    "net/unrecoverable_error": (data: {
+        /** WebSocket close code */
+        code: number;
+        /** Error tag for categorization */
+        tag: string;
+        /** Network route name */
+        route: string;
+        /** Connection count at time of error */
+        times_connected: number;
+        /** Device information */
+        device_info: DeviceInfo;
+    }) => void;
+}
+
+/** Device information for latency and connection analytics */
+export interface DeviceInfo {
+    /** Whether the device is mobile */
+    mobile: boolean;
+    /** Device manufacturer (e.g. "Apple", "Samsung") */
+    manufacturer: string;
+    /** Operating system name (e.g. "Windows", "iOS", "Android") */
+    os_name: string;
+    /** Browser name (e.g. "Chrome", "Safari", "Firefox") */
+    browser_name: string;
+    /** Raw user agent string */
+    useragent: string;
 }
 
 /** This is an exhaustive list of the messages that the client can send
