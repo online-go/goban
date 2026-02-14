@@ -17,19 +17,21 @@
 (global as any).CLIENT = true;
 
 import WS from "jest-websocket-mock";
-import { GobanSocket } from "../../src/engine/GobanSocket";
+import { GobanSocket, IGobanSocket } from "../../src/engine/GobanSocket";
 import { AIReviewData } from "../../src/engine/ai/AIReviewData";
+import type { ClientToAIServer } from "../../src/engine/protocol/ClientToAIServer";
+import type { AIServerToClient } from "../../src/engine/protocol/AIServerToClient";
 import { JGOFAIReview } from "../../src/engine/formats/JGOF";
 import { GobanEngine } from "../../src/engine/GobanEngine";
 
 describe("AIReviewData", () => {
     let socket_server: WS;
-    let mock_socket: GobanSocket<any, any>;
+    let mock_socket: IGobanSocket<ClientToAIServer, AIServerToClient>;
     const port = 48890;
 
     beforeEach(async () => {
         socket_server = new WS(`ws://localhost:${port}`, { jsonProtocol: true });
-        mock_socket = new GobanSocket(`ws://localhost:${port}`, {
+        mock_socket = new GobanSocket<ClientToAIServer, AIServerToClient>(`ws://localhost:${port}`, {
             dont_ping: true,
             quiet: true,
         });

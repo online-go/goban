@@ -39,7 +39,7 @@ import {
 } from "./engine/formats/JGOF";
 import { AdHocPackedMove } from "./engine/formats/AdHocFormat";
 import { MessageID } from "./engine/messages";
-import type { GobanSocket } from "./engine/GobanSocket";
+import type { IGobanSocket } from "./engine/GobanSocket";
 import type { ServerToClient, GameChatLine } from "./engine/protocol";
 import { EventEmitter } from "eventemitter3";
 import { setGobanCallbacks } from "./Goban/callbacks";
@@ -127,7 +127,7 @@ export interface GobanConfig extends GobanEngineConfig, PuzzleConfig {
 
     // deprecated
     username?: string;
-    server_socket?: GobanSocket;
+    server_socket?: IGobanSocket;
     connect_to_chat?: number | boolean;
 }
 

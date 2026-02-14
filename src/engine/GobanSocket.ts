@@ -68,6 +68,42 @@ export type DataArgument<Entry> = Entry extends (...args: infer A) => void ? A[0
 export type ProtocolResponseType<Entry> = Entry extends (...args: any[]) => infer R ? R : never;
 
 /**
+ * Interface describing the public API of a GobanSocket (or compatible proxy).
+ * Both GobanSocket and GobanSocketProxy satisfy this interface.
+ * Extends EventEmitter<GobanSocketEvents> so on/off/emit types match exactly.
+ */
+export interface IGobanSocket<
+    SendProtocol extends ClientToServerBase = ClientToServer,
+    RecvProtocol = ServerToClient,
+> extends EventEmitter<GobanSocketEvents> {
+    readonly url: string;
+    clock_drift: number;
+    latency: number;
+    options: {
+        dont_ping?: boolean;
+        ping_interval?: number;
+        timeout_delay?: number;
+        quiet?: boolean;
+    };
+    readonly connected: boolean;
+
+    send<Command extends keyof SendProtocol>(
+        command: Command,
+        data: DataArgument<SendProtocol[Command]>,
+        cb?: (data: ProtocolResponseType<SendProtocol[Command]>, error?: any) => void,
+    ): void;
+
+    sendPromise<Command extends keyof SendProtocol>(
+        command: Command,
+        data: DataArgument<SendProtocol[Command]>,
+    ): Promise<ProtocolResponseType<SendProtocol[Command]>>;
+
+    authenticate(authentication: DataArgument<SendProtocol["authenticate"]>): void;
+    disconnect(): void;
+    ping(): void;
+}
+
+/**
  * This is a simple wrapper around the WebSocket API that provides a
  * simple interface to connect to the Online-Go.com servers. It provides:
  *

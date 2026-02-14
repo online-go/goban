@@ -29,7 +29,7 @@ import {
     deepEqual,
     deepClone,
     encodeMove,
-    GobanSocket,
+    IGobanSocket,
     GobanSocketEvents,
     ConditionalMoveTree,
     GobanEngine,
@@ -67,7 +67,7 @@ interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
  */
 export abstract class OGSConnectivity extends GobanInteractive {
     public sent_timed_out_message: boolean = false;
-    protected socket!: GobanSocket;
+    protected socket!: IGobanSocket;
     protected socket_event_bindings: Array<[keyof GobanSocketEvents, () => void]> = [];
     protected connectToReviewSent?: boolean;
 
@@ -134,7 +134,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         return 0;
     }
 
-    protected connect(server_socket: GobanSocket): void {
+    protected connect(server_socket: IGobanSocket): void {
         const socket = (this.socket = server_socket);
 
         this.disconnectedFromGame = false;
