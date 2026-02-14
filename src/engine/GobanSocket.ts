@@ -41,7 +41,7 @@ interface ErrorResponse {
     message: string;
 }
 
-interface GobanSocketOptions {
+export interface GobanSocketOptions {
     /** Don't automatically send pings */
     dont_ping?: boolean;
 
@@ -79,12 +79,7 @@ export interface IGobanSocket<
     readonly url: string;
     clock_drift: number;
     latency: number;
-    options: {
-        dont_ping?: boolean;
-        ping_interval?: number;
-        timeout_delay?: number;
-        quiet?: boolean;
-    };
+    options: GobanSocketOptions;
     readonly connected: boolean;
 
     send<Command extends keyof SendProtocol>(
