@@ -15,7 +15,7 @@
  */
 
 import { EventEmitter } from "eventemitter3";
-import { GobanSocket, GobanSocketEvents } from "../GobanSocket";
+import { IGobanSocket, GobanSocketEvents } from "../GobanSocket";
 import { JGOFAIReview, JGOFAIReviewMove } from "../formats/JGOF";
 import * as protocol from "../protocol";
 import { MoveTree } from "../MoveTree";
@@ -52,14 +52,14 @@ export interface AIReviewDataEvents {
  * Takes care of socket communication and updating AI review data as it streams in.
  * */
 export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JGOFAIReview {
-    public readonly socket: GobanSocket<protocol.ClientToAIServer, protocol.AIServerToClient>;
+    public readonly socket: IGobanSocket<protocol.ClientToAIServer, protocol.AIServerToClient>;
     public readonly uuid: string;
     private ai_review: JGOFAIReview;
     public readonly move_tree: MoveTree;
     private analysis_requests_made: { [id: string]: boolean } = {};
 
     constructor(
-        socket: GobanSocket<protocol.ClientToAIServer, protocol.AIServerToClient>,
+        socket: IGobanSocket<protocol.ClientToAIServer, protocol.AIServerToClient>,
         move_tree: MoveTree,
         ai_review: JGOFAIReview,
         game_id: number | string,
