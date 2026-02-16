@@ -93,6 +93,26 @@ export interface ClientToServerBase {
         mobile: boolean;
     }) => void;
 
+    /** Report a ping timeout event for diagnostics.
+     *  Sent when the client detects that a ping response (pong) was not
+     *  received within the expected timeout window. */
+    "net/timeout": (data: {
+        /** Network route name (e.g. "cloudflare", "google", "public") */
+        route: string;
+        /** Ping interval at time of timeout (ms) */
+        ping_interval: number;
+        /** Timeout delay threshold that was exceeded (ms) */
+        timeout_delay: number;
+        /** Last measured latency before timeout (ms) */
+        latency: number;
+        /** How many times the client has connected this session */
+        times_connected: number;
+        /** Whether the client is currently viewing their own live game */
+        in_live_game: boolean;
+        /** Device information */
+        device_info: DeviceInfo;
+    }) => void;
+
     /** Report an unrecoverable WebSocket error (e.g. close code 1014/1015) */
     "net/unrecoverable_error": (data: {
         /** WebSocket close code */
