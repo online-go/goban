@@ -173,11 +173,6 @@ export class GobanSocket<
         this.socket = this.connect();
 
         this.on("net/pong", ({ client, server }: { client: number; server: number }) => {
-            if (this.timeout_timer) {
-                clearTimeout(this.timeout_timer);
-                this.timeout_timer = undefined;
-            }
-
             // Ignore pongs from background pings: either we're still in
             // background mode, or this is a stale pong that arrived after
             // returning to the foreground.
@@ -185,6 +180,10 @@ export class GobanSocket<
                 this.options.background_pinging ||
                 (this.options.ignore_pongs_before && client < this.options.ignore_pongs_before)
             ) {
+                if (this.timeout_timer) {
+                    clearTimeout(this.timeout_timer);
+                    this.timeout_timer = undefined;
+                }
                 return;
             }
 
@@ -194,6 +193,10 @@ export class GobanSocket<
             this.latency = latency;
             this.clock_drift = drift;
             this.emit("latency", latency, drift);
+            if (this.timeout_timer) {
+                clearTimeout(this.timeout_timer);
+                this.timeout_timer = undefined;
+            }
         });
     }
 
