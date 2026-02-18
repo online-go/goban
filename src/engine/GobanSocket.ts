@@ -45,6 +45,25 @@ export interface GobanSocketOptions {
     /** Don't automatically send pings */
     dont_ping?: boolean;
 
+    /**
+     * When true, pings are still sent (letting the browser throttle
+     * naturally) but no timeout timers are armed and pong responses
+     * are silently ignored (no latency/drift updates, no timeout
+     * signals). Used when the tab is in the background so we keep the
+     * connection alive through intermediaries without reacting to
+     * unreliable timing measurements.
+     */
+    background_pinging?: boolean;
+
+    /**
+     * Timestamp (ms since epoch). Pong responses whose originating
+     * ping was sent before this time are silently discarded. Set to
+     * Date.now() when transitioning from background to foreground so
+     * that stale in-flight pongs from the background period don't
+     * pollute latency measurements.
+     */
+    ignore_pongs_before?: number;
+
     // Note: you can't turn off ping by setting ping interval to zero or undefined.
     ping_interval?: number; // milliseconds, applied if non-zero.
     timeout_delay?: number;
@@ -154,6 +173,20 @@ export class GobanSocket<
         this.socket = this.connect();
 
         this.on("net/pong", ({ client, server }: { client: number; server: number }) => {
+            // Ignore pongs from background pings: either we're still in
+            // background mode, or this is a stale pong that arrived after
+            // returning to the foreground.
+            if (
+                this.options.background_pinging ||
+                (this.options.ignore_pongs_before && client < this.options.ignore_pongs_before)
+            ) {
+                if (this.timeout_timer) {
+                    clearTimeout(this.timeout_timer);
+                    this.timeout_timer = undefined;
+                }
+                return;
+            }
+
             const now = Date.now();
             const latency = now - client;
             const drift = now - latency / 2 - server;
@@ -162,8 +195,8 @@ export class GobanSocket<
             this.emit("latency", latency, drift);
             if (this.timeout_timer) {
                 clearTimeout(this.timeout_timer);
+                this.timeout_timer = undefined;
             }
-            ///console.log("Pong:", this.url);
         });
     }
 
@@ -183,6 +216,11 @@ export class GobanSocket<
     }
 
     signalTimeout = () => {
+        // A timeout timer from the last foreground ping may fire after
+        // we've transitioned to background mode -- ignore it.
+        if (this.options.background_pinging) {
+            return;
+        }
         this.emit("timeout");
     };
 
@@ -198,7 +236,7 @@ export class GobanSocket<
                 latency: this.latency,
             } as DataArgument<SendProtocol["net/ping"]>);
 
-            if (this.options.timeout_delay) {
+            if (this.options.timeout_delay && !this.options.background_pinging) {
                 this.timeout_timer = setTimeout(this.signalTimeout, this.options.timeout_delay);
             }
 
