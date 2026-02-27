@@ -115,6 +115,9 @@ export interface ServerToClient {
      *  that are found in the ui/config */
     "user/update": (user: User & { [extra: string]: any }) => void;
 
+    /** Update the user's last completed game state */
+    "config/last_game": (last_game: { [key: string]: any } | null) => void;
+
     /** Updates whether a user is online or not. Subscribe to these updates for
      *  particular users using the `user/monitor` command. */
     "user/state": (data: { [player_id: number]: boolean }) => void;
