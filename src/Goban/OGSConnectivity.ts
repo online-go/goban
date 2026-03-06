@@ -1508,6 +1508,17 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 console.error("Auto-scoring timed out after 30 seconds");
                 this.clearMessage();
                 this.emit("stone-removal.auto-scoring-complete");
+                this.showMessage(
+                    "error",
+                    {
+                        error: {
+                            message: _(
+                                "Auto-scoring failed, please manually score the game",
+                            ),
+                        },
+                    },
+                    3000,
+                );
             }, 30000);
 
             se.when_ready
@@ -1565,7 +1576,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         "error",
                         {
                             error: {
-                                message: "Auto-scoring failed, please manually score the game",
+                                message: _(
+                                    "Auto-scoring failed, please manually score the game",
+                                ),
                             },
                         },
                         3000,

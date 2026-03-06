@@ -43,6 +43,7 @@ export interface GobanStrings {
     "Error": string;
     "Self-capture is not allowed": string;
     "The game would be repeating with that move, please play somewhere else first": string;
+    "Auto-scoring failed, please manually score the game": string;
 
     "Black Walnut": string;
     "Book": string;
