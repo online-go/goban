@@ -33,7 +33,6 @@ import {
     GobanSocketEvents,
     ConditionalMoveTree,
     GobanEngine,
-    init_wasm_ownership_estimator,
     JGOFIntersection,
     JGOFPauseState,
     JGOFPlayerClock,
@@ -76,11 +75,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.setGameClock(null);
 
         this.on("load", (config) => {
-            if (
-                this.engine.phase === "stone removal" &&
-                !("auto_scoring_done" in this) &&
-                !("auto_scoring_done" in (this as any).engine)
-            ) {
+            if (this.engine.phase === "stone removal" && !this.stone_removal_auto_scoring_done) {
                 this.performStoneRemovalAutoScoring();
             }
         });
@@ -384,6 +379,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     }
 
                     this.engine.phase = new_phase;
+                    this.emit("phase", new_phase);
 
                     if (this.engine.phase === "stone removal") {
                         this.performStoneRemovalAutoScoring();
@@ -392,6 +388,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     }
 
                     this.updateTitleAndStonePlacement();
+                    this.redraw(true);
                     this.emit("update");
                 },
             );
@@ -1483,19 +1480,34 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.showMessage("processing", undefined, -1);
         this.emit("stone-removal.auto-scoring-started");
         const do_score_estimation = () => {
-            const se = new ScoreEstimator(
-                this.engine,
-                this,
-                AUTOSCORE_TRIALS,
-                AUTOSCORE_TOLERANCE,
-                true /* prefer remote */,
-                true /* autoscore */,
-                /* Don't use existing stone removal markings for auto scoring */
-                makeMatrix(this.width, this.height, false),
-            );
+            let se: ScoreEstimator;
+            try {
+                se = new ScoreEstimator(
+                    this.engine,
+                    this,
+                    AUTOSCORE_TRIALS,
+                    AUTOSCORE_TOLERANCE,
+                    true /* prefer remote */,
+                    true /* autoscore */,
+                    /* Don't use existing stone removal markings for auto scoring */
+                    makeMatrix(this.width, this.height, false),
+                );
+            } catch (err) {
+                console.error("Failed to create ScoreEstimator:", err);
+                this.clearMessage();
+                this.emit("stone-removal.auto-scoring-complete");
+                return;
+            }
+
+            const timeout_handle = setTimeout(() => {
+                console.error("Auto-scoring timed out after 30 seconds");
+                this.clearMessage();
+                this.emit("stone-removal.auto-scoring-complete");
+            }, 30000);
 
             se.when_ready
                 .then(() => {
+                    clearTimeout(timeout_handle);
                     const current_removed = this.engine.getStoneRemovalString();
                     const new_removed = se.getProbablyDead();
 
@@ -1530,8 +1542,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.emit("stone-removal.auto-scoring-complete");
                 })
                 .catch((err) => {
+                    clearTimeout(timeout_handle);
                     console.error(`Auto-scoring error: `, err);
                     this.clearMessage();
+                    this.emit("stone-removal.auto-scoring-complete");
                     this.showMessage(
                         "error",
                         {
@@ -1544,11 +1558,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 });
         };
 
-        setTimeout(() => {
-            init_wasm_ownership_estimator()
-                .then(do_score_estimation)
-                .catch((err) => console.error(err));
-        }, 10);
+        setTimeout(do_score_estimation, 10);
     }
 
     public acceptRemovedStones(): void {
