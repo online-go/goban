@@ -1512,9 +1512,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     "error",
                     {
                         error: {
-                            message: _(
-                                "Auto-scoring failed, please manually score the game",
-                            ),
+                            message: _("Auto-scoring failed, please manually score the game"),
                         },
                     },
                     3000,
@@ -1576,9 +1574,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         "error",
                         {
                             error: {
-                                message: _(
-                                    "Auto-scoring failed, please manually score the game",
-                                ),
+                                message: _("Auto-scoring failed, please manually score the game"),
                             },
                         },
                         3000,
