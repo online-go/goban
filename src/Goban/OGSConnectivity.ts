@@ -1499,7 +1499,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 return;
             }
 
+            let completed = false;
             const timeout_handle = setTimeout(() => {
+                if (completed) {
+                    return;
+                }
+                completed = true;
                 console.error("Auto-scoring timed out after 30 seconds");
                 this.clearMessage();
                 this.emit("stone-removal.auto-scoring-complete");
@@ -1508,6 +1513,11 @@ export abstract class OGSConnectivity extends GobanInteractive {
             se.when_ready
                 .then(() => {
                     clearTimeout(timeout_handle);
+                    if (completed) {
+                        return;
+                    }
+                    completed = true;
+
                     const current_removed = this.engine.getStoneRemovalString();
                     const new_removed = se.getProbablyDead();
 
@@ -1543,6 +1553,11 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 })
                 .catch((err) => {
                     clearTimeout(timeout_handle);
+                    if (completed) {
+                        return;
+                    }
+                    completed = true;
+
                     console.error(`Auto-scoring error: `, err);
                     this.clearMessage();
                     this.emit("stone-removal.auto-scoring-complete");
