@@ -142,8 +142,8 @@ export interface ServerToClient {
 
     /** An automatch request was canceled */
     "automatch/cancel": (data: {
-        // The automatch id that was cancelled
-        uuid: string;
+        // The automatch id that was cancelled. null cancels all automatch requests.
+        uuid: string | null;
     }) => void;
 
     /** An automatch request is active */
