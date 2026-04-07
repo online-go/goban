@@ -105,6 +105,7 @@ export interface GobanEngineConfig extends BoardConfig {
     width?: number;
     height?: number;
     disable_analysis?: boolean;
+    disable_vacation?: boolean;
     handicap_rank_difference?: number;
     handicap?: number;
     komi?: number;
