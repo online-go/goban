@@ -344,6 +344,7 @@ export class GobanEngine extends BoardState {
         speed: "correspondence",
         pause_on_weekends: true,
     };
+    public sgf_time_settings?: JGOFTimeControl;
     public game_id: number = NaN;
     public review_id?: number;
     public decoded_moves: Array<JGOFMove> = [];
