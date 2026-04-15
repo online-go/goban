@@ -124,7 +124,8 @@ export class MoveTree {
     public pen_marks: MoveTreePenMarks = [];
     public player_update: JGOFPlayerSummary | undefined;
     public played_by: number | undefined;
-    public clock?: JGOFPlayerClock;
+    public black_clock?: JGOFPlayerClock;
+    public white_clock?: JGOFPlayerClock;
 
     /* public for use by renderers when drawing move trees  */
     public active_path_number: number = 0;

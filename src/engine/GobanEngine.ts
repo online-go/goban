@@ -2565,6 +2565,12 @@ export class GobanEngine extends BoardState {
                                         total_time: main_time_ms,
                                         pause_on_weekends: false,
                                     };
+                                } else if ("main_time" in self.sgf_time_settings) {
+                                    self.sgf_time_settings.main_time = main_time_ms;
+                                } else if ("total_time" in self.sgf_time_settings) {
+                                    self.sgf_time_settings.total_time = main_time_ms;
+                                } else if ("initial_time" in self.sgf_time_settings) {
+                                    self.sgf_time_settings.initial_time = main_time_ms;
                                 }
                             }
                         }
@@ -2595,10 +2601,10 @@ export class GobanEngine extends BoardState {
                             instructions.push(() => {
                                 const time_left = parseFloat(val) * 1000;
                                 if (!isNaN(time_left)) {
-                                    if (!self.cur_move.clock) {
-                                        self.cur_move.clock = { main_time: 0 };
+                                    if (!self.cur_move.black_clock) {
+                                        self.cur_move.black_clock = { main_time: 0 };
                                     }
-                                    self.cur_move.clock.main_time = time_left;
+                                    self.cur_move.black_clock.main_time = time_left;
                                 }
                             });
                         }
@@ -2609,10 +2615,10 @@ export class GobanEngine extends BoardState {
                             instructions.push(() => {
                                 const time_left = parseFloat(val) * 1000;
                                 if (!isNaN(time_left)) {
-                                    if (!self.cur_move.clock) {
-                                        self.cur_move.clock = { main_time: 0 };
+                                    if (!self.cur_move.white_clock) {
+                                        self.cur_move.white_clock = { main_time: 0 };
                                     }
-                                    self.cur_move.clock.main_time = time_left;
+                                    self.cur_move.white_clock.main_time = time_left;
                                 }
                             });
                         }
@@ -2621,12 +2627,16 @@ export class GobanEngine extends BoardState {
                     case "OB":
                         {
                             instructions.push(() => {
-                                const periods = parseInt(val);
-                                if (!isNaN(periods)) {
-                                    if (!self.cur_move.clock) {
-                                        self.cur_move.clock = { main_time: 0 };
+                                const count = parseInt(val);
+                                if (!isNaN(count)) {
+                                    if (!self.cur_move.black_clock) {
+                                        self.cur_move.black_clock = { main_time: 0 };
                                     }
-                                    self.cur_move.clock.periods_left = periods;
+                                    if (self.sgf_time_settings?.system === "canadian") {
+                                        self.cur_move.black_clock.moves_left = count;
+                                    } else {
+                                        self.cur_move.black_clock.periods_left = count;
+                                    }
                                 }
                             });
                         }
@@ -2635,12 +2645,16 @@ export class GobanEngine extends BoardState {
                     case "OW":
                         {
                             instructions.push(() => {
-                                const periods = parseInt(val);
-                                if (!isNaN(periods)) {
-                                    if (!self.cur_move.clock) {
-                                        self.cur_move.clock = { main_time: 0 };
+                                const count = parseInt(val);
+                                if (!isNaN(count)) {
+                                    if (!self.cur_move.white_clock) {
+                                        self.cur_move.white_clock = { main_time: 0 };
                                     }
-                                    self.cur_move.clock.periods_left = periods;
+                                    if (self.sgf_time_settings?.system === "canadian") {
+                                        self.cur_move.white_clock.moves_left = count;
+                                    } else {
+                                        self.cur_move.white_clock.periods_left = count;
+                                    }
                                 }
                             });
                         }

@@ -58,7 +58,7 @@ export function parseSGFOvertime(
             speed,
             initial_time: main_time_ms,
             time_increment: increment,
-            max_time: main_time_ms + increment,
+            max_time: main_time_ms * 2 || increment * 20,
             pause_on_weekends: false,
         };
     }
