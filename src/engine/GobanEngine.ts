@@ -23,6 +23,7 @@ import {
     encodeMove,
     encodeMoves,
     makeMatrix,
+    parseSGFOvertime,
     positionId,
     prettyCoordinates,
     sortMoves,
@@ -2548,6 +2549,98 @@ export class GobanEngine extends BoardState {
                                         white_territory_point.y,
                                         true,
                                     );
+                                }
+                            });
+                        }
+                        break;
+
+                    case "TM":
+                        {
+                            const main_time_ms = parseFloat(val) * 1000;
+                            if (!isNaN(main_time_ms)) {
+                                if (!self.sgf_time_settings) {
+                                    self.sgf_time_settings = {
+                                        system: "absolute",
+                                        speed: "live",
+                                        total_time: main_time_ms,
+                                        pause_on_weekends: false,
+                                    };
+                                }
+                            }
+                        }
+                        break;
+
+                    case "OT":
+                        {
+                            const existing_main_time =
+                                self.sgf_time_settings &&
+                                "main_time" in self.sgf_time_settings
+                                    ? self.sgf_time_settings.main_time
+                                    : self.sgf_time_settings &&
+                                        "total_time" in self.sgf_time_settings
+                                      ? self.sgf_time_settings.total_time
+                                      : self.sgf_time_settings &&
+                                          "initial_time" in self.sgf_time_settings
+                                        ? self.sgf_time_settings.initial_time
+                                        : 0;
+                            const parsed = parseSGFOvertime(val, existing_main_time);
+                            if (parsed) {
+                                self.sgf_time_settings = parsed;
+                            }
+                        }
+                        break;
+
+                    case "BL":
+                        {
+                            instructions.push(() => {
+                                const time_left = parseFloat(val) * 1000;
+                                if (!isNaN(time_left)) {
+                                    if (!self.cur_move.clock) {
+                                        self.cur_move.clock = { main_time: 0 };
+                                    }
+                                    self.cur_move.clock.main_time = time_left;
+                                }
+                            });
+                        }
+                        break;
+
+                    case "WL":
+                        {
+                            instructions.push(() => {
+                                const time_left = parseFloat(val) * 1000;
+                                if (!isNaN(time_left)) {
+                                    if (!self.cur_move.clock) {
+                                        self.cur_move.clock = { main_time: 0 };
+                                    }
+                                    self.cur_move.clock.main_time = time_left;
+                                }
+                            });
+                        }
+                        break;
+
+                    case "OB":
+                        {
+                            instructions.push(() => {
+                                const periods = parseInt(val);
+                                if (!isNaN(periods)) {
+                                    if (!self.cur_move.clock) {
+                                        self.cur_move.clock = { main_time: 0 };
+                                    }
+                                    self.cur_move.clock.periods_left = periods;
+                                }
+                            });
+                        }
+                        break;
+
+                    case "OW":
+                        {
+                            instructions.push(() => {
+                                const periods = parseInt(val);
+                                if (!isNaN(periods)) {
+                                    if (!self.cur_move.clock) {
+                                        self.cur_move.clock = { main_time: 0 };
+                                    }
+                                    self.cur_move.clock.periods_left = periods;
                                 }
                             });
                         }
