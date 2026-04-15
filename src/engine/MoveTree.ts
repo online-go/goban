@@ -24,7 +24,7 @@ import {
     prettyCoordinates,
 } from "./util";
 import { AdHocPackedMove } from "./formats/AdHocFormat";
-import { JGOFMove, JGOFNumericPlayerColor, JGOFPlayerSummary } from "./formats/JGOF";
+import { JGOFMove, JGOFNumericPlayerColor, JGOFPlayerClock, JGOFPlayerSummary } from "./formats/JGOF";
 import { escapeSGFText, newlines_to_spaces } from "./util";
 
 export interface MarkInterface {
@@ -124,6 +124,7 @@ export class MoveTree {
     public pen_marks: MoveTreePenMarks = [];
     public player_update: JGOFPlayerSummary | undefined;
     public played_by: number | undefined;
+    public clock?: JGOFPlayerClock;
 
     /* public for use by renderers when drawing move trees  */
     public active_path_number: number = 0;
