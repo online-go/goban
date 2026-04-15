@@ -37,7 +37,7 @@ export function parseSGFOvertime(
     const speed: JGOFTimeControlSpeed = estimateSpeed(main_time_ms);
 
     // Canadian: "15/300 Canadian" — stones_per_period/period_time
-    const canadian = ot.match(/^(\d+)\/(\d+)\s+canadian$/i);
+    const canadian = ot.match(/^(\d+)\/(\d+(?:\.\d+)?)\s+canadian$/i);
     if (canadian) {
         return {
             system: "canadian",

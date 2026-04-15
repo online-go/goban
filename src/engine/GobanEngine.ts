@@ -2571,6 +2571,11 @@ export class GobanEngine extends BoardState {
                                     self.sgf_time_settings.total_time = main_time_ms;
                                 } else if ("initial_time" in self.sgf_time_settings) {
                                     self.sgf_time_settings.initial_time = main_time_ms;
+                                    if ("max_time" in self.sgf_time_settings) {
+                                        self.sgf_time_settings.max_time =
+                                            main_time_ms * 2 ||
+                                            self.sgf_time_settings.time_increment * 20;
+                                    }
                                 }
                             }
                         }
