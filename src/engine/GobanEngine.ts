@@ -2568,6 +2568,9 @@ export class GobanEngine extends BoardState {
                                         pause_on_weekends: false,
                                     };
                                 } else {
+                                    // No arm for "simple": JGOFSimpleTimeControl has no
+                                    // main_time field, so TM cannot be preserved when
+                                    // OT is simple — consistent with parseSGFOvertime.
                                     if ("main_time" in self.sgf_time_settings) {
                                         self.sgf_time_settings.main_time = main_time_ms;
                                     } else if ("total_time" in self.sgf_time_settings) {
@@ -2575,6 +2578,8 @@ export class GobanEngine extends BoardState {
                                     } else if ("initial_time" in self.sgf_time_settings) {
                                         self.sgf_time_settings.initial_time = main_time_ms;
                                         if ("max_time" in self.sgf_time_settings) {
+                                            // See Fischer branch of parseSGFOvertime for
+                                            // the rationale behind max(main*2, inc*20).
                                             self.sgf_time_settings.max_time = Math.max(
                                                 main_time_ms * 2,
                                                 self.sgf_time_settings.time_increment * 20,

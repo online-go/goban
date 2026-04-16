@@ -58,6 +58,8 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         if (increment <= 0) {
             return null;
         }
+        // SGF doesn't specify a max_time cap; use the larger of 2x main time
+        // or ~20 moves of increments as a reasonable playable ceiling.
         return {
             system: "fischer",
             speed: estimateSpeed(main_time_ms + increment),
@@ -86,7 +88,9 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         };
     }
 
-    // Simple: "60 simple" — per_move in seconds
+    // Simple: "60 simple" — per_move in seconds.
+    // JGOFSimpleTimeControl has no main_time field, so main_time_ms is
+    // intentionally discarded here and by the TM handler's ordering logic.
     const simple = cleaned.match(/^(\d+(?:\.\d+)?)\s+simple$/i);
     if (simple) {
         const per_move = parseFloat(simple[1]) * 1000;
