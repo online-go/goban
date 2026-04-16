@@ -2581,8 +2581,9 @@ export class GobanEngine extends BoardState {
                                             );
                                         }
                                     }
-                                    self.sgf_time_settings.speed =
-                                        computeTimeControlSpeed(self.sgf_time_settings);
+                                    self.sgf_time_settings.speed = computeTimeControlSpeed(
+                                        self.sgf_time_settings,
+                                    );
                                 }
                             }
                         }
