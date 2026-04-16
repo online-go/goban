@@ -143,7 +143,7 @@ describe("computeTimeControlSpeed", () => {
         expect(computeTimeControlSpeed(tc)).toBe("blitz");
     });
 
-    test("Canadian 3600 main + 15/300 → live", () => {
+    test("Canadian 3600 main + 15/300 → correspondence", () => {
         const tc: JGOFTimeControl = {
             system: "canadian",
             speed: "blitz",
@@ -152,7 +152,7 @@ describe("computeTimeControlSpeed", () => {
             period_time: 300 * 1000,
             pause_on_weekends: false,
         };
-        // 3600 + 20 = 3620s → live (since > 15min and <= 60min)
+        // 3600 + 20 = 3620s → correspondence (> 60 min threshold)
         expect(computeTimeControlSpeed(tc)).toBe("correspondence");
     });
 
@@ -181,7 +181,7 @@ describe("computeTimeControlSpeed", () => {
         expect(computeTimeControlSpeed(tc)).toBe("rapid");
     });
 
-    test("byoyomi uses main + periods*period_time", () => {
+    test("byoyomi uses main + period_time (per-move pressure)", () => {
         const tc: JGOFTimeControl = {
             system: "byoyomi",
             speed: "blitz",
@@ -190,8 +190,22 @@ describe("computeTimeControlSpeed", () => {
             period_time: 30 * 1000,
             pause_on_weekends: false,
         };
-        // 1800 + 150 = 1950s → live
+        // 1800 + 30 = 1830s → live
         expect(computeTimeControlSpeed(tc)).toBe("live");
+    });
+
+    test("byoyomi with no main time uses period_time only", () => {
+        // 5x120s byo-yomi: per-move pressure is 120s, should classify as blitz,
+        // not rapid (which 5*120=600s would falsely yield).
+        const tc: JGOFTimeControl = {
+            system: "byoyomi",
+            speed: "rapid",
+            main_time: 0,
+            periods: 5,
+            period_time: 120 * 1000,
+            pause_on_weekends: false,
+        };
+        expect(computeTimeControlSpeed(tc)).toBe("blitz");
     });
 
     test("simple uses per_move", () => {

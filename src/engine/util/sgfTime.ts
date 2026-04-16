@@ -72,7 +72,7 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         const period_time = parseFloat(byoyomi[2]) * 1000;
         return {
             system: "byoyomi",
-            speed: estimateSpeed(main_time_ms + periods * period_time),
+            speed: estimateSpeed(main_time_ms + period_time),
             main_time: main_time_ms,
             periods,
             period_time,
@@ -125,7 +125,7 @@ export function computeTimeControlSpeed(tc: JGOFTimeControl): JGOFTimeControlSpe
         case "fischer":
             return estimateSpeed(tc.initial_time + tc.time_increment);
         case "byoyomi":
-            return estimateSpeed(tc.main_time + tc.periods * tc.period_time);
+            return estimateSpeed(tc.main_time + tc.period_time);
         case "simple":
             return estimateSpeed(tc.per_move);
         case "absolute":
