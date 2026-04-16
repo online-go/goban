@@ -31,22 +31,28 @@ import { JGOFTimeControl, JGOFTimeControlSpeed } from "../formats/JGOF";
  * @returns A JGOFTimeControl if the format is recognized, or null otherwise
  */
 export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTimeControl | null {
+    const cleaned = ot.trim();
+
     // Canadian: "15/300 Canadian" — stones_per_period/period_time
-    const canadian = ot.match(/^(\d+)\/(\d+(?:\.\d+)?)\s+canadian$/i);
+    const canadian = cleaned.match(/^(\d+)\/(\d+(?:\.\d+)?)\s+canadian$/i);
     if (canadian) {
+        const stones_per_period = parseInt(canadian[1]);
         const period_time = parseFloat(canadian[2]) * 1000;
+        if (stones_per_period <= 0) {
+            return null;
+        }
         return {
             system: "canadian",
-            speed: estimateSpeed(main_time_ms + period_time),
+            speed: estimateSpeed(main_time_ms + period_time / stones_per_period),
             main_time: main_time_ms,
-            stones_per_period: parseInt(canadian[1]),
+            stones_per_period,
             period_time,
             pause_on_weekends: false,
         };
     }
 
     // Fischer: "30 Fischer" — time_increment in seconds
-    const fischer = ot.match(/^(\d+(?:\.\d+)?)\s+fischer$/i);
+    const fischer = cleaned.match(/^(\d+(?:\.\d+)?)\s+fischer$/i);
     if (fischer) {
         const increment = parseFloat(fischer[1]) * 1000;
         return {
@@ -60,7 +66,7 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     }
 
     // Byoyomi: "5x30 byo-yomi" — periods x period_time
-    const byoyomi = ot.match(/^(\d+)x(\d+(?:\.\d+)?)\s+byo-?yomi$/i);
+    const byoyomi = cleaned.match(/^(\d+)\s*x\s*(\d+(?:\.\d+)?)\s+byo-?yomi$/i);
     if (byoyomi) {
         const periods = parseInt(byoyomi[1]);
         const period_time = parseFloat(byoyomi[2]) * 1000;
@@ -75,7 +81,7 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     }
 
     // Simple: "60 simple" — per_move in seconds
-    const simple = ot.match(/^(\d+(?:\.\d+)?)\s+simple$/i);
+    const simple = cleaned.match(/^(\d+(?:\.\d+)?)\s+simple$/i);
     if (simple) {
         const per_move = parseFloat(simple[1]) * 1000;
         return {
@@ -111,8 +117,11 @@ export function estimateSpeed(total_time_ms: number): JGOFTimeControlSpeed {
  */
 export function computeTimeControlSpeed(tc: JGOFTimeControl): JGOFTimeControlSpeed {
     switch (tc.system) {
-        case "canadian":
-            return estimateSpeed(tc.main_time + tc.period_time);
+        case "canadian": {
+            const per_move =
+                tc.stones_per_period > 0 ? tc.period_time / tc.stones_per_period : tc.period_time;
+            return estimateSpeed(tc.main_time + per_move);
+        }
         case "fischer":
             return estimateSpeed(tc.initial_time + tc.time_increment);
         case "byoyomi":
