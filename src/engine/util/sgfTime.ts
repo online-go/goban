@@ -31,17 +31,16 @@ import { JGOFTimeControl, JGOFTimeControlSpeed } from "../formats/JGOF";
  * @returns A JGOFTimeControl if the format is recognized, or null otherwise
  */
 export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTimeControl | null {
-    const speed: JGOFTimeControlSpeed = estimateSpeed(main_time_ms);
-
     // Canadian: "15/300 Canadian" — stones_per_period/period_time
     const canadian = ot.match(/^(\d+)\/(\d+(?:\.\d+)?)\s+canadian$/i);
     if (canadian) {
+        const period_time = parseFloat(canadian[2]) * 1000;
         return {
             system: "canadian",
-            speed,
+            speed: estimateSpeed(main_time_ms + period_time),
             main_time: main_time_ms,
             stones_per_period: parseInt(canadian[1]),
-            period_time: parseFloat(canadian[2]) * 1000,
+            period_time,
             pause_on_weekends: false,
         };
     }
@@ -52,10 +51,10 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         const increment = parseFloat(fischer[1]) * 1000;
         return {
             system: "fischer",
-            speed,
+            speed: estimateSpeed(main_time_ms + increment),
             initial_time: main_time_ms,
             time_increment: increment,
-            max_time: main_time_ms * 2 || increment * 20,
+            max_time: Math.max(main_time_ms * 2, increment * 20),
             pause_on_weekends: false,
         };
     }
@@ -63,12 +62,14 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     // Byoyomi: "5x30 byo-yomi" — periods x period_time
     const byoyomi = ot.match(/^(\d+)x(\d+(?:\.\d+)?)\s+byo-?yomi$/i);
     if (byoyomi) {
+        const periods = parseInt(byoyomi[1]);
+        const period_time = parseFloat(byoyomi[2]) * 1000;
         return {
             system: "byoyomi",
-            speed,
+            speed: estimateSpeed(main_time_ms + periods * period_time),
             main_time: main_time_ms,
-            periods: parseInt(byoyomi[1]),
-            period_time: parseFloat(byoyomi[2]) * 1000,
+            periods,
+            period_time,
             pause_on_weekends: false,
         };
     }
@@ -76,10 +77,11 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     // Simple: "60 simple" — per_move in seconds
     const simple = ot.match(/^(\d+(?:\.\d+)?)\s+simple$/i);
     if (simple) {
+        const per_move = parseFloat(simple[1]) * 1000;
         return {
             system: "simple",
-            speed,
-            per_move: parseFloat(simple[1]) * 1000,
+            speed: estimateSpeed(per_move),
+            per_move,
             pause_on_weekends: false,
         };
     }
