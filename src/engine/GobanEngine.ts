@@ -2559,7 +2559,7 @@ export class GobanEngine extends BoardState {
                     case "TM":
                         {
                             const main_time_ms = parseFloat(val) * 1000;
-                            if (!isNaN(main_time_ms)) {
+                            if (!isNaN(main_time_ms) && main_time_ms >= 0) {
                                 if (!self.sgf_time_settings) {
                                     self.sgf_time_settings = {
                                         system: "absolute",
@@ -2612,12 +2612,13 @@ export class GobanEngine extends BoardState {
                         {
                             instructions.push(() => {
                                 const time_left = parseFloat(val) * 1000;
-                                if (!isNaN(time_left)) {
-                                    if (!self.cur_move.black_clock) {
-                                        self.cur_move.black_clock = { main_time: 0 };
-                                    }
-                                    self.cur_move.black_clock.main_time = time_left;
+                                if (isNaN(time_left) || time_left < 0) {
+                                    return;
                                 }
+                                if (!self.cur_move.black_clock) {
+                                    self.cur_move.black_clock = { main_time: 0 };
+                                }
+                                self.cur_move.black_clock.main_time = time_left;
                             });
                         }
                         break;
@@ -2626,12 +2627,13 @@ export class GobanEngine extends BoardState {
                         {
                             instructions.push(() => {
                                 const time_left = parseFloat(val) * 1000;
-                                if (!isNaN(time_left)) {
-                                    if (!self.cur_move.white_clock) {
-                                        self.cur_move.white_clock = { main_time: 0 };
-                                    }
-                                    self.cur_move.white_clock.main_time = time_left;
+                                if (isNaN(time_left) || time_left < 0) {
+                                    return;
                                 }
+                                if (!self.cur_move.white_clock) {
+                                    self.cur_move.white_clock = { main_time: 0 };
+                                }
+                                self.cur_move.white_clock.main_time = time_left;
                             });
                         }
                         break;
@@ -2640,7 +2642,7 @@ export class GobanEngine extends BoardState {
                         {
                             instructions.push(() => {
                                 const count = parseInt(val);
-                                if (isNaN(count)) {
+                                if (isNaN(count) || count < 0) {
                                     return;
                                 }
                                 const system = self.sgf_time_settings?.system;
@@ -2663,7 +2665,7 @@ export class GobanEngine extends BoardState {
                         {
                             instructions.push(() => {
                                 const count = parseInt(val);
-                                if (isNaN(count)) {
+                                if (isNaN(count) || count < 0) {
                                     return;
                                 }
                                 const system = self.sgf_time_settings?.system;

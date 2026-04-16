@@ -156,4 +156,22 @@ describe("GobanEngine SGF time parsing", () => {
             total_time: 1800 * 1000,
         });
     });
+
+    test("TM with negative value is ignored", () => {
+        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[-100])");
+        expect(goban.engine.sgf_time_settings).toBeUndefined();
+    });
+
+    test("BL with negative value does not create black_clock", () => {
+        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[1800];B[pd]BL[-50])");
+        const move1 = nth(goban.engine.move_tree, 1);
+        expect(move1.black_clock).toBeUndefined();
+    });
+
+    test("OB with negative value is ignored", () => {
+        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd]BL[30]OB[-1])");
+        const move1 = nth(goban.engine.move_tree, 1);
+        expect(move1.black_clock?.main_time).toBe(30 * 1000);
+        expect(move1.black_clock?.periods_left).toBeUndefined();
+    });
 });
