@@ -89,15 +89,39 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     return null;
 }
 
-export function estimateSpeed(main_time_ms: number): JGOFTimeControlSpeed {
-    if (main_time_ms <= 5 * 60 * 1000) {
+/**
+ * Estimate the speed category from total available time in milliseconds.
+ */
+export function estimateSpeed(total_time_ms: number): JGOFTimeControlSpeed {
+    if (total_time_ms <= 5 * 60 * 1000) {
         return "blitz";
     }
-    if (main_time_ms <= 15 * 60 * 1000) {
-        return "live";
-    }
-    if (main_time_ms <= 3600 * 1000) {
+    if (total_time_ms <= 15 * 60 * 1000) {
         return "rapid";
     }
+    if (total_time_ms <= 3600 * 1000) {
+        return "live";
+    }
     return "correspondence";
+}
+
+/**
+ * Compute the speed category from a complete JGOFTimeControl object,
+ * considering both main time and overtime components.
+ */
+export function computeTimeControlSpeed(tc: JGOFTimeControl): JGOFTimeControlSpeed {
+    switch (tc.system) {
+        case "canadian":
+            return estimateSpeed(tc.main_time + tc.period_time);
+        case "fischer":
+            return estimateSpeed(tc.initial_time + tc.time_increment);
+        case "byoyomi":
+            return estimateSpeed(tc.main_time + tc.periods * tc.period_time);
+        case "simple":
+            return estimateSpeed(tc.per_move);
+        case "absolute":
+            return estimateSpeed(tc.total_time);
+        case "none":
+            return "correspondence";
+    }
 }
