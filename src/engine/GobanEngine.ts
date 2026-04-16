@@ -2640,15 +2640,20 @@ export class GobanEngine extends BoardState {
                         {
                             instructions.push(() => {
                                 const count = parseInt(val);
-                                if (!isNaN(count)) {
-                                    if (!self.cur_move.black_clock) {
-                                        self.cur_move.black_clock = { main_time: 0 };
-                                    }
-                                    if (self.sgf_time_settings?.system === "canadian") {
-                                        self.cur_move.black_clock.moves_left = count;
-                                    } else {
-                                        self.cur_move.black_clock.periods_left = count;
-                                    }
+                                if (isNaN(count)) {
+                                    return;
+                                }
+                                const system = self.sgf_time_settings?.system;
+                                if (system !== "canadian" && system !== "byoyomi") {
+                                    return;
+                                }
+                                if (!self.cur_move.black_clock) {
+                                    self.cur_move.black_clock = { main_time: 0 };
+                                }
+                                if (system === "canadian") {
+                                    self.cur_move.black_clock.moves_left = count;
+                                } else {
+                                    self.cur_move.black_clock.periods_left = count;
                                 }
                             });
                         }
@@ -2658,15 +2663,20 @@ export class GobanEngine extends BoardState {
                         {
                             instructions.push(() => {
                                 const count = parseInt(val);
-                                if (!isNaN(count)) {
-                                    if (!self.cur_move.white_clock) {
-                                        self.cur_move.white_clock = { main_time: 0 };
-                                    }
-                                    if (self.sgf_time_settings?.system === "canadian") {
-                                        self.cur_move.white_clock.moves_left = count;
-                                    } else {
-                                        self.cur_move.white_clock.periods_left = count;
-                                    }
+                                if (isNaN(count)) {
+                                    return;
+                                }
+                                const system = self.sgf_time_settings?.system;
+                                if (system !== "canadian" && system !== "byoyomi") {
+                                    return;
+                                }
+                                if (!self.cur_move.white_clock) {
+                                    self.cur_move.white_clock = { main_time: 0 };
+                                }
+                                if (system === "canadian") {
+                                    self.cur_move.white_clock.moves_left = count;
+                                } else {
+                                    self.cur_move.white_clock.periods_left = count;
                                 }
                             });
                         }
