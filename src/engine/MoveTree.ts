@@ -24,7 +24,12 @@ import {
     prettyCoordinates,
 } from "./util";
 import { AdHocPackedMove } from "./formats/AdHocFormat";
-import { JGOFMove, JGOFNumericPlayerColor, JGOFPlayerClock, JGOFPlayerSummary } from "./formats/JGOF";
+import {
+    JGOFMove,
+    JGOFNumericPlayerColor,
+    JGOFPlayerClock,
+    JGOFPlayerSummary,
+} from "./formats/JGOF";
 import { escapeSGFText, newlines_to_spaces } from "./util";
 
 export interface MarkInterface {

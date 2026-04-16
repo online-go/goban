@@ -30,10 +30,7 @@ import { JGOFTimeControl, JGOFTimeControlSpeed } from "../formats/JGOF";
  *                     populate required fields on the time control object
  * @returns A JGOFTimeControl if the format is recognized, or null otherwise
  */
-export function parseSGFOvertime(
-    ot: string,
-    main_time_ms: number = 0,
-): JGOFTimeControl | null {
+export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTimeControl | null {
     const speed: JGOFTimeControlSpeed = estimateSpeed(main_time_ms);
 
     // Canadian: "15/300 Canadian" — stones_per_period/period_time

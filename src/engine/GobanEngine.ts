@@ -2584,8 +2584,7 @@ export class GobanEngine extends BoardState {
                     case "OT":
                         {
                             const existing_main_time =
-                                self.sgf_time_settings &&
-                                "main_time" in self.sgf_time_settings
+                                self.sgf_time_settings && "main_time" in self.sgf_time_settings
                                     ? self.sgf_time_settings.main_time
                                     : self.sgf_time_settings &&
                                         "total_time" in self.sgf_time_settings
