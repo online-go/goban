@@ -2567,8 +2567,7 @@ export class GobanEngine extends BoardState {
                                         pause_on_weekends: false,
                                     };
                                 } else {
-                                    self.sgf_time_settings.speed =
-                                        estimateSpeed(main_time_ms);
+                                    self.sgf_time_settings.speed = estimateSpeed(main_time_ms);
                                     if ("main_time" in self.sgf_time_settings) {
                                         self.sgf_time_settings.main_time = main_time_ms;
                                     } else if ("total_time" in self.sgf_time_settings) {
