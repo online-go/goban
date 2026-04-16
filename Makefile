@@ -22,7 +22,7 @@ test:
 	yarn run test
 
 prettier:
-	npm run prettier
+	yarn run prettier
 	
 detect-duplicate-code duplicate-code-detection:
 	yarn run detect-duplicate-code
