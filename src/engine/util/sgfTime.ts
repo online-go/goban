@@ -38,7 +38,7 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     if (canadian) {
         const stones_per_period = parseInt(canadian[1]);
         const period_time = parseFloat(canadian[2]) * 1000;
-        if (stones_per_period <= 0) {
+        if (stones_per_period <= 0 || period_time <= 0) {
             return null;
         }
         return {
@@ -55,6 +55,9 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     const fischer = cleaned.match(/^(\d+(?:\.\d+)?)\s+fischer$/i);
     if (fischer) {
         const increment = parseFloat(fischer[1]) * 1000;
+        if (increment <= 0) {
+            return null;
+        }
         return {
             system: "fischer",
             speed: estimateSpeed(main_time_ms + increment),
@@ -70,7 +73,7 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     if (byoyomi) {
         const periods = parseInt(byoyomi[1]);
         const period_time = parseFloat(byoyomi[2]) * 1000;
-        if (periods <= 0) {
+        if (periods <= 0 || period_time <= 0) {
             return null;
         }
         return {
@@ -87,6 +90,9 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     const simple = cleaned.match(/^(\d+(?:\.\d+)?)\s+simple$/i);
     if (simple) {
         const per_move = parseFloat(simple[1]) * 1000;
+        if (per_move <= 0) {
+            return null;
+        }
         return {
             system: "simple",
             speed: estimateSpeed(per_move),

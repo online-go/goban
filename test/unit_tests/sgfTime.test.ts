@@ -84,6 +84,22 @@ describe("parseSGFOvertime", () => {
         expect(parseSGFOvertime("0x30 byo-yomi", 0)).toBeNull();
     });
 
+    test("rejects byoyomi with zero period_time", () => {
+        expect(parseSGFOvertime("5x0 byo-yomi", 0)).toBeNull();
+    });
+
+    test("rejects Canadian with zero period_time", () => {
+        expect(parseSGFOvertime("15/0 Canadian", 0)).toBeNull();
+    });
+
+    test("rejects Fischer with zero increment", () => {
+        expect(parseSGFOvertime("0 Fischer", 0)).toBeNull();
+    });
+
+    test("rejects Simple with zero per_move", () => {
+        expect(parseSGFOvertime("0 simple", 0)).toBeNull();
+    });
+
     test("parses byoyomi with spaces around x", () => {
         const result = parseSGFOvertime("5 x 30 byo-yomi", 0);
         expect(result?.system).toBe("byoyomi");
