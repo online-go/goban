@@ -80,6 +80,10 @@ describe("parseSGFOvertime", () => {
         expect(result?.system).toBe("byoyomi");
     });
 
+    test("rejects byoyomi with zero periods", () => {
+        expect(parseSGFOvertime("0x30 byo-yomi", 0)).toBeNull();
+    });
+
     test("parses byoyomi with spaces around x", () => {
         const result = parseSGFOvertime("5 x 30 byo-yomi", 0);
         expect(result?.system).toBe("byoyomi");

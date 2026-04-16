@@ -70,6 +70,9 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
     if (byoyomi) {
         const periods = parseInt(byoyomi[1]);
         const period_time = parseFloat(byoyomi[2]) * 1000;
+        if (periods <= 0) {
+            return null;
+        }
         return {
             system: "byoyomi",
             speed: estimateSpeed(main_time_ms + period_time),
