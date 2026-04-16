@@ -20,8 +20,9 @@ import type {
     AutomatchPreferences,
     RemoteStorageReplication,
     BotConfig,
+    RuleSet,
 } from "./ClientToServer";
-import type { JGOFTimeControl } from "../formats/JGOF";
+import type { JGOFTimeControl, JGOFTimeControlSystem } from "../formats/JGOF";
 import type { ConditionalMoveResponse } from "../ConditionalMoveTree";
 import type { GobanEngineConfig, Score, ReviewMessage } from "../GobanEngine";
 import type { AdHocPackedMove } from "../formats/AdHocFormat";
@@ -707,18 +708,20 @@ export interface SeekgraphChallengeMessage {
     handicap: number | null;
     /** Komi */
     komi: number | null;
+    /** Whether komi is automatic or custom */
+    komi_auto: "automatic" | "custom";
     /** Rules being used */
-    rules: string;
+    rules: RuleSet;
     /** Board width */
     width: number;
     /** Board height */
     height: number;
     /** Color the accepting player will be */
-    challenger_color: "black" | "white" | "automatic";
+    challenger_color: "black" | "white" | "automatic" | "random";
     /** If analysis is disabled */
     disable_analysis: boolean;
     /** Time control system type */
-    time_control: string;
+    time_control: JGOFTimeControlSystem;
     /** Time control parameters */
     time_control_parameters: JGOFTimeControl;
     /** Average time per move */
