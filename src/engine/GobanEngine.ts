@@ -134,6 +134,7 @@ export interface GobanEngineConfig extends BoardConfig {
     moves?: GobanMovesArray;
     move_tree?: MoveTreeJson;
     ranked?: boolean;
+    private?: boolean;
     original_disable_analysis?: boolean;
     original_sgf?: string;
     free_handicap_placement?: boolean;
