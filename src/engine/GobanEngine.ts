@@ -2626,6 +2626,11 @@ export class GobanEngine extends BoardState {
                                         : 0;
                             const parsed = parseSGFOvertime(val, existing_main_time);
                             if (parsed) {
+                                parsed.speed = computeTimeControlSpeed(
+                                    parsed,
+                                    self.width,
+                                    self.height,
+                                );
                                 self.sgf_time_settings = parsed;
                             }
                         }

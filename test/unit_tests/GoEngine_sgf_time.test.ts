@@ -188,6 +188,14 @@ describe("GobanEngine SGF time parsing", () => {
         expect(move1.black_clock).toBeUndefined();
     });
 
+    test("OT speed uses board dimensions, not default 90 moves", () => {
+        // 900s main + 1s byo-yomi on 19x19:
+        //   per-move = 900000/126.5 + 1000 ≈ 8.1s → blitz
+        // With the default 90-moves fallback this would be 11s → live.
+        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[900]OT[5x1 byo-yomi])");
+        expect(goban.engine.sgf_time_settings?.speed).toBe("blitz");
+    });
+
     test("OB with negative value is ignored", () => {
         const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd]BL[30]OB[-1])");
         const move1 = nth(goban.engine.move_tree, 1);
