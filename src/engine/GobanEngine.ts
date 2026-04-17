@@ -50,6 +50,18 @@ import * as goscorer from "goscorer";
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
 
+// Stable sort key: BL/WL must be processed before OB/OW within a single node,
+// since OB/OW depend on the clock BL/WL populates.
+function clockPropRank(ident: string): number {
+    if (ident === "BL" || ident === "WL") {
+        return 0;
+    }
+    if (ident === "OB" || ident === "OW") {
+        return 2;
+    }
+    return 1;
+}
+
 function findAncestorClock(
     move: MoveTree,
     field: "black_clock" | "white_clock",
@@ -2190,7 +2202,11 @@ export class GobanEngine extends BoardState {
                 }
             }
 
-            // Now process deferred properties (like comments) after moves
+            // Now process deferred properties (like comments) after moves.
+            // OB/OW read the clock that BL/WL populates, so push BL/WL first
+            // regardless of file order — the SGF spec treats node properties
+            // as an unordered set.
+            deferredProperties.sort((a, b) => clockPropRank(a[0]) - clockPropRank(b[0]));
             for (const prop of deferredProperties) {
                 processProperty(prop[0], prop);
             }

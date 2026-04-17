@@ -188,6 +188,28 @@ describe("GobanEngine SGF time parsing", () => {
         expect(move1.black_clock).toBeUndefined();
     });
 
+    test("OB before BL on same node still records periods_left", () => {
+        // SGF property order within a node is not significant per spec.
+        // OB must see the clock BL populates even when OB appears first.
+        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd]OB[3]BL[30])");
+        const move1 = nth(goban.engine.move_tree, 1);
+        expect(move1.black_clock).toMatchObject({
+            main_time: 30 * 1000,
+            periods_left: 3,
+        });
+    });
+
+    test("OW before WL on same node still records periods_left", () => {
+        const goban = loadSGF(
+            "(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd];W[dp]OW[2]WL[30])",
+        );
+        const move2 = nth(goban.engine.move_tree, 2);
+        expect(move2.white_clock).toMatchObject({
+            main_time: 30 * 1000,
+            periods_left: 2,
+        });
+    });
+
     test("OT speed uses board dimensions, not default 90 moves", () => {
         // 900s main + 1s byo-yomi on 19x19:
         //   per-move = 900000/126.5 + 1000 ≈ 8.1s → blitz
