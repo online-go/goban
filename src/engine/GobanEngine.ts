@@ -36,7 +36,6 @@ import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
     JGOFMove,
-    JGOFPlayerClock,
     JGOFPlayerSummary,
     JGOFIntersection,
     JGOFSealingIntersection,
@@ -60,20 +59,6 @@ function clockPropRank(ident: string): number {
         return 2;
     }
     return 1;
-}
-
-function findAncestorClock(
-    move: MoveTree,
-    field: "black_clock" | "white_clock",
-): JGOFPlayerClock | undefined {
-    let cur: MoveTree | null = move.parent;
-    while (cur) {
-        if (cur[field]) {
-            return cur[field];
-        }
-        cur = cur.parent;
-    }
-    return undefined;
 }
 
 export const AUTOSCORE_TRIALS = 1000;
@@ -2694,23 +2679,15 @@ export class GobanEngine extends BoardState {
                                     return;
                                 }
                                 if (!self.cur_move.black_clock) {
-                                    // No BL on this node. Inherit from the nearest
-                                    // ancestor's clock rather than fabricating
-                                    // main_time: 0 (which would be misread as
-                                    // "flagged"). Some SGF writers emit BL only
-                                    // during main time and then just OB/OW once in
-                                    // byo-yomi, so the nearest BL may be several
-                                    // nodes back. If no ancestor clock exists,
-                                    // skip — a bare count with no time baseline
-                                    // is ambiguous.
-                                    const inherited = findAncestorClock(
-                                        self.cur_move,
-                                        "black_clock",
-                                    );
-                                    if (!inherited) {
+                                    // No BL on this node. Fall back only to the
+                                    // direct parent's clock — don't walk further
+                                    // ancestors. A bare count with no time
+                                    // baseline on self or parent is skipped.
+                                    const parent_clock = self.cur_move.parent?.black_clock;
+                                    if (!parent_clock) {
                                         return;
                                     }
-                                    self.cur_move.black_clock = { ...inherited };
+                                    self.cur_move.black_clock = { ...parent_clock };
                                 }
                                 if (system === "canadian") {
                                     self.cur_move.black_clock.moves_left = count;
@@ -2733,14 +2710,11 @@ export class GobanEngine extends BoardState {
                                     return;
                                 }
                                 if (!self.cur_move.white_clock) {
-                                    const inherited = findAncestorClock(
-                                        self.cur_move,
-                                        "white_clock",
-                                    );
-                                    if (!inherited) {
+                                    const parent_clock = self.cur_move.parent?.white_clock;
+                                    if (!parent_clock) {
                                         return;
                                     }
-                                    self.cur_move.white_clock = { ...inherited };
+                                    self.cur_move.white_clock = { ...parent_clock };
                                 }
                                 if (system === "canadian") {
                                     self.cur_move.white_clock.moves_left = count;

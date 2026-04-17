@@ -168,18 +168,15 @@ describe("GobanEngine SGF time parsing", () => {
         expect(move1.black_clock).toBeUndefined();
     });
 
-    test("OB without BL on same node inherits parent's main_time", () => {
-        // Some SGF writers stop emitting BL once the main clock expires and
-        // only track byo-yomi periods. Verify main_time is inherited rather
-        // than fabricated as 0.
+    test("OB without BL is skipped when parent has no black_clock", () => {
+        // Inheritance is limited to the direct parent. In normal alternating
+        // play the parent is a white move with no black_clock, so OB without
+        // BL produces no clock data rather than walking further ancestors.
         const goban = loadSGF(
             "(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd]BL[30]OB[5];W[dp];B[pp]OB[4])",
         );
         const move3 = nth(goban.engine.move_tree, 3);
-        expect(move3.black_clock).toMatchObject({
-            main_time: 30 * 1000,
-            periods_left: 4,
-        });
+        expect(move3.black_clock).toBeUndefined();
     });
 
     test("OB without BL and no parent clock is skipped", () => {
