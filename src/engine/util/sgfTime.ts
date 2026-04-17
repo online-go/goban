@@ -15,6 +15,7 @@
  */
 
 import { JGOFTimeControl, JGOFTimeControlSpeed } from "../formats/JGOF";
+import { computeAverageMoveTime } from "./computeAverageMoveTime";
 
 /**
  * Parses an SGF OT (overtime) property string into a partial JGOFTimeControl.
@@ -41,14 +42,16 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         if (stones_per_period <= 0 || period_time <= 0) {
             return null;
         }
-        return {
+        const tc: JGOFTimeControl = {
             system: "canadian",
-            speed: estimateSpeed(main_time_ms + period_time / stones_per_period),
+            speed: "live",
             main_time: main_time_ms,
             stones_per_period,
             period_time,
             pause_on_weekends: false,
         };
+        tc.speed = computeTimeControlSpeed(tc);
+        return tc;
     }
 
     // Fischer: "30 Fischer" — time_increment in seconds
@@ -60,14 +63,16 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         }
         // SGF doesn't specify a max_time cap; use the larger of 2x main time
         // or ~20 moves of increments as a reasonable playable ceiling.
-        return {
+        const tc: JGOFTimeControl = {
             system: "fischer",
-            speed: estimateSpeed(main_time_ms + increment),
+            speed: "live",
             initial_time: main_time_ms,
             time_increment: increment,
             max_time: Math.max(main_time_ms * 2, increment * 20),
             pause_on_weekends: false,
         };
+        tc.speed = computeTimeControlSpeed(tc);
+        return tc;
     }
 
     // Byoyomi: "5x30 byo-yomi" — periods x period_time
@@ -78,14 +83,16 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         if (periods <= 0 || period_time <= 0) {
             return null;
         }
-        return {
+        const tc: JGOFTimeControl = {
             system: "byoyomi",
-            speed: estimateSpeed(main_time_ms + period_time),
+            speed: "live",
             main_time: main_time_ms,
             periods,
             period_time,
             pause_on_weekends: false,
         };
+        tc.speed = computeTimeControlSpeed(tc);
+        return tc;
     }
 
     // Simple: "60 simple" — per_move in seconds.
@@ -97,53 +104,49 @@ export function parseSGFOvertime(ot: string, main_time_ms: number = 0): JGOFTime
         if (per_move <= 0) {
             return null;
         }
-        return {
+        const tc: JGOFTimeControl = {
             system: "simple",
-            speed: estimateSpeed(per_move),
+            speed: "live",
             per_move,
             pause_on_weekends: false,
         };
+        tc.speed = computeTimeControlSpeed(tc);
+        return tc;
     }
 
     return null;
 }
 
 /**
- * Estimate the speed category from total available time in milliseconds.
+ * Classify a per-move time (in milliseconds) into a speed category.
+ * Thresholds mirror the server's `getGameSpeed`:
+ *   blitz:          0 < tpm < 10s
+ *   live:           10s <= tpm < 3600s
+ *   correspondence: tpm >= 3600s or tpm == 0
  */
-export function estimateSpeed(total_time_ms: number): JGOFTimeControlSpeed {
-    if (total_time_ms <= 5 * 60 * 1000) {
+export function estimateSpeed(time_per_move_ms: number): JGOFTimeControlSpeed {
+    const tpm = time_per_move_ms / 1000;
+    if (tpm > 0 && tpm < 10) {
         return "blitz";
     }
-    if (total_time_ms <= 15 * 60 * 1000) {
-        return "rapid";
-    }
-    if (total_time_ms <= 3600 * 1000) {
+    if (tpm >= 10 && tpm < 3600) {
         return "live";
     }
     return "correspondence";
 }
 
 /**
- * Compute the speed category from a complete JGOFTimeControl object,
- * considering both main time and overtime components.
+ * Compute the speed category from a complete JGOFTimeControl, based on
+ * expected time-per-move rather than total budget. Mirrors the server's
+ * `calculate_average_move_time` + `getGameSpeed` pairing.
  */
-export function computeTimeControlSpeed(tc: JGOFTimeControl): JGOFTimeControlSpeed {
-    switch (tc.system) {
-        case "canadian": {
-            const per_move =
-                tc.stones_per_period > 0 ? tc.period_time / tc.stones_per_period : tc.period_time;
-            return estimateSpeed(tc.main_time + per_move);
-        }
-        case "fischer":
-            return estimateSpeed(tc.initial_time + tc.time_increment);
-        case "byoyomi":
-            return estimateSpeed(tc.main_time + tc.period_time);
-        case "simple":
-            return estimateSpeed(tc.per_move);
-        case "absolute":
-            return estimateSpeed(tc.total_time);
-        case "none":
-            return "correspondence";
+export function computeTimeControlSpeed(
+    tc: JGOFTimeControl,
+    width?: number,
+    height?: number,
+): JGOFTimeControlSpeed {
+    if (tc.system === "none") {
+        return "correspondence";
     }
+    return estimateSpeed(computeAverageMoveTime(tc, width, height));
 }

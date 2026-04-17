@@ -23,7 +23,6 @@ import {
     decodePrettyCoordinates,
     encodeMove,
     encodeMoves,
-    estimateSpeed,
     makeMatrix,
     parseSGFOvertime,
     positionId,
@@ -2576,12 +2575,14 @@ export class GobanEngine extends BoardState {
                             const main_time_ms = parseFloat(val) * 1000;
                             if (!isNaN(main_time_ms) && main_time_ms >= 0) {
                                 if (!self.sgf_time_settings) {
-                                    self.sgf_time_settings = {
+                                    const tc: JGOFTimeControl = {
                                         system: "absolute",
-                                        speed: estimateSpeed(main_time_ms),
+                                        speed: "live",
                                         total_time: main_time_ms,
                                         pause_on_weekends: false,
                                     };
+                                    tc.speed = computeTimeControlSpeed(tc, self.width, self.height);
+                                    self.sgf_time_settings = tc;
                                 } else {
                                     // No arm for "simple": JGOFSimpleTimeControl has no
                                     // main_time field, so TM cannot be preserved when
@@ -2603,6 +2604,8 @@ export class GobanEngine extends BoardState {
                                     }
                                     self.sgf_time_settings.speed = computeTimeControlSpeed(
                                         self.sgf_time_settings,
+                                        self.width,
+                                        self.height,
                                     );
                                 }
                             }

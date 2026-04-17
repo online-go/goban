@@ -127,30 +127,35 @@ describe("parseSGFOvertime", () => {
     });
 });
 
+// estimateSpeed and computeTimeControlSpeed classify by expected time-per-move,
+// matching the server's `calculate_average_move_time` + `getGameSpeed`:
+//   blitz          : 0 < tpm < 10s
+//   live           : 10s <= tpm < 3600s
+//   correspondence : tpm >= 3600s or tpm == 0
 describe("estimateSpeed", () => {
-    test("classifies blitz (<=5min)", () => {
-        expect(estimateSpeed(0)).toBe("blitz");
-        expect(estimateSpeed(5 * 60 * 1000)).toBe("blitz");
+    test("classifies blitz for per-move under 10s", () => {
+        expect(estimateSpeed(1)).toBe("blitz");
+        expect(estimateSpeed(9999)).toBe("blitz");
     });
 
-    test("classifies rapid (5-15min)", () => {
-        expect(estimateSpeed(5 * 60 * 1000 + 1)).toBe("rapid");
-        expect(estimateSpeed(15 * 60 * 1000)).toBe("rapid");
+    test("classifies live at 10s boundary and below 3600s", () => {
+        expect(estimateSpeed(10 * 1000)).toBe("live");
+        expect(estimateSpeed(3599 * 1000)).toBe("live");
     });
 
-    test("classifies live (15-60min)", () => {
-        expect(estimateSpeed(15 * 60 * 1000 + 1)).toBe("live");
-        expect(estimateSpeed(3600 * 1000)).toBe("live");
-    });
-
-    test("classifies correspondence (>60min)", () => {
-        expect(estimateSpeed(3600 * 1000 + 1)).toBe("correspondence");
+    test("classifies correspondence at 3600s boundary and above", () => {
+        expect(estimateSpeed(3600 * 1000)).toBe("correspondence");
         expect(estimateSpeed(86400 * 1000)).toBe("correspondence");
+    });
+
+    test("classifies zero per-move as correspondence", () => {
+        expect(estimateSpeed(0)).toBe("correspondence");
     });
 });
 
 describe("computeTimeControlSpeed", () => {
-    test("Canadian divides period_time by stones_per_period", () => {
+    // 19x19 avg moves per side = (0.7 * 19 * 19) / 2 = 126.35
+    test("Canadian per-move is period_time / stones_per_period when no main time", () => {
         const tc: JGOFTimeControl = {
             system: "canadian",
             speed: "blitz",
@@ -159,11 +164,11 @@ describe("computeTimeControlSpeed", () => {
             period_time: 600 * 1000,
             pause_on_weekends: false,
         };
-        // 600s / 25 = 24s per stone → blitz
-        expect(computeTimeControlSpeed(tc)).toBe("blitz");
+        // 0 + 600s/25 = 24s per move → live
+        expect(computeTimeControlSpeed(tc)).toBe("live");
     });
 
-    test("Canadian 3600 main + 15/300 → correspondence", () => {
+    test("Canadian 3600 main + 15/300 classifies as live per-move", () => {
         const tc: JGOFTimeControl = {
             system: "canadian",
             speed: "blitz",
@@ -172,8 +177,8 @@ describe("computeTimeControlSpeed", () => {
             period_time: 300 * 1000,
             pause_on_weekends: false,
         };
-        // 3600 + 20 = 3620s → correspondence (> 60 min threshold)
-        expect(computeTimeControlSpeed(tc)).toBe("correspondence");
+        // 3600/126.35 + 300/15 ≈ 28.5 + 20 = 48.5s per move → live
+        expect(computeTimeControlSpeed(tc)).toBe("live");
     });
 
     test("Canadian handles zero stones_per_period without crashing", () => {
@@ -188,7 +193,7 @@ describe("computeTimeControlSpeed", () => {
         expect(computeTimeControlSpeed(tc)).toBeDefined();
     });
 
-    test("Fischer uses initial_time + time_increment", () => {
+    test("Fischer per-move is initial_time/avg + increment", () => {
         const tc: JGOFTimeControl = {
             system: "fischer",
             speed: "blitz",
@@ -197,11 +202,24 @@ describe("computeTimeControlSpeed", () => {
             max_time: 600 * 1000,
             pause_on_weekends: false,
         };
-        // 610s → rapid
-        expect(computeTimeControlSpeed(tc)).toBe("rapid");
+        // 600/126.35 + 10 ≈ 4.75 + 10 = 14.75s per move → live
+        expect(computeTimeControlSpeed(tc)).toBe("live");
     });
 
-    test("byoyomi uses main + period_time (per-move pressure)", () => {
+    test("Fischer with small initial and small increment classifies as blitz", () => {
+        const tc: JGOFTimeControl = {
+            system: "fischer",
+            speed: "live",
+            initial_time: 60 * 1000,
+            time_increment: 5 * 1000,
+            max_time: 120 * 1000,
+            pause_on_weekends: false,
+        };
+        // 60/126.35 + 5 ≈ 0.47 + 5 = 5.47s per move → blitz
+        expect(computeTimeControlSpeed(tc)).toBe("blitz");
+    });
+
+    test("byoyomi per-move is main/avg + period_time", () => {
         const tc: JGOFTimeControl = {
             system: "byoyomi",
             speed: "blitz",
@@ -210,42 +228,54 @@ describe("computeTimeControlSpeed", () => {
             period_time: 30 * 1000,
             pause_on_weekends: false,
         };
-        // 1800 + 30 = 1830s → live
+        // 1800/126.35 + 30 ≈ 14.2 + 30 = 44.2s per move → live
         expect(computeTimeControlSpeed(tc)).toBe("live");
     });
 
-    test("byoyomi with no main time uses period_time only", () => {
-        // 5x120s byo-yomi: per-move pressure is 120s, should classify as blitz,
-        // not rapid (which 5*120=600s would falsely yield).
+    test("byoyomi with small period_time and no main classifies as blitz", () => {
         const tc: JGOFTimeControl = {
             system: "byoyomi",
-            speed: "rapid",
+            speed: "live",
             main_time: 0,
             periods: 5,
-            period_time: 120 * 1000,
+            period_time: 5 * 1000,
             pause_on_weekends: false,
         };
+        // 0 + 5 = 5s per move → blitz
         expect(computeTimeControlSpeed(tc)).toBe("blitz");
     });
 
-    test("simple uses per_move", () => {
+    test("simple uses per_move directly", () => {
         const tc: JGOFTimeControl = {
             system: "simple",
             speed: "blitz",
             per_move: 60 * 1000,
             pause_on_weekends: false,
         };
-        expect(computeTimeControlSpeed(tc)).toBe("blitz");
+        // 60s per move → live
+        expect(computeTimeControlSpeed(tc)).toBe("live");
     });
 
-    test("absolute uses total_time", () => {
+    test("absolute divides total_time by avg moves per side", () => {
         const tc: JGOFTimeControl = {
             system: "absolute",
             speed: "blitz",
             total_time: 3600 * 1000,
             pause_on_weekends: false,
         };
+        // 3600/126.35 ≈ 28.5s per move → live
         expect(computeTimeControlSpeed(tc)).toBe("live");
+    });
+
+    test("absolute with large total_time classifies as correspondence", () => {
+        const tc: JGOFTimeControl = {
+            system: "absolute",
+            speed: "blitz",
+            total_time: 7 * 86400 * 1000,
+            pause_on_weekends: false,
+        };
+        // 7d / 126.35 ≈ 4800s per move → correspondence
+        expect(computeTimeControlSpeed(tc)).toBe("correspondence");
     });
 
     test("none maps to correspondence", () => {
@@ -255,5 +285,20 @@ describe("computeTimeControlSpeed", () => {
             pause_on_weekends: false,
         };
         expect(computeTimeControlSpeed(tc)).toBe("correspondence");
+    });
+
+    test("board size affects classification for main-time-heavy controls", () => {
+        const tc: JGOFTimeControl = {
+            system: "byoyomi",
+            speed: "blitz",
+            main_time: 1800 * 1000,
+            periods: 5,
+            period_time: 30 * 1000,
+            pause_on_weekends: false,
+        };
+        // 9x9: avg = 28.35 → 1800/28.35 + 30 ≈ 63.5 + 30 = 93.5s/move → live
+        // 19x19: 44.2s/move → live (both live, but smaller board pushes toward slower)
+        expect(computeTimeControlSpeed(tc, 9, 9)).toBe("live");
+        expect(computeTimeControlSpeed(tc, 19, 19)).toBe("live");
     });
 });
