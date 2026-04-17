@@ -18,11 +18,13 @@ import { BoardState, BoardConfig } from "./BoardState";
 import { GobanMoveError } from "./GobanError";
 import { MoveTree, MoveTreeJson } from "./MoveTree";
 import {
+    computeTimeControlSpeed,
     decodeMoves,
     decodePrettyCoordinates,
     encodeMove,
     encodeMoves,
     makeMatrix,
+    parseSGFOvertime,
     positionId,
     prettyCoordinates,
     sortMoves,
@@ -46,6 +48,18 @@ import * as goscorer from "goscorer";
 
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
+
+// Stable sort key: BL/WL must be processed before OB/OW within a single node,
+// since OB/OW depend on the clock BL/WL populates.
+function clockPropRank(ident: string): number {
+    if (ident === "BL" || ident === "WL") {
+        return 0;
+    }
+    if (ident === "OB" || ident === "OW") {
+        return 2;
+    }
+    return 1;
+}
 
 export const AUTOSCORE_TRIALS = 1000;
 export const AUTOSCORE_TOLERANCE = 0.1;
@@ -345,6 +359,7 @@ export class GobanEngine extends BoardState {
         speed: "correspondence",
         pause_on_weekends: true,
     };
+    public sgf_time_settings?: JGOFTimeControl;
     public game_id: number = NaN;
     public review_id?: number;
     public decoded_moves: Array<JGOFMove> = [];
@@ -2173,7 +2188,11 @@ export class GobanEngine extends BoardState {
                 }
             }
 
-            // Now process deferred properties (like comments) after moves
+            // Now process deferred properties (like comments) after moves.
+            // OB/OW read the clock that BL/WL populates, so push BL/WL first
+            // regardless of file order — the SGF spec treats node properties
+            // as an unordered set.
+            deferredProperties.sort((a, b) => clockPropRank(a[0]) - clockPropRank(b[0]));
             for (const prop of deferredProperties) {
                 processProperty(prop[0], prop);
             }
@@ -2548,6 +2567,160 @@ export class GobanEngine extends BoardState {
                                         white_territory_point.y,
                                         true,
                                     );
+                                }
+                            });
+                        }
+                        break;
+
+                    case "TM":
+                        {
+                            const main_time_ms = parseFloat(val) * 1000;
+                            if (!isNaN(main_time_ms) && main_time_ms >= 0) {
+                                if (!self.sgf_time_settings) {
+                                    const tc: JGOFTimeControl = {
+                                        system: "absolute",
+                                        speed: "live",
+                                        total_time: main_time_ms,
+                                        pause_on_weekends: false,
+                                    };
+                                    tc.speed = computeTimeControlSpeed(tc, self.width, self.height);
+                                    self.sgf_time_settings = tc;
+                                } else {
+                                    // No arm for "simple": JGOFSimpleTimeControl has no
+                                    // main_time field, so TM cannot be preserved when
+                                    // OT is simple — consistent with parseSGFOvertime.
+                                    if ("main_time" in self.sgf_time_settings) {
+                                        self.sgf_time_settings.main_time = main_time_ms;
+                                    } else if ("total_time" in self.sgf_time_settings) {
+                                        self.sgf_time_settings.total_time = main_time_ms;
+                                    } else if ("initial_time" in self.sgf_time_settings) {
+                                        self.sgf_time_settings.initial_time = main_time_ms;
+                                        if ("max_time" in self.sgf_time_settings) {
+                                            // See Fischer branch of parseSGFOvertime for
+                                            // the rationale behind max(main*2, inc*20).
+                                            self.sgf_time_settings.max_time = Math.max(
+                                                main_time_ms * 2,
+                                                self.sgf_time_settings.time_increment * 20,
+                                            );
+                                        }
+                                    }
+                                    self.sgf_time_settings.speed = computeTimeControlSpeed(
+                                        self.sgf_time_settings,
+                                        self.width,
+                                        self.height,
+                                    );
+                                }
+                            }
+                        }
+                        break;
+
+                    case "OT":
+                        {
+                            const existing_main_time =
+                                self.sgf_time_settings && "main_time" in self.sgf_time_settings
+                                    ? self.sgf_time_settings.main_time
+                                    : self.sgf_time_settings &&
+                                        "total_time" in self.sgf_time_settings
+                                      ? self.sgf_time_settings.total_time
+                                      : self.sgf_time_settings &&
+                                          "initial_time" in self.sgf_time_settings
+                                        ? self.sgf_time_settings.initial_time
+                                        : 0;
+                            const parsed = parseSGFOvertime(val, existing_main_time);
+                            if (parsed) {
+                                parsed.speed = computeTimeControlSpeed(
+                                    parsed,
+                                    self.width,
+                                    self.height,
+                                );
+                                self.sgf_time_settings = parsed;
+                            }
+                        }
+                        break;
+
+                    case "BL":
+                        {
+                            instructions.push(() => {
+                                const time_left = parseFloat(val) * 1000;
+                                if (isNaN(time_left) || time_left < 0) {
+                                    return;
+                                }
+                                if (!self.cur_move.black_clock) {
+                                    self.cur_move.black_clock = { main_time: 0 };
+                                }
+                                self.cur_move.black_clock.main_time = time_left;
+                            });
+                        }
+                        break;
+
+                    case "WL":
+                        {
+                            instructions.push(() => {
+                                const time_left = parseFloat(val) * 1000;
+                                if (isNaN(time_left) || time_left < 0) {
+                                    return;
+                                }
+                                if (!self.cur_move.white_clock) {
+                                    self.cur_move.white_clock = { main_time: 0 };
+                                }
+                                self.cur_move.white_clock.main_time = time_left;
+                            });
+                        }
+                        break;
+
+                    case "OB":
+                        {
+                            instructions.push(() => {
+                                const count = parseInt(val);
+                                if (isNaN(count) || count < 0) {
+                                    return;
+                                }
+                                const system = self.sgf_time_settings?.system;
+                                if (system !== "canadian" && system !== "byoyomi") {
+                                    return;
+                                }
+                                if (!self.cur_move.black_clock) {
+                                    // No BL on this node. Fall back only to the
+                                    // direct parent's clock — don't walk further
+                                    // ancestors. A bare count with no time
+                                    // baseline on self or parent is skipped.
+                                    const parent_clock = self.cur_move.parent?.black_clock;
+                                    if (!parent_clock) {
+                                        return;
+                                    }
+                                    self.cur_move.black_clock = { ...parent_clock };
+                                }
+                                if (system === "canadian") {
+                                    self.cur_move.black_clock.moves_left = count;
+                                } else {
+                                    self.cur_move.black_clock.periods_left = count;
+                                }
+                            });
+                        }
+                        break;
+
+                    case "OW":
+                        {
+                            instructions.push(() => {
+                                const count = parseInt(val);
+                                if (isNaN(count) || count < 0) {
+                                    return;
+                                }
+                                const system = self.sgf_time_settings?.system;
+                                if (system !== "canadian" && system !== "byoyomi") {
+                                    return;
+                                }
+                                if (!self.cur_move.white_clock) {
+                                    const parent_clock = self.cur_move.parent?.white_clock;
+                                    if (!parent_clock) {
+                                        return;
+                                    }
+                                    self.cur_move.white_clock = { ...parent_clock };
+                                }
+                                if (system === "canadian") {
+                                    self.cur_move.white_clock.moves_left = count;
+                                } else {
+                                    self.cur_move.white_clock.periods_left = count;
                                 }
                             });
                         }
