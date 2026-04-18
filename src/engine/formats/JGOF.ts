@@ -264,7 +264,7 @@ export type JGOFTimeControl =
 /******/
 
 export interface JGOFAIReview {
-    id: string;
+    id: number;
     uuid: string;
 
     /**
