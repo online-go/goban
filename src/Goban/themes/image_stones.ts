@@ -439,4 +439,89 @@ export default function (THEMES: ThemesInterface) {
 
     THEMES["black"]["Custom"] = Custom;
     THEMES["white"]["Custom"] = Custom;
+
+    class BadukTV extends Common {
+        override sort() {
+            return 110;
+        }
+        override get theme_name(): string {
+            return "BadukTV";
+        }
+
+        override preRenderBlack(
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): StoneTypeArray {
+            return preRenderImageStone(
+                radius,
+                getCDNReleaseBase() + "/img/baduktv_black.png",
+                deferredRenderCallback,
+            );
+        }
+
+        override preRenderWhite(
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): StoneTypeArray {
+            return preRenderImageStone(
+                radius,
+                getCDNReleaseBase() + "/img/baduktv_white.png",
+                deferredRenderCallback,
+            );
+        }
+
+        override getBlackTextColor(_color: string): string {
+            return "#ffffff";
+        }
+
+        override getWhiteTextColor(_color: string): string {
+            return "#000000";
+        }
+
+        public override preRenderBlackSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            const id = this.def_uid(`baduktv-black-${radius}`);
+            defs.append(
+                this.renderSVG(
+                    {
+                        id,
+                        url: getCDNReleaseBase() + "/img/baduktv_black.png",
+                    },
+                    radius,
+                ),
+            );
+
+            return [id];
+        }
+
+        public override preRenderWhiteSVG(
+            defs: SVGDefsElement,
+            radius: number,
+            _seed: number,
+            deferredRenderCallback: () => void,
+        ): string[] {
+            const id = this.def_uid(`baduktv-white-${radius}`);
+            defs.append(
+                this.renderSVG(
+                    {
+                        id,
+                        url: getCDNReleaseBase() + "/img/baduktv_white.png",
+                    },
+                    radius,
+                ),
+            );
+
+            return [id];
+        }
+    }
+
+    _("BadukTV"); // ensure translation
+    THEMES["black"]["BadukTV"] = BadukTV;
+    THEMES["white"]["BadukTV"] = BadukTV;
 }
