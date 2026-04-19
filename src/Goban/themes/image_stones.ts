@@ -442,7 +442,7 @@ export default function (THEMES: ThemesInterface) {
 
     class BadukTV extends Common {
         override sort() {
-            return 100;
+            return 110;
         }
         override get theme_name(): string {
             return "BadukTV";
