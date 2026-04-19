@@ -311,7 +311,8 @@ export default function (THEMES: ThemesInterface) {
         override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('/img/baduktv.png')",
+                "background-image": "url('" + getCDNReleaseBase() + "/img/baduktv.png')",
+                "background-size": "cover",
             };
         }
         override getLineColor(): string {
@@ -351,6 +352,7 @@ export default function (THEMES: ThemesInterface) {
             return {
                 "background-color": "#DCB35C",
                 "background-image": "url('" + getCDNReleaseBase() + "/img/community_favorite.png')",
+                "background-size": "cover",
             };
         }
         override getLineColor(): string {
