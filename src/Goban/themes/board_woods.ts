@@ -351,7 +351,7 @@ export default function (THEMES: ThemesInterface) {
         override getBackgroundCSS(): GobanThemeBackgroundCSS {
             return {
                 "background-color": "#DCB35C",
-                "background-image": "url('" + getCDNReleaseBase() + "/img/community_favorite.png')",
+                "background-image": "url('" + getCDNReleaseBase() + "/img/community_favorite.jpg')",
                 "background-size": "cover",
             };
         }

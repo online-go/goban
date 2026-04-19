@@ -455,7 +455,7 @@ export default function (THEMES: ThemesInterface) {
         ): StoneTypeArray {
             return preRenderImageStone(
                 radius,
-                getCDNReleaseBase() + "/img/baduktv_black.svg",
+                getCDNReleaseBase() + "/img/baduktv_black.png",
                 deferredRenderCallback,
             );
         }
@@ -467,7 +467,7 @@ export default function (THEMES: ThemesInterface) {
         ): StoneTypeArray {
             return preRenderImageStone(
                 radius,
-                getCDNReleaseBase() + "/img/baduktv_white.svg",
+                getCDNReleaseBase() + "/img/baduktv_white.png",
                 deferredRenderCallback,
             );
         }
@@ -491,7 +491,7 @@ export default function (THEMES: ThemesInterface) {
                 this.renderSVG(
                     {
                         id,
-                        url: getCDNReleaseBase() + "/img/baduktv_black.svg",
+                        url: getCDNReleaseBase() + "/img/baduktv_black.png",
                     },
                     radius,
                 ),
@@ -511,7 +511,7 @@ export default function (THEMES: ThemesInterface) {
                 this.renderSVG(
                     {
                         id,
-                        url: getCDNReleaseBase() + "/img/baduktv_white.svg",
+                        url: getCDNReleaseBase() + "/img/baduktv_white.png",
                     },
                     radius,
                 ),
