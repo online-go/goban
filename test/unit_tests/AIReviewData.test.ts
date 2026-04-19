@@ -47,7 +47,7 @@ describe("AIReviewData", () => {
             const engine = new GobanEngine({ width: 19, height: 19 });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-1",
+                id: 1,
                 uuid: "uuid-123",
                 type: "fast",
                 engine: "katago",
@@ -63,7 +63,7 @@ describe("AIReviewData", () => {
             const reviewData = new AIReviewData(mock_socket, engine.move_tree, ai_review, 123);
 
             expect(reviewData.uuid).toBe("uuid-123");
-            expect(reviewData.id).toBe("test-review-1");
+            expect(reviewData.id).toBe(1);
             expect(reviewData.type).toBe("fast");
             expect(reviewData.engine).toBe("katago");
             expect(reviewData.engine_version).toBe("1.11.0");
@@ -77,7 +77,7 @@ describe("AIReviewData", () => {
             const engine = new GobanEngine({ width: 19, height: 19 });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-2",
+                id: 2,
                 uuid: "uuid-456",
                 type: "full",
                 engine: "katago",
@@ -101,7 +101,7 @@ describe("AIReviewData", () => {
             const engine = new GobanEngine({ width: 19, height: 19 });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-3",
+                id: 3,
                 uuid: "uuid-789",
                 type: "fast",
                 engine: "katago",
@@ -121,7 +121,7 @@ describe("AIReviewData", () => {
                 {
                     uuid: "uuid-789",
                     game_id: 789,
-                    ai_review_id: "test-review-3",
+                    ai_review_id: 3,
                 },
             ]);
 
@@ -132,7 +132,7 @@ describe("AIReviewData", () => {
             const engine = new GobanEngine({ width: 19, height: 19 });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-4",
+                id: 4,
                 uuid: "uuid-101",
                 type: "full",
                 engine: "katago",
@@ -152,7 +152,7 @@ describe("AIReviewData", () => {
                 {
                     uuid: "uuid-101",
                     game_id: 101,
-                    ai_review_id: "test-review-4",
+                    ai_review_id: 4,
                 },
             ]);
 
@@ -172,7 +172,7 @@ describe("AIReviewData", () => {
             const engine = new GobanEngine({ width: 19, height: 19 });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-5",
+                id: 5,
                 uuid: "uuid-202",
                 type: "fast",
                 engine: "katago",
@@ -204,7 +204,7 @@ describe("AIReviewData", () => {
             const engine = new GobanEngine({ width: 19, height: 19 });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-6",
+                id: 6,
                 uuid: "uuid-303",
                 type: "full",
                 engine: "katago",
@@ -241,7 +241,7 @@ describe("AIReviewData", () => {
             });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-7",
+                id: 7,
                 uuid: "uuid-404",
                 type: "fast",
                 engine: "katago-beta",
@@ -292,7 +292,7 @@ describe("AIReviewData", () => {
             const engine = new GobanEngine({ width: 19, height: 19 });
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-8",
+                id: 8,
                 uuid: "uuid-505",
                 type: "fast",
                 engine: "leela-zero",
@@ -321,7 +321,7 @@ describe("AIReviewData", () => {
             engine.move_tree.move_number = 0;
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-9",
+                id: 9,
                 uuid: "uuid-606",
                 type: "full",
                 engine: "katago",
@@ -343,7 +343,7 @@ describe("AIReviewData", () => {
                 {
                     uuid: "uuid-606",
                     game_id: 606,
-                    ai_review_id: "test-review-9",
+                    ai_review_id: 9,
                 },
             ]);
 
@@ -366,7 +366,7 @@ describe("AIReviewData", () => {
             engine.move_tree.move_number = 0;
 
             const ai_review: JGOFAIReview = {
-                id: "test-review-10",
+                id: 10,
                 uuid: "uuid-707",
                 type: "full",
                 engine: "katago",
@@ -389,7 +389,7 @@ describe("AIReviewData", () => {
                 {
                     uuid: "uuid-707",
                     game_id: 707,
-                    ai_review_id: "test-review-10",
+                    ai_review_id: 10
                 },
             ]);
 

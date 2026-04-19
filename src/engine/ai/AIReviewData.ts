@@ -105,7 +105,7 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
         this.emit("destroy");
     }
 
-    public get id(): string {
+    public get id(): number {
         return this.ai_review.id;
     }
 

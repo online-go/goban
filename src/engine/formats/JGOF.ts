@@ -38,7 +38,7 @@ export interface JGOF {
 
     /** AI Review information computed for this game */
     ai_reviews?: {
-        [id: string]: JGOFAIReview;
+        [id: number]: JGOFAIReview;
     };
 }
 
@@ -264,7 +264,7 @@ export type JGOFTimeControl =
 /******/
 
 export interface JGOFAIReview {
-    id: string;
+    id: number;
     uuid: string;
 
     /**
