@@ -453,7 +453,11 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): StoneTypeArray {
-            return preRenderImageStone(radius, "/img/baduktv_black.svg", deferredRenderCallback);
+            return preRenderImageStone(
+                radius,
+                getCDNReleaseBase() + "/img/baduktv_black.svg",
+                deferredRenderCallback,
+            );
         }
 
         override preRenderWhite(
@@ -461,7 +465,11 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): StoneTypeArray {
-            return preRenderImageStone(radius, "/img/baduktv_white.svg", deferredRenderCallback);
+            return preRenderImageStone(
+                radius,
+                getCDNReleaseBase() + "/img/baduktv_white.svg",
+                deferredRenderCallback,
+            );
         }
 
         override getBlackTextColor(_color: string): string {
