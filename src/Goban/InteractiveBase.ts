@@ -489,6 +489,12 @@ export abstract class GobanInteractive extends GobanBase {
         }
         return false;
     }
+    protected getFuzzyPlacementEnabled(): boolean {
+        if (callbacks.getFuzzyPlacementEnabled) {
+            return callbacks.getFuzzyPlacementEnabled();
+        }
+        return false;
+    }
     // scale relative to the "OGS default"
     protected getStoneFontScale(): number {
         if (callbacks.getStoneFontScale) {
