@@ -2034,6 +2034,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             cell.clearScoreEstimate();
         }
 
+        if (stone_color && this.getFuzzyPlacementEnabled()) {
+            const offset = this.getStonePlacementOffset(i, j);
+            transform += ` translate(${offset.x},${offset.y})`;
+        }
         cell.transform = transform;
         //this.__draw_state[j][i] = this.drawingHash(i, j);
     }
@@ -3873,8 +3877,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
 
     protected computeThemeStoneRadius(): number {
-        const r = this.square_size * 0.5;
-        return Math.max(1, r);
+        const scale = this.getFuzzyPlacementEnabled() ? 0.45 : 0.5;
+        return Math.max(1, this.square_size * scale);
     }
 
     public redraw(force_clear?: boolean): void {
