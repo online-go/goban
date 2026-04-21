@@ -84,7 +84,7 @@ export interface GobanCanvasInterface {
 
     move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void;
     move_tree_redraw(no_warp?: boolean): void;
-    setMoveTreeContainer(container: HTMLElement): void;
+    setMoveTreeContainer(container: HTMLElement | null): void;
 
     showMessage(
         message_id_or_error: MessageID,
@@ -3271,8 +3271,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     //
     // Move tree
     //
-    public setMoveTreeContainer(container: HTMLElement): void {
-        this.move_tree_container = container;
+    public setMoveTreeContainer(container: HTMLElement | null): void {
+        this.move_tree_container = container ?? undefined;
         this.move_tree_redraw();
     }
 

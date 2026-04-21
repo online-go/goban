@@ -47,7 +47,7 @@ export class TestGoban extends Goban {
     public drawSquare(i: number, j: number): void {}
     public redraw(force_clear?: boolean | undefined): void {}
     public move_tree_redraw(no_warp?: boolean | undefined): void {}
-    public setMoveTreeContainer(container: HTMLElement): void {}
+    public setMoveTreeContainer(container: HTMLElement | null): void {}
     protected setTitle(title: string): void {}
     protected enableDrawing(): void {}
     protected disableDrawing(): void {}
