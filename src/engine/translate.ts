@@ -63,6 +63,8 @@ export interface GobanStrings {
     "Slate": string;
     "Worn Glass": string;
     "Anime": string;
+    "BadukTV": string;
+    "Community Favorite": string;
 
     "%swk": string /* short time week */;
     "%sd": string /* short time day */;

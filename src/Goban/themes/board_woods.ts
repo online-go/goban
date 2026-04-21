@@ -300,4 +300,84 @@ export default function (THEMES: ThemesInterface) {
 
     _("Bright Kaya"); // ensure translation
     THEMES["board"]["Bright Kaya"] = BrightKaya;
+
+    class BadukTV extends GobanTheme {
+        override sort(): number {
+            return 35;
+        }
+        override get theme_name(): string {
+            return "BadukTV";
+        }
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
+            return {
+                "background-color": "#DCB35C",
+                "background-image": "url('" + getCDNReleaseBase() + "/img/baduktv.png')",
+                "background-size": "cover",
+            };
+        }
+        override getLineColor(): string {
+            return "#442211";
+        }
+        override getFadedLineColor(): string {
+            return "#888888";
+        }
+        override getStarColor(): string {
+            return "#000000";
+        }
+        override getFadedStarColor(): string {
+            return "#888888";
+        }
+        override getBlankTextColor(): string {
+            return "#000000";
+        }
+        override getLabelTextColor(): string {
+            return "#444444";
+        }
+        override getShadowColor(): string {
+            return "#482200";
+        }
+    }
+
+    _("BadukTV"); // ensure translation
+    THEMES["board"]["BadukTV"] = BadukTV;
+
+    class CommunityFavorite extends GobanTheme {
+        override sort(): number {
+            return 120;
+        }
+        override get theme_name(): string {
+            return "Community Favorite";
+        }
+        override getBackgroundCSS(): GobanThemeBackgroundCSS {
+            return {
+                "background-color": "#DCB35C",
+                "background-image": "url('" + getCDNReleaseBase() + "/img/community_favorite.jpg')",
+                "background-size": "cover",
+            };
+        }
+        override getLineColor(): string {
+            return "#442211";
+        }
+        override getFadedLineColor(): string {
+            return "#888888";
+        }
+        override getStarColor(): string {
+            return "#000000";
+        }
+        override getFadedStarColor(): string {
+            return "#888888";
+        }
+        override getBlankTextColor(): string {
+            return "#000000";
+        }
+        override getLabelTextColor(): string {
+            return "#444444";
+        }
+        override getShadowColor(): string {
+            return "#482200";
+        }
+    }
+
+    _("Community Favorite"); // ensure translation
+    THEMES["board"]["Community Favorite"] = CommunityFavorite;
 }
