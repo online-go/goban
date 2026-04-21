@@ -103,7 +103,7 @@ export abstract class Goban extends OGSConnectivity {
     public getStonePlacementOffset(i: number, j: number): { x: number; y: number } {
         const max_shift = 0.05 * this.square_size;
         const seed = ((this.game_id || 0) % 1000) / 1000;
-        const stone_index = i * this.width + j;
+        const stone_index = 1 + i * this.width + j;
         const dx = this.prng(seed, stone_index * Math.sqrt(2)) * max_shift;
         const dy = this.prng(seed, stone_index * Math.sqrt(3)) * max_shift;
         return { x: dx, y: dy };

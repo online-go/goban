@@ -3877,7 +3877,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
 
     protected computeThemeStoneRadius(): number {
-        const scale = this.getFuzzyPlacementEnabled() ? 0.45 : 0.5;
+        const scale = this.getFuzzyPlacementEnabled() ? 0.49 : 0.5;
         return Math.max(1, this.square_size * scale);
     }
 
