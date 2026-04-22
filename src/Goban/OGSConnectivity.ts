@@ -47,6 +47,7 @@ import {
 } from "../engine";
 import {
     //ServerToClient,
+    ChatMessageBody,
     GameChatMessage,
     //GameChatLine,
     //StallingScoreEstimate,
@@ -1115,7 +1116,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.socket_event_bindings = [];
     }
 
-    public sendChat(msg_body: string, type: string) {
+    public sendChat(msg_body: string | ChatMessageBody, type: string) {
         if (typeof msg_body === "string" && msg_body.length === 0) {
             return;
         }
