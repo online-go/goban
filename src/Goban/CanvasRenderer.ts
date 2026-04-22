@@ -3032,7 +3032,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         this.emit("clear-message");
     }
-    protected setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
+    public setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
             return;
         }

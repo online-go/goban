@@ -4108,7 +4108,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         return defs;
     }
 
-    protected setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
+    public setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
             console.log("No display");
             return;
