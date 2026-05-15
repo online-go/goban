@@ -43,6 +43,10 @@ export interface ClientToServerBase {
         client?: string;
         /** Client version string. */
         client_version?: string;
+        /** Browser-detected IANA timezone (e.g. "America/Los_Angeles").
+         *  Used server-side to keep the player's recorded timezone
+         *  fresh for activity-day bucketing of streaks. */
+        timezone?: string;
 
         /** Bot username connecting, if applicable */
         bot_username?: string;
