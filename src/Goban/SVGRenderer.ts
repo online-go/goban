@@ -106,7 +106,7 @@ interface GobanSVGInterface {
 
     move_tree_bindEvents(svg: SVGElement): void;
     move_tree_redraw(no_warp?: boolean): void;
-    setMoveTreeContainer(container: HTMLElement): void;
+    setMoveTreeContainer(container: HTMLElement | null): void;
 
     showMessage(
         message_id_or_error: MessageID,
@@ -4108,7 +4108,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         return defs;
     }
 
-    protected setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
+    public setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         if (this.no_display) {
             console.log("No display");
             return;
@@ -4261,8 +4261,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     //
     // Move tree
     //
-    public setMoveTreeContainer(container: HTMLElement): void {
-        this.move_tree_container = container;
+    public setMoveTreeContainer(container: HTMLElement | null): void {
+        this.move_tree_container = container ?? undefined;
         this.move_tree_redraw();
     }
 

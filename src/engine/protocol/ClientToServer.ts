@@ -549,14 +549,17 @@ export interface ClientToServer extends ClientToServerBase {
     /** Sets a channel topic */
     "chat/topic": (data: { channel: string; topic: string }) => void;
 
+    // (chat/send is below; ChatMessageBody is declared at the bottom of the file.)
+
     /** Sends a chat message to the given channel */
     "chat/send": (data: {
         /** Channel to send the message to */
         channel: string;
         /** ID for the message */
         uuid: string;
-        /** Message text */
-        message: string;
+        /** Message text, or a typed body (e.g. `{type: "analysis", ...}`) for
+         * structured chat lines such as posted analysis variations. */
+        message: string | ChatMessageBody;
     }) => void;
 
     /** Join a chat channel */
@@ -925,4 +928,15 @@ export interface GameChatAnalysisMessage {
 export interface GameChatReviewMessage {
     type: "review";
     review_id: number;
+}
+
+/**
+ * Structured chat message body. Used by typed chat lines such as posted
+ * analysis variations and system messages. The `type` discriminator names
+ * the renderer; additional fields depend on the type. Concrete bodies
+ * (e.g. an analysis chat-line shape with `from`/`moves`/`name` fields)
+ * are structurally compatible since only `type` is required.
+ */
+export interface ChatMessageBody {
+    type: string;
 }
