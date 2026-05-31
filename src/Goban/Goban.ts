@@ -158,15 +158,14 @@ export abstract class Goban extends OGSConnectivity {
         if (this.last_pointer_up_square.i !== pt.i || this.last_pointer_up_square.j !== pt.j) {
             return "ignore";
         }
-        if (this.synthesized_double_click) {
-            /* Already handled via the timing fallback above; ignore the native
-             * `dblclick` and reset the timing baseline so the first click of the
-             * next move can't chain off this (now stale) timestamp. */
-            this.synthesized_double_click = false;
-            this.last_pointer_up_timestamp = 0;
-            return "ignore";
-        }
-        return "double";
+        /* Reset the timing baseline either way (whether or not we already
+         * handled this double via the fallback) so the first click of the next
+         * move can't chain off this now-stale timestamp and be mistaken for a
+         * double-click. */
+        const already_handled = this.synthesized_double_click;
+        this.synthesized_double_click = false;
+        this.last_pointer_up_timestamp = 0;
+        return already_handled ? "ignore" : "double";
     }
 
     public getStonePlacementOffset(i: number, j: number): { x: number; y: number } {

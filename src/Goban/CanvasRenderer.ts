@@ -483,9 +483,17 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         let mouse_disabled: any = 0;
 
         canvas.addEventListener("click", (ev) => {
+            // pointerUp is handled in the mouseup listener below for reliability
+            // during rapid DOM updates: the browser drops click/dblclick when the
+            // DOM under the cursor is mutated between presses (e.g. after an
+            // opponent's pass), but mouseup still fires. See #3364.
+            ev.preventDefault();
+            return false;
+        });
+        canvas.addEventListener("mouseup", (ev) => {
             if (!mouse_disabled) {
-                dragging = true;
                 pointerUp(ev, false);
+                dragging = false;
             }
             ev.preventDefault();
             return false;
