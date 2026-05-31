@@ -44,7 +44,9 @@ function simulateDoubleClickWithoutNativeDblClick(div: HTMLElement, x: number, y
     }
 }
 
-function commonConfig(): SVGRendererGobanConfig {
+function commonConfig(extra?: Partial<SVGRendererGobanConfig>): SVGRendererGobanConfig {
+    // No `player_id` (matches the submit tests in GobanSVG.test.ts): with a
+    // player id set, sendMove() requires a server clock we don't mock here.
     return {
         square_size: TEST_SQUARE_SIZE,
         board_div,
@@ -52,11 +54,7 @@ function commonConfig(): SVGRendererGobanConfig {
         server_socket: mock_socket,
         width: 9,
         height: 9,
-        player_id: 123,
-        players: {
-            black: { id: 123, username: "p1" },
-            white: { id: 456, username: "p2" },
-        },
+        ...(extra ?? {}),
     };
 }
 
@@ -71,29 +69,35 @@ describe("double-click fallback (#3364)", () => {
     });
 
     test("two quick clicks submit a move even without a native dblclick event", async () => {
-        const goban = new SVGRenderer(commonConfig({ double_click_submit: true } as any));
+        const goban = new SVGRenderer(commonConfig({ double_click_submit: true }));
         await socket_server.connected;
         goban.enableStonePlacement();
+        // `sendMove` is the submission path; spy on it instead of the socket so
+        // the assertion doesn't depend on the mocked clock/transport.
+        const sendMove = jest.spyOn(goban as any, "sendMove").mockReturnValue(true);
 
         simulateDoubleClickWithoutNativeDblClick(goban.parent, 4, 4);
 
         expect(goban.engine.board[4][4]).toBe(1);
-        // The move was submitted, not left pending behind the submit button.
-        expect(goban.submit_move).toBeUndefined();
-        expect(socket_server).toHaveReceivedMessages([
-            expect.arrayContaining(["game/move", expect.objectContaining({ move: "ee" })]),
-        ]);
+        // The move was submitted (not left pending behind the submit button).
+        expect(sendMove).toHaveBeenCalledWith(expect.objectContaining({ move: "ee" }));
     });
 
     test("two quick clicks do NOT auto-submit when double_click_submit is off", async () => {
-        const goban = new SVGRenderer(commonConfig({ double_click_submit: false } as any));
+        const goban = new SVGRenderer(commonConfig({ double_click_submit: false }));
+        // Guard against regressing back to the ignored-argument bug: the config
+        // must actually disable double-click submission.
+        expect(goban.double_click_submit).toBe(false);
         await socket_server.connected;
         goban.enableStonePlacement();
+        const sendMove = jest.spyOn(goban as any, "sendMove").mockReturnValue(true);
 
         simulateDoubleClickWithoutNativeDblClick(goban.parent, 4, 4);
 
         // In submit-button mode the second click toggles the provisional stone
-        // back off and nothing is submitted.
+        // back off; nothing is placed and nothing is submitted.
+        expect(goban.engine.board[4][4]).toBe(0);
+        expect(sendMove).not.toHaveBeenCalled();
         expect(goban.submit_move).toBeUndefined();
         expect(goban.engine.last_official_move.move_number).toBe(0);
     });

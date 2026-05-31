@@ -448,8 +448,12 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         if (synthesized_double_click) {
                             /* Already handled via the timing fallback above; a
                              * native `dblclick` also arrived, so ignore it to
-                             * avoid submitting/placing twice. */
+                             * avoid submitting/placing twice. Reset the timing
+                             * baseline so the first click of the next move can't
+                             * chain off this (now stale) timestamp and be
+                             * mistaken for a double-click. */
                             synthesized_double_click = false;
+                            last_pointer_up_timestamp = 0;
                             this.onMouseOut(ev);
                             return;
                         }
