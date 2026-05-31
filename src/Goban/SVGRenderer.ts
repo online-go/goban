@@ -92,10 +92,6 @@ interface MoveTreeViewPortInterface {
 
 const HOT_PINK = "#ff69b4";
 
-/* Max time between two releases on the same square for our timing-based
- * double-click fallback to treat them as a double-click (#3364). */
-const DOUBLE_CLICK_TIMEOUT_MS = 500;
-
 //interface GobanCanvasInterface {
 interface GobanSVGInterface {
     engine: GobanEngine;
@@ -379,18 +375,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         let dragging = false;
 
-        let last_click_square = this.xy2ij(0, 0);
         let pointer_down_timestamp = 0;
-        /* Fallback double-click detection. The browser does not always
-         * synthesize a native `dblclick` event: if the DOM under the cursor is
-         * mutated between the two clicks the click/dblclick events are dropped.
-         * This happens e.g. after an opponent's pass, where placing the
-         * provisional stone triggers a board redraw, which left
-         * `double-click-to-move` behaving like the submit-button mode (#3364).
-         * We therefore detect the double-tap ourselves from timing + position
-         * in `pointerUp` and ignore the native `dblclick` when we already did. */
-        let last_pointer_up_timestamp = 0;
-        let synthesized_double_click = false;
 
         const pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
             const press_duration_ms = performance.now() - pointer_down_timestamp;
@@ -449,47 +434,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 } else {
                     const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
-                    let treat_as_double_click = double_clicked;
-                    const now = performance.now();
-                    if (!double_clicked) {
-                        /* Timing-based double-click fallback (#3364): if a
-                         * second release lands on the same square shortly after
-                         * the first, treat it as a double-click even when the
-                         * browser failed to emit a native `dblclick`. */
-                        if (
-                            this.double_click_submit &&
-                            !synthesized_double_click &&
-                            last_click_square.i === pt.i &&
-                            last_click_square.j === pt.j &&
-                            now - last_pointer_up_timestamp <= DOUBLE_CLICK_TIMEOUT_MS
-                        ) {
-                            treat_as_double_click = true;
-                            synthesized_double_click = true;
-                        } else {
-                            synthesized_double_click = false;
-                        }
-                        last_pointer_up_timestamp = now;
-                        last_click_square = pt;
-                    } else {
-                        if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
-                            this.onMouseOut(ev);
-                            return;
-                        }
-                        if (synthesized_double_click) {
-                            /* Already handled via the timing fallback above; a
-                             * native `dblclick` also arrived, so ignore it to
-                             * avoid submitting/placing twice. Reset the timing
-                             * baseline so the first click of the next move can't
-                             * chain off this (now stale) timestamp and be
-                             * mistaken for a double-click. */
-                            synthesized_double_click = false;
-                            last_pointer_up_timestamp = 0;
-                            this.onMouseOut(ev);
-                            return;
-                        }
+                    const resolution = this.resolveDoubleClick(pt, double_clicked);
+                    if (resolution === "ignore") {
+                        this.onMouseOut(ev);
+                        return;
                     }
 
-                    this.onTap(ev, treat_as_double_click, right_click, press_duration_ms);
+                    this.onTap(ev, resolution === "double", right_click, press_duration_ms);
                     this.onMouseOut(ev);
                 }
             } catch (e) {
