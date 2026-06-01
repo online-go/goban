@@ -136,6 +136,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
     private lines_layer?: SVGGraphicsElement;
+    private crosshair_layer?: SVGGraphicsElement;
     private coordinate_labels_layer?: SVGGraphicsElement;
     private grid: Array<Array<SVGGraphicsElement>> = [];
     public grid_layer?: SVGGraphicsElement;
@@ -1977,6 +1978,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             const m = this.last_move;
             delete this.last_move;
             this.cell(m.x, m.y).clearLastMove();
+            this.updateLastMoveCrosshair();
         }
 
         /* Draw last move */
@@ -1988,6 +1990,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
+                this.updateLastMoveCrosshair();
 
                 if (i >= 0 && j >= 0) {
                     const color =
@@ -2999,6 +3002,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             const m = this.last_move;
             delete this.last_move;
             this.drawSquare(m.x, m.y);
+            this.updateLastMoveCrosshair();
         }
 
         /* Draw last move */
@@ -3010,6 +3014,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
+                this.updateLastMoveCrosshair();
 
                 if (i >= 0 && j >= 0) {
                     const color =
@@ -3704,6 +3709,73 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
 
+    /* Last-move crosshair: a dedicated layer kept directly beneath the stone
+     * grid layer (so the lines pass under the stones) holding the full
+     * horizontal and vertical lines through the last move. Rebuilt on every
+     * redraw and whenever the last move changes. */
+    private updateLastMoveCrosshair(): void {
+        if (!this.grid_layer) {
+            return;
+        }
+        if (!this.crosshair_layer) {
+            this.crosshair_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            this.crosshair_layer.setAttribute("class", "crosshair-layer");
+        }
+        // Keep it directly before the stone grid layer (under the stones).
+        this.svg.insertBefore(this.crosshair_layer, this.grid_layer);
+        this.crosshair_layer.innerHTML = "";
+
+        if (!this.engine || !this.engine.cur_move) {
+            return;
+        }
+        const cm = this.engine.cur_move;
+        const playing = this.engine.phase === "play" || this.engine.phase === "finished";
+        if (
+            this.dont_draw_last_move ||
+            this.dont_draw_last_move_crosshair ||
+            !playing ||
+            cm.x < 0 ||
+            cm.y < 0
+        ) {
+            return;
+        }
+        const ch = this.getLastMoveCrosshair();
+        if (!ch.enabled) {
+            return;
+        }
+
+        // Mirror the intersection geometry used by drawLines().
+        const ss = this.square_size;
+        let ox = this.draw_left_labels ? ss : 0;
+        let oy = this.draw_top_labels ? ss : 0;
+        if (this.bounds.left > 0) {
+            ox = -ss * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -ss * this.bounds.top;
+        }
+        ox += Math.round(ss / 2);
+        oy += Math.round(ss / 2);
+
+        const cx = ox + cm.x * ss;
+        const cy = oy + cm.y * ss;
+        const lw = Math.max(1, ss * ch.thickness);
+        const mk = (x1: number, y1: number, x2: number, y2: number) => {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1.toString());
+            line.setAttribute("y1", y1.toString());
+            line.setAttribute("x2", x2.toString());
+            line.setAttribute("y2", y2.toString());
+            line.setAttribute("stroke", ch.color);
+            line.setAttribute("stroke-width", lw.toString());
+            this.crosshair_layer!.appendChild(line);
+        };
+        // horizontal: spans all columns at the last move's row
+        mk(ox, cy, ox + (this.width - 1) * ss, cy);
+        // vertical: spans all rows at the last move's column
+        mk(cx, oy, cx, oy + (this.height - 1) * ss);
+    }
+
     private drawCoordinateLabels(force_clear?: boolean): void {
         if (force_clear) {
             if (this.coordinate_labels_layer) {
@@ -3986,6 +4058,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
             this.drawPenMarks(this.pen_marks);
         }
+        this.updateLastMoveCrosshair();
         this.move_tree_redraw();
     }
 

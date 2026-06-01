@@ -114,6 +114,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
     private last_move_opacity: number = 1;
+    /* Dedicated canvas for the last-move accessibility crosshair. It sits
+     * behind the (transparent) stone canvas, so the full-board horizontal and
+     * vertical lines are drawn as single strokes under the stones. */
+    private crosshair_layer?: HTMLCanvasElement;
+    private crosshair_ctx?: CanvasRenderingContext2D;
     public move_tree_container?: HTMLElement;
     private move_tree_inner_container?: HTMLDivElement;
     private move_tree_canvas?: HTMLCanvasElement;
@@ -246,6 +251,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         this.detachPenCanvas();
         this.detachShadowLayer();
+        this.detachCrosshairLayer();
 
         if (this.message_timeout) {
             clearTimeout(this.message_timeout);
@@ -306,6 +312,104 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             }
             this.bindPointerBindings(this.shadow_layer);
         }
+    }
+    private attachCrosshairLayer(): void {
+        if (!this.crosshair_layer && this.parent) {
+            this.crosshair_layer = createDeviceScaledCanvas(
+                this.metrics.width,
+                this.metrics.height,
+            );
+            this.crosshair_layer.setAttribute("id", "crosshair-canvas");
+            this.crosshair_layer.className = "CrosshairLayer";
+            try {
+                this.parent.insertBefore(this.crosshair_layer, this.board);
+            } catch (e) {
+                console.warn("Error inserting crosshair layer before board", e);
+                try {
+                    this.parent.appendChild(this.crosshair_layer);
+                } catch (e2) {
+                    console.error(e2);
+                }
+            }
+            const ctx = this.crosshair_layer.getContext("2d", { willReadFrequently: true });
+            if (ctx) {
+                this.crosshair_ctx = ctx;
+            }
+        }
+    }
+    private detachCrosshairLayer(): void {
+        if (this.crosshair_layer) {
+            if (this.crosshair_layer.parentNode) {
+                this.crosshair_layer.parentNode.removeChild(this.crosshair_layer);
+            }
+            delete this.crosshair_layer;
+            delete this.crosshair_ctx;
+        }
+    }
+    /* Draws (or clears) the last-move accessibility crosshair on its own canvas:
+     * two single full-board strokes through the last move, clamped to the edge
+     * intersections, sitting under the stones. The layer is attached lazily so
+     * boards never pay for it unless the setting is enabled. */
+    private drawLastMoveCrosshair(): void {
+        const ch = this.getLastMoveCrosshair();
+        const cur = this.engine?.cur_move;
+        const shows =
+            ch.enabled &&
+            !this.dont_draw_last_move &&
+            !this.dont_draw_last_move_crosshair &&
+            !!cur &&
+            cur.x >= 0 &&
+            cur.y >= 0 &&
+            (this.engine.phase === "play" || this.engine.phase === "finished");
+
+        if (!shows) {
+            if (this.crosshair_ctx && this.crosshair_layer) {
+                this.crosshair_ctx.clearRect(
+                    0,
+                    0,
+                    this.crosshair_layer.width,
+                    this.crosshair_layer.height,
+                );
+            }
+            return;
+        }
+
+        this.attachCrosshairLayer();
+        if (!this.crosshair_ctx || !this.crosshair_layer) {
+            return;
+        }
+
+        const ctx = this.crosshair_ctx;
+        ctx.clearRect(0, 0, this.crosshair_layer.width, this.crosshair_layer.height);
+
+        const s = this.square_size;
+        let ox = this.draw_left_labels ? s : 0;
+        let oy = this.draw_top_labels ? s : 0;
+        if (this.bounds.left > 0) {
+            ox = -s * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -s * this.bounds.top;
+        }
+        const mid = this.metrics.mid;
+        const cx = ox + cur.x * s + mid;
+        const cy = oy + cur.y * s + mid;
+        // span from the first to the last intersection centre
+        const x0 = ox + mid;
+        const x1 = ox + (this.width - 1) * s + mid;
+        const y0 = oy + mid;
+        const y1 = oy + (this.height - 1) * s + mid;
+
+        ctx.save();
+        ctx.strokeStyle = ch.color;
+        ctx.lineWidth = Math.max(1, s * ch.thickness);
+        ctx.beginPath();
+        ctx.moveTo(x0, cy);
+        ctx.lineTo(x1, cy);
+        ctx.moveTo(cx, y0);
+        ctx.lineTo(cx, y1);
+        ctx.stroke();
+        ctx.restore();
     }
     private detachPenCanvas(): void {
         if (this.pen_layer) {
@@ -2179,6 +2283,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             const m = this.last_move;
             delete this.last_move;
             this.drawSquare(m.x, m.y);
+            // The last-move crosshair lives on its own canvas; refresh it whenever
+            // the last move changes (live moves / navigation are targeted draws).
+            this.drawLastMoveCrosshair();
         }
 
         /* Draw last move */
@@ -2190,6 +2297,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
+                // Keep the crosshair canvas in sync on the first move (no prior
+                // last move to trigger the "clear last move" path above).
+                this.drawLastMoveCrosshair();
 
                 if (i >= 0 && j >= 0) {
                     const color =
@@ -2765,6 +2875,16 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     }
                 }
 
+                if (this.crosshair_layer) {
+                    resizeDeviceScaledCanvas(this.crosshair_layer, metrics.width, metrics.height);
+                    const ctx = this.crosshair_layer.getContext("2d", {
+                        willReadFrequently: true,
+                    });
+                    if (ctx) {
+                        this.crosshair_ctx = ctx;
+                    }
+                }
+
                 this.__set_board_width = metrics.width;
                 this.__set_board_height = metrics.height;
                 const ctx = this.board.getContext("2d", { willReadFrequently: true });
@@ -2962,6 +3082,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
 
         this.drawPenMarks(this.pen_marks);
+        this.drawLastMoveCrosshair();
         this.move_tree_redraw();
     }
     public showMessage(

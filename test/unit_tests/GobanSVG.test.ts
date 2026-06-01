@@ -13,6 +13,7 @@ import {
 } from "../../src/Goban/InteractiveBase";
 import { GobanSocket, makeMatrix } from "engine";
 import { GobanBase } from "../../src/GobanBase";
+import { callbacks } from "../../src/Goban/callbacks";
 import WS from "jest-websocket-mock";
 
 let board_div: HTMLDivElement;
@@ -36,7 +37,10 @@ interface MouseClickOptions {
     metaKey?: boolean;
 }
 
-function simulateMouseClick(div: HTMLElement, { x, y, shiftKey, ctrlKey, altKey, metaKey }: MouseClickOptions) {
+function simulateMouseClick(
+    div: HTMLElement,
+    { x, y, shiftKey, ctrlKey, altKey, metaKey }: MouseClickOptions,
+) {
     const eventInitDict = {
         // 1.5 assumes axis labels, which take up exactly one stone width
         clientX: (x + 1.5) * TEST_SQUARE_SIZE,
@@ -459,5 +463,71 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
+    });
+});
+
+describe("last-move crosshair (SVG)", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        delete (callbacks as any).getLastMoveCrosshair;
+        board_div.remove();
+    });
+
+    test("draws two crosshair lines when enabled", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new SVGRenderer(basicScorableBoardConfig());
+        goban.redraw(true);
+        const layer = (goban as any).crosshair_layer as SVGGraphicsElement;
+        expect(layer.querySelectorAll("line").length).toBe(2);
+        goban.destroy();
+    });
+
+    test("draws no crosshair lines when disabled", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: false,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new SVGRenderer(basicScorableBoardConfig());
+        goban.redraw(true);
+        const layer = (goban as any).crosshair_layer as SVGGraphicsElement | undefined;
+        expect(layer?.querySelectorAll("line").length ?? 0).toBe(0);
+        goban.destroy();
+    });
+
+    test("draws no crosshair lines when dont_draw_last_move is set", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new SVGRenderer(basicScorableBoardConfig({ dont_draw_last_move: true }));
+        goban.redraw(true);
+        const layer = (goban as any).crosshair_layer as SVGGraphicsElement | undefined;
+        expect(layer?.querySelectorAll("line").length ?? 0).toBe(0);
+        goban.destroy();
+    });
+
+    test("draws no crosshair lines when dont_draw_last_move_crosshair is set", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new SVGRenderer(
+            basicScorableBoardConfig({ dont_draw_last_move_crosshair: true }),
+        );
+        goban.redraw(true);
+        const layer = (goban as any).crosshair_layer as SVGGraphicsElement | undefined;
+        expect(layer?.querySelectorAll("line").length ?? 0).toBe(0);
+        goban.destroy();
     });
 });

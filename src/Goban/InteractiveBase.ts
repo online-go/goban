@@ -245,6 +245,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected display_width?: number;
     protected done_loading_review: boolean = false;
     protected dont_draw_last_move: boolean;
+    protected dont_draw_last_move_crosshair: boolean;
 
     protected edit_color?: "black" | "white";
     protected errorHandler: (e: Error) => void;
@@ -364,6 +365,7 @@ export abstract class GobanInteractive extends GobanBase {
             this.onError = config.onError;
         }
         this.dont_draw_last_move = !!config.dont_draw_last_move;
+        this.dont_draw_last_move_crosshair = !!config.dont_draw_last_move_crosshair;
         this.last_move_radius = config.last_move_radius || 0.25;
         this.circle_radius = config.circle_radius || 0.25;
         this.getPuzzlePlacementSetting = config.getPuzzlePlacementSetting;
@@ -501,6 +503,12 @@ export abstract class GobanInteractive extends GobanBase {
             return callbacks.getStoneFontScale();
         }
         return 1.0;
+    }
+    protected getLastMoveCrosshair(): { enabled: boolean; color: string; thickness: number } {
+        if (callbacks.getLastMoveCrosshair) {
+            return callbacks.getLastMoveCrosshair();
+        }
+        return { enabled: false, color: "#1e6bff", thickness: 0.1 };
     }
     public static getMoveTreeNumbering(): string {
         if (callbacks.getMoveTreeNumbering) {
