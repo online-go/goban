@@ -130,7 +130,17 @@ export abstract class Goban extends OGSConnectivity {
     protected resolveDoubleClick(
         pt: { i: number; j: number },
         double_clicked: boolean,
+        right_click: boolean = false,
     ): "single" | "double" | "ignore" {
+        if (right_click) {
+            /* A non-primary button (e.g. right-click) is never a
+             * double-click-to-move. Crucially we must not record its timing,
+             * otherwise a following primary click on the same square within the
+             * window would be mistaken for a double-click (#3364 review). The
+             * native `dblclick` event only ever fired for the primary button,
+             * so this matches the previous behavior. */
+            return "single";
+        }
         const now = performance.now();
         if (!double_clicked) {
             let is_double = false;

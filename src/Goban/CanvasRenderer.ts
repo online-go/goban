@@ -404,7 +404,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 } else {
                     const pos = getRelativeEventPosition(ev);
                     const pt = this.xy2ij(pos.x, pos.y);
-                    const resolution = this.resolveDoubleClick(pt, double_clicked);
+                    const resolution = this.resolveDoubleClick(pt, double_clicked, right_click);
                     if (resolution === "ignore") {
                         this.onMouseOut(ev);
                         return;
@@ -491,7 +491,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return false;
         });
         canvas.addEventListener("mouseup", (ev) => {
-            if (!mouse_disabled) {
+            // Only the primary button is handled here. Right-clicks must keep
+            // flowing through the `contextmenu` handler below, which calls
+            // pointerUp and preventDefault()s the native menu (Firefox does not
+            // suppress it from a mousedown preventDefault the way Chrome does).
+            if (!mouse_disabled && ev.button === 0) {
                 pointerUp(ev, false);
                 dragging = false;
             }

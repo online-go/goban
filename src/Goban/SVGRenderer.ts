@@ -434,7 +434,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 } else {
                     const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
-                    const resolution = this.resolveDoubleClick(pt, double_clicked);
+                    const resolution = this.resolveDoubleClick(pt, double_clicked, right_click);
                     if (resolution === "ignore") {
                         this.onMouseOut(ev);
                         return;

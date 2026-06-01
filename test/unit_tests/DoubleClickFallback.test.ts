@@ -106,6 +106,25 @@ describe.each(RENDERERS)("double-click fallback on %s (#3364)", (_name, makeRend
         expect(sendMove).toHaveBeenCalledWith(expect.objectContaining({ move: "ee" }));
     });
 
+    test("a right-click does not prime a following left-click into a double-click", async () => {
+        const { goban, target } = makeRenderer(true);
+        await socket_server.connected;
+        goban.enableStonePlacement();
+        const sendMove = jest.spyOn(goban as any, "sendMove").mockReturnValue(true);
+
+        const init = eventInit(4, 4);
+        // A right-click release on the square, immediately followed by a single
+        // left-click on the same square.
+        target.dispatchEvent(new MouseEvent("mousedown", { ...init, button: 2 }));
+        target.dispatchEvent(new MouseEvent("mouseup", { ...init, button: 2 }));
+        target.dispatchEvent(new MouseEvent("mousedown", { ...init, button: 0 }));
+        target.dispatchEvent(new MouseEvent("mouseup", { ...init, button: 0 }));
+
+        // The left-click must be treated as an ordinary single click (provisional
+        // stone), not as the second half of a double-click, so nothing is submitted.
+        expect(sendMove).not.toHaveBeenCalled();
+    });
+
     test("two quick presses do NOT auto-submit when double_click_submit is off", async () => {
         const { goban, target } = makeRenderer(false);
         // Guard against the config being silently ignored: it must really be off.
