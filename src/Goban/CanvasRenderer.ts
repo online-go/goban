@@ -331,7 +331,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     console.error(e2);
                 }
             }
-            const ctx = this.crosshair_layer.getContext("2d", { willReadFrequently: true });
+            // Write-only layer (clearRect + stroke, never getImageData), so keep
+            // it GPU-accelerated — no willReadFrequently hint.
+            const ctx = this.crosshair_layer.getContext("2d");
             if (ctx) {
                 this.crosshair_ctx = ctx;
             }
@@ -2877,9 +2879,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
                 if (this.crosshair_layer) {
                     resizeDeviceScaledCanvas(this.crosshair_layer, metrics.width, metrics.height);
-                    const ctx = this.crosshair_layer.getContext("2d", {
-                        willReadFrequently: true,
-                    });
+                    // Write-only layer — keep it GPU-accelerated (no willReadFrequently).
+                    const ctx = this.crosshair_layer.getContext("2d");
                     if (ctx) {
                         this.crosshair_ctx = ctx;
                     }

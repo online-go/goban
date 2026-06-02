@@ -3743,8 +3743,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.crosshair_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
             this.crosshair_layer.setAttribute("class", "crosshair-layer");
         }
-        // Keep it directly before the stone grid layer (under the stones).
-        this.svg.insertBefore(this.crosshair_layer, this.grid_layer);
+        // Keep it directly before the stone grid layer (under the stones). Only
+        // (re)insert when not already positioned there — grid_layer is recreated
+        // on a force_clear redraw, but otherwise this avoids a DOM mutation (and
+        // layout invalidation) on every move.
+        if (this.crosshair_layer.nextSibling !== this.grid_layer) {
+            this.svg.insertBefore(this.crosshair_layer, this.grid_layer);
+        }
         this.crosshair_layer.innerHTML = "";
 
         // Mirror the intersection geometry used by drawLines().
