@@ -3717,6 +3717,28 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (!this.grid_layer) {
             return;
         }
+
+        const cm = this.engine?.cur_move;
+        const ch = this.getLastMoveCrosshair();
+        const shows =
+            ch.enabled &&
+            !this.dont_draw_last_move &&
+            !this.dont_draw_last_move_crosshair &&
+            !!cm &&
+            cm.x >= 0 &&
+            cm.y >= 0 &&
+            (this.engine?.phase === "play" || this.engine?.phase === "finished");
+
+        // When the crosshair isn't shown, do no DOM work — only clear an already
+        // attached layer. The layer is created/attached lazily so boards never pay
+        // for it unless the feature is on (matches the Canvas renderer).
+        if (!shows || !cm) {
+            if (this.crosshair_layer) {
+                this.crosshair_layer.innerHTML = "";
+            }
+            return;
+        }
+
         if (!this.crosshair_layer) {
             this.crosshair_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
             this.crosshair_layer.setAttribute("class", "crosshair-layer");
@@ -3724,25 +3746,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         // Keep it directly before the stone grid layer (under the stones).
         this.svg.insertBefore(this.crosshair_layer, this.grid_layer);
         this.crosshair_layer.innerHTML = "";
-
-        if (!this.engine || !this.engine.cur_move) {
-            return;
-        }
-        const cm = this.engine.cur_move;
-        const playing = this.engine.phase === "play" || this.engine.phase === "finished";
-        if (
-            this.dont_draw_last_move ||
-            this.dont_draw_last_move_crosshair ||
-            !playing ||
-            cm.x < 0 ||
-            cm.y < 0
-        ) {
-            return;
-        }
-        const ch = this.getLastMoveCrosshair();
-        if (!ch.enabled) {
-            return;
-        }
 
         // Mirror the intersection geometry used by drawLines().
         const ss = this.square_size;
