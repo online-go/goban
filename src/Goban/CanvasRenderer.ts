@@ -2282,13 +2282,20 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
 
         /* Clear last move */
+        // Tracks whether the crosshair was already refreshed in this draw, so the
+        // "draw last move" block below doesn't redraw it a second time for the
+        // same cur_move.
+        let crosshair_synced = false;
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
             const m = this.last_move;
             delete this.last_move;
             this.drawSquare(m.x, m.y);
             // The last-move crosshair lives on its own canvas; refresh it whenever
             // the last move changes (live moves / navigation are targeted draws).
+            // This also clears it when navigating to a position with no last-move
+            // stone, which the "draw last move" block below cannot.
             this.drawLastMoveCrosshair();
+            crosshair_synced = true;
         }
 
         /* Draw last move */
@@ -2300,9 +2307,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
-                // Keep the crosshair canvas in sync on the first move (no prior
-                // last move to trigger the "clear last move" path above).
-                this.drawLastMoveCrosshair();
+                // Sync the crosshair on the first move (no prior last move to
+                // trigger the "clear last move" path above); skip if already done.
+                if (!crosshair_synced) {
+                    this.drawLastMoveCrosshair();
+                }
 
                 if (i >= 0 && j >= 0) {
                     const color =

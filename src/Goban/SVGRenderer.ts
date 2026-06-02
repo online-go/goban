@@ -1979,11 +1979,17 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Clear last move */
+        // Tracks whether the crosshair was already refreshed in this draw, so the
+        // "draw last move" block below doesn't redraw it again for the same cur_move.
+        let crosshair_synced = false;
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
             const m = this.last_move;
             delete this.last_move;
             this.cell(m.x, m.y).clearLastMove();
+            // Also clears the crosshair when navigating to a position with no
+            // last-move stone, which the "draw last move" block below cannot.
             this.updateLastMoveCrosshair();
+            crosshair_synced = true;
         }
 
         /* Draw last move */
@@ -1995,7 +2001,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
-                this.updateLastMoveCrosshair();
+                // Sync on the first move (no prior last move above); skip if done.
+                if (!crosshair_synced) {
+                    this.updateLastMoveCrosshair();
+                }
 
                 if (i >= 0 && j >= 0) {
                     const color =
@@ -3003,11 +3012,17 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Clear last move */
+        // Tracks whether the crosshair was already refreshed in this draw, so the
+        // "draw last move" block below doesn't redraw it again for the same cur_move.
+        let crosshair_synced = false;
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
             const m = this.last_move;
             delete this.last_move;
             this.drawSquare(m.x, m.y);
+            // Also clears the crosshair when navigating to a position with no
+            // last-move stone, which the "draw last move" block below cannot.
             this.updateLastMoveCrosshair();
+            crosshair_synced = true;
         }
 
         /* Draw last move */
@@ -3019,7 +3034,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
-                this.updateLastMoveCrosshair();
+                // Sync on the first move (no prior last move above); skip if done.
+                if (!crosshair_synced) {
+                    this.updateLastMoveCrosshair();
+                }
 
                 if (i >= 0 && j >= 0) {
                     const color =
