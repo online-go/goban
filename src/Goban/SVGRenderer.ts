@@ -319,6 +319,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
         delete (this as any).board;
         delete (this as any).svg;
+        // The crosshair layer was a child of the now-removed svg; drop our
+        // references so late updateLastMoveCrosshair() calls early-return and the
+        // detached subtree can be GC'd (mirrors the Canvas detachCrosshairLayer).
+        delete this.crosshair_layer;
+        delete this.grid_layer;
 
         this.detachPenLayer();
 
@@ -3752,7 +3757,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
         this.crosshair_layer.innerHTML = "";
 
-        // Mirror the intersection geometry used by drawLines().
+        // Align with the stone centres — metrics.mid is the canonical centre
+        // offset used by the stones and the Canvas crosshair (it accounts for the
+        // 0.5px adjustment on even square sizes; Math.round(ss/2) would be 0.5px off).
         const ss = this.square_size;
         let ox = this.draw_left_labels ? ss : 0;
         let oy = this.draw_top_labels ? ss : 0;
@@ -3762,8 +3769,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (this.bounds.top > 0) {
             oy = -ss * this.bounds.top;
         }
-        ox += Math.round(ss / 2);
-        oy += Math.round(ss / 2);
+        ox += this.metrics.mid;
+        oy += this.metrics.mid;
 
         const cx = ox + cm.x * ss;
         const cy = oy + cm.y * ss;

@@ -63,7 +63,7 @@
 
     .CrosshairLayer {
         position: absolute;
-        z-index: var(--z-goban-crosshair-layer, 15);
+        z-index: var(--z-goban-crosshair-layer);
         left: 0;
         right: 0;
     }
