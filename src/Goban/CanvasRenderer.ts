@@ -324,6 +324,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             try {
                 this.parent.insertBefore(this.crosshair_layer, this.board);
             } catch (e) {
+                // Mirrors attachShadowLayer's fallback: sentry.io shows insertBefore can
+                // occasionally throw. The appendChild fallback puts the layer last in DOM
+                // order, so correct under-stone stacking then relies on the consumer having
+                // defined --z-goban-crosshair-layer (as OGS does); without it both layers
+                // fall back to z-index:auto and the crosshair would paint over the stones.
                 console.warn("Error inserting crosshair layer before board", e);
                 try {
                     this.parent.appendChild(this.crosshair_layer);
@@ -2893,6 +2898,13 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     const ctx = this.crosshair_layer.getContext("2d", { willReadFrequently: true });
                     if (ctx) {
                         this.crosshair_ctx = ctx;
+                    } else {
+                        // resizeDeviceScaledCanvas reset the backing store; if we can't
+                        // re-acquire the context (e.g. GPU context loss) drop the stale
+                        // reference so drawLastMoveCrosshair skips rather than draws at the
+                        // wrong scale. The crosshair is an optional accessibility overlay,
+                        // so degrade gracefully instead of throwing like the core layers.
+                        delete this.crosshair_ctx;
                     }
                 }
 
