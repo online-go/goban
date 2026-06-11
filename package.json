@@ -4,8 +4,21 @@
     "description": "",
     "main": "build/goban.js",
     "types": "build/src/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./build/src/index.d.ts",
+            "default": "./build/goban.js"
+        },
+        "./engine": {
+            "types": "./engine/goban-engine.d.ts",
+            "default": "./engine/build/goban-engine.js"
+        },
+        "./package.json": "./package.json"
+    },
     "files": [
-        "build/"
+        "build/",
+        "engine/build/",
+        "engine/goban-engine.d.ts"
     ],
     "keywords": [
         "go",
