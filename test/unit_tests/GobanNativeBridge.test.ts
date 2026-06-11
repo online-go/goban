@@ -1,0 +1,381 @@
+/*
+ * Copyright (C)  Online-Go.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+(global as any).CLIENT = true;
+
+import { GobanNativeBridge, NativeBridgeGobanConfig } from "../../src/Goban/GobanNativeBridge";
+import {
+    GobanNativeBridgeTransport,
+    NativeBridgeAttachOptions,
+    NativeBridgeIntentPlaceEvent,
+    NativeBridgeRect,
+    NativeBridgeTheme,
+    NativeBridgeUpdateOptions,
+} from "../../src/Goban/NativeBridgeTransport";
+import { GobanSocket } from "engine";
+import WS from "jest-websocket-mock";
+
+const test_port = 48890;
+const socket_server = new WS(`ws://localhost:${test_port}`, { jsonProtocol: true });
+const mock_socket = new GobanSocket(`ws://localhost:${test_port}`, {
+    dont_ping: true,
+    quiet: true,
+});
+
+void socket_server;
+
+interface RecordedCall {
+    method: string;
+    opts: any;
+}
+
+class RecordingTransport implements GobanNativeBridgeTransport {
+    public calls: RecordedCall[] = [];
+    public reject_attach = false;
+    private listeners: Array<(event: NativeBridgeIntentPlaceEvent) => void> = [];
+
+    attach(opts: NativeBridgeAttachOptions): Promise<void> {
+        this.calls.push({ method: "attach", opts });
+        if (this.reject_attach) {
+            return Promise.reject(new Error("unsupported"));
+        }
+        return Promise.resolve();
+    }
+    update(opts: NativeBridgeUpdateOptions): Promise<void> {
+        this.calls.push({ method: "update", opts });
+        return Promise.resolve();
+    }
+    move(opts: { id: string; rect: NativeBridgeRect }): Promise<void> {
+        this.calls.push({ method: "move", opts });
+        return Promise.resolve();
+    }
+    setTheme(opts: { id: string; theme: NativeBridgeTheme }): Promise<void> {
+        this.calls.push({ method: "setTheme", opts });
+        return Promise.resolve();
+    }
+    suspend(opts: { id: string }): Promise<{ snapshot: string }> {
+        this.calls.push({ method: "suspend", opts });
+        return Promise.resolve({ snapshot: "data:image/png;base64,SNAPSHOT" });
+    }
+    resume(opts: { id: string }): Promise<void> {
+        this.calls.push({ method: "resume", opts });
+        return Promise.resolve();
+    }
+    detach(opts: { id: string }): Promise<void> {
+        this.calls.push({ method: "detach", opts });
+        return Promise.resolve();
+    }
+    onIntentPlace(cb: (event: NativeBridgeIntentPlaceEvent) => void): () => void {
+        this.listeners.push(cb);
+        return () => {
+            this.listeners = this.listeners.filter((l) => l !== cb);
+        };
+    }
+
+    emitIntentPlace(event: NativeBridgeIntentPlaceEvent): void {
+        for (const cb of this.listeners) {
+            cb(event);
+        }
+    }
+    callsOf(method: string): RecordedCall[] {
+        return this.calls.filter((c) => c.method === method);
+    }
+    get listener_count(): number {
+        return this.listeners.length;
+    }
+}
+
+/** Let the bridge's microtask-coalesced sync and serial op queue drain. */
+async function flush(): Promise<void> {
+    for (let i = 0; i < 5; ++i) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+}
+
+let board_div: HTMLDivElement;
+
+function config(
+    transport: RecordingTransport | undefined,
+    overrides?: Partial<NativeBridgeGobanConfig>,
+): NativeBridgeGobanConfig {
+    return {
+        square_size: 10,
+        board_div: board_div,
+        interactive: true,
+        server_socket: mock_socket,
+        width: 3,
+        height: 3,
+        native_transport: transport,
+        ...(overrides ?? {}),
+    };
+}
+
+beforeEach(() => {
+    board_div = document.createElement("div");
+    document.body.appendChild(board_div);
+});
+
+afterEach(() => {
+    board_div.remove();
+});
+
+describe("attach", () => {
+    test("attaches with flat board, colorToMove, theme and interactive flag", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("active");
+        const attaches = transport.callsOf("attach");
+        expect(attaches).toHaveLength(1);
+        const opts = attaches[0].opts as NativeBridgeAttachOptions;
+        expect(opts.id).toBe(`goban-${goban.goban_id}`);
+        expect(opts.size).toBe(3);
+        expect(opts.board).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        expect(opts.colorToMove).toBe(1);
+        expect(opts.interactive).toBe(true);
+        for (const key of [
+            "boardColor",
+            "lineColor",
+            "blackStoneColor",
+            "whiteStoneColor",
+            "backgroundColor",
+        ] as const) {
+            expect(typeof opts.theme[key]).toBe("string");
+            expect(opts.theme[key].length).toBeGreaterThan(0);
+        }
+        goban.destroy();
+    });
+
+    test("hides the web canvas while the native view is active", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("without a transport the bridge is a plain canvas renderer", async () => {
+        const goban = new GobanNativeBridge(config(undefined));
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("fallback");
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+        goban.destroy();
+    });
+
+    test("attach rejection falls back to the canvas permanently", async () => {
+        const transport = new RecordingTransport();
+        transport.reject_attach = true;
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("fallback");
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        /* and stays fallen back across later state changes */
+        goban.redraw(true);
+        await flush();
+        expect(transport.callsOf("attach")).toHaveLength(1);
+        goban.destroy();
+    });
+
+    test("non-square boards never attach", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport, { width: 4, height: 2 }));
+        await flush();
+
+        expect(transport.callsOf("attach")).toHaveLength(0);
+        expect(goban.nativeBridgeState).toBe("pending");
+        goban.destroy();
+    });
+
+    test("analyze mode at construction never attaches", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport, { mode: "analyze" }));
+        await flush();
+
+        expect(transport.callsOf("attach")).toHaveLength(0);
+        goban.destroy();
+    });
+});
+
+describe("intentPlace", () => {
+    test("routes through the same path as a canvas tap", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        goban.enableStonePlacement();
+        transport.emitIntentPlace({ id: `goban-${goban.goban_id}`, x: 0, y: 0 });
+
+        expect(goban.engine.board).toEqual([
+            [1, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        goban.destroy();
+    });
+
+    test("ignores events for other board ids", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        goban.enableStonePlacement();
+        transport.emitIntentPlace({ id: "goban-some-other-board", x: 0, y: 0 });
+
+        expect(goban.engine.board).toEqual([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        goban.destroy();
+    });
+
+    test("placement flows back out as an update with lastMove", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        goban.enableStonePlacement();
+        transport.emitIntentPlace({ id: `goban-${goban.goban_id}`, x: 1, y: 2 });
+        await flush();
+
+        const updates = transport.callsOf("update");
+        expect(updates.length).toBeGreaterThan(0);
+        const last = updates[updates.length - 1].opts as NativeBridgeUpdateOptions;
+        expect(last.board).toEqual([0, 0, 0, 0, 0, 0, 0, 1, 0]);
+        expect(last.lastMove).toEqual({ x: 1, y: 2 });
+        expect(last.colorToMove).toBe(2);
+        goban.destroy();
+    });
+
+    test("identical state does not produce duplicate updates", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        const updates_before = transport.callsOf("update").length;
+        goban.redraw(true);
+        await flush();
+        goban.redraw(true);
+        await flush();
+
+        /* the first sync after attach establishes the baseline; repeated
+         * identical redraws must not keep sending updates */
+        expect(transport.callsOf("update").length).toBeLessThanOrEqual(updates_before + 1);
+        goban.destroy();
+    });
+});
+
+describe("capability fallback and re-engagement", () => {
+    test("entering analyze mode bails to the canvas, returning to play re-engages", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        goban.setMode("analyze");
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("bailed");
+        expect(transport.callsOf("suspend")).toHaveLength(1);
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        goban.setMode("play");
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("active");
+        expect(transport.callsOf("resume")).toHaveLength(1);
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("marks on the current move bail to the canvas", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        goban.getMarks(1, 1).triangle = true;
+        goban.redraw(true);
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("bailed");
+        goban.destroy();
+    });
+});
+
+describe("overlay suspend/resume", () => {
+    test("suspendNativeView returns the snapshot and resumeNativeView resumes", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        const snapshot = await goban.suspendNativeView();
+        expect(snapshot).toBe("data:image/png;base64,SNAPSHOT");
+        expect(transport.callsOf("suspend")).toHaveLength(1);
+
+        goban.resumeNativeView();
+        await flush();
+        expect(transport.callsOf("resume")).toHaveLength(1);
+        goban.destroy();
+    });
+
+    test("suspendNativeView is null when the native view is not active", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport, { mode: "analyze" }));
+        await flush();
+
+        const snapshot = await goban.suspendNativeView();
+        expect(snapshot).toBeNull();
+        expect(transport.callsOf("suspend")).toHaveLength(0);
+        goban.destroy();
+    });
+
+    test("second suspend without resume is a no-op", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        await goban.suspendNativeView();
+        const second = await goban.suspendNativeView();
+        expect(second).toBeNull();
+        expect(transport.callsOf("suspend")).toHaveLength(1);
+        goban.destroy();
+    });
+});
+
+describe("destroy", () => {
+    test("detaches the native view and unsubscribes", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(transport.listener_count).toBe(1);
+
+        goban.destroy();
+        await flush();
+
+        expect(transport.callsOf("detach")).toHaveLength(1);
+        expect(transport.listener_count).toBe(0);
+    });
+});

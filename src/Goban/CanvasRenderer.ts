@@ -104,7 +104,9 @@ export interface GobanCanvasInterface {
 export class GobanCanvas extends Goban implements GobanCanvasInterface {
     public engine: GobanEngine;
     //private board_div: HTMLElement;
-    private board: HTMLCanvasElement;
+    /** Protected so the GobanNativeBridge subclass can measure and
+     *  show/hide the canvas when swapping in the native draw layer. */
+    protected board: HTMLCanvasElement;
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
     private ready_to_draw: boolean = false;
@@ -112,7 +114,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private message_td?: HTMLElement;
     private message_text?: HTMLDivElement;
     private message_timeout?: number;
-    private shadow_layer?: HTMLCanvasElement;
+    /** Protected for GobanNativeBridge (see `board`). */
+    protected shadow_layer?: HTMLCanvasElement;
     private shadow_ctx?: CanvasRenderingContext2D;
     private grid_layer?: HTMLCanvasElement;
     private grid_ctx?: CanvasRenderingContext2D;
@@ -152,19 +155,22 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         "stone-scale": 1.0,
         "stone-shadows": "default",
     };
-    private theme_black!: GobanTheme;
+    /** Protected so GobanNativeBridge can resolve theme colors. */
+    protected theme_black!: GobanTheme;
     private theme_black_stone_color: string = HOT_PINK;
     private theme_black_stones: Array<any> = [];
     private theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
-    private theme_board!: GobanTheme;
+    /** Protected so GobanNativeBridge can resolve theme colors. */
+    protected theme_board!: GobanTheme;
     private theme_faded_line_color: string = HOT_PINK;
     private theme_faded_star_color: string = HOT_PINK;
     //private theme_faded_text_color:string;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
-    private theme_white!: GobanTheme;
+    /** Protected so GobanNativeBridge can resolve theme colors. */
+    protected theme_white!: GobanTheme;
     private theme_white_stone_color: string = HOT_PINK;
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
