@@ -590,6 +590,23 @@ describe("transport failure recovery while active", () => {
     });
 });
 
+describe("sync plumbing", () => {
+    test("engine cur_move events reach the goban emitter (listener is live)", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        /* GobanEngine forwards its emits to the owning goban via
+         * parentEventEmitter; the bridge's goban-level "cur_move"
+         * listener relies on that. */
+        let fired = 0;
+        goban.on("cur_move", () => fired++);
+        goban.engine.place(0, 0);
+        expect(fired).toBe(1);
+        goban.destroy();
+    });
+});
+
 describe("destroy", () => {
     test("detaches the native view and unsubscribes", async () => {
         const transport = new RecordingTransport();

@@ -103,6 +103,12 @@ export class GobanNativeBridge extends GobanCanvas {
             this.on("update", () => this.scheduleNativeSync());
             this.on("mode", () => this.scheduleNativeSync());
             this.on("load", () => this.scheduleNativeSync());
+            /* "cur_move" is emitted on the *engine* emitter, but GobanEngine
+             * forwards every emit to the owning goban through
+             * `parentEventEmitter` (wired whenever load() creates an engine),
+             * so this listener is live -- including across engine swaps on
+             * "load" -- and covers move-tree navigation that does not go
+             * through set()/setState()/"update". */
             this.on("cur_move", () => this.scheduleNativeSync());
 
             if (typeof ResizeObserver !== "undefined") {
