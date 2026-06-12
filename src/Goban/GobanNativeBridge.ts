@@ -369,21 +369,29 @@ export class GobanNativeBridge extends GobanCanvas {
             return;
         }
         this.native_state = "attaching";
-        const size = this.engine.width;
-        const rect = this.measureNativeRect();
         this.enqueueNativeOp(async () => {
             if (this.destroyed || !this.native_transport) {
                 /* destroy() ran while this op was queued. */
                 return;
             }
+            /* Build the *entire* payload at op execution time: this op may
+             * have waited in the queue behind other transport calls, and
+             * the engine can be swapped or resized meanwhile (game loads,
+             * 19x19 -> 9x9). Capturing any field earlier would send a
+             * mismatched size/board pair the rim rightly rejects. */
+            const size = this.engine.width;
+            const rect = this.measureNativeRect();
+            const board = this.flattenBoard();
+            const color_to_move: 1 | 2 = this.engine.player === 2 ? 2 : 1;
+            const last_move = this.nativeLastMove();
             try {
                 await transport.attach({
                     id: this.nativeId(),
                     rect,
                     size,
-                    board: this.flattenBoard(),
-                    colorToMove: this.engine.player === 2 ? 2 : 1,
-                    lastMove: this.nativeLastMove(),
+                    board,
+                    colorToMove: color_to_move,
+                    lastMove: last_move,
                     interactive: this.interactive,
                     theme: this.resolveNativeTheme(),
                     showCoordinates:
@@ -398,7 +406,9 @@ export class GobanNativeBridge extends GobanCanvas {
                 }
                 /* Plugin absent/old rim/bad args: permanent canvas
                  * fallback for this instance (capability probe, never
-                 * version sniffing). */
+                 * version sniffing, per contract v1). Note the payload is
+                 * built at execution time above, so a rejection can no
+                 * longer be a stale size/rect racing the queue. */
                 this.native_state = "fallback";
                 this.setCanvasVisible(true);
                 this.nativeLog("attach rejected; falling back to canvas", err);
@@ -413,7 +423,15 @@ export class GobanNativeBridge extends GobanCanvas {
             this.native_state = "active";
             this.native_attached_size = size;
             this.native_last_rect = rect;
-            this.native_last_update_json = "";
+            /* The attach itself carried this exact state, so baseline the
+             * update dedup on it; the first post-attach sync would
+             * otherwise re-send the same board in a wasted round-trip. */
+            this.native_last_update_json = JSON.stringify({
+                id: this.nativeId(),
+                board,
+                colorToMove: color_to_move,
+                lastMove: last_move,
+            } satisfies NativeBridgeUpdateOptions);
             if (this.native_overlay_suspended) {
                 /* An overlay opened while we were attaching. The
                  * coordinator's suspendNativeView() resolved null before we

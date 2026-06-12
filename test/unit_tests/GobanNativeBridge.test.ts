@@ -49,10 +49,11 @@ class RecordingTransport implements GobanNativeBridgeTransport {
      *  next update/move call. */
     public reject_next_update = false;
     public reject_next_move = false;
-    /** When set, the next attach call resolves only after the gate promise
-     *  does (consumed on use); lets tests hold the bridge's serial op
-     *  queue open to provoke races. */
+    /** When set, the next attach/detach call resolves only after the gate
+     *  promise does (consumed on use); lets tests hold the bridge's serial
+     *  op queue open to provoke races. */
     public next_attach_gate?: Promise<void>;
+    public next_detach_gate?: Promise<void>;
     private listeners: Array<(event: NativeBridgeIntentPlaceEvent) => void> = [];
 
     attach(opts: NativeBridgeAttachOptions): Promise<void> {
@@ -94,7 +95,9 @@ class RecordingTransport implements GobanNativeBridgeTransport {
     }
     detach(opts: { id: string }): Promise<void> {
         this.calls.push({ method: "detach", opts });
-        return Promise.resolve();
+        const gate = this.next_detach_gate;
+        this.next_detach_gate = undefined;
+        return gate ?? Promise.resolve();
     }
     onIntentPlace(cb: (event: NativeBridgeIntentPlaceEvent) => void): () => void {
         this.listeners.push(cb);
@@ -459,6 +462,69 @@ describe("lifecycle races", () => {
         await flush();
         expect(transport.callsOf("resume")).toHaveLength(1);
         expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("board size change detaches and re-attaches with the new size", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport, { width: 19, height: 19 }));
+        await flush();
+        expect((transport.callsOf("attach")[0].opts as NativeBridgeAttachOptions).size).toBe(19);
+
+        goban.load(config(transport, { width: 9, height: 9 }));
+        await flush();
+
+        expect(transport.callsOf("detach")).toHaveLength(1);
+        const attaches = transport.callsOf("attach");
+        expect(attaches).toHaveLength(2);
+        const reattach = attaches[1].opts as NativeBridgeAttachOptions;
+        expect(reattach.size).toBe(9);
+        expect(reattach.board).toHaveLength(81);
+        expect(goban.nativeBridgeState).toBe("active");
+        goban.destroy();
+    });
+
+    test("engine resize while a re-attach is queued sends a payload built at execution", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport, { width: 19, height: 19 }));
+        await flush();
+
+        /* hold the queue open on the reattach's detach so the follow-up
+         * attach op is still queued when the engine changes size again */
+        const detach_gate = gate();
+        transport.next_detach_gate = detach_gate.promise;
+        goban.load(config(transport, { width: 9, height: 9 }));
+        await flush();
+        goban.load(config(transport, { width: 13, height: 13 }));
+        await flush();
+        detach_gate.open();
+        await flush();
+
+        const attaches = transport.callsOf("attach");
+        const last = attaches[attaches.length - 1].opts as NativeBridgeAttachOptions;
+        /* size and board must agree with each other and with the engine
+         * as of op execution, never with values captured at schedule */
+        expect(last.size).toBe(13);
+        expect(last.board).toHaveLength(169);
+        expect(goban.nativeBridgeState).toBe("active");
+        goban.destroy();
+    });
+
+    test("attach carries the state baseline; no redundant first update", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+        expect(transport.callsOf("update")).toHaveLength(0);
+
+        goban.redraw(true);
+        await flush();
+        expect(transport.callsOf("update")).toHaveLength(0);
+
+        goban.enableStonePlacement();
+        transport.emitIntentPlace({ id: `goban-${goban.goban_id}`, x: 0, y: 0 });
+        await flush();
+        expect(transport.callsOf("update")).toHaveLength(1);
         goban.destroy();
     });
 });
