@@ -5,14 +5,19 @@ SLACK_WEBHOOK=$(shell cat ~/meta/ogs/Makefile | grep SLACK_WEBHOOK= | cut -d '='
 all dev: 
 	yarn run dev
 	
-build: build-debug build-production
+build: build-debug build-production dts-engine
 	cp src/Goban.css build/Goban.css
-	
+
 build-debug:
 	yarn run build-debug
 
 build-production:
 	yarn run build-production
+
+# The package.json "./engine" export points its types at this generated
+# bundle; it is gitignored, so every build/publish must (re)generate it.
+dts-engine:
+	yarn run dts-engine
 
 
 lint:
@@ -91,5 +96,5 @@ upload_to_cdn: set-versions
 	cp build/goban.min.js* deployment-staging-area
 	gsutil -m rsync -r deployment-staging-area/ gs://ogs-site-files/goban/`node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version'`/
 
-.PHONY: doc build docs test clean all dev typedoc publish push build publish-production upload_to_cdn notify beta beta_npm publish-beta publish_docs build-debug build-production detect-duplicate-code duplicate-code-detection lint
+.PHONY: doc build docs test clean all dev typedoc publish push build publish-production upload_to_cdn notify beta beta_npm publish-beta publish_docs build-debug build-production dts-engine detect-duplicate-code duplicate-code-detection lint
  
