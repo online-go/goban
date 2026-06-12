@@ -178,7 +178,7 @@ export class GobanNativeBridge extends GobanCanvas {
         if (this.native_state === "active" && this.native_transport) {
             const transport = this.native_transport;
             this.enqueueNativeOp(() => transport.resume({ id: this.nativeId() }), "resume").catch(
-                () => undefined,
+                () => this.recoverFromActiveTransportFailure("resume"),
             );
         }
         this.scheduleNativeSync();
@@ -441,11 +441,27 @@ export class GobanNativeBridge extends GobanCanvas {
         this.pushNativeUpdate();
         if (!this.native_overlay_suspended) {
             this.enqueueNativeOp(() => transport.resume({ id: this.nativeId() }), "resume").catch(
-                () => undefined,
+                () => this.recoverFromActiveTransportFailure("resume"),
             );
         }
         this.setCanvasVisible(false);
         this.nativeLog("board v1-serviceable again; native view re-engaged");
+    }
+
+    /**
+     * A transport rejection while the native view owns the pixels must
+     * never be swallowed: the native bitmap would silently freeze over a
+     * hidden canvas with no recovery path. Show the canvas immediately and
+     * re-probe with a fresh attach (the reattach path): transient failures
+     * recover on the next sync, persistent ones surface as an attach
+     * rejection and become a permanent canvas fallback.
+     */
+    private recoverFromActiveTransportFailure(label: string): void {
+        if (this.destroyed || this.native_state !== "active") {
+            return;
+        }
+        this.nativeLog(`${label} rejected while active; showing canvas and re-probing`);
+        this.reattachNative();
     }
 
     private pushNativeUpdate(): void {
@@ -464,7 +480,9 @@ export class GobanNativeBridge extends GobanCanvas {
             return;
         }
         this.native_last_update_json = json;
-        this.enqueueNativeOp(() => transport.update(update), "update").catch(() => undefined);
+        this.enqueueNativeOp(() => transport.update(update), "update").catch(() =>
+            this.recoverFromActiveTransportFailure("update"),
+        );
     }
 
     private pushNativeGeometry(force: boolean = false): void {
@@ -486,7 +504,7 @@ export class GobanNativeBridge extends GobanCanvas {
         }
         this.native_last_rect = rect;
         this.enqueueNativeOp(() => transport.move({ id: this.nativeId(), rect }), "move").catch(
-            () => undefined,
+            () => this.recoverFromActiveTransportFailure("move"),
         );
     }
 

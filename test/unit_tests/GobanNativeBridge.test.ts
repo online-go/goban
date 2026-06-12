@@ -45,6 +45,10 @@ interface RecordedCall {
 class RecordingTransport implements GobanNativeBridgeTransport {
     public calls: RecordedCall[] = [];
     public reject_attach = false;
+    /** One-shot rejections (consumed on use): a transient failure of the
+     *  next update/move call. */
+    public reject_next_update = false;
+    public reject_next_move = false;
     private listeners: Array<(event: NativeBridgeIntentPlaceEvent) => void> = [];
 
     attach(opts: NativeBridgeAttachOptions): Promise<void> {
@@ -56,10 +60,18 @@ class RecordingTransport implements GobanNativeBridgeTransport {
     }
     update(opts: NativeBridgeUpdateOptions): Promise<void> {
         this.calls.push({ method: "update", opts });
+        if (this.reject_next_update) {
+            this.reject_next_update = false;
+            return Promise.reject(new Error("update failed"));
+        }
         return Promise.resolve();
     }
     move(opts: { id: string; rect: NativeBridgeRect }): Promise<void> {
         this.calls.push({ method: "move", opts });
+        if (this.reject_next_move) {
+            this.reject_next_move = false;
+            return Promise.reject(new Error("move failed"));
+        }
         return Promise.resolve();
     }
     setTheme(opts: { id: string; theme: NativeBridgeTheme }): Promise<void> {
@@ -361,6 +373,67 @@ describe("overlay suspend/resume", () => {
         const second = await goban.suspendNativeView();
         expect(second).toBeNull();
         expect(transport.callsOf("suspend")).toHaveLength(1);
+        goban.destroy();
+    });
+});
+
+describe("transport failure recovery while active", () => {
+    test("update rejection while active shows the canvas and re-probes with attach", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        transport.reject_next_update = true;
+        goban.enableStonePlacement();
+        transport.emitIntentPlace({ id: `goban-${goban.goban_id}`, x: 0, y: 0 });
+        await flush();
+
+        /* never silently frozen: detach + fresh attach carrying the move */
+        expect(transport.callsOf("detach")).toHaveLength(1);
+        const attaches = transport.callsOf("attach");
+        expect(attaches).toHaveLength(2);
+        expect((attaches[1].opts as NativeBridgeAttachOptions).board).toContain(1);
+        expect(goban.nativeBridgeState).toBe("active");
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("move rejection while active recovers through a re-attach", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        transport.reject_next_move = true;
+        /* bail + re-engage forces a move push, which now rejects */
+        goban.setMode("analyze");
+        await flush();
+        goban.setMode("play");
+        await flush();
+
+        expect(transport.callsOf("attach")).toHaveLength(2);
+        expect(goban.nativeBridgeState).toBe("active");
+        goban.destroy();
+    });
+
+    test("persistently failing transport converges to permanent canvas fallback", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        transport.reject_next_update = true;
+        transport.reject_attach = true;
+        goban.enableStonePlacement();
+        transport.emitIntentPlace({ id: `goban-${goban.goban_id}`, x: 0, y: 0 });
+        await flush();
+
+        /* update failed -> re-probe attach failed -> permanent fallback */
+        expect(goban.nativeBridgeState).toBe("fallback");
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
         goban.destroy();
     });
 });
