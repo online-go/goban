@@ -80,7 +80,12 @@ export class GobanNativeBridge extends GobanCanvas {
     private native_last_rect?: NativeBridgeRect;
     private native_last_update_json = "";
     private native_sync_scheduled = false;
-    private readonly native_window_listener = () => this.scheduleNativeSync();
+    /** True while the pending coalesced sync was requested only by
+     *  geometry sources (scroll/resize); lets the sync skip the board
+     *  flatten + serialize entirely. Any state-driven request upgrades
+     *  the pending sync to a full one. */
+    private native_sync_geometry_only = false;
+    private readonly native_window_listener = () => this.scheduleNativeSync(true);
 
     constructor(config: NativeBridgeGobanConfig, preloaded_data?: AdHocFormat | JGOF) {
         super(config, preloaded_data);
@@ -112,7 +117,9 @@ export class GobanNativeBridge extends GobanCanvas {
             this.on("cur_move", () => this.scheduleNativeSync());
 
             if (typeof ResizeObserver !== "undefined") {
-                this.native_resize_observer = new ResizeObserver(() => this.scheduleNativeSync());
+                this.native_resize_observer = new ResizeObserver(() =>
+                    this.scheduleNativeSync(true),
+                );
                 this.native_resize_observer.observe(this.board);
                 this.native_resize_observer.observe(this.parent);
             }
@@ -156,6 +163,12 @@ export class GobanNativeBridge extends GobanCanvas {
      * is still recorded, so a native view that attaches or re-engages while
      * the overlay is open stays hidden (with the canvas left visible as the
      * board) until {@link resumeNativeView}.
+     *
+     * Future note: the snapshot is a point-in-time capture; if the game
+     * state changes while the overlay is open, the displayed snapshot goes
+     * stale until resume (the native view itself is kept in sync). A later
+     * contract revision could refresh the snapshot on update-while-
+     * suspended if this becomes user-visible in practice.
      */
     public suspendNativeView(): Promise<string | null> {
         const transport = this.native_transport;
@@ -257,6 +270,11 @@ export class GobanNativeBridge extends GobanCanvas {
                 this.native_state === "attaching")
         ) {
             const transport = this.native_transport;
+            /* Future note: the detach is asynchronous, so when a successor
+             * goban attaches immediately (unmount/remount of the same game
+             * view) both native views can exist for a frame -- a brief
+             * dual-view, not corruption; detach is id-safe per the
+             * contract. Revisit only if it becomes visible in practice. */
             this.enqueueNativeOp(() => transport.detach({ id: this.nativeId() }), "detach").catch(
                 () => undefined,
             );
@@ -289,16 +307,23 @@ export class GobanNativeBridge extends GobanCanvas {
         return next;
     }
 
-    private scheduleNativeSync(): void {
-        if (!this.native_transport || this.native_sync_scheduled || this.destroyed) {
+    private scheduleNativeSync(geometry_only: boolean = false): void {
+        if (!this.native_transport || this.destroyed) {
+            return;
+        }
+        if (this.native_sync_scheduled) {
+            /* Coalesce: any full request upgrades a pending geometry-only
+             * sync. */
+            this.native_sync_geometry_only = this.native_sync_geometry_only && geometry_only;
             return;
         }
         this.native_sync_scheduled = true;
+        this.native_sync_geometry_only = geometry_only;
         Promise.resolve()
             .then(() => {
                 this.native_sync_scheduled = false;
                 if (!this.destroyed) {
-                    this.syncNative();
+                    this.syncNative(this.native_sync_geometry_only);
                 }
             })
             .catch((err) => this.nativeLog("sync failed", err));
@@ -307,7 +332,7 @@ export class GobanNativeBridge extends GobanCanvas {
     /** Single driver for the native state machine; coalesced to a
      *  microtask so bursts of renderer calls produce one transport
      *  round-trip. */
-    private syncNative(): void {
+    private syncNative(geometry_only: boolean = false): void {
         if (!this.native_transport || this.native_state === "fallback") {
             return;
         }
@@ -331,7 +356,9 @@ export class GobanNativeBridge extends GobanCanvas {
                     this.reattachNative();
                 } else {
                     this.pushNativeGeometry();
-                    this.pushNativeUpdate();
+                    if (!geometry_only) {
+                        this.pushNativeUpdate();
+                    }
                 }
                 return;
 
@@ -650,8 +677,10 @@ export class GobanNativeBridge extends GobanCanvas {
 
 /** Normalize a CSS color to six-digit hex where cheaply possible
  *  (contract: "six-digit hex preferred"); pass through anything a canvas
- *  cannot normalize (or when no 2d context is available, e.g. jsdom). */
-export function normalizeColor(color: string): string {
+ *  cannot normalize (or when no 2d context is available, e.g. jsdom).
+ *  Deliberately not exported: the name is far too generic for the
+ *  package's flat public API. */
+function normalizeColor(color: string): string {
     if (/^#[0-9a-fA-F]{6}$/.test(color)) {
         return color;
     }

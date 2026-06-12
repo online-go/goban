@@ -56,6 +56,14 @@ export function setGobanRenderer(_renderer: "svg" | "canvas") {
 
 import { AdHocFormat, JGOF } from "./engine";
 
+/**
+ * Construct the renderer appropriate for `config`.
+ *
+ * Note: a `native_transport` in the config takes precedence over the
+ * renderer selected with {@link setGobanRenderer} -- the instance will be
+ * a {@link GobanNativeBridge} (a GobanCanvas subclass) regardless of any
+ * explicit "svg"/"canvas" choice.
+ */
 export function createGoban(
     config: GobanRendererConfig,
     preloaded_data?: AdHocFormat | JGOF,

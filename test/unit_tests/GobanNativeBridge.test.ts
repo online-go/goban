@@ -591,6 +591,20 @@ describe("transport failure recovery while active", () => {
 });
 
 describe("sync plumbing", () => {
+    test("window resize triggers a geometry-only sync (no board update)", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        const updates_before = transport.callsOf("update").length;
+
+        window.dispatchEvent(new Event("resize"));
+        await flush();
+
+        expect(transport.callsOf("update")).toHaveLength(updates_before);
+        expect(goban.nativeBridgeState).toBe("active");
+        goban.destroy();
+    });
+
     test("engine cur_move events reach the goban emitter (listener is live)", async () => {
         const transport = new RecordingTransport();
         const goban = new GobanNativeBridge(config(transport));
