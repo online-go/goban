@@ -49,6 +49,10 @@ class RecordingTransport implements GobanNativeBridgeTransport {
      *  next update/move call. */
     public reject_next_update = false;
     public reject_next_move = false;
+    /** When set, the next attach call resolves only after the gate promise
+     *  does (consumed on use); lets tests hold the bridge's serial op
+     *  queue open to provoke races. */
+    public next_attach_gate?: Promise<void>;
     private listeners: Array<(event: NativeBridgeIntentPlaceEvent) => void> = [];
 
     attach(opts: NativeBridgeAttachOptions): Promise<void> {
@@ -56,7 +60,9 @@ class RecordingTransport implements GobanNativeBridgeTransport {
         if (this.reject_attach) {
             return Promise.reject(new Error("unsupported"));
         }
-        return Promise.resolve();
+        const gate = this.next_attach_gate;
+        this.next_attach_gate = undefined;
+        return gate ?? Promise.resolve();
     }
     update(opts: NativeBridgeUpdateOptions): Promise<void> {
         this.calls.push({ method: "update", opts });
@@ -115,6 +121,13 @@ async function flush(): Promise<void> {
     for (let i = 0; i < 5; ++i) {
         await new Promise((resolve) => setTimeout(resolve, 0));
     }
+}
+
+/** A manually-opened gate for the RecordingTransport's `next_*_gate`s. */
+function gate(): { promise: Promise<void>; open: () => void } {
+    let open: () => void = () => undefined;
+    const promise = new Promise<void>((resolve) => (open = resolve));
+    return { promise, open };
 }
 
 let board_div: HTMLDivElement;
@@ -373,6 +386,61 @@ describe("overlay suspend/resume", () => {
         const second = await goban.suspendNativeView();
         expect(second).toBeNull();
         expect(transport.callsOf("suspend")).toHaveLength(1);
+        goban.destroy();
+    });
+});
+
+describe("lifecycle races", () => {
+    test("overlay suspend during attach keeps the canvas visible until resume", async () => {
+        const transport = new RecordingTransport();
+        const attach_gate = gate();
+        transport.next_attach_gate = attach_gate.promise;
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("attaching");
+
+        /* the coordinator suspends pre-active and gets no snapshot ... */
+        await expect(goban.suspendNativeView()).resolves.toBeNull();
+        attach_gate.open();
+        await flush();
+
+        /* ... so the fresh native view is hidden but the canvas stays up */
+        expect(goban.nativeBridgeState).toBe("active");
+        expect(transport.callsOf("suspend")).toHaveLength(1);
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        goban.resumeNativeView();
+        await flush();
+        expect(transport.callsOf("resume")).toHaveLength(1);
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("re-engaging while overlay-suspended keeps the canvas until resume", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        const snapshot = await goban.suspendNativeView();
+        expect(snapshot).toBe("data:image/png;base64,SNAPSHOT");
+        goban.setMode("analyze");
+        await flush();
+        expect(goban.nativeBridgeState).toBe("bailed");
+
+        goban.setMode("play");
+        await flush();
+
+        /* re-engaged, but the overlay is still open: no resume, canvas up */
+        expect(goban.nativeBridgeState).toBe("active");
+        expect(transport.callsOf("resume")).toHaveLength(0);
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        goban.resumeNativeView();
+        await flush();
+        expect(transport.callsOf("resume")).toHaveLength(1);
+        expect(canvas.style.visibility).toBe("hidden");
         goban.destroy();
     });
 });

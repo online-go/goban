@@ -146,7 +146,10 @@ export class GobanNativeBridge extends GobanCanvas {
      * hide it, so site overlays (modals, popovers, the drawer) can stack
      * above the board. The caller places the snapshot in the DOM and calls
      * {@link resumeNativeView} when the overlay closes. Returns null when
-     * there is nothing to suspend (native view not active).
+     * there is nothing to suspend (native view not active); the suspension
+     * is still recorded, so a native view that attaches or re-engages while
+     * the overlay is open stays hidden (with the canvas left visible as the
+     * board) until {@link resumeNativeView}.
      */
     public suspendNativeView(): Promise<string | null> {
         const transport = this.native_transport;
@@ -180,6 +183,10 @@ export class GobanNativeBridge extends GobanCanvas {
             this.enqueueNativeOp(() => transport.resume({ id: this.nativeId() }), "resume").catch(
                 () => this.recoverFromActiveTransportFailure("resume"),
             );
+            /* The canvas may have been left visible by a suspension that
+             * predated the attach/re-engage (no snapshot covered the board
+             * then); the native view owns the pixels again now. */
+            this.setCanvasVisible(false);
         }
         this.scheduleNativeSync();
     }
@@ -208,9 +215,11 @@ export class GobanNativeBridge extends GobanCanvas {
         if (!this.native_transport) {
             return;
         }
-        if (this.native_state === "active") {
+        if (this.native_state === "active" && !this.native_overlay_suspended) {
             /* setTheme may have re-created the shadow layer; keep it
-             * hidden while the native view owns the pixels. */
+             * hidden while the native view owns the pixels. (While an
+             * overlay suspension is in effect the canvas may be serving
+             * as the visible board, so leave it alone.) */
             this.setCanvasVisible(false);
         }
         if (this.native_state === "active" || this.native_state === "bailed") {
@@ -392,10 +401,16 @@ export class GobanNativeBridge extends GobanCanvas {
             this.native_attached_size = size;
             this.native_last_rect = rect;
             this.native_last_update_json = "";
-            this.setCanvasVisible(false);
             if (this.native_overlay_suspended) {
-                /* An overlay opened while we were attaching. */
+                /* An overlay opened while we were attaching. The
+                 * coordinator's suspendNativeView() resolved null before we
+                 * were active, so it has no snapshot covering the board:
+                 * hide the fresh native view but keep the canvas visible
+                 * as the board until resumeNativeView(). */
                 await transport.suspend({ id: this.nativeId() }).catch(() => undefined);
+                this.setCanvasVisible(true);
+            } else {
+                this.setCanvasVisible(false);
             }
             this.scheduleNativeSync();
         }, "attach").catch(() => undefined);
@@ -439,11 +454,17 @@ export class GobanNativeBridge extends GobanCanvas {
         this.native_last_update_json = "";
         this.pushNativeGeometry(true);
         this.pushNativeUpdate();
-        if (!this.native_overlay_suspended) {
-            this.enqueueNativeOp(() => transport.resume({ id: this.nativeId() }), "resume").catch(
-                () => this.recoverFromActiveTransportFailure("resume"),
-            );
+        if (this.native_overlay_suspended) {
+            /* An overlay is open: the native view stays hidden and the
+             * canvas stays visible as the board until resumeNativeView()
+             * (the coordinator has no snapshot covering us -- its suspend
+             * resolved null while we were bailed). */
+            this.nativeLog("board v1-serviceable again; native re-engage deferred to resume");
+            return;
         }
+        this.enqueueNativeOp(() => transport.resume({ id: this.nativeId() }), "resume").catch(() =>
+            this.recoverFromActiveTransportFailure("resume"),
+        );
         this.setCanvasVisible(false);
         this.nativeLog("board v1-serviceable again; native view re-engaged");
     }
