@@ -372,6 +372,10 @@ export class GobanNativeBridge extends GobanCanvas {
         const size = this.engine.width;
         const rect = this.measureNativeRect();
         this.enqueueNativeOp(async () => {
+            if (this.destroyed || !this.native_transport) {
+                /* destroy() ran while this op was queued. */
+                return;
+            }
             try {
                 await transport.attach({
                     id: this.nativeId(),
@@ -389,12 +393,21 @@ export class GobanNativeBridge extends GobanCanvas {
                         this.draw_right_labels,
                 });
             } catch (err) {
+                if (this.destroyed) {
+                    return;
+                }
                 /* Plugin absent/old rim/bad args: permanent canvas
                  * fallback for this instance (capability probe, never
                  * version sniffing). */
                 this.native_state = "fallback";
                 this.setCanvasVisible(true);
                 this.nativeLog("attach rejected; falling back to canvas", err);
+                return;
+            }
+            if (this.destroyed) {
+                /* destroy() ran while attach was in flight; it already
+                 * queued a detach behind us, so just don't resurrect any
+                 * state (the board elements are gone). */
                 return;
             }
             this.native_state = "active";

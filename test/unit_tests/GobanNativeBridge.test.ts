@@ -391,6 +391,24 @@ describe("overlay suspend/resume", () => {
 });
 
 describe("lifecycle races", () => {
+    test("destroy during an in-flight attach leaves a clean fallback", async () => {
+        const transport = new RecordingTransport();
+        const attach_gate = gate();
+        transport.next_attach_gate = attach_gate.promise;
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("attaching");
+
+        goban.destroy();
+        attach_gate.open();
+        await flush();
+
+        /* the attach continuation must not resurrect any state */
+        expect(goban.nativeBridgeState).toBe("fallback");
+        expect(transport.callsOf("detach")).toHaveLength(1);
+        expect(transport.listener_count).toBe(0);
+    });
+
     test("overlay suspend during attach keeps the canvas visible until resume", async () => {
         const transport = new RecordingTransport();
         const attach_gate = gate();
