@@ -1349,8 +1349,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             ctx.beginPath();
             ctx.fillStyle = have_text_to_draw ? this.theme_faded_star_color : this.theme_star_color;
             ctx.arc(
-                (l + r) / 2,
-                (t + b) / 2,
+                l + this.metrics.mid,
+                t + this.metrics.mid,
                 star_radius,
                 0.001,
                 2 * Math.PI,

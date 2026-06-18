@@ -3734,7 +3734,16 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.grid_background_layer.setAttributeNS("http://www.w3.org/1999/xlink", "href", grid.url);
 
         const reference = this.coordinate_labels_layer ?? this.lines_layer?.nextSibling ?? null;
-        if (reference !== this.grid_background_layer) {
+        /*
+         * insertBefore handles both first insertion and moving an existing node, but
+         * nextSibling is also null for detached nodes. Keep the parent check so the
+         * first insert still happens, and the nextSibling check so redraws do not
+         * move an already-correct layer before coordinate labels on every sync.
+         */
+        if (
+            this.grid_background_layer.parentNode !== this.svg ||
+            this.grid_background_layer.nextSibling !== reference
+        ) {
             this.svg.insertBefore(this.grid_background_layer, reference);
         }
     }
