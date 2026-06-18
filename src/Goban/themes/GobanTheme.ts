@@ -24,6 +24,8 @@ export interface GobanThemeBackgroundCSS {
     "background-color"?: string;
     "background-image"?: string;
     "background-size"?: string;
+    "background-position"?: string;
+    "background-repeat"?: string;
 }
 
 export interface GobanThemeBackgroundReactStyles {

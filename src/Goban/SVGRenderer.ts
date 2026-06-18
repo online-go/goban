@@ -43,6 +43,7 @@ import {
     ShadowTheme,
     CaptureDisplayConfig,
     CaptureDisplay,
+    ResolvedBoardBackground,
 } from "./Goban";
 import { ColoredCircle } from "./InteractiveBase";
 
@@ -136,6 +137,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
     private lines_layer?: SVGGraphicsElement;
+    private grid_background_layer?: SVGImageElement;
     private coordinate_labels_layer?: SVGGraphicsElement;
     private grid: Array<Array<SVGGraphicsElement>> = [];
     public grid_layer?: SVGGraphicsElement;
@@ -161,6 +163,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private drawing_enabled: boolean = true;
     public event_layer?: HTMLDivElement;
     private activeTouchCompleter?: () => void;
+    private board_grid_background_configured: boolean = false;
 
     public themes: GobanSelectedThemes = {
         "board": "Plain",
@@ -1430,7 +1433,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Fade our lines if we have text to draw */
-        if (have_text_to_draw) {
+        if (have_text_to_draw && !this.board_grid_background_configured) {
             let star_radius;
             if (this.square_size < 5) {
                 star_radius = 0.5;
@@ -2152,7 +2155,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Fade our lines if we have text to draw */
-        if (have_text_to_draw) {
+        if (have_text_to_draw && !this.board_grid_background_configured) {
             /* draw lighter colored lines */
             let sx = 0;
             let ex = ss;
@@ -3704,6 +3707,42 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
 
+    private syncBoardBackground(background: ResolvedBoardBackground): void {
+        this.applyBaseBoardBackground(background);
+
+        const grid = background.grid;
+        this.board_grid_background_configured = !!grid;
+        if (!grid) {
+            this.grid_background_layer?.remove();
+            this.grid_background_layer = undefined;
+            return;
+        }
+
+        if (!this.grid_background_layer) {
+            this.grid_background_layer = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "image",
+            );
+            this.grid_background_layer.setAttribute("class", "grid-background");
+            this.grid_background_layer.setAttribute("pointer-events", "none");
+        }
+
+        this.grid_background_layer.setAttribute("x", grid.x.toString());
+        this.grid_background_layer.setAttribute("y", grid.y.toString());
+        this.grid_background_layer.setAttribute("width", grid.width.toString());
+        this.grid_background_layer.setAttribute("height", grid.height.toString());
+        this.grid_background_layer.setAttribute("preserveAspectRatio", "none");
+        this.grid_background_layer.setAttribute("href", grid.url);
+        this.grid_background_layer.setAttributeNS("http://www.w3.org/1999/xlink", "href", grid.url);
+
+        const reference = this.coordinate_labels_layer ?? this.lines_layer?.nextSibling ?? null;
+        if (this.grid_background_layer.parentNode !== this.svg) {
+            this.svg.insertBefore(this.grid_background_layer, reference);
+        } else if (reference !== this.grid_background_layer) {
+            this.svg.insertBefore(this.grid_background_layer, reference);
+        }
+    }
+
     private drawCoordinateLabels(force_clear?: boolean): void {
         if (force_clear) {
             if (this.coordinate_labels_layer) {
@@ -3926,7 +3965,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
         }
 
+        if (force_clear && this.coordinate_labels_layer) {
+            this.coordinate_labels_layer.remove();
+            delete this.coordinate_labels_layer;
+        }
+
         this.drawLines(force_clear);
+        this.syncBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
         this.drawCoordinateLabels(force_clear);
 
         if (force_clear || !this.grid_layer || !this.shadow_layer) {
@@ -4174,12 +4219,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         this.theme_shadow_color = this.theme_board.getShadowColor();
-        const bg_css = this.theme_board.getBackgroundCSS();
-        if (this.parent) {
-            for (const key in bg_css) {
-                (this.parent.style as any)[key] = (bg_css as any)[key];
-            }
-        }
+        this.syncBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
 
         if (!dont_redraw) {
             this.redraw(true);

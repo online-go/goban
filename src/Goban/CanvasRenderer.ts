@@ -47,6 +47,7 @@ import {
     GOBAN_FONT,
     CaptureDisplayConfig,
     CaptureDisplay,
+    ResolvedBoardBackground,
 } from "./Goban";
 
 const __theme_cache: {
@@ -111,6 +112,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private message_timeout?: number;
     private shadow_layer?: HTMLCanvasElement;
     private shadow_ctx?: CanvasRenderingContext2D;
+    private grid_layer: HTMLCanvasElement;
+    private grid_ctx: CanvasRenderingContext2D;
+    private grid_background_layer: HTMLDivElement;
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
     private last_move_opacity: number = 1;
@@ -159,6 +163,19 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
 
+        this.grid_layer = createDeviceScaledCanvas(10, 10);
+        this.grid_layer.setAttribute("id", "grid-canvas");
+        this.grid_layer.className = "GridLayer";
+        const grid_ctx = this.grid_layer.getContext("2d", { willReadFrequently: true });
+        if (grid_ctx) {
+            this.grid_ctx = grid_ctx;
+        } else {
+            throw new Error(`Failed to obtain drawing context for board grid`);
+        }
+
+        this.grid_background_layer = document.createElement("div");
+        this.grid_background_layer.className = "GridBackgroundLayer";
+
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
@@ -170,6 +187,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             throw new Error(`Failed to obtain drawing context for board`);
         }
 
+        this.parent.appendChild(this.grid_layer);
+        this.parent.appendChild(this.grid_background_layer);
         this.parent.appendChild(this.board);
         this.bindPointerBindings(this.board);
 
@@ -240,6 +259,12 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         if (this.board && this.board.parentNode) {
             this.board.parentNode.removeChild(this.board);
+        }
+        if (this.grid_layer && this.grid_layer.parentNode) {
+            this.grid_layer.parentNode.removeChild(this.grid_layer);
+        }
+        if (this.grid_background_layer && this.grid_background_layer.parentNode) {
+            this.grid_background_layer.parentNode.removeChild(this.grid_background_layer);
         }
         delete (this as any).board;
         delete (this as any).ctx;
@@ -1230,6 +1255,127 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             }
         }
     }
+    private drawGridSquare(
+        i: number,
+        j: number,
+        l: number,
+        r: number,
+        t: number,
+        b: number,
+        have_text_to_draw: boolean,
+    ): void {
+        const ctx = this.grid_ctx;
+
+        ctx.clearRect(l, t, r - l, b - t);
+
+        let sx = l;
+        let ex = r;
+        const mx = (r + l) / 2 - this.metrics.offset;
+        let sy = t;
+        let ey = b;
+        const my = (t + b) / 2 - this.metrics.offset;
+
+        if (i === 0) {
+            sx += this.metrics.mid;
+        }
+        if (i === this.width - 1) {
+            ex -= this.metrics.mid;
+        }
+        if (j === 0) {
+            sy += this.metrics.mid;
+        }
+        if (j === this.height - 1) {
+            ey -= this.metrics.mid;
+        }
+
+        if (i === this.width - 1 && j === this.height - 1) {
+            if (mx === ex && my === ey) {
+                ex += 1;
+                ey += 1;
+            }
+        }
+
+        ctx.lineWidth = this.square_size < 5 ? 0.2 : 1;
+        ctx.strokeStyle = have_text_to_draw ? this.theme_faded_line_color : this.theme_line_color;
+        ctx.lineCap = "butt";
+        ctx.beginPath();
+        ctx.moveTo(Math.floor(sx), my);
+        ctx.lineTo(Math.floor(ex), my);
+        ctx.moveTo(mx, Math.floor(sy));
+        ctx.lineTo(mx, Math.floor(ey));
+        ctx.stroke();
+
+        let star_radius;
+        if (this.square_size < 5) {
+            star_radius = 0.5;
+        } else {
+            star_radius = Math.max(2, (this.metrics.mid - 1.5) * 0.16);
+        }
+        let draw_star_point = false;
+        if (
+            this.width === 19 &&
+            this.height === 19 &&
+            ((i === 3 && (j === 3 || j === 9 || j === 15)) ||
+                (i === 9 && (j === 3 || j === 9 || j === 15)) ||
+                (i === 15 && (j === 3 || j === 9 || j === 15)))
+        ) {
+            draw_star_point = true;
+        }
+
+        if (
+            this.width === 13 &&
+            this.height === 13 &&
+            ((i === 3 && (j === 3 || j === 9)) ||
+                (i === 6 && j === 6) ||
+                (i === 9 && (j === 3 || j === 9)))
+        ) {
+            draw_star_point = true;
+        }
+
+        if (
+            this.width === 9 &&
+            this.height === 9 &&
+            ((i === 2 && (j === 2 || j === 6)) ||
+                (i === 4 && j === 4) ||
+                (i === 6 && (j === 2 || j === 6)))
+        ) {
+            draw_star_point = true;
+        }
+
+        if (draw_star_point) {
+            ctx.beginPath();
+            ctx.fillStyle = have_text_to_draw ? this.theme_faded_star_color : this.theme_star_color;
+            ctx.arc(
+                (l + r) / 2,
+                (t + b) / 2,
+                star_radius,
+                0.001,
+                2 * Math.PI,
+                false,
+            ); /* 0.001 to workaround fucked up chrome 27 bug */
+            ctx.fill();
+        }
+    }
+    private syncBoardBackground(background: ResolvedBoardBackground): void {
+        this.applyBaseBoardBackground(background);
+
+        this.grid_background_layer.style.width = `${this.metrics.width}px`;
+        this.grid_background_layer.style.height = `${this.metrics.height}px`;
+
+        const grid = background.grid;
+        if (grid) {
+            this.grid_background_layer.style.backgroundImage = grid.css["background-image"] || "";
+            this.grid_background_layer.style.backgroundSize = grid.css["background-size"] || "";
+            this.grid_background_layer.style.backgroundPosition =
+                grid.css["background-position"] || "";
+            this.grid_background_layer.style.backgroundRepeat = grid.css["background-repeat"] || "";
+        } else {
+            this.grid_background_layer.style.backgroundImage = "";
+            this.grid_background_layer.style.backgroundSize = "";
+            this.grid_background_layer.style.backgroundPosition = "";
+            this.grid_background_layer.style.backgroundRepeat = "";
+        }
+    }
     public drawSquare(i: number, j: number): void {
         if (this.destroyed) {
             return;
@@ -1363,109 +1509,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
             cx = l + this.metrics.mid;
             cy = t + this.metrics.mid;
-
-            /* draw line */
-            let sx = l;
-            let ex = r;
-            const mx = (r + l) / 2 - this.metrics.offset;
-            let sy = t;
-            let ey = b;
-            const my = (t + b) / 2 - this.metrics.offset;
-
-            if (i === 0) {
-                sx += this.metrics.mid;
-            }
-            if (i === this.width - 1) {
-                ex -= this.metrics.mid;
-            }
-            if (j === 0) {
-                sy += this.metrics.mid;
-            }
-            if (j === this.height - 1) {
-                ey -= this.metrics.mid;
-            }
-
-            if (i === this.width - 1 && j === this.height - 1) {
-                if (mx === ex && my === ey) {
-                    ex += 1;
-                    ey += 1;
-                }
-            }
-
-            if (this.square_size < 5) {
-                ctx.lineWidth = 0.2;
-            } else {
-                ctx.lineWidth = 1;
-            }
-            if (have_text_to_draw) {
-                ctx.strokeStyle = this.theme_faded_line_color;
-            } else {
-                ctx.strokeStyle = this.theme_line_color;
-            }
-            ctx.lineCap = "butt";
-            ctx.beginPath();
-            ctx.moveTo(Math.floor(sx), my);
-            ctx.lineTo(Math.floor(ex), my);
-            ctx.moveTo(mx, Math.floor(sy));
-            ctx.lineTo(mx, Math.floor(ey));
-            ctx.stroke();
-        }
-
-        /* Draw star points */
-        {
-            let star_radius;
-            if (this.square_size < 5) {
-                star_radius = 0.5;
-            } else {
-                star_radius = Math.max(2, (this.metrics.mid - 1.5) * 0.16);
-            }
-            let draw_star_point = false;
-            if (
-                this.width === 19 &&
-                this.height === 19 &&
-                ((i === 3 && (j === 3 || j === 9 || j === 15)) ||
-                    (i === 9 && (j === 3 || j === 9 || j === 15)) ||
-                    (i === 15 && (j === 3 || j === 9 || j === 15)))
-            ) {
-                draw_star_point = true;
-            }
-
-            if (
-                this.width === 13 &&
-                this.height === 13 &&
-                ((i === 3 && (j === 3 || j === 9)) ||
-                    (i === 6 && j === 6) ||
-                    (i === 9 && (j === 3 || j === 9)))
-            ) {
-                draw_star_point = true;
-            }
-
-            if (
-                this.width === 9 &&
-                this.height === 9 &&
-                ((i === 2 && (j === 2 || j === 6)) ||
-                    (i === 4 && j === 4) ||
-                    (i === 6 && (j === 2 || j === 6)))
-            ) {
-                draw_star_point = true;
-            }
-
-            if (draw_star_point) {
-                ctx.beginPath();
-                ctx.fillStyle = this.theme_star_color;
-                if (have_text_to_draw) {
-                    ctx.fillStyle = this.theme_faded_star_color;
-                }
-                ctx.arc(
-                    cx,
-                    cy,
-                    star_radius,
-                    0.001,
-                    2 * Math.PI,
-                    false,
-                ); /* 0.001 to workaround fucked up chrome 27 bug */
-                ctx.fill();
-            }
+            this.drawGridSquare(i, j, l, r, t, b, have_text_to_draw);
         }
 
         /* Heatmap */
@@ -2739,6 +2783,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 //this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
                 this.parent.style.width = metrics.width + "px";
                 this.parent.style.height = metrics.height + "px";
+                resizeDeviceScaledCanvas(this.grid_layer, metrics.width, metrics.height);
                 resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
 
                 if (this.pen_layer) {
@@ -2767,6 +2812,12 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
                 this.__set_board_width = metrics.width;
                 this.__set_board_height = metrics.height;
+                const grid_ctx = this.grid_layer.getContext("2d", { willReadFrequently: true });
+                if (grid_ctx) {
+                    this.grid_ctx = grid_ctx;
+                } else {
+                    throw new Error(`Failed to obtain drawing context for board grid`);
+                }
                 const ctx = this.board.getContext("2d", { willReadFrequently: true });
                 if (ctx) {
                     this.ctx = ctx;
@@ -2938,6 +2989,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
             ctx.restore();
         }
+
+        this.syncBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
 
         /* Draw squares */
         if (
@@ -3191,13 +3244,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
-        //this.parent.css(this.theme_board.getBackgroundCSS());
-        const bg_css = this.theme_board.getBackgroundCSS();
-        if (this.parent) {
-            for (const key in bg_css) {
-                (this.parent.style as any)[key] = (bg_css as any)[key];
-            }
-        }
+        this.syncBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
 
         if (!dont_redraw) {
             this.redraw(true);
