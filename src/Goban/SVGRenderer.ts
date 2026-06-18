@@ -163,7 +163,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private drawing_enabled: boolean = true;
     public event_layer?: HTMLDivElement;
     private activeTouchCompleter?: () => void;
-    private board_grid_background_configured: boolean = false;
 
     public themes: GobanSelectedThemes = {
         "board": "Plain",
@@ -1433,7 +1432,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Fade our lines if we have text to draw */
-        if (have_text_to_draw && !this.board_grid_background_configured) {
+        if (have_text_to_draw) {
             let star_radius;
             if (this.square_size < 5) {
                 star_radius = 0.5;
@@ -2155,7 +2154,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Fade our lines if we have text to draw */
-        if (have_text_to_draw && !this.board_grid_background_configured) {
+        if (have_text_to_draw) {
             /* draw lighter colored lines */
             let sx = 0;
             let ex = ss;
@@ -3711,7 +3710,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.applyBaseBoardBackground(background);
 
         const grid = background.grid;
-        this.board_grid_background_configured = !!grid;
         if (!grid) {
             this.grid_background_layer?.remove();
             this.grid_background_layer = undefined;
@@ -4217,7 +4215,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         this.theme_shadow_color = this.theme_board.getShadowColor();
-        this.applyBaseBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
+        const background = this.resolveBoardBackground(this.theme_board, this.themes);
+        if (dont_redraw) {
+            this.syncBoardBackground(background);
+        } else {
+            this.applyBaseBoardBackground(background);
+        }
 
         if (!dont_redraw) {
             this.redraw(true);
