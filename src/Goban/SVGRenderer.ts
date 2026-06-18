@@ -4217,7 +4217,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         this.theme_shadow_color = this.theme_board.getShadowColor();
-        this.syncBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
+        this.applyBaseBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
 
         if (!dont_redraw) {
             this.redraw(true);

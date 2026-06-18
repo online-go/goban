@@ -3244,7 +3244,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
-        this.syncBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
+        this.applyBaseBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
 
         if (!dont_redraw) {
             this.redraw(true);
