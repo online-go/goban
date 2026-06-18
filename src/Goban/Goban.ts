@@ -74,10 +74,6 @@ function boardGridBackgroundKey(size: BoardGridBackgroundNumericSize): BoardGrid
     }
 }
 
-function cssUrl(url: string): string {
-    return `url("${url.replace(/["\\]/g, "\\$&")}")`;
-}
-
 export interface CustomShadowConfig {
     black?: {
         gradientTransform?: string;
@@ -446,7 +442,7 @@ export abstract class Goban extends OGSConnectivity {
                 width: virtual_width,
                 height: virtual_height,
                 css: {
-                    "background-image": cssUrl(url),
+                    "background-image": "url('" + url + "')",
                     "background-size": `${virtual_width}px ${virtual_height}px`,
                     "background-position": `${-visible_left * this.square_size}px ${
                         -visible_top * this.square_size
