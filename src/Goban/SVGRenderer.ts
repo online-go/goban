@@ -3976,7 +3976,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.drawLines(force_clear);
-        this.syncBoardBackground(this.resolveBoardBackground(this.theme_board, this.themes));
+        this.syncBoardBackgroundIfNeeded(
+            this.theme_board,
+            this.themes,
+            (background) => this.syncBoardBackground(background),
+            // force_clear rebuilds SVG layers, so re-check placement even if geometry is unchanged.
+            !!force_clear,
+        );
         this.drawCoordinateLabels(force_clear);
 
         if (force_clear || !this.grid_layer || !this.shadow_layer) {
@@ -4165,6 +4171,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.themes = themes;
+        this.invalidateBoardBackgroundSync();
         const BoardTheme = THEMES["board"]?.[themes.board] || THEMES["board"]["Plain"];
         const WhiteTheme = THEMES["white"]?.[themes.white] || THEMES["white"]["Plain"];
         const BlackTheme = THEMES["black"]?.[themes.black] || THEMES["black"]["Plain"];
@@ -4224,10 +4231,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         this.theme_shadow_color = this.theme_board.getShadowColor();
-        const background = this.resolveBoardBackground(this.theme_board, this.themes);
         if (dont_redraw) {
-            this.syncBoardBackground(background);
+            this.syncBoardBackgroundIfNeeded(this.theme_board, this.themes, (background) =>
+                this.syncBoardBackground(background),
+            );
         } else {
+            // Preserve the previous eager base-board update; redraw will sync grid layers if needed.
+            const background = this.resolveBoardBackground(this.theme_board, this.themes);
             this.applyBaseBoardBackground(background);
         }
 

@@ -152,6 +152,7 @@ export abstract class Goban extends OGSConnectivity {
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
     private _evaluation: number = 0.5;
     private _evaluation_bar_width: number = 8;
+    private board_background_sync_key?: string;
 
     private prng(seed: number, irrational: number): number {
         return (((seed + irrational) % 1) - 0.5) * 2;
@@ -451,6 +452,53 @@ export abstract class Goban extends OGSConnectivity {
                 },
             },
         };
+    }
+
+    /*
+     * Baked-grid backgrounds are synced from redraw, not only from theme changes,
+     * because their geometry follows square size, cropped bounds, and coordinate
+     * label margins. Keep that redraw call cheap: theme changes explicitly
+     * invalidate this key, and geometry changes produce a different key.
+     */
+    protected syncBoardBackgroundIfNeeded(
+        theme_board: Pick<GobanTheme, "getBackgroundCSS">,
+        themes: GobanSelectedThemes,
+        sync: (background: ResolvedBoardBackground) => void,
+        force: boolean = false,
+    ): void {
+        const sync_key = this.getBoardBackgroundSyncKey(themes);
+        if (!force && this.board_background_sync_key === sync_key) {
+            return;
+        }
+
+        sync(this.resolveBoardBackground(theme_board, themes));
+        this.board_background_sync_key = sync_key;
+    }
+
+    protected invalidateBoardBackgroundSync(): void {
+        this.board_background_sync_key = undefined;
+    }
+
+    private getBoardBackgroundSyncKey(themes: GobanSelectedThemes): string {
+        const grid_backgrounds = themes["custom-board-grid-backgrounds"];
+
+        return JSON.stringify([
+            themes.board,
+            grid_backgrounds?.["9"] || "",
+            grid_backgrounds?.["13"] || "",
+            grid_backgrounds?.["19"] || "",
+            this.width,
+            this.height,
+            this.square_size,
+            this.bounds.left,
+            this.bounds.top,
+            this.bounds.right,
+            this.bounds.bottom,
+            this.draw_left_labels,
+            this.draw_right_labels,
+            this.draw_top_labels,
+            this.draw_bottom_labels,
+        ]);
     }
 
     protected applyBaseBoardBackground(background: ResolvedBoardBackground): void {
