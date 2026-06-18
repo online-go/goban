@@ -3736,9 +3736,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.grid_background_layer.setAttributeNS("http://www.w3.org/1999/xlink", "href", grid.url);
 
         const reference = this.coordinate_labels_layer ?? this.lines_layer?.nextSibling ?? null;
-        if (this.grid_background_layer.parentNode !== this.svg) {
-            this.svg.insertBefore(this.grid_background_layer, reference);
-        } else if (reference !== this.grid_background_layer) {
+        if (reference !== this.grid_background_layer) {
             this.svg.insertBefore(this.grid_background_layer, reference);
         }
     }

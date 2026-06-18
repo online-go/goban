@@ -166,7 +166,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.grid_layer = createDeviceScaledCanvas(10, 10);
         this.grid_layer.setAttribute("id", "grid-canvas");
         this.grid_layer.className = "GridLayer";
-        const grid_ctx = this.grid_layer.getContext("2d", { willReadFrequently: true });
+        const grid_ctx = this.grid_layer.getContext("2d");
         if (grid_ctx) {
             this.grid_ctx = grid_ctx;
         } else {
@@ -2812,7 +2812,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
                 this.__set_board_width = metrics.width;
                 this.__set_board_height = metrics.height;
-                const grid_ctx = this.grid_layer.getContext("2d", { willReadFrequently: true });
+                const grid_ctx = this.grid_layer.getContext("2d");
                 if (grid_ctx) {
                     this.grid_ctx = grid_ctx;
                 } else {
