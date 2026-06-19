@@ -26,16 +26,31 @@ const mock_socket = new GobanSocket(`ws://localhost:${last_port}`, {
 
 // Nothing special about this square size, just easy to do mental math with
 const TEST_SQUARE_SIZE = 10;
-function simulateMouseClick(canvas: HTMLCanvasElement, { x, y }: { x: number; y: number }) {
+interface MouseClickOptions {
+    x: number;
+    y: number;
+    shiftKey?: boolean;
+    ctrlKey?: boolean;
+    altKey?: boolean;
+    metaKey?: boolean;
+}
+
+function simulateMouseClick(
+    canvas: HTMLCanvasElement,
+    { x, y, shiftKey, ctrlKey, altKey, metaKey }: MouseClickOptions,
+) {
     const eventInitDict = {
         // 1.5 assumes axis labels, which take up exactly one stone width
         clientX: (x + 1.5) * TEST_SQUARE_SIZE,
         clientY: (y + 1.5) * TEST_SQUARE_SIZE,
+        shiftKey: shiftKey ?? false,
+        ctrlKey: ctrlKey ?? false,
+        altKey: altKey ?? false,
+        metaKey: metaKey ?? false,
     } as const;
 
-    // Some actions are triggered on 'mousedown', others on 'click'
-    // As far as the onTap tests are concerned, it doesn't matter which, so we
-    // trigger all three mouse events when simulating the mouse click.
+    // Stone placement is handled on 'mouseup' (see CanvasRenderer); 'click' is a
+    // no-op. We dispatch all three to mirror a real click.
     canvas.dispatchEvent(new MouseEvent("mousedown", eventInitDict));
     canvas.dispatchEvent(new MouseEvent("mouseup", eventInitDict));
     canvas.dispatchEvent(new MouseEvent("click", eventInitDict));
@@ -157,11 +172,6 @@ describe("onTap", () => {
             }),
         );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
-        const mouse_event = new MouseEvent("click", {
-            clientX: 25,
-            clientY: 15,
-            shiftKey: true,
-        });
 
         expect(goban.engine.board).toEqual([
             [1, 2, 1],
@@ -170,7 +180,7 @@ describe("onTap", () => {
         ]);
         expect(goban.engine.cur_move.move_number).toBe(3);
 
-        canvas.dispatchEvent(mouse_event);
+        simulateMouseClick(canvas, { x: 1, y: 0, shiftKey: true });
 
         // These are the important expectations
         expect(goban.engine.board).toEqual([
@@ -341,13 +351,7 @@ describe("onTap", () => {
             [0, 1, 2, 0],
         ]);
 
-        canvas.dispatchEvent(
-            new MouseEvent("click", {
-                clientX: 15 + TEST_SQUARE_SIZE,
-                clientY: 15,
-                shiftKey: true,
-            }),
-        );
+        simulateMouseClick(canvas, { x: 1, y: 0, shiftKey: true });
 
         await expect(socket_server).toReceiveMessage(
             expect.arrayContaining([
@@ -373,13 +377,7 @@ describe("onTap", () => {
         const addCoordinatesToChatInput = jest.fn();
         GobanBase.setCallbacks({ addCoordinatesToChatInput });
 
-        canvas.dispatchEvent(
-            new MouseEvent("click", {
-                clientX: 15,
-                clientY: 15,
-                ctrlKey: true,
-            }),
-        );
+        simulateMouseClick(canvas, { x: 0, y: 0, ctrlKey: true });
 
         // Unmodified clicks in stone removal send a "game/removed_stones/set" message
         jest.setSystemTime(50);

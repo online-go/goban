@@ -375,7 +375,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         let dragging = false;
 
-        let last_click_square = this.xy2ij(0, 0);
         let pointer_down_timestamp = 0;
 
         const pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
@@ -435,16 +434,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 } else {
                     const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
-                    if (!double_clicked) {
-                        last_click_square = pt;
-                    } else {
-                        if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
-                            this.onMouseOut(ev);
-                            return;
-                        }
+                    const resolution = this.resolveDoubleClick(pt, double_clicked, right_click);
+                    if (resolution === "ignore") {
+                        this.onMouseOut(ev);
+                        return;
                     }
 
-                    this.onTap(ev, double_clicked, right_click, press_duration_ms);
+                    this.onTap(ev, resolution === "double", right_click, press_duration_ms);
                     this.onMouseOut(ev);
                 }
             } catch (e) {

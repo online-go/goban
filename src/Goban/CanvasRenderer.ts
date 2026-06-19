@@ -344,7 +344,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         let dragging = false;
 
-        let last_click_square = this.xy2ij(0, 0);
         let pointer_down_timestamp = 0;
 
         const pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
@@ -405,16 +404,13 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 } else {
                     const pos = getRelativeEventPosition(ev);
                     const pt = this.xy2ij(pos.x, pos.y);
-                    if (!double_clicked) {
-                        last_click_square = pt;
-                    } else {
-                        if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
-                            this.onMouseOut(ev);
-                            return;
-                        }
+                    const resolution = this.resolveDoubleClick(pt, double_clicked, right_click);
+                    if (resolution === "ignore") {
+                        this.onMouseOut(ev);
+                        return;
                     }
 
-                    this.onTap(ev, double_clicked, right_click, press_duration_ms);
+                    this.onTap(ev, resolution === "double", right_click, press_duration_ms);
                     this.onMouseOut(ev);
                 }
             } catch (e) {
@@ -487,9 +483,21 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         let mouse_disabled: any = 0;
 
         canvas.addEventListener("click", (ev) => {
-            if (!mouse_disabled) {
-                dragging = true;
+            // pointerUp is handled in the mouseup listener below for reliability
+            // during rapid DOM updates: the browser drops click/dblclick when the
+            // DOM under the cursor is mutated between presses (e.g. after an
+            // opponent's pass), but mouseup still fires. See #3364.
+            ev.preventDefault();
+            return false;
+        });
+        canvas.addEventListener("mouseup", (ev) => {
+            // Only the primary button is handled here. Right-clicks must keep
+            // flowing through the `contextmenu` handler below, which calls
+            // pointerUp and preventDefault()s the native menu (Firefox does not
+            // suppress it from a mousedown preventDefault the way Chrome does).
+            if (!mouse_disabled && ev.button === 0) {
                 pointerUp(ev, false);
+                dragging = false;
             }
             ev.preventDefault();
             return false;
