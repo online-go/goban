@@ -112,9 +112,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private message_timeout?: number;
     private shadow_layer?: HTMLCanvasElement;
     private shadow_ctx?: CanvasRenderingContext2D;
-    private grid_layer: HTMLCanvasElement;
-    private grid_ctx: CanvasRenderingContext2D;
-    private grid_background_layer: HTMLDivElement;
+    private grid_layer?: HTMLCanvasElement;
+    private grid_ctx?: CanvasRenderingContext2D;
+    private grid_background_layer?: HTMLDivElement;
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
     private last_move_opacity: number = 1;
@@ -168,19 +168,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
 
-        this.grid_layer = createDeviceScaledCanvas(10, 10);
-        this.grid_layer.setAttribute("id", "grid-canvas");
-        this.grid_layer.className = "GridLayer";
-        const grid_ctx = this.grid_layer.getContext("2d");
-        if (grid_ctx) {
-            this.grid_ctx = grid_ctx;
-        } else {
-            throw new Error(`Failed to obtain drawing context for board grid`);
-        }
-
-        this.grid_background_layer = document.createElement("div");
-        this.grid_background_layer.className = "GridBackgroundLayer";
-
         this.board = createDeviceScaledCanvas(10, 10);
         this.board.setAttribute("id", "board-canvas");
         this.board.className = "StoneLayer";
@@ -192,8 +179,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             throw new Error(`Failed to obtain drawing context for board`);
         }
 
-        this.parent.appendChild(this.grid_layer);
-        this.parent.appendChild(this.grid_background_layer);
         this.parent.appendChild(this.board);
         this.bindPointerBindings(this.board);
 
@@ -265,18 +250,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         if (this.board && this.board.parentNode) {
             this.board.parentNode.removeChild(this.board);
         }
-        if (this.grid_layer && this.grid_layer.parentNode) {
-            this.grid_layer.parentNode.removeChild(this.grid_layer);
-        }
-        if (this.grid_background_layer && this.grid_background_layer.parentNode) {
-            this.grid_background_layer.parentNode.removeChild(this.grid_background_layer);
-        }
         delete (this as any).board;
         delete (this as any).ctx;
-        delete (this as any).grid_layer;
-        delete (this as any).grid_ctx;
-        delete (this as any).grid_background_layer;
 
+        this.detachGridBackgroundLayers();
         this.detachPenCanvas();
         this.detachShadowLayer();
         this.detachCrosshairLayer();
@@ -310,6 +287,70 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             delete this.shadow_layer;
             delete this.shadow_ctx;
         }
+    }
+    private invalidateDrawState(): void {
+        this.__draw_state = makeMatrix(this.width, this.height, "");
+    }
+    private detachGridBackgroundLayers(): void {
+        const had_layers = !!this.grid_layer || !!this.grid_background_layer;
+        if (this.grid_layer) {
+            if (this.grid_layer.parentNode) {
+                this.grid_layer.parentNode.removeChild(this.grid_layer);
+            }
+            delete this.grid_layer;
+            delete this.grid_ctx;
+        }
+        if (this.grid_background_layer) {
+            if (this.grid_background_layer.parentNode) {
+                this.grid_background_layer.parentNode.removeChild(this.grid_background_layer);
+            }
+            delete this.grid_background_layer;
+        }
+        if (had_layers) {
+            this.invalidateDrawState();
+        }
+    }
+    private attachGridBackgroundLayers(): boolean {
+        const had_grid_layer = !!this.grid_layer;
+
+        if (!this.grid_layer) {
+            this.grid_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
+            this.grid_layer.setAttribute("id", "grid-canvas");
+            this.grid_layer.className = "GridLayer";
+
+            const ctx = this.grid_layer.getContext("2d");
+            if (ctx) {
+                this.grid_ctx = ctx;
+            } else {
+                console.error(new Error(`Failed to obtain drawing context for board grid`));
+                this.detachGridBackgroundLayers();
+                return false;
+            }
+        }
+
+        if (!this.grid_background_layer) {
+            this.grid_background_layer = document.createElement("div");
+            this.grid_background_layer.className = "GridBackgroundLayer";
+        }
+
+        try {
+            this.parent.insertBefore(this.grid_layer, this.board);
+            this.parent.insertBefore(this.grid_background_layer, this.board);
+        } catch (e) {
+            console.warn("Error inserting grid background layers before board", e);
+            try {
+                this.parent.appendChild(this.grid_layer);
+                this.parent.appendChild(this.grid_background_layer);
+            } catch (e2) {
+                console.error(e2);
+            }
+        }
+
+        if (!had_grid_layer) {
+            this.invalidateDrawState();
+        }
+
+        return true;
     }
     private attachShadowLayer(): void {
         if (!this.shadow_layer && this.parent) {
@@ -1379,6 +1420,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
     }
     private drawGridSquare(
+        ctx: CanvasRenderingContext2D,
         i: number,
         j: number,
         l: number,
@@ -1387,8 +1429,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         b: number,
         have_text_to_draw: boolean,
     ): void {
-        const ctx = this.grid_ctx;
-
         ctx.clearRect(l, t, r - l, b - t);
 
         let sx = l;
@@ -1482,21 +1522,24 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private syncBoardBackground(background: ResolvedBoardBackground): void {
         this.applyBaseBoardBackground(background);
 
-        this.grid_background_layer.style.width = `${this.metrics.width}px`;
-        this.grid_background_layer.style.height = `${this.metrics.height}px`;
-
         const grid = background.grid;
-        if (grid) {
-            this.grid_background_layer.style.backgroundImage = grid.css["background-image"] || "";
-            this.grid_background_layer.style.backgroundSize = grid.css["background-size"] || "";
-            this.grid_background_layer.style.backgroundPosition =
-                grid.css["background-position"] || "";
-            this.grid_background_layer.style.backgroundRepeat = grid.css["background-repeat"] || "";
-        } else {
-            this.grid_background_layer.style.backgroundImage = "";
-            this.grid_background_layer.style.backgroundSize = "";
-            this.grid_background_layer.style.backgroundPosition = "";
-            this.grid_background_layer.style.backgroundRepeat = "";
+        if (!grid) {
+            this.detachGridBackgroundLayers();
+            return;
+        }
+
+        if (!this.attachGridBackgroundLayers()) {
+            return;
+        }
+
+        const grid_background_layer = this.grid_background_layer;
+        if (grid_background_layer) {
+            grid_background_layer.style.width = `${this.metrics.width}px`;
+            grid_background_layer.style.height = `${this.metrics.height}px`;
+            grid_background_layer.style.backgroundImage = grid.css["background-image"] || "";
+            grid_background_layer.style.backgroundSize = grid.css["background-size"] || "";
+            grid_background_layer.style.backgroundPosition = grid.css["background-position"] || "";
+            grid_background_layer.style.backgroundRepeat = grid.css["background-repeat"] || "";
         }
     }
     public drawSquare(i: number, j: number): void {
@@ -1632,7 +1675,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
             cx = l + this.metrics.mid;
             cy = t + this.metrics.mid;
-            this.drawGridSquare(i, j, l, r, t, b, have_text_to_draw);
+            this.drawGridSquare(this.grid_ctx ?? ctx, i, j, l, r, t, b, have_text_to_draw);
         }
 
         /* Heatmap */
@@ -2921,7 +2964,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 //this.parent.css({"width": metrics.width + "px", "height": metrics.height + "px"});
                 this.parent.style.width = metrics.width + "px";
                 this.parent.style.height = metrics.height + "px";
-                resizeDeviceScaledCanvas(this.grid_layer, metrics.width, metrics.height);
                 resizeDeviceScaledCanvas(this.board, metrics.width, metrics.height);
 
                 if (this.pen_layer) {
@@ -2964,14 +3006,18 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     }
                 }
 
+                if (this.grid_layer) {
+                    resizeDeviceScaledCanvas(this.grid_layer, metrics.width, metrics.height);
+                    const grid_ctx = this.grid_layer.getContext("2d");
+                    if (grid_ctx) {
+                        this.grid_ctx = grid_ctx;
+                    } else {
+                        this.detachGridBackgroundLayers();
+                    }
+                }
+
                 this.__set_board_width = metrics.width;
                 this.__set_board_height = metrics.height;
-                const grid_ctx = this.grid_layer.getContext("2d");
-                if (grid_ctx) {
-                    this.grid_ctx = grid_ctx;
-                } else {
-                    throw new Error(`Failed to obtain drawing context for board grid`);
-                }
                 const ctx = this.board.getContext("2d", { willReadFrequently: true });
                 if (ctx) {
                     this.ctx = ctx;
@@ -3144,8 +3190,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             ctx.restore();
         }
 
-        this.syncBoardBackgroundIfNeeded(this.theme_board, this.themes, (background) =>
-            this.syncBoardBackground(background),
+        this.syncBoardBackgroundIfNeeded(
+            this.theme_board,
+            this.themes,
+            (background) => this.syncBoardBackground(background),
+            !!force_clear,
         );
 
         /* Draw squares */
@@ -3402,7 +3451,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
-        if (dont_redraw) {
+        if (dont_redraw && this.ready_to_draw) {
             this.syncBoardBackgroundIfNeeded(this.theme_board, this.themes, (background) =>
                 this.syncBoardBackground(background),
             );
