@@ -310,7 +310,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             this.invalidateDrawState();
         }
     }
-    private attachGridBackgroundLayers(): boolean {
+    private ensureGridBackgroundLayers(): HTMLDivElement | undefined {
         const had_grid_layer = !!this.grid_layer;
 
         if (!this.grid_layer) {
@@ -324,7 +324,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             } else {
                 console.error(new Error(`Failed to obtain drawing context for board grid`));
                 this.detachGridBackgroundLayers();
-                return false;
+                return undefined;
             }
         }
 
@@ -350,7 +350,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             this.invalidateDrawState();
         }
 
-        return true;
+        return this.grid_background_layer;
     }
     private attachShadowLayer(): void {
         if (!this.shadow_layer && this.parent) {
@@ -1429,8 +1429,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         b: number,
         have_text_to_draw: boolean,
     ): void {
-        ctx.clearRect(l, t, r - l, b - t);
-
         let sx = l;
         let ex = r;
         const mx = (r + l) / 2 - this.metrics.offset;
@@ -1528,19 +1526,17 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return;
         }
 
-        if (!this.attachGridBackgroundLayers()) {
+        const grid_background_layer = this.ensureGridBackgroundLayers();
+        if (!grid_background_layer) {
             return;
         }
 
-        const grid_background_layer = this.grid_background_layer;
-        if (grid_background_layer) {
-            grid_background_layer.style.width = `${this.metrics.width}px`;
-            grid_background_layer.style.height = `${this.metrics.height}px`;
-            grid_background_layer.style.backgroundImage = grid.css["background-image"] || "";
-            grid_background_layer.style.backgroundSize = grid.css["background-size"] || "";
-            grid_background_layer.style.backgroundPosition = grid.css["background-position"] || "";
-            grid_background_layer.style.backgroundRepeat = grid.css["background-repeat"] || "";
-        }
+        grid_background_layer.style.width = `${this.metrics.width}px`;
+        grid_background_layer.style.height = `${this.metrics.height}px`;
+        grid_background_layer.style.backgroundImage = grid.css["background-image"] || "";
+        grid_background_layer.style.backgroundSize = grid.css["background-size"] || "";
+        grid_background_layer.style.backgroundPosition = grid.css["background-position"] || "";
+        grid_background_layer.style.backgroundRepeat = grid.css["background-repeat"] || "";
     }
     public drawSquare(i: number, j: number): void {
         if (this.destroyed) {
@@ -1675,7 +1671,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
             cx = l + this.metrics.mid;
             cy = t + this.metrics.mid;
-            this.drawGridSquare(this.grid_ctx ?? ctx, i, j, l, r, t, b, have_text_to_draw);
+            const grid_ctx = this.grid_ctx;
+            if (grid_ctx) {
+                grid_ctx.clearRect(l, t, r - l, b - t);
+            }
+            this.drawGridSquare(grid_ctx ?? ctx, i, j, l, r, t, b, have_text_to_draw);
         }
 
         /* Heatmap */

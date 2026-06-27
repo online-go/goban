@@ -603,6 +603,17 @@ describe("custom board grid background (canvas layers)", () => {
         goban.destroy();
     });
 
+    test("does not attach optional grid background layers for custom themes without a grid URL", () => {
+        callbacks.getSelectedThemes = () => selectedThemes("Custom");
+        const goban = new GobanCanvas(basic3x3Config({ width: 9, height: 9 }));
+
+        expect(board_div.querySelector("#grid-canvas")).toBeNull();
+        expect(board_div.querySelector(".GridBackgroundLayer")).toBeNull();
+        expect(board_div.querySelector("#board-canvas")).not.toBeNull();
+
+        goban.destroy();
+    });
+
     test("attaches optional grid background layers for a configured custom grid background", () => {
         callbacks.getSelectedThemes = () =>
             selectedThemes("Custom", "https://cdn.example.test/grid-9.png");
