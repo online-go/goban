@@ -13,6 +13,7 @@ import {
 } from "../../src/Goban/InteractiveBase";
 import { GobanSocket, makeMatrix } from "engine";
 import { GobanBase } from "../../src/GobanBase";
+import { callbacks } from "../../src/Goban/callbacks";
 import WS from "jest-websocket-mock";
 
 let board_div: HTMLDivElement;
@@ -461,5 +462,104 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
+    });
+});
+
+describe("last-move crosshair callback", () => {
+    afterEach(() => {
+        delete (callbacks as any).getLastMoveCrosshair;
+    });
+
+    test("getLastMoveCrosshair falls back to disabled when no callback is set", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        expect((goban as any).getLastMoveCrosshair()).toEqual({
+            enabled: false,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        goban.destroy();
+    });
+
+    test("getLastMoveCrosshair returns the callback value", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#00ff00",
+            thickness: 0.2,
+        });
+        const goban = new GobanCanvas(basic3x3Config());
+        expect((goban as any).getLastMoveCrosshair()).toEqual({
+            enabled: true,
+            color: "#00ff00",
+            thickness: 0.2,
+        });
+        goban.destroy();
+    });
+});
+
+describe("last-move crosshair (canvas layer)", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        delete (callbacks as any).getLastMoveCrosshair;
+        board_div.remove();
+    });
+
+    test("attaches a dedicated crosshair canvas under the stones when enabled", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(basicScorableBoardConfig());
+        goban.redraw(true);
+        const layer = (goban as any).crosshair_layer as HTMLCanvasElement | undefined;
+        expect(layer).toBeDefined();
+        // It must sit before the stone canvas so it renders under the stones.
+        expect(layer?.className).toBe("CrosshairLayer");
+        const board = (goban as any).board as HTMLCanvasElement;
+        const children = Array.from(board.parentNode!.childNodes);
+        expect(children.indexOf(layer as any)).toBeLessThan(children.indexOf(board));
+        goban.destroy();
+    });
+
+    test("does not attach the crosshair canvas when disabled", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: false,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(basicScorableBoardConfig());
+        goban.redraw(true);
+        expect((goban as any).crosshair_layer).toBeUndefined();
+        goban.destroy();
+    });
+
+    test("does not attach the crosshair canvas when dont_draw_last_move is set", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(basicScorableBoardConfig({ dont_draw_last_move: true }));
+        goban.redraw(true);
+        expect((goban as any).crosshair_layer).toBeUndefined();
+        goban.destroy();
+    });
+
+    test("does not attach the crosshair canvas when dont_draw_last_move_crosshair is set", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(
+            basicScorableBoardConfig({ dont_draw_last_move_crosshair: true }),
+        );
+        goban.redraw(true);
+        expect((goban as any).crosshair_layer).toBeUndefined();
+        goban.destroy();
     });
 });

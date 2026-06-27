@@ -16,7 +16,7 @@
 
 .Goban {
     position: relative;
-    background-color: #DCB35C;
+    background-color: #dcb35c;
     display: inline-block;
     box-shadow: var(--goban-shadow);
 
@@ -61,6 +61,13 @@
         right: 0;
     }
 
+    .CrosshairLayer {
+        position: absolute;
+        z-index: var(--z-goban-crosshair-layer);
+        left: 0;
+        right: 0;
+    }
+
     .GobanMessage table {
         position: relative;
         width: 100%;
@@ -75,10 +82,10 @@
     .GobanMessage table td div {
         border-radius: 3px;
         box-shadow: 5px 5px 3px rgba(0, 0, 0, 0.26);
-        color: #FF5500;
+        color: #ff5500;
         background-color: #262626;
-        padding: .3em;
-        margin: .4em;
+        padding: 0.3em;
+        margin: 0.4em;
     }
 
     .hidden {
