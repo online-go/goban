@@ -91,6 +91,10 @@ export interface GobanConfig extends GobanEngineConfig, PuzzleConfig {
     draw_right_labels?: boolean;
     bounds?: GobanBounds;
     dont_draw_last_move?: boolean;
+    /** Suppress only the last-move accessibility crosshair on this board, even
+     *  when the global crosshair setting is enabled (e.g. small preview/thumbnail
+     *  boards). Does not affect the regular last-move marker. */
+    dont_draw_last_move_crosshair?: boolean;
     dont_show_messages?: boolean;
     last_move_radius?: number;
     circle_radius?: number;

@@ -138,6 +138,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
     private lines_layer?: SVGGraphicsElement;
     private grid_background_layer?: SVGImageElement;
+    private crosshair_layer?: SVGGraphicsElement;
     private coordinate_labels_layer?: SVGGraphicsElement;
     private grid: Array<Array<SVGGraphicsElement>> = [];
     public grid_layer?: SVGGraphicsElement;
@@ -320,6 +321,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
         delete (this as any).board;
         delete (this as any).svg;
+        // The crosshair layer was a child of the now-removed svg; drop our
+        // references so late updateLastMoveCrosshair() calls early-return and the
+        // detached subtree can be GC'd (mirrors the Canvas detachCrosshairLayer).
+        delete this.crosshair_layer;
+        delete this.grid_layer;
 
         this.detachPenLayer();
 
@@ -377,7 +383,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         let dragging = false;
 
-        let last_click_square = this.xy2ij(0, 0);
         let pointer_down_timestamp = 0;
 
         const pointerUp = (ev: MouseEvent | TouchEvent, double_clicked: boolean): void => {
@@ -437,16 +442,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 } else {
                     const pos = getRelativeEventPosition(ev, this.parent);
                     const pt = this.xy2ij(pos.x, pos.y);
-                    if (!double_clicked) {
-                        last_click_square = pt;
-                    } else {
-                        if (last_click_square.i !== pt.i || last_click_square.j !== pt.j) {
-                            this.onMouseOut(ev);
-                            return;
-                        }
+                    const resolution = this.resolveDoubleClick(pt, double_clicked, right_click);
+                    if (resolution === "ignore") {
+                        this.onMouseOut(ev);
+                        return;
                     }
 
-                    this.onTap(ev, double_clicked, right_click, press_duration_ms);
+                    this.onTap(ev, resolution === "double", right_click, press_duration_ms);
                     this.onMouseOut(ev);
                 }
             } catch (e) {
@@ -1975,10 +1977,17 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Clear last move */
+        // Tracks whether the crosshair was already refreshed in this draw, so the
+        // "draw last move" block below doesn't redraw it again for the same cur_move.
+        let crosshair_synced = false;
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
             const m = this.last_move;
             delete this.last_move;
             this.cell(m.x, m.y).clearLastMove();
+            // Also clears the crosshair when navigating to a position with no
+            // last-move stone, which the "draw last move" block below cannot.
+            this.updateLastMoveCrosshair();
+            crosshair_synced = true;
         }
 
         /* Draw last move */
@@ -1990,6 +1999,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
+                // Sync on the first move (no prior last move above); skip if done.
+                if (!crosshair_synced) {
+                    this.updateLastMoveCrosshair();
+                }
 
                 if (i >= 0 && j >= 0) {
                     const color =
@@ -2997,10 +3010,17 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         /* Clear last move */
+        // Tracks whether the crosshair was already refreshed in this draw, so the
+        // "draw last move" block below doesn't redraw it again for the same cur_move.
+        let crosshair_synced = false;
         if (this.last_move && this.engine && !this.last_move.is(this.engine.cur_move)) {
             const m = this.last_move;
             delete this.last_move;
             this.drawSquare(m.x, m.y);
+            // Also clears the crosshair when navigating to a position with no
+            // last-move stone, which the "draw last move" block below cannot.
+            this.updateLastMoveCrosshair();
+            crosshair_synced = true;
         }
 
         /* Draw last move */
@@ -3012,6 +3032,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
+                // Sync on the first move (no prior last move above); skip if done.
+                if (!crosshair_synced) {
+                    this.updateLastMoveCrosshair();
+                }
 
                 if (i >= 0 && j >= 0) {
                     const color =
@@ -3748,6 +3772,83 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
 
+    /* Last-move crosshair: a dedicated layer kept directly beneath the stone
+     * grid layer (so the lines pass under the stones) holding the full
+     * horizontal and vertical lines through the last move. Rebuilt on every
+     * redraw and whenever the last move changes. */
+    private updateLastMoveCrosshair(): void {
+        if (!this.grid_layer) {
+            return;
+        }
+
+        const cm = this.engine?.cur_move;
+        const ch = this.getLastMoveCrosshair();
+        const shows =
+            ch.enabled &&
+            !this.dont_draw_last_move &&
+            !this.dont_draw_last_move_crosshair &&
+            !!cm &&
+            cm.x >= 0 &&
+            cm.y >= 0 &&
+            (this.engine?.phase === "play" || this.engine?.phase === "finished");
+
+        // When the crosshair isn't shown, do no DOM work — only clear an already
+        // attached layer. The layer is created/attached lazily so boards never pay
+        // for it unless the feature is on (matches the Canvas renderer).
+        if (!shows || !cm) {
+            if (this.crosshair_layer) {
+                this.crosshair_layer.innerHTML = "";
+            }
+            return;
+        }
+
+        if (!this.crosshair_layer) {
+            this.crosshair_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            this.crosshair_layer.setAttribute("class", "crosshair-layer");
+        }
+        // Keep it directly before the stone grid layer (under the stones). Only
+        // (re)insert when not already positioned there — grid_layer is recreated
+        // on a force_clear redraw, but otherwise this avoids a DOM mutation (and
+        // layout invalidation) on every move.
+        if (this.crosshair_layer.nextSibling !== this.grid_layer) {
+            this.svg.insertBefore(this.crosshair_layer, this.grid_layer);
+        }
+        this.crosshair_layer.innerHTML = "";
+
+        // Align with the stone centres — metrics.mid is the canonical centre
+        // offset used by the stones and the Canvas crosshair (it accounts for the
+        // 0.5px adjustment on even square sizes; Math.round(ss/2) would be 0.5px off).
+        const ss = this.square_size;
+        let ox = this.draw_left_labels ? ss : 0;
+        let oy = this.draw_top_labels ? ss : 0;
+        if (this.bounds.left > 0) {
+            ox = -ss * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            oy = -ss * this.bounds.top;
+        }
+        ox += this.metrics.mid;
+        oy += this.metrics.mid;
+
+        const cx = ox + cm.x * ss;
+        const cy = oy + cm.y * ss;
+        const lw = Math.max(1, ss * ch.thickness);
+        const mk = (x1: number, y1: number, x2: number, y2: number) => {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1.toString());
+            line.setAttribute("y1", y1.toString());
+            line.setAttribute("x2", x2.toString());
+            line.setAttribute("y2", y2.toString());
+            line.setAttribute("stroke", ch.color);
+            line.setAttribute("stroke-width", lw.toString());
+            this.crosshair_layer!.appendChild(line);
+        };
+        // horizontal: spans all columns at the last move's row
+        mk(ox, cy, ox + (this.width - 1) * ss, cy);
+        // vertical: spans all rows at the last move's column
+        mk(cx, oy, cx, oy + (this.height - 1) * ss);
+    }
+
     private drawCoordinateLabels(force_clear?: boolean): void {
         if (force_clear) {
             if (this.coordinate_labels_layer) {
@@ -4042,6 +4143,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
             this.drawPenMarks(this.pen_marks);
         }
+        this.updateLastMoveCrosshair();
         this.move_tree_redraw();
     }
 

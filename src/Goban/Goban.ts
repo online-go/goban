@@ -131,6 +131,10 @@ export interface CaptureDisplay {
     destroy(): void;
 }
 
+/* Max time between two releases on the same square for the timing-based
+ * double-click fallback to treat them as a double-click (#3364). */
+const DOUBLE_CLICK_TIMEOUT_MS = 500;
+
 /**
  * Goban serves as a base class for our renderers as well as a namespace for various
  * classes, types, and enums.
@@ -154,8 +158,82 @@ export abstract class Goban extends OGSConnectivity {
     private _evaluation_bar_width: number = 8;
     private board_background_sync_key?: string;
 
+    /* State for the timing-based double-click fallback shared by the renderers
+     * (#3364). The browser does not always synthesize a native `dblclick`: if
+     * the DOM under the cursor is mutated between the two clicks (e.g. after an
+     * opponent's pass the board is redrawn when the provisional stone is placed)
+     * the click/dblclick events are dropped, which left `double-click-to-move`
+     * behaving like the submit-button mode. We therefore detect the double-tap
+     * ourselves from the timing + position of the two pointer releases. */
+    private last_pointer_up_timestamp = 0;
+    private last_pointer_up_square: { i: number; j: number } = { i: -1, j: -1 };
+    private synthesized_double_click = false;
+
     private prng(seed: number, irrational: number): number {
         return (((seed + irrational) % 1) - 0.5) * 2;
+    }
+
+    /**
+     * Resolve whether a pointer release should be handled as a single click, a
+     * double-click, or ignored, for `double-click-to-move`. Called from each
+     * renderer's `pointerUp` so the logic isn't duplicated. `double_clicked` is
+     * `true` when the browser delivered a native `dblclick` event.
+     *
+     * Returns:
+     *  - `"double"` — submit-as-double-click (place + submit),
+     *  - `"single"` — ordinary single click (place provisional),
+     *  - `"ignore"` — drop this event (wrong square, or a native `dblclick` that
+     *    we already handled via the timing fallback).
+     */
+    protected resolveDoubleClick(
+        pt: { i: number; j: number },
+        double_clicked: boolean,
+        right_click: boolean = false,
+    ): "single" | "double" | "ignore" {
+        if (right_click) {
+            /* A non-primary button (e.g. right-click) is never a
+             * double-click-to-move. Crucially we must not record its timing,
+             * otherwise a following primary click on the same square within the
+             * window would be mistaken for a double-click (#3364 review). The
+             * native `dblclick` event only ever fired for the primary button,
+             * so this matches the previous behavior. */
+            return "single";
+        }
+        const now = performance.now();
+        if (!double_clicked) {
+            let is_double = false;
+            /* Timing-based fallback: a second release on the same square shortly
+             * after the first is a double-click even when no native `dblclick`
+             * was emitted. */
+            if (
+                this.double_click_submit &&
+                !this.synthesized_double_click &&
+                this.last_pointer_up_square.i === pt.i &&
+                this.last_pointer_up_square.j === pt.j &&
+                now - this.last_pointer_up_timestamp <= DOUBLE_CLICK_TIMEOUT_MS
+            ) {
+                is_double = true;
+                this.synthesized_double_click = true;
+            } else {
+                this.synthesized_double_click = false;
+            }
+            this.last_pointer_up_timestamp = now;
+            this.last_pointer_up_square = pt;
+            return is_double ? "double" : "single";
+        }
+
+        /* Native `dblclick`. */
+        if (this.last_pointer_up_square.i !== pt.i || this.last_pointer_up_square.j !== pt.j) {
+            return "ignore";
+        }
+        /* Reset the timing baseline either way (whether or not we already
+         * handled this double via the fallback) so the first click of the next
+         * move can't chain off this now-stale timestamp and be mistaken for a
+         * double-click. */
+        const already_handled = this.synthesized_double_click;
+        this.synthesized_double_click = false;
+        this.last_pointer_up_timestamp = 0;
+        return already_handled ? "ignore" : "double";
     }
 
     public getStonePlacementOffset(i: number, j: number): { x: number; y: number } {

@@ -85,6 +85,13 @@
         right: 0;
     }
 
+    .CrosshairLayer {
+        position: absolute;
+        z-index: var(--z-goban-crosshair-layer);
+        left: 0;
+        right: 0;
+    }
+
     .GobanMessage table {
         position: relative;
         width: 100%;

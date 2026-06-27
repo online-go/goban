@@ -13,6 +13,7 @@ import {
 } from "../../src/Goban/InteractiveBase";
 import { GobanSocket, makeMatrix } from "engine";
 import { GobanBase } from "../../src/GobanBase";
+import { callbacks } from "../../src/Goban/callbacks";
 import WS from "jest-websocket-mock";
 
 let board_div: HTMLDivElement;
@@ -26,16 +27,31 @@ const mock_socket = new GobanSocket(`ws://localhost:${last_port}`, {
 
 // Nothing special about this square size, just easy to do mental math with
 const TEST_SQUARE_SIZE = 10;
-function simulateMouseClick(canvas: HTMLCanvasElement, { x, y }: { x: number; y: number }) {
+interface MouseClickOptions {
+    x: number;
+    y: number;
+    shiftKey?: boolean;
+    ctrlKey?: boolean;
+    altKey?: boolean;
+    metaKey?: boolean;
+}
+
+function simulateMouseClick(
+    canvas: HTMLCanvasElement,
+    { x, y, shiftKey, ctrlKey, altKey, metaKey }: MouseClickOptions,
+) {
     const eventInitDict = {
         // 1.5 assumes axis labels, which take up exactly one stone width
         clientX: (x + 1.5) * TEST_SQUARE_SIZE,
         clientY: (y + 1.5) * TEST_SQUARE_SIZE,
+        shiftKey: shiftKey ?? false,
+        ctrlKey: ctrlKey ?? false,
+        altKey: altKey ?? false,
+        metaKey: metaKey ?? false,
     } as const;
 
-    // Some actions are triggered on 'mousedown', others on 'click'
-    // As far as the onTap tests are concerned, it doesn't matter which, so we
-    // trigger all three mouse events when simulating the mouse click.
+    // Stone placement is handled on 'mouseup' (see CanvasRenderer); 'click' is a
+    // no-op. We dispatch all three to mirror a real click.
     canvas.dispatchEvent(new MouseEvent("mousedown", eventInitDict));
     canvas.dispatchEvent(new MouseEvent("mouseup", eventInitDict));
     canvas.dispatchEvent(new MouseEvent("click", eventInitDict));
@@ -157,11 +173,6 @@ describe("onTap", () => {
             }),
         );
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
-        const mouse_event = new MouseEvent("click", {
-            clientX: 25,
-            clientY: 15,
-            shiftKey: true,
-        });
 
         expect(goban.engine.board).toEqual([
             [1, 2, 1],
@@ -170,7 +181,7 @@ describe("onTap", () => {
         ]);
         expect(goban.engine.cur_move.move_number).toBe(3);
 
-        canvas.dispatchEvent(mouse_event);
+        simulateMouseClick(canvas, { x: 1, y: 0, shiftKey: true });
 
         // These are the important expectations
         expect(goban.engine.board).toEqual([
@@ -341,13 +352,7 @@ describe("onTap", () => {
             [0, 1, 2, 0],
         ]);
 
-        canvas.dispatchEvent(
-            new MouseEvent("click", {
-                clientX: 15 + TEST_SQUARE_SIZE,
-                clientY: 15,
-                shiftKey: true,
-            }),
-        );
+        simulateMouseClick(canvas, { x: 1, y: 0, shiftKey: true });
 
         await expect(socket_server).toReceiveMessage(
             expect.arrayContaining([
@@ -373,13 +378,7 @@ describe("onTap", () => {
         const addCoordinatesToChatInput = jest.fn();
         GobanBase.setCallbacks({ addCoordinatesToChatInput });
 
-        canvas.dispatchEvent(
-            new MouseEvent("click", {
-                clientX: 15,
-                clientY: 15,
-                ctrlKey: true,
-            }),
-        );
+        simulateMouseClick(canvas, { x: 0, y: 0, ctrlKey: true });
 
         // Unmodified clicks in stone removal send a "game/removed_stones/set" message
         jest.setSystemTime(50);
@@ -463,5 +462,104 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
+    });
+});
+
+describe("last-move crosshair callback", () => {
+    afterEach(() => {
+        delete (callbacks as any).getLastMoveCrosshair;
+    });
+
+    test("getLastMoveCrosshair falls back to disabled when no callback is set", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        expect((goban as any).getLastMoveCrosshair()).toEqual({
+            enabled: false,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        goban.destroy();
+    });
+
+    test("getLastMoveCrosshair returns the callback value", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#00ff00",
+            thickness: 0.2,
+        });
+        const goban = new GobanCanvas(basic3x3Config());
+        expect((goban as any).getLastMoveCrosshair()).toEqual({
+            enabled: true,
+            color: "#00ff00",
+            thickness: 0.2,
+        });
+        goban.destroy();
+    });
+});
+
+describe("last-move crosshair (canvas layer)", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        delete (callbacks as any).getLastMoveCrosshair;
+        board_div.remove();
+    });
+
+    test("attaches a dedicated crosshair canvas under the stones when enabled", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(basicScorableBoardConfig());
+        goban.redraw(true);
+        const layer = (goban as any).crosshair_layer as HTMLCanvasElement | undefined;
+        expect(layer).toBeDefined();
+        // It must sit before the stone canvas so it renders under the stones.
+        expect(layer?.className).toBe("CrosshairLayer");
+        const board = (goban as any).board as HTMLCanvasElement;
+        const children = Array.from(board.parentNode!.childNodes);
+        expect(children.indexOf(layer as any)).toBeLessThan(children.indexOf(board));
+        goban.destroy();
+    });
+
+    test("does not attach the crosshair canvas when disabled", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: false,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(basicScorableBoardConfig());
+        goban.redraw(true);
+        expect((goban as any).crosshair_layer).toBeUndefined();
+        goban.destroy();
+    });
+
+    test("does not attach the crosshair canvas when dont_draw_last_move is set", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(basicScorableBoardConfig({ dont_draw_last_move: true }));
+        goban.redraw(true);
+        expect((goban as any).crosshair_layer).toBeUndefined();
+        goban.destroy();
+    });
+
+    test("does not attach the crosshair canvas when dont_draw_last_move_crosshair is set", () => {
+        (callbacks as any).getLastMoveCrosshair = () => ({
+            enabled: true,
+            color: "#1e6bff",
+            thickness: 0.1,
+        });
+        const goban = new GobanCanvas(
+            basicScorableBoardConfig({ dont_draw_last_move_crosshair: true }),
+        );
+        goban.redraw(true);
+        expect((goban as any).crosshair_layer).toBeUndefined();
+        goban.destroy();
     });
 });
