@@ -310,7 +310,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             this.invalidateDrawState();
         }
     }
-    private ensureGridBackgroundLayers(): HTMLDivElement | undefined {
+    private attachGridBackgroundLayers(): void {
         const had_grid_layer = !!this.grid_layer;
 
         if (!this.grid_layer) {
@@ -324,7 +324,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             } else {
                 console.error(new Error(`Failed to obtain drawing context for board grid`));
                 this.detachGridBackgroundLayers();
-                return undefined;
+                return;
             }
         }
 
@@ -334,8 +334,13 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         }
 
         try {
-            this.parent.insertBefore(this.grid_layer, this.board);
-            this.parent.insertBefore(this.grid_background_layer, this.board);
+            // Keep the grid canvas directly before the grid background, both beneath the board.
+            if (this.grid_background_layer.nextSibling !== this.board) {
+                this.parent.insertBefore(this.grid_background_layer, this.board);
+            }
+            if (this.grid_layer.nextSibling !== this.grid_background_layer) {
+                this.parent.insertBefore(this.grid_layer, this.grid_background_layer);
+            }
         } catch (e) {
             console.warn("Error inserting grid background layers before board", e);
             try {
@@ -349,8 +354,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         if (!had_grid_layer) {
             this.invalidateDrawState();
         }
-
-        return this.grid_background_layer;
     }
     private attachShadowLayer(): void {
         if (!this.shadow_layer && this.parent) {
@@ -1526,17 +1529,17 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return;
         }
 
-        const grid_background_layer = this.ensureGridBackgroundLayers();
-        if (!grid_background_layer) {
+        this.attachGridBackgroundLayers();
+        if (!this.grid_ctx || !this.grid_layer || !this.grid_background_layer) {
             return;
         }
 
-        grid_background_layer.style.width = `${this.metrics.width}px`;
-        grid_background_layer.style.height = `${this.metrics.height}px`;
-        grid_background_layer.style.backgroundImage = grid.css["background-image"] || "";
-        grid_background_layer.style.backgroundSize = grid.css["background-size"] || "";
-        grid_background_layer.style.backgroundPosition = grid.css["background-position"] || "";
-        grid_background_layer.style.backgroundRepeat = grid.css["background-repeat"] || "";
+        this.grid_background_layer.style.width = `${this.metrics.width}px`;
+        this.grid_background_layer.style.height = `${this.metrics.height}px`;
+        this.grid_background_layer.style.backgroundImage = grid.css["background-image"] || "";
+        this.grid_background_layer.style.backgroundSize = grid.css["background-size"] || "";
+        this.grid_background_layer.style.backgroundPosition = grid.css["background-position"] || "";
+        this.grid_background_layer.style.backgroundRepeat = grid.css["background-repeat"] || "";
     }
     public drawSquare(i: number, j: number): void {
         if (this.destroyed) {
