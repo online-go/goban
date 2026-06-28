@@ -312,44 +312,57 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     }
     private attachGridBackgroundLayers(): void {
         const had_grid_layer = !!this.grid_layer;
+        // Stage new layers in locals so drawSquare does not switch to grid_ctx
+        // until the canvas is actually attached and visible.
+        let grid_layer = this.grid_layer;
+        let grid_ctx = this.grid_ctx;
 
-        if (!this.grid_layer) {
-            this.grid_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
-            this.grid_layer.setAttribute("id", "grid-canvas");
-            this.grid_layer.className = "GridLayer";
+        if (!grid_layer) {
+            grid_layer = createDeviceScaledCanvas(this.metrics.width, this.metrics.height);
+            grid_layer.setAttribute("id", "grid-canvas");
+            grid_layer.className = "GridLayer";
+            grid_ctx = grid_layer.getContext("2d") ?? undefined;
+        } else if (!grid_ctx) {
+            grid_ctx = grid_layer.getContext("2d") ?? undefined;
+        }
 
-            const ctx = this.grid_layer.getContext("2d");
-            if (ctx) {
-                this.grid_ctx = ctx;
-            } else {
-                console.error(new Error(`Failed to obtain drawing context for board grid`));
+        if (!grid_ctx) {
+            console.error(new Error(`Failed to obtain drawing context for board grid`));
+            this.detachGridBackgroundLayers();
+            return;
+        }
+
+        let grid_background_layer = this.grid_background_layer;
+        if (!grid_background_layer) {
+            grid_background_layer = document.createElement("div");
+            grid_background_layer.className = "GridBackgroundLayer";
+        }
+
+        try {
+            // Keep the grid canvas directly before the grid background, both beneath the board.
+            if (grid_background_layer.nextSibling !== this.board) {
+                this.parent.insertBefore(grid_background_layer, this.board);
+            }
+            if (grid_layer.nextSibling !== grid_background_layer) {
+                this.parent.insertBefore(grid_layer, grid_background_layer);
+            }
+        } catch (e) {
+            console.warn("Error inserting grid background layers before board", e);
+            try {
+                this.parent.appendChild(grid_layer);
+                this.parent.appendChild(grid_background_layer);
+            } catch (e2) {
+                console.error(e2);
+                grid_layer.remove();
+                grid_background_layer.remove();
                 this.detachGridBackgroundLayers();
                 return;
             }
         }
 
-        if (!this.grid_background_layer) {
-            this.grid_background_layer = document.createElement("div");
-            this.grid_background_layer.className = "GridBackgroundLayer";
-        }
-
-        try {
-            // Keep the grid canvas directly before the grid background, both beneath the board.
-            if (this.grid_background_layer.nextSibling !== this.board) {
-                this.parent.insertBefore(this.grid_background_layer, this.board);
-            }
-            if (this.grid_layer.nextSibling !== this.grid_background_layer) {
-                this.parent.insertBefore(this.grid_layer, this.grid_background_layer);
-            }
-        } catch (e) {
-            console.warn("Error inserting grid background layers before board", e);
-            try {
-                this.parent.appendChild(this.grid_layer);
-                this.parent.appendChild(this.grid_background_layer);
-            } catch (e2) {
-                console.error(e2);
-            }
-        }
+        this.grid_layer = grid_layer;
+        this.grid_ctx = grid_ctx;
+        this.grid_background_layer = grid_background_layer;
 
         if (!had_grid_layer) {
             this.invalidateDrawState();

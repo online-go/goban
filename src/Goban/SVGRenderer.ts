@@ -326,6 +326,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         // detached subtree can be GC'd (mirrors the Canvas detachCrosshairLayer).
         delete this.crosshair_layer;
         delete this.grid_layer;
+        delete this.grid_background_layer;
 
         this.detachPenLayer();
 

@@ -655,4 +655,37 @@ describe("custom board grid background (canvas layers)", () => {
 
         goban.destroy();
     });
+
+    test("does not keep grid context when optional grid layer insertion fails", () => {
+        callbacks.getSelectedThemes = () => selectedThemes("Kaya");
+        const goban = new GobanCanvas(basic3x3Config({ width: 9, height: 9 }));
+        const internals = goban as unknown as {
+            grid_ctx?: CanvasRenderingContext2D;
+            grid_layer?: HTMLCanvasElement;
+            grid_background_layer?: HTMLDivElement;
+        };
+
+        const insert_before = jest.spyOn(board_div, "insertBefore").mockImplementation(() => {
+            throw new Error("insert failed");
+        });
+        const append_child = jest.spyOn(board_div, "appendChild").mockImplementation(() => {
+            throw new Error("append failed");
+        });
+        const console_warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+        const console_error = jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+        goban.setTheme(selectedThemes("Custom", "https://cdn.example.test/grid-9.png"), false);
+
+        expect(internals.grid_ctx).toBeUndefined();
+        expect(internals.grid_layer).toBeUndefined();
+        expect(internals.grid_background_layer).toBeUndefined();
+        expect(board_div.querySelector("#grid-canvas")).toBeNull();
+        expect(board_div.querySelector(".GridBackgroundLayer")).toBeNull();
+
+        insert_before.mockRestore();
+        append_child.mockRestore();
+        console_warn.mockRestore();
+        console_error.mockRestore();
+        goban.destroy();
+    });
 });
