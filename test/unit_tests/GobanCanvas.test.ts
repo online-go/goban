@@ -7,6 +7,7 @@
 (global as any).CLIENT = true;
 
 import { GobanCanvas, CanvasRendererGobanConfig } from "../../src/Goban/CanvasRenderer";
+import type { GobanSelectedThemes } from "../../src/Goban/Goban";
 import {
     SCORE_ESTIMATION_TOLERANCE,
     SCORE_ESTIMATION_TRIALS,
@@ -91,6 +92,22 @@ function basicScorableBoardConfig(
             [2, 1],
         ],
         ...(additionalOptions ?? {}),
+    };
+}
+
+function selectedThemes(board: "Custom" | "Kaya", grid9Url: string = ""): GobanSelectedThemes {
+    return {
+        "white": "Shell",
+        "black": "Slate",
+        "board": board,
+        "removal-graphic": "square",
+        "removal-scale": 1.0,
+        "stone-shadows": "none",
+        "custom-board-grid-backgrounds": {
+            "9": grid9Url,
+            "13": "",
+            "19": "",
+        },
     };
 }
 
@@ -560,6 +577,115 @@ describe("last-move crosshair (canvas layer)", () => {
         );
         goban.redraw(true);
         expect((goban as any).crosshair_layer).toBeUndefined();
+        goban.destroy();
+    });
+});
+
+describe("custom board grid background (canvas layers)", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        delete callbacks.getSelectedThemes;
+        board_div.remove();
+    });
+
+    test("does not attach optional grid background layers for default themes", () => {
+        callbacks.getSelectedThemes = () => selectedThemes("Kaya");
+        const goban = new GobanCanvas(basic3x3Config());
+
+        expect(board_div.querySelector("#grid-canvas")).toBeNull();
+        expect(board_div.querySelector(".GridBackgroundLayer")).toBeNull();
+        expect(board_div.querySelector("#board-canvas")).not.toBeNull();
+
+        goban.destroy();
+    });
+
+    test("does not attach optional grid background layers for custom themes without a grid URL", () => {
+        callbacks.getSelectedThemes = () => selectedThemes("Custom");
+        const goban = new GobanCanvas(basic3x3Config({ width: 9, height: 9 }));
+
+        expect(board_div.querySelector("#grid-canvas")).toBeNull();
+        expect(board_div.querySelector(".GridBackgroundLayer")).toBeNull();
+        expect(board_div.querySelector("#board-canvas")).not.toBeNull();
+
+        goban.destroy();
+    });
+
+    test("attaches optional grid background layers for a configured custom grid background", () => {
+        callbacks.getSelectedThemes = () =>
+            selectedThemes("Custom", "https://cdn.example.test/grid-9.png");
+        const goban = new GobanCanvas(basic3x3Config({ width: 9, height: 9 }));
+
+        const grid_layer = board_div.querySelector<HTMLCanvasElement>("#grid-canvas");
+        const grid_background_layer =
+            board_div.querySelector<HTMLDivElement>(".GridBackgroundLayer");
+        const board = board_div.querySelector<HTMLCanvasElement>("#board-canvas");
+
+        if (!grid_layer || !grid_background_layer || !board) {
+            throw new Error("Expected grid background layers and board canvas to exist");
+        }
+
+        const children = Array.from(board.parentNode?.childNodes ?? []);
+        expect(grid_layer.className).toBe("GridLayer");
+        expect(grid_background_layer.className).toBe("GridBackgroundLayer");
+        expect(children.indexOf(grid_layer)).toBeLessThan(children.indexOf(grid_background_layer));
+        expect(children.indexOf(grid_background_layer)).toBeLessThan(children.indexOf(board));
+        expect(grid_background_layer.style.backgroundImage).toContain("grid-9.png");
+
+        goban.destroy();
+    });
+
+    test("detaches optional grid background layers when switching away from custom grid backgrounds", () => {
+        let themes = selectedThemes("Custom", "https://cdn.example.test/grid-9.png");
+        callbacks.getSelectedThemes = () => themes;
+        const goban = new GobanCanvas(basic3x3Config({ width: 9, height: 9 }));
+
+        expect(board_div.querySelector("#grid-canvas")).not.toBeNull();
+        expect(board_div.querySelector(".GridBackgroundLayer")).not.toBeNull();
+
+        themes = selectedThemes("Kaya");
+        goban.setTheme(themes, false);
+
+        expect(board_div.querySelector("#grid-canvas")).toBeNull();
+        expect(board_div.querySelector(".GridBackgroundLayer")).toBeNull();
+        expect(board_div.querySelector("#board-canvas")).not.toBeNull();
+
+        goban.destroy();
+    });
+
+    test("does not keep grid context when optional grid layer insertion fails", () => {
+        callbacks.getSelectedThemes = () => selectedThemes("Kaya");
+        const goban = new GobanCanvas(basic3x3Config({ width: 9, height: 9 }));
+        const internals = goban as unknown as {
+            grid_ctx?: CanvasRenderingContext2D;
+            grid_layer?: HTMLCanvasElement;
+            grid_background_layer?: HTMLDivElement;
+        };
+
+        const insert_before = jest.spyOn(board_div, "insertBefore").mockImplementation(() => {
+            throw new Error("insert failed");
+        });
+        const append_child = jest.spyOn(board_div, "appendChild").mockImplementation(() => {
+            throw new Error("append failed");
+        });
+        const console_warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+        const console_error = jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+        goban.setTheme(selectedThemes("Custom", "https://cdn.example.test/grid-9.png"), false);
+
+        expect(internals.grid_ctx).toBeUndefined();
+        expect(internals.grid_layer).toBeUndefined();
+        expect(internals.grid_background_layer).toBeUndefined();
+        expect(board_div.querySelector("#grid-canvas")).toBeNull();
+        expect(board_div.querySelector(".GridBackgroundLayer")).toBeNull();
+
+        insert_before.mockRestore();
+        append_child.mockRestore();
+        console_warn.mockRestore();
+        console_error.mockRestore();
         goban.destroy();
     });
 });

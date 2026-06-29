@@ -43,6 +43,7 @@ import {
     ShadowTheme,
     CaptureDisplayConfig,
     CaptureDisplay,
+    ResolvedBoardBackground,
 } from "./Goban";
 import { ColoredCircle } from "./InteractiveBase";
 
@@ -136,6 +137,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private handleShiftKey: (ev: KeyboardEvent) => void;
 
     private lines_layer?: SVGGraphicsElement;
+    private grid_background_layer?: SVGImageElement;
     private crosshair_layer?: SVGGraphicsElement;
     private coordinate_labels_layer?: SVGGraphicsElement;
     private grid: Array<Array<SVGGraphicsElement>> = [];
@@ -324,6 +326,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         // detached subtree can be GC'd (mirrors the Canvas detachCrosshairLayer).
         delete this.crosshair_layer;
         delete this.grid_layer;
+        delete this.grid_background_layer;
 
         this.detachPenLayer();
 
@@ -3728,6 +3731,48 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
 
+    private syncBoardBackground(background: ResolvedBoardBackground): void {
+        this.applyBaseBoardBackground(background);
+
+        const grid = background.grid;
+        if (!grid) {
+            this.grid_background_layer?.remove();
+            this.grid_background_layer = undefined;
+            return;
+        }
+
+        if (!this.grid_background_layer) {
+            this.grid_background_layer = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "image",
+            );
+            this.grid_background_layer.setAttribute("class", "grid-background");
+            this.grid_background_layer.setAttribute("pointer-events", "none");
+        }
+
+        this.grid_background_layer.setAttribute("x", grid.x.toString());
+        this.grid_background_layer.setAttribute("y", grid.y.toString());
+        this.grid_background_layer.setAttribute("width", grid.width.toString());
+        this.grid_background_layer.setAttribute("height", grid.height.toString());
+        this.grid_background_layer.setAttribute("preserveAspectRatio", "none");
+        this.grid_background_layer.setAttribute("href", grid.url);
+        this.grid_background_layer.setAttributeNS("http://www.w3.org/1999/xlink", "href", grid.url);
+
+        const reference = this.coordinate_labels_layer ?? this.lines_layer?.nextSibling ?? null;
+        /*
+         * insertBefore handles both first insertion and moving an existing node, but
+         * nextSibling is also null for detached nodes. Keep the parent check so the
+         * first insert still happens, and the nextSibling check so redraws do not
+         * move an already-correct layer before coordinate labels on every sync.
+         */
+        if (
+            this.grid_background_layer.parentNode !== this.svg ||
+            this.grid_background_layer.nextSibling !== reference
+        ) {
+            this.svg.insertBefore(this.grid_background_layer, reference);
+        }
+    }
+
     /* Last-move crosshair: a dedicated layer kept directly beneath the stone
      * grid layer (so the lines pass under the stones) holding the full
      * horizontal and vertical lines through the last move. Rebuilt on every
@@ -4027,7 +4072,19 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
         }
 
+        if (force_clear && this.coordinate_labels_layer) {
+            this.coordinate_labels_layer.remove();
+            delete this.coordinate_labels_layer;
+        }
+
         this.drawLines(force_clear);
+        this.syncBoardBackgroundIfNeeded(
+            this.theme_board,
+            this.themes,
+            (background) => this.syncBoardBackground(background),
+            // force_clear rebuilds SVG layers, so re-check placement even if geometry is unchanged.
+            !!force_clear,
+        );
         this.drawCoordinateLabels(force_clear);
 
         if (force_clear || !this.grid_layer || !this.shadow_layer) {
@@ -4217,6 +4274,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.themes = themes;
+        this.invalidateBoardBackgroundSync();
         const BoardTheme = THEMES["board"]?.[themes.board] || THEMES["board"]["Plain"];
         const WhiteTheme = THEMES["white"]?.[themes.white] || THEMES["white"]["Plain"];
         const BlackTheme = THEMES["black"]?.[themes.black] || THEMES["black"]["Plain"];
@@ -4276,11 +4334,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         this.theme_shadow_color = this.theme_board.getShadowColor();
-        const bg_css = this.theme_board.getBackgroundCSS();
-        if (this.parent) {
-            for (const key in bg_css) {
-                (this.parent.style as any)[key] = (bg_css as any)[key];
-            }
+        if (dont_redraw) {
+            this.syncBoardBackgroundIfNeeded(this.theme_board, this.themes, (background) =>
+                this.syncBoardBackground(background),
+            );
+        } else {
+            // Preserve the previous eager base-board update; redraw will sync grid layers if needed.
+            const background = this.resolveBoardBackground(this.theme_board, this.themes);
+            this.applyBaseBoardBackground(background);
         }
 
         if (!dont_redraw) {

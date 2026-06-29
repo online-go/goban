@@ -38,7 +38,14 @@ function makeSvgImageData(svg: string): string {
     return "data:image/svg+xml," + svg.replace(/#/g, "%23");
 }
 
-type StoneType = { stone: HTMLCanvasElement; shadow: HTMLCanvasElement };
+/* Canvas-backed custom URL stones can be pending or fail due to CORS/broken URLs.
+ * Track image readiness so board and move-tree drawing can use a plain-stone fallback
+ * instead of painting a blank pre-rendered canvas. */
+type StoneType = {
+    stone: HTMLCanvasElement;
+    shadow: HTMLCanvasElement;
+    image_loaded: boolean;
+};
 type StoneTypeArray = Array<StoneType>;
 
 function square_size(radius: number, scaled: boolean): number {
@@ -67,7 +74,7 @@ export function preRenderImageStone(
     }
 
     const ret: StoneTypeArray = [];
-    const promises: Promise<any>[] = [];
+    const promises: Promise<void>[] = [];
 
     for (const url of urls) {
         const stone_image = new Image(ss, ss);
@@ -76,16 +83,40 @@ export function preRenderImageStone(
         stone_image.width = ss;
         stone_image.height = ss;
 
-        stone_image.src = url;
-
         const stone = allocateCanvasOrError(`${ss}px`, `${ss}px`);
         const shadow = allocateCanvasOrError(`${sss}px`, `${sss}px`);
+        const rendered_stone: StoneType = {
+            stone,
+            shadow,
+            image_loaded: false,
+        };
 
-        const stone_load_promise = new Promise((resolve, reject) => {
-            stone_image.onerror = reject;
-            stone_image.onload = resolve;
+        const stone_load_promise = new Promise<void>((resolve) => {
+            stone_image.onerror = (err) => {
+                console.error(err);
+                resolve();
+            };
+            stone_image.onload = () => {
+                const stone_ctx = stone.getContext("2d", { willReadFrequently: true });
+
+                if (!stone_ctx) {
+                    console.error(new Error("Error getting stone context 2d"));
+                    resolve();
+                    return;
+                }
+
+                try {
+                    stone_ctx.drawImage(stone_image, 0, 0, ss, ss);
+                    rendered_stone.image_loaded = true;
+                } catch (err) {
+                    console.error(err);
+                }
+
+                resolve();
+            };
         });
         promises.push(stone_load_promise);
+        stone_image.src = url;
 
         const shadow_ctx = shadow.getContext("2d", { willReadFrequently: true });
         if (!shadow_ctx) {
@@ -95,20 +126,7 @@ export function preRenderImageStone(
             renderShadow(shadow_ctx, center, radius * 1.05, sss, 0.0, "rgba(60,60,40,0.4)");
         }
 
-        stone_load_promise
-            .then(() => {
-                const stone_ctx = stone.getContext("2d", { willReadFrequently: true });
-
-                if (!stone_ctx) {
-                    throw new Error("Error getting stone context 2d");
-                }
-
-                stone_ctx.drawImage(stone_image, 0, 0, ss, ss);
-                //deferredRenderCallback();
-            })
-            .catch((err) => console.error(err));
-
-        ret.push({ stone, shadow });
+        ret.push(rendered_stone);
     }
 
     Promise.all(promises)
@@ -116,6 +134,10 @@ export function preRenderImageStone(
         .catch((err) => console.error(err));
 
     return ret;
+}
+
+function imageStoneIsReady(stone: StoneType): boolean {
+    return stone.image_loaded;
 }
 
 export function placeRenderedImageStone(
@@ -302,7 +324,11 @@ export default function (THEMES: ThemesInterface) {
             cy: number,
             radius: number,
         ): void {
-            if (callbacks.customBlackStoneUrl && callbacks.customBlackStoneUrl() !== "") {
+            if (
+                callbacks.customBlackStoneUrl &&
+                callbacks.customBlackStoneUrl() !== "" &&
+                imageStoneIsReady(stone)
+            ) {
                 placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
             } else {
                 renderPlainStone(
@@ -349,7 +375,11 @@ export default function (THEMES: ThemesInterface) {
             cy: number,
             radius: number,
         ): void {
-            if (callbacks.customWhiteStoneUrl && callbacks.customWhiteStoneUrl() !== "") {
+            if (
+                callbacks.customWhiteStoneUrl &&
+                callbacks.customWhiteStoneUrl() !== "" &&
+                imageStoneIsReady(stone)
+            ) {
                 placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
             } else {
                 renderPlainStone(

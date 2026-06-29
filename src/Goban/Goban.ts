@@ -21,9 +21,58 @@ import { callbacks } from "./callbacks";
 import { makeMatrix, StoneStringBuilder } from "../engine";
 import { getRelativeEventPosition } from "./canvas_utils";
 import { THEMES, THEMES_SORTED } from "./themes";
+import type { GobanTheme, GobanThemeBackgroundCSS } from "./themes/GobanTheme";
 
 export const GOBAN_FONT = "Verdana,Arial,sans-serif";
 export type ShadowTheme = "none" | "low" | "mid" | "high" | "custom" | "default" | "anime";
+export type BoardGridBackgroundSize = "9" | "13" | "19";
+export type BoardGridBackgroundNumericSize = 9 | 13 | 19;
+export type CustomBoardGridBackgrounds = Record<BoardGridBackgroundSize, string>;
+
+export const emptyCustomBoardGridBackgrounds: CustomBoardGridBackgrounds = {
+    "9": "",
+    "13": "",
+    "19": "",
+};
+
+export type BoardBackgroundAsset =
+    | { kind: "default"; url: string; hasGrid: false }
+    | {
+          kind: "grid";
+          url: string;
+          hasGrid: true;
+          size: BoardGridBackgroundNumericSize;
+          marginProfile: "coordinate-space-all-sides";
+          bakedCoordinates: false;
+      };
+
+export interface ResolvedBoardBackground {
+    baseCSS: GobanThemeBackgroundCSS;
+    grid?: {
+        asset: Extract<BoardBackgroundAsset, { kind: "grid" }>;
+        css: GobanThemeBackgroundCSS;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        url: string;
+    };
+}
+
+function isBoardGridBackgroundSize(size: number): size is BoardGridBackgroundNumericSize {
+    return size === 9 || size === 13 || size === 19;
+}
+
+function boardGridBackgroundKey(size: BoardGridBackgroundNumericSize): BoardGridBackgroundSize {
+    switch (size) {
+        case 9:
+            return "9";
+        case 13:
+            return "13";
+        case 19:
+            return "19";
+    }
+}
 
 export interface CustomShadowConfig {
     black?: {
@@ -44,6 +93,14 @@ export interface GobanSelectedThemes {
     "removal-scale": number;
     "stone-shadows"?: ShadowTheme;
     "custom-shadow-config"?: CustomShadowConfig;
+    /*
+     * V1 stores only one baked-grid background URL per supported board size, and those
+     * assets use the same margin geometry as a board with coordinate labels on all sides.
+     * Keep the renderer-facing asset descriptor more explicit than this compact preference
+     * so future small-margin assets, baked labels, label origins, and coordinate systems can
+     * be added without reinterpreting saved URLs.
+     */
+    "custom-board-grid-backgrounds"?: CustomBoardGridBackgrounds;
 }
 export type LabelPosition =
     | "all"
@@ -99,6 +156,7 @@ export abstract class Goban extends OGSConnectivity {
     private analysis_scoring_last_position: { i: number; j: number } = { i: NaN, j: NaN };
     private _evaluation: number = 0.5;
     private _evaluation_bar_width: number = 8;
+    private board_background_sync_key?: string;
 
     /* State for the timing-based double-click fallback shared by the renderers
      * (#3364). The browser does not always synthesize a native `dblclick`: if
@@ -389,6 +447,146 @@ export abstract class Goban extends OGSConnectivity {
         });
         this.setSquareSize(square_size, suppress_redraw);
         this.evaluation_bar_width = Goban.computeEvaluationBarWidth(this.display_width);
+    }
+
+    protected resolveBoardBackground(
+        theme_board: Pick<GobanTheme, "getBackgroundCSS">,
+        themes: GobanSelectedThemes,
+    ): ResolvedBoardBackground {
+        const default_css = theme_board.getBackgroundCSS();
+        const default_background: ResolvedBoardBackground = {
+            baseCSS: {
+                ...default_css,
+                "background-position": "",
+                "background-repeat": "",
+            },
+        };
+
+        if (themes.board !== "Custom" || this.width !== this.height) {
+            return default_background;
+        }
+
+        const board_size = this.width;
+        if (!isBoardGridBackgroundSize(board_size)) {
+            return default_background;
+        }
+
+        if (!Number.isFinite(this.square_size) || this.square_size <= 0) {
+            return default_background;
+        }
+
+        const url =
+            themes["custom-board-grid-backgrounds"]?.[boardGridBackgroundKey(board_size)].trim() ||
+            "";
+
+        if (!url) {
+            return default_background;
+        }
+
+        /*
+         * The first baked-grid asset profile is intentionally explicit:
+         * - marginProfile describes geometry, not whether coordinates are in the image.
+         * - bakedCoordinates stays false for v1 because OGS still draws labels as overlays.
+         * Future profiles can add small margins or baked coordinate labels without changing
+         * the meaning of existing saved preferences.
+         *
+         * The baked-grid image is rendered as a layer above the vector grid, not as a
+         * replacement for it. This is deliberate graceful degradation: if an external
+         * baked-grid URL is slow or broken, the browser simply leaves that layer blank and
+         * the default board background plus vector grid below remain usable. The default
+         * board image itself still falls back to the board color if its URL fails.
+         */
+        const asset: Extract<BoardBackgroundAsset, { kind: "grid" }> = {
+            kind: "grid",
+            url,
+            hasGrid: true,
+            size: board_size,
+            marginProfile: "coordinate-space-all-sides",
+            bakedCoordinates: false,
+        };
+        const virtual_width = (this.width + 2) * this.square_size;
+        const virtual_height = (this.height + 2) * this.square_size;
+        const visible_left =
+            this.bounds.left + (this.draw_left_labels && this.bounds.left === 0 ? 0 : 1);
+        const visible_top =
+            this.bounds.top + (this.draw_top_labels && this.bounds.top === 0 ? 0 : 1);
+
+        return {
+            baseCSS: default_background.baseCSS,
+            grid: {
+                asset,
+                url,
+                x: -visible_left * this.square_size,
+                y: -visible_top * this.square_size,
+                width: virtual_width,
+                height: virtual_height,
+                css: {
+                    "background-image": "url('" + url + "')",
+                    "background-size": `${virtual_width}px ${virtual_height}px`,
+                    "background-position": `${-visible_left * this.square_size}px ${
+                        -visible_top * this.square_size
+                    }px`,
+                    "background-repeat": "no-repeat",
+                },
+            },
+        };
+    }
+
+    /*
+     * Baked-grid backgrounds are synced from redraw, not only from theme changes,
+     * because their geometry follows square size, cropped bounds, and coordinate
+     * label margins. Keep that redraw call cheap: theme changes explicitly
+     * invalidate this key, and geometry changes produce a different key.
+     */
+    protected syncBoardBackgroundIfNeeded(
+        theme_board: Pick<GobanTheme, "getBackgroundCSS">,
+        themes: GobanSelectedThemes,
+        sync: (background: ResolvedBoardBackground) => void,
+        force: boolean = false,
+    ): void {
+        const sync_key = this.getBoardBackgroundSyncKey(themes);
+        if (!force && this.board_background_sync_key === sync_key) {
+            return;
+        }
+
+        sync(this.resolveBoardBackground(theme_board, themes));
+        this.board_background_sync_key = sync_key;
+    }
+
+    protected invalidateBoardBackgroundSync(): void {
+        this.board_background_sync_key = undefined;
+    }
+
+    private getBoardBackgroundSyncKey(themes: GobanSelectedThemes): string {
+        const grid_backgrounds = themes["custom-board-grid-backgrounds"];
+
+        return JSON.stringify([
+            themes.board,
+            grid_backgrounds?.["9"] || "",
+            grid_backgrounds?.["13"] || "",
+            grid_backgrounds?.["19"] || "",
+            this.width,
+            this.height,
+            this.square_size,
+            this.bounds.left,
+            this.bounds.top,
+            this.bounds.right,
+            this.bounds.bottom,
+            this.draw_left_labels,
+            this.draw_right_labels,
+            this.draw_top_labels,
+            this.draw_bottom_labels,
+        ]);
+    }
+
+    protected applyBaseBoardBackground(background: ResolvedBoardBackground): void {
+        const css = background.baseCSS;
+
+        this.parent.style.backgroundColor = css["background-color"] || "";
+        this.parent.style.backgroundImage = css["background-image"] || "";
+        this.parent.style.backgroundSize = css["background-size"] || "";
+        this.parent.style.backgroundPosition = css["background-position"] || "";
+        this.parent.style.backgroundRepeat = css["background-repeat"] || "";
     }
 
     set evaluation_bar_width(width: number) {

@@ -47,6 +47,30 @@
         z-index: var(--z-goban-pen-layer);
     }
 
+    /*
+     * The host application defines the --z-goban-* values. The optional themed
+     * baked-grid image layer is intentionally above the vector grid and below
+     * shadows/stones: if the image loads it covers the vector grid; if it does
+     * not load, the vector grid remains visible as graceful degradation.
+     */
+    .GridLayer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: var(--z-goban-grid-layer);
+        pointer-events: none;
+    }
+
+    .GridBackgroundLayer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: var(--z-goban-grid-background-layer);
+        pointer-events: none;
+    }
+
     .StoneLayer {
         position: absolute;
         left: 0;
