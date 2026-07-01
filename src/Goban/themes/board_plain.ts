@@ -18,30 +18,7 @@ import { GobanTheme, GobanThemeBackgroundCSS } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { callbacks } from "../callbacks";
 import { _ } from "../../engine/translate";
-
-// Generates a color blended with its inverse by the provided alpha, returning a standard 6-digit hex color string.
-function blendWithInverseColor(raw: string, alpha: number = 1): string {
-    alpha = Math.max(0, Math.min(1, alpha));
-
-    const hex = raw.replace("#", "");
-    if (hex.length !== 6) {
-        console.error(`Invalid color: ${raw}`);
-        return raw;
-    }
-
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-
-    const invR = 255 - r;
-    const invG = 255 - g;
-    const invB = 255 - b;
-
-    const blend = (c: number, inv: number) => Math.round(inv * (1 - alpha) + c * alpha);
-
-    const toHex = (n: number) => n.toString(16).padStart(2, "0");
-    return `#${toHex(blend(r, invR))}${toHex(blend(g, invG))}${toHex(blend(b, invB))}`;
-}
+import { blendWithInverseColor } from "../../engine/util/color";
 
 export default function (THEMES: ThemesInterface) {
     class Plain extends GobanTheme {
@@ -124,6 +101,10 @@ export default function (THEMES: ThemesInterface) {
             return callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000";
         }
         override getLabelTextColor(): string {
+            if (callbacks.customBoardLabelColor) {
+                return callbacks.customBoardLabelColor();
+            }
+
             return blendWithInverseColor(
                 callbacks.customBoardLineColor ? callbacks.customBoardLineColor() : "#000000",
                 0.75,

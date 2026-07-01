@@ -45,6 +45,7 @@ export interface GobanCallbacks {
     customWhiteTextColor?: () => string;
     customBoardColor?: () => string;
     customBoardLineColor?: () => string;
+    customBoardLabelColor?: () => string;
     customBoardUrl?: () => string;
     customBlackStoneUrl?: () => string;
     customWhiteStoneUrl?: () => string;
