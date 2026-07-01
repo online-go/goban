@@ -26,6 +26,30 @@ export function color_blend(c1: string, c2: string): string {
     );
 }
 
+/** Blend a color with its inverse by the provided alpha, returning a 6-digit hex color. */
+export function blendWithInverseColor(raw: string, alpha: number = 1): string {
+    alpha = Math.max(0, Math.min(1, alpha));
+
+    const hex = raw.replace("#", "");
+    if (hex.length !== 6) {
+        console.error(`Invalid color: ${raw}`);
+        return raw;
+    }
+
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    const invR = 255 - r;
+    const invG = 255 - g;
+    const invB = 255 - b;
+
+    const blend = (c: number, inv: number) => Math.round(inv * (1 - alpha) + c * alpha);
+
+    const toHex = (n: number) => n.toString(16).padStart(2, "0");
+    return `#${toHex(blend(r, invR))}${toHex(blend(g, invG))}${toHex(blend(b, invB))}`;
+}
+
 /** Convert hex color to RGB */
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
