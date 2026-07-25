@@ -122,6 +122,57 @@ function selectedThemesWithoutStoneScale(): GobanSelectedThemes {
     return themes as GobanSelectedThemes;
 }
 
+function customStoneThemes(): GobanSelectedThemes {
+    return {
+        ...selectedThemes("Kaya"),
+        black: "Custom",
+        white: "Custom",
+    };
+}
+
+describe("theme colors", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+
+        callbacks.getSelectedThemes = customStoneThemes;
+        callbacks.customBlackStoneColor = () => "#112233";
+        callbacks.customBlackTextColor = () => "#aabbcc";
+        callbacks.customWhiteStoneColor = () => "#ddeeff";
+        callbacks.customWhiteTextColor = () => "#334455";
+        callbacks.customBlackStoneUrl = () => "";
+        callbacks.customWhiteStoneUrl = () => "";
+    });
+
+    afterEach(() => {
+        delete callbacks.getSelectedThemes;
+        delete callbacks.customBlackStoneColor;
+        delete callbacks.customBlackTextColor;
+        delete callbacks.customWhiteStoneColor;
+        delete callbacks.customWhiteTextColor;
+        delete callbacks.customBlackStoneUrl;
+        delete callbacks.customWhiteStoneUrl;
+        board_div.remove();
+    });
+
+    test("keeps perceived stone colors separate from marker colors", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        const colors = goban as unknown as {
+            theme_black_stone_color: string;
+            theme_black_text_color: string;
+            theme_white_stone_color: string;
+            theme_white_text_color: string;
+        };
+
+        expect(colors.theme_black_stone_color).toBe("#112233");
+        expect(colors.theme_black_text_color).toBe("#aabbcc");
+        expect(colors.theme_white_stone_color).toBe("#ddeeff");
+        expect(colors.theme_white_text_color).toBe("#334455");
+
+        goban.destroy();
+    });
+});
+
 describe("stone scale", () => {
     beforeEach(() => {
         board_div = document.createElement("div");

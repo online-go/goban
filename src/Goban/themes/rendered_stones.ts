@@ -1045,6 +1045,10 @@ export default function (THEMES: ThemesInterface) {
             return "#888888";
         }
 
+        override getBlackStoneColor(): string {
+            return "#000000";
+        }
+
         override preRenderWhite(radius: number, seed: number): StoneTypeArray {
             return preRenderStone(radius, (seed *= 13), {
                 base_color: "rgba(100,100,100,1.0)",
@@ -1058,6 +1062,12 @@ export default function (THEMES: ThemesInterface) {
 
         override getWhiteTextColor(color: string): string {
             return "#000000";
+        }
+
+        override getWhiteStoneColor(): string {
+            // Preserve the existing ownership color for now. Perceived colors for
+            // image and gradient themes can be tuned independently in a follow-up.
+            return "#888888";
         }
         /*
         public override preRenderBlackSVG(
