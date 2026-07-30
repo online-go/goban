@@ -151,6 +151,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         "stone-shadows": "default",
     };
     private theme_black!: GobanTheme;
+    private theme_black_stone_color: string = HOT_PINK;
     private theme_black_stones: Array<any> = [];
     private theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
@@ -162,6 +163,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
     private theme_white!: GobanTheme;
+    private theme_white_stone_color: string = HOT_PINK;
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
 
@@ -2018,9 +2020,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             ctx.lineTo(cx - r, cy + r);
 
             if (pos.score === "black" && color === "white") {
-                ctx.strokeStyle = this.theme_white_text_color;
+                ctx.strokeStyle = this.theme_black_stone_color;
             } else if (pos.score === "white" && color === "black") {
-                ctx.strokeStyle = this.theme_black_text_color;
+                ctx.strokeStyle = this.theme_white_stone_color;
             } else if (
                 (pos.score === "white" && color === "white") ||
                 (pos.score === "black" && color === "black")
@@ -2122,10 +2124,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 }
 
                 if (color === "white") {
-                    ctx.fillStyle = this.theme_black_text_color;
+                    ctx.fillStyle = this.theme_white_stone_color;
                     ctx.strokeStyle = "#777777";
                 } else if (color === "black") {
-                    ctx.fillStyle = this.theme_white_text_color;
+                    ctx.fillStyle = this.theme_black_stone_color;
                     ctx.strokeStyle = "#888888";
                 } else if (color === "dame") {
                     ctx.fillStyle = "#ff0000";
@@ -2498,10 +2500,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
             if (color_num !== stone_color) {
                 if (color === "white") {
-                    ctx.fillStyle = this.theme_black_text_color;
+                    ctx.fillStyle = this.theme_white_stone_color;
                     ctx.strokeStyle = "#777777";
                 } else if (color === "black") {
-                    ctx.fillStyle = this.theme_white_text_color;
+                    ctx.fillStyle = this.theme_black_stone_color;
                     ctx.strokeStyle = "#888888";
                 }
                 ctx.lineWidth = Math.ceil(this.square_size * 0.035) - 0.5;
@@ -3466,7 +3468,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.theme_star_color = this.theme_board.getStarColor();
         this.theme_faded_star_color = this.theme_board.getFadedStarColor();
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
+        this.theme_black_stone_color = this.theme_black.getBlackStoneColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
+        this.theme_white_stone_color = this.theme_white.getWhiteStoneColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         if (dont_redraw && this.ready_to_draw) {
             this.syncBoardBackgroundIfNeeded(this.theme_board, this.themes, (background) =>

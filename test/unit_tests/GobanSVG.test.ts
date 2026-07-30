@@ -114,6 +114,55 @@ function selectedThemesWithoutStoneScale(): GobanSelectedThemes {
     return themes as GobanSelectedThemes;
 }
 
+function customStoneThemes(): GobanSelectedThemes {
+    return {
+        ...selectedThemes(),
+        black: "Custom",
+        white: "Custom",
+    };
+}
+
+describe("theme colors", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+
+        callbacks.getSelectedThemes = customStoneThemes;
+        callbacks.customBlackStoneColor = () => "#112233";
+        callbacks.customBlackTextColor = () => "#aabbcc";
+        callbacks.customWhiteStoneColor = () => "#ddeeff";
+        callbacks.customWhiteTextColor = () => "#334455";
+        callbacks.customBlackStoneUrl = () => "";
+        callbacks.customWhiteStoneUrl = () => "";
+    });
+
+    afterEach(() => {
+        delete callbacks.getSelectedThemes;
+        delete callbacks.customBlackStoneColor;
+        delete callbacks.customBlackTextColor;
+        delete callbacks.customWhiteStoneColor;
+        delete callbacks.customWhiteTextColor;
+        delete callbacks.customBlackStoneUrl;
+        delete callbacks.customWhiteStoneUrl;
+        board_div.remove();
+    });
+
+    test("uses marker colors for stone symbols and stone colors for ownership", () => {
+        const goban = new SVGRenderer(basic3x3Config());
+        goban.cell(0, 0).lastMove("o", goban.theme_black_text_color, 1);
+        goban.cell(1, 0).scoreEstimate("white", 1);
+        const svg = (goban as unknown as { svg: SVGSVGElement }).svg;
+
+        const last_move = svg.querySelector<SVGElement>(".last-move");
+        const white_ownership = svg.querySelector<SVGRectElement>('rect[fill="#ddeeff"]');
+
+        expect(last_move?.getAttribute("stroke")).toBe("#aabbcc");
+        expect(white_ownership).not.toBeNull();
+
+        goban.destroy();
+    });
+});
+
 describe("stone scale", () => {
     beforeEach(() => {
         board_div = document.createElement("div");

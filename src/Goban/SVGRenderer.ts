@@ -175,6 +175,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         "stone-shadows": "default",
     };
     public theme_black!: GobanTheme;
+    public theme_black_stone_color: string = HOT_PINK;
     private theme_black_stones: Array<any> = [];
     public theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
@@ -187,6 +188,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
     public theme_white!: GobanTheme;
+    public theme_white_stone_color: string = HOT_PINK;
     private theme_white_stones: Array<any> = [];
     public theme_white_text_color: string = HOT_PINK;
 
@@ -1699,9 +1701,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             let r = Math.max(1, mid * 0.5);
 
             if (pos.score === "black" && color === "white") {
-                fill = this.theme_white_text_color;
+                fill = this.theme_black_stone_color;
             } else if (pos.score === "white" && color === "black") {
-                fill = this.theme_black_text_color;
+                fill = this.theme_white_stone_color;
             } else if (
                 (pos.score === "white" && color === "white") ||
                 (pos.score === "black" && color === "black")
@@ -1797,11 +1799,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             let fill = "";
             let stroke = "";
             if (color === "white") {
-                fill = this.theme_black_text_color;
+                fill = this.theme_white_stone_color;
                 stroke = "#777777";
             }
             if (color === "black") {
-                fill = this.theme_white_text_color;
+                fill = this.theme_black_stone_color;
                 stroke = "#888888";
             }
             if (color === "dame") {
@@ -2558,9 +2560,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 this.engine.board[j][i] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
 
             if (pos.score === "black" && color === "white") {
-                cross.setAttribute("fill", this.theme_white_text_color);
+                cross.setAttribute("fill", this.theme_black_stone_color);
             } else if (pos.score === "white" && color === "black") {
-                cross.setAttribute("fill", this.theme_black_text_color);
+                cross.setAttribute("fill", this.theme_white_stone_color);
             } else if (
                 (pos.score === "white" && color === "white") ||
                 (pos.score === "black" && color === "black")
@@ -2716,11 +2718,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 rect.setAttribute("width", (r * 2).toFixed(1));
                 rect.setAttribute("height", (r * 2).toFixed(1));
                 if (color === "white") {
-                    rect.setAttribute("fill", this.theme_black_text_color);
+                    rect.setAttribute("fill", this.theme_white_stone_color);
                     rect.setAttribute("stroke", "#777777");
                 }
                 if (color === "black") {
-                    rect.setAttribute("fill", this.theme_white_text_color);
+                    rect.setAttribute("fill", this.theme_black_stone_color);
                     rect.setAttribute("stroke", "#888888");
                 }
                 if (color === "dame") {
@@ -3149,11 +3151,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 rect.setAttribute("width", (r * 2).toFixed(1));
                 rect.setAttribute("height", (r * 2).toFixed(1));
                 if (color === "white") {
-                    rect.setAttribute("fill", this.theme_black_text_color);
+                    rect.setAttribute("fill", this.theme_white_stone_color);
                     rect.setAttribute("stroke", "#777777");
                 }
                 if (color === "black") {
-                    rect.setAttribute("fill", this.theme_white_text_color);
+                    rect.setAttribute("fill", this.theme_black_stone_color);
                     rect.setAttribute("stroke", "#888888");
                 }
                 rect.setAttribute(
@@ -4337,7 +4339,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.theme_star_color = this.theme_board.getStarColor();
         this.theme_faded_star_color = this.theme_board.getFadedStarColor();
         this.theme_blank_text_color = this.theme_board.getBlankTextColor();
+        this.theme_black_stone_color = this.theme_black.getBlackStoneColor();
         this.theme_black_text_color = this.theme_black.getBlackTextColor();
+        this.theme_white_stone_color = this.theme_white.getWhiteStoneColor();
         this.theme_white_text_color = this.theme_white.getWhiteTextColor();
         this.theme_shadow_color = this.theme_board.getShadowColor();
         if (dont_redraw) {
@@ -6227,11 +6231,11 @@ class GCell {
         rect.setAttribute("width", (r * 2).toFixed(1));
         rect.setAttribute("height", (r * 2).toFixed(1));
         if (color === "white") {
-            rect.setAttribute("fill", this.renderer.theme_black_text_color);
+            rect.setAttribute("fill", this.renderer.theme_white_stone_color);
             rect.setAttribute("stroke", "#777777");
         }
         if (color === "black") {
-            rect.setAttribute("fill", this.renderer.theme_white_text_color);
+            rect.setAttribute("fill", this.renderer.theme_black_stone_color);
             rect.setAttribute("stroke", "#888888");
         }
         rect.setAttribute("stroke-width", (Math.ceil(ss * 0.035) - 0.5).toFixed(1));
