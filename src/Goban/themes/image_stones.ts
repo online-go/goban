@@ -48,6 +48,10 @@ type StoneType = {
 };
 type StoneTypeArray = Array<StoneType>;
 
+function getCustomStoneUrls(callback: (() => string[]) | undefined): string[] {
+    return callback?.() ?? [];
+}
+
 function square_size(radius: number, scaled: boolean): number {
     return 2 * Math.floor(radius) + (scaled ? 0 : 1);
 }
@@ -325,8 +329,7 @@ export default function (THEMES: ThemesInterface) {
             radius: number,
         ): void {
             if (
-                callbacks.customBlackStoneUrl &&
-                callbacks.customBlackStoneUrl() !== "" &&
+                getCustomStoneUrls(callbacks.customBlackStoneUrls).length > 0 &&
                 imageStoneIsReady(stone)
             ) {
                 placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
@@ -346,13 +349,14 @@ export default function (THEMES: ThemesInterface) {
             radius: number,
             _seed: number,
             deferredRenderCallback: () => void,
-        ): StoneTypeArray | boolean {
-            if (!callbacks.customBlackStoneUrl || callbacks.customBlackStoneUrl() === "") {
+        ): StoneTypeArray | true {
+            const [url] = getCustomStoneUrls(callbacks.customBlackStoneUrls);
+            if (!url) {
                 return true;
             }
             return preRenderImageStone(
                 radius,
-                callbacks.customBlackStoneUrl ? callbacks.customBlackStoneUrl() : "",
+                url,
                 deferredRenderCallback,
                 false /* show_shadow */,
             );
@@ -376,8 +380,7 @@ export default function (THEMES: ThemesInterface) {
             radius: number,
         ): void {
             if (
-                callbacks.customWhiteStoneUrl &&
-                callbacks.customWhiteStoneUrl() !== "" &&
+                getCustomStoneUrls(callbacks.customWhiteStoneUrls).length > 0 &&
                 imageStoneIsReady(stone)
             ) {
                 placeRenderedImageStone(ctx, shadow_ctx, stone, cx, cy, radius);
@@ -397,13 +400,14 @@ export default function (THEMES: ThemesInterface) {
             radius: number,
             _seed: number,
             deferredRenderCallback: () => void,
-        ): StoneTypeArray | boolean {
-            if (!callbacks.customWhiteStoneUrl || callbacks.customWhiteStoneUrl() === "") {
+        ): StoneTypeArray | true {
+            const [url] = getCustomStoneUrls(callbacks.customWhiteStoneUrls);
+            if (!url) {
                 return true;
             }
             return preRenderImageStone(
                 radius,
-                callbacks.customWhiteStoneUrl ? callbacks.customWhiteStoneUrl() : "",
+                url,
                 deferredRenderCallback,
                 false /* show_shadow */,
             );
@@ -424,22 +428,16 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): string[] {
-            if (!callbacks.customBlackStoneUrl || callbacks.customBlackStoneUrl() === "") {
+            const urls = getCustomStoneUrls(callbacks.customBlackStoneUrls);
+            if (urls.length === 0) {
                 return super.preRenderBlackSVG(defs, radius, _seed, deferredRenderCallback);
             }
 
-            const id = this.def_uid(`custom-black-${radius}`);
-            defs.append(
-                this.renderSVG(
-                    {
-                        id,
-                        url: callbacks.customBlackStoneUrl(),
-                    },
-                    radius,
-                ),
-            );
-
-            return [id];
+            return urls.map((url, index) => {
+                const id = this.def_uid(`custom-black-${index}-${radius}`);
+                defs.append(this.renderSVG({ id, url }, radius));
+                return id;
+            });
         }
 
         public override preRenderWhiteSVG(
@@ -448,22 +446,16 @@ export default function (THEMES: ThemesInterface) {
             _seed: number,
             deferredRenderCallback: () => void,
         ): string[] {
-            if (!callbacks.customWhiteStoneUrl || callbacks.customWhiteStoneUrl() === "") {
+            const urls = getCustomStoneUrls(callbacks.customWhiteStoneUrls);
+            if (urls.length === 0) {
                 return super.preRenderWhiteSVG(defs, radius, _seed, deferredRenderCallback);
             }
 
-            const id = this.def_uid(`custom-white-${radius}`);
-            defs.append(
-                this.renderSVG(
-                    {
-                        id,
-                        url: callbacks.customWhiteStoneUrl(),
-                    },
-                    radius,
-                ),
-            );
-
-            return [id];
+            return urls.map((url, index) => {
+                const id = this.def_uid(`custom-white-${index}-${radius}`);
+                defs.append(this.renderSVG({ id, url }, radius));
+                return id;
+            });
         }
     }
 

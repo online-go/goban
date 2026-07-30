@@ -47,8 +47,10 @@ export interface GobanCallbacks {
     customBoardLineColor?: () => string;
     customBoardLabelColor?: () => string;
     customBoardUrl?: () => string;
-    customBlackStoneUrl?: () => string;
-    customWhiteStoneUrl?: () => string;
+    /** Returns custom black stone image URLs, trimmed and unique within the array. */
+    customBlackStoneUrls?: () => string[];
+    /** Returns custom white stone image URLs, trimmed and unique within the array. */
+    customWhiteStoneUrls?: () => string[];
 
     canvasAllocationErrorHandler?: (
         note: string | null,
@@ -72,6 +74,8 @@ export interface GobanCallbacks {
 
 export const callbacks: GobanCallbacks = {
     getClockDrift: () => 0,
+    customBlackStoneUrls: () => [],
+    customWhiteStoneUrls: () => [],
 };
 
 /**

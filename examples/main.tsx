@@ -68,11 +68,11 @@ Goban.setCallbacks({
         "stone-scale": 1.0,
     }),
 
-    customWhiteStoneUrl: () => {
-        return "https://cdn.online-go.com/goban/anime_white.svg";
+    customWhiteStoneUrls: () => {
+        return ["https://cdn.online-go.com/goban/anime_white.svg"];
     },
-    customBlackStoneUrl: () => {
-        return "https://cdn.online-go.com/goban/anime_black.svg";
+    customBlackStoneUrls: () => {
+        return ["https://cdn.online-go.com/goban/anime_black.svg"];
     },
 });
 
