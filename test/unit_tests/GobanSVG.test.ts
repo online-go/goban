@@ -132,8 +132,8 @@ describe("theme colors", () => {
         callbacks.customBlackTextColor = () => "#aabbcc";
         callbacks.customWhiteStoneColor = () => "#ddeeff";
         callbacks.customWhiteTextColor = () => "#334455";
-        callbacks.customBlackStoneUrl = () => "";
-        callbacks.customWhiteStoneUrl = () => "";
+        callbacks.customBlackStoneUrls = () => [];
+        callbacks.customWhiteStoneUrls = () => [];
     });
 
     afterEach(() => {
@@ -142,8 +142,8 @@ describe("theme colors", () => {
         delete callbacks.customBlackTextColor;
         delete callbacks.customWhiteStoneColor;
         delete callbacks.customWhiteTextColor;
-        delete callbacks.customBlackStoneUrl;
-        delete callbacks.customWhiteStoneUrl;
+        delete callbacks.customBlackStoneUrls;
+        delete callbacks.customWhiteStoneUrls;
         board_div.remove();
     });
 

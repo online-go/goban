@@ -5,17 +5,17 @@
         "target": "es2015",
         "module": "commonjs",
         "outDir": "./build/",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "removeComments": false,
         "declaration": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "lib": ["es2015", "dom"],
-        "baseUrl": ".",
+        "types": ["node", "jest"],
         "paths": {
-            "*": ["src/*", "*"],
-            "engine": ["src/engine"],
-            "goscorer": ["src/third_party/goscorer/goscorer"]
+            "*": ["./src/*", "./*"],
+            "engine": ["./src/engine"],
+            "goscorer": ["./src/third_party/goscorer/goscorer"]
         },
 
         "forceConsistentCasingInFileNames": true,

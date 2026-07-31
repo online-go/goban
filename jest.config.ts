@@ -202,7 +202,13 @@ export default {
     // A map from regular expressions to paths to transformers
     transform: {
         "^.+\\.ts?$": "ts-jest",
-        "^.+goscorer.mjs$": "ts-jest",
+        // TypeScript 6.0+ always emits .mjs files as ESM regardless of the
+        // "module" setting, which Jest's CommonJS runtime cannot load, so this
+        // vendored file is converted to CommonJS with babel instead of ts-jest.
+        "^.+goscorer.mjs$": [
+            "babel-jest",
+            { plugins: ["@babel/plugin-transform-modules-commonjs"] },
+        ],
         "^.+\\.svg$": "jest-transform-stub",
     },
 

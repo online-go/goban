@@ -1273,7 +1273,7 @@ export abstract class GobanInteractive extends GobanBase {
             this.player_id === this.engine.playerToMove() &&
             this.mode !== "score estimation"
         ) {
-            /* this shouldn't ever get called, but incase we screw up.. */
+            /* this shouldn't ever get called, but in case we screw up.. */
             try {
                 swal.fire("Can't enter conditional move planning when it's your turn");
             } catch (e) {
@@ -1553,7 +1553,7 @@ export abstract class GobanInteractive extends GobanBase {
                 }
             }
         } catch (e) {
-            console.error(e.stack);
+            console.error(e);
         }
     }
     protected setTransientMark(
@@ -1579,7 +1579,7 @@ export abstract class GobanInteractive extends GobanBase {
                 }
             }
         } catch (e) {
-            console.error(e.stack);
+            console.error(e);
         }
     }
     public getMarks(x: number, y: number): MarkInterface {
