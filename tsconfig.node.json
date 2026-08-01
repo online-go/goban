@@ -5,6 +5,7 @@
         "target": "es2022",
         "module": "node16",
         "outDir": "./engine/build/",
+        "rootDir": "./src",
         "moduleResolution": "node16",
         "esModuleInterop": true,
         "removeComments": false,
@@ -12,11 +13,10 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "lib": ["es2023", "dom"],
-        "baseUrl": ".",
         "paths": {
-            "*": ["src/*", "*"],
-            "engine": ["src/engine"],
-            "goscorer": ["src/third_party/goscorer/goscorer"]
+            "*": ["./src/*", "./*"],
+            "engine": ["./src/engine"],
+            "goscorer": ["./src/third_party/goscorer/goscorer"]
         },
         "noImplicitAny": true,
         "noImplicitReturns": true,

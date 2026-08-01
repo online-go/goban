@@ -703,10 +703,7 @@ export class GobanEngine extends BoardState {
             load_sgf_moves_if_needed();
             this.loading_sgf = false;
         } catch (e) {
-            console.log("Error loading SGF: ", e.message);
-            if (e.stack) {
-                console.log(e.stack);
-            }
+            console.log("Error loading SGF: ", e);
         }
 
         if (config.moves) {
@@ -742,7 +739,7 @@ export class GobanEngine extends BoardState {
                                     ? "black"
                                     : "white"
                             } at ${this.prettyCoordinates(mv.x, mv.y)} (${mv.x}, ${mv.y})`,
-                            stack: e.stack,
+                            stack: e instanceof Error ? e.stack : e,
                         });
                         console.log(config.errors[config.errors.length - 1]);
                         this.editPlace(mv.x, mv.y, mv.color || 0, true);
@@ -950,7 +947,7 @@ export class GobanEngine extends BoardState {
 
             return ret;
         } catch (e) {
-            console.log(e.stack);
+            console.log(e);
             this.jumpTo(this.last_official_move);
             return [];
         }
@@ -999,7 +996,6 @@ export class GobanEngine extends BoardState {
             }
         } catch (e) {
             console.error(e);
-            console.error(e.stack);
         }
 
         // keep deprecated fields up to date
@@ -2741,7 +2737,7 @@ export class GobanEngine extends BoardState {
                     sgf.substr(pos - 10, 10) +
                     "')",
             );
-            console.log(e.stack);
+            console.log(e);
         }
 
         return () => {

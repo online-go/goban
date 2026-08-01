@@ -38,7 +38,7 @@ export function allocateCanvasOrError(
         canvas = document.createElement("canvas");
         ++canvases_allocated;
     } catch (e) {
-        validateCanvas(null, e);
+        validateCanvas(null, e instanceof Error ? e : new Error(String(e)));
     }
 
     if (canvas && width && typeof width === "string") {
@@ -82,7 +82,7 @@ export function validateCanvas(
             ctx = canvas.getContext("2d", { willReadFrequently: true });
         } catch (e) {
             err_string = err_string || "Canvas context allocation failed";
-            err = err || e;
+            err = err || (e instanceof Error ? e : new Error(String(e)));
         }
     }
 

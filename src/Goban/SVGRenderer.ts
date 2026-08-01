@@ -27,6 +27,7 @@ import { MoveTreePenMarks } from "../engine/MoveTree";
 import { getRelativeEventPosition } from "./canvas_utils";
 import { _ } from "../engine/translate";
 import { formatMessage, MessageID } from "../engine/messages";
+import { GobanMoveError } from "../engine/GobanError";
 import {
     color_blend,
     encodeMove,
@@ -1259,9 +1260,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
         } catch (e) {
             delete this.move_selected;
+            const err = e instanceof Error ? e : new Error(String(e));
             // stone already placed is just to be ignored, it's not really an error.
-            if (e.message_id !== "stone_already_placed_here") {
-                this.errorHandler(e);
+            if (
+                !(err instanceof GobanMoveError) ||
+                err.message_id !== "stone_already_placed_here"
+            ) {
+                this.errorHandler(err);
                 this.emit("error", "stone_already_placed_here");
             }
             this.emit("update");

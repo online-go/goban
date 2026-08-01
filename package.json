@@ -25,8 +25,8 @@
         "detect-duplicate-code": "jscpd --ignore '**/board_woods.ts' --ignore-pattern '.*place.*StoneSVG.*' --min-tokens 50 src/",
         "lint": "eslint src/",
         "lint:fix": "eslint --fix src/",
-        "typedoc": "typedoc --plugin typedoc-plugin-missing-exports src/index.ts ",
-        "typedoc:watch": "typedoc --watch src/index.ts",
+        "typedoc": "typedoc --plugin typedoc-plugin-missing-exports",
+        "typedoc:watch": "typedoc --watch",
         "prettier": "prettier --write \"src/**/*.{ts,tsx}\"",
         "prettier:check": "prettier --check \"src/**/*.{ts,tsx}\"",
         "checks": "npm run lint && npm run prettier:check",
@@ -45,6 +45,8 @@
     },
     "homepage": "https://github.com/online-go/goban#readme",
     "devDependencies": {
+        "@babel/core": "7.28.5",
+        "@babel/plugin-transform-modules-commonjs": "7.29.7",
         "@eslint/compat": "^1.4.0",
         "@eslint/eslintrc": "^3.3.1",
         "@eslint/js": "9.38.0",
@@ -55,8 +57,9 @@
         "@types/node": "^24.9.1",
         "@types/react": "^19.2.13",
         "@types/react-dom": "^19.2.3",
-        "@typescript-eslint/eslint-plugin": "^8.46.2",
-        "@typescript-eslint/parser": "^8.46.2",
+        "@typescript-eslint/eslint-plugin": "8.65.0",
+        "@typescript-eslint/parser": "8.65.0",
+        "@typescript/native": "npm:typescript@7.0.2",
         "bufferutil": "^4.0.7",
         "canvas": "^3.1.0",
         "cli-color": "^2.0.4",
@@ -86,13 +89,13 @@
         "react-router-dom": "7.9.4",
         "svg-inline-loader": "0.8.2",
         "thread-loader": "^3.0.4",
-        "ts-jest": "^29.4.5",
+        "ts-jest": "29.4.12",
         "ts-loader": "^9.5.1",
         "ts-node": "^10.9.2",
         "tsconfig-paths": "^4.2.0",
-        "typedoc": "^0.25.13",
-        "typedoc-plugin-missing-exports": "^2.3.0",
-        "typescript": "=5.5.4",
+        "typedoc": "0.28.20",
+        "typedoc-plugin-missing-exports": "4.1.4",
+        "typescript": "npm:@typescript/typescript6@6.0.2",
         "utf-8-validate": "^6.0.3",
         "webpack": "^5.89.0",
         "webpack-cli": "^5.1.4",
@@ -110,5 +113,8 @@
             "eslint",
             "cspell"
         ]
+    },
+    "resolutions": {
+        "dts-bundle-generator/typescript": "npm:@typescript/typescript6@6.0.2"
     }
 }

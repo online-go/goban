@@ -1472,7 +1472,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 return;
             }
         } catch (e) {
-            console.error(e.stack);
+            console.error(e);
             return;
         }
 

@@ -196,7 +196,7 @@ export class BoardState extends EventEmitter<GobanEvents> implements BoardConfig
                 return { removed: removing, group: selected_group.intersections };
             }
         } catch (err) {
-            console.log(err.stack);
+            console.log(err);
         }
 
         return empty;
