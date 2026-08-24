@@ -540,11 +540,17 @@ export abstract class GobanInteractive extends GobanBase {
         }
         return {};
     }
+    /**
+     * Whether analysis is disabled for the current viewer. The host
+     * application decides through the isAnalysisDisabled callback (typically
+     * exempting spectators from the per-game setting); without a callback the
+     * per-game setting applies to everyone.
+     */
     public isAnalysisDisabled(perGameSettingAppliesToNonPlayers: boolean = false): boolean {
         if (callbacks.isAnalysisDisabled) {
             return callbacks.isAnalysisDisabled(this, perGameSettingAppliesToNonPlayers);
         }
-        return false;
+        return !!this.engine.config.disable_analysis;
     }
 
     protected getLocation(): string {
@@ -1302,9 +1308,9 @@ export abstract class GobanInteractive extends GobanBase {
         }
 
         if (
-            this.engine.config.disable_analysis &&
+            (mode === "analyze" || mode === "conditional") &&
             this.engine.phase !== "finished" &&
-            (mode === "analyze" || mode === "conditional")
+            this.isAnalysisDisabled()
         ) {
             try {
                 swal.fire("Unable to enter " + mode + " mode");

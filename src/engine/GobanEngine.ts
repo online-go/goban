@@ -629,20 +629,7 @@ export class GobanEngine extends BoardState {
 
         this.rengo_casual_mode = config.rengo_casual_mode || false;
 
-        try {
-            this.config.original_disable_analysis = this.config.disable_analysis;
-            if (
-                typeof window !== "undefined" &&
-                typeof (window as any)["user"] !== "undefined" &&
-                (window as any)["user"] &&
-                !this.isParticipant((window as any)["user"].id)
-            ) {
-                this.disable_analysis = false;
-                this.config.disable_analysis = false;
-            }
-        } catch (e) {
-            console.log(e);
-        }
+        this.config.original_disable_analysis = this.config.disable_analysis;
 
         this.player = 1;
 
