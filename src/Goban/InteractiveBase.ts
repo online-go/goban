@@ -510,6 +510,18 @@ export abstract class GobanInteractive extends GobanBase {
         }
         return { enabled: false, color: "#1e6bff", thickness: 0.1 };
     }
+
+    /** Re-reads the visual-preference callbacks whose values are cached at
+     *  construction (variation move numbers, stone font scale) and repaints
+     *  the board. Callbacks that are consulted live at draw time (fuzzy
+     *  placement, undo request indicator, coordinate display system) are
+     *  picked up by the repaint alone. Clients should call this after a
+     *  preference backing one of those callbacks changes. */
+    public refreshVisualPreferences(): void {
+        this.show_variation_move_numbers = this.getShowVariationMoveNumbers();
+        this.stone_font_scale = this.getStoneFontScale();
+        this.redraw(true);
+    }
     public static getMoveTreeNumbering(): string {
         if (callbacks.getMoveTreeNumbering) {
             return callbacks.getMoveTreeNumbering();
