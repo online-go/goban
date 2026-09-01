@@ -843,3 +843,116 @@ describe("no blank board while a resume is in flight", () => {
         goban.destroy();
     });
 });
+
+/* Board state added for the reworked AI review display. None of it is
+ * expressible in contract v1 (which carries only stones, colorToMove and a
+ * last-move ring), so all of it has to reach the web canvas. */
+describe("AI review board state", () => {
+    test("presenting the next move bails to the canvas and clearing re-engages", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        goban.setPresentNextMove(true);
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("bailed");
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        goban.setPresentNextMove(false);
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("active");
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("an ai_quality badge bails to the canvas", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        goban.setAIQualityMark(1, 1, "blunder");
+        goban.redraw(true);
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("bailed");
+        goban.destroy();
+    });
+
+    test("a subscript2 annotation bails to the canvas", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        goban.setSubscript2Mark(1, 1, "1.2k");
+        goban.redraw(true);
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("bailed");
+        goban.destroy();
+    });
+
+    test("colored circles bail, and clearing them re-engages on its own", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        goban.setColoredCircles([{ move: { x: 1, y: 1 }, color: "#ff0000" }]);
+        await flush();
+        expect(goban.nativeBridgeState).toBe("bailed");
+
+        /* setColoredCircles repaints when clearing, which is what schedules
+         * the sync that re-engages us. */
+        goban.setColoredCircles([]);
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+        goban.destroy();
+    });
+});
+
+/* Board decorations that predate the AI review work but are equally
+ * outside contract v1: the native side has no way to draw them, so a board
+ * showing them has to be the web canvas. */
+describe("other unrenderable board decorations", () => {
+    test("an outstanding undo request bails, and cancelling it re-engages", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        goban.engine.place(0, 0);
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        /* The live game socket sets this and repaints so the "?" appears on
+         * the move the request covers. */
+        goban.engine.undo_requested = goban.engine.cur_move.move_number;
+        goban.redraw(true);
+        await flush();
+        expect(goban.nativeBridgeState).toBe("bailed");
+
+        goban.engine.undo_requested = undefined;
+        goban.redraw(true);
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+        goban.destroy();
+    });
+
+    test("move tree move highlighting bails", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+
+        /* Set by puzzle configs, which highlight the moves the tree knows. */
+        (goban as any).highlight_movetree_moves = true;
+        goban.redraw(true);
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("bailed");
+        goban.destroy();
+    });
+});
