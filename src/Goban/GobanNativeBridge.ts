@@ -85,6 +85,9 @@ export class GobanNativeBridge extends GobanCanvas {
      *  flatten + serialize entirely. Any state-driven request upgrades
      *  the pending sync to a full one. */
     private native_sync_geometry_only = false;
+    /** Which way {@link applyCanvasVisibility} should currently drive the
+     *  web board's layer stack. */
+    private native_canvas_hidden = false;
     private readonly native_window_listener = () => this.scheduleNativeSync(true);
 
     constructor(config: NativeBridgeGobanConfig, preloaded_data?: AdHocFormat | JGOF) {
@@ -336,6 +339,8 @@ export class GobanNativeBridge extends GobanCanvas {
         if (!this.native_transport || this.native_state === "fallback") {
             return;
         }
+        /* Catch up any board layer that attached since the last sync. */
+        this.applyCanvasVisibility();
         const serviceable = this.isV1Serviceable();
 
         switch (this.native_state) {
@@ -667,11 +672,21 @@ export class GobanNativeBridge extends GobanCanvas {
     }
 
     private setCanvasVisible(visible: boolean): void {
-        const visibility = visible ? "" : "hidden";
-        this.board.style.visibility = visibility;
-        if (this.shadow_layer) {
-            this.shadow_layer.style.visibility = visibility;
-        }
+        this.native_canvas_hidden = !visible;
+        this.applyCanvasVisibility();
+    }
+
+    /**
+     * Push the recorded canvas visibility onto the renderer's layer stack.
+     *
+     * Re-applied on every sync rather than only on transitions: the board
+     * is drawn across several lazily-attached layers (shadows, the themed
+     * grid background, the last-move crosshair), any of which can appear
+     * after we hid the ones that existed at the time -- and an unhidden
+     * layer would keep painting a full board underneath the native view.
+     */
+    private applyCanvasVisibility(): void {
+        this.setBoardLayersVisible(!this.native_canvas_hidden);
     }
 }
 

@@ -104,8 +104,8 @@ export interface GobanCanvasInterface {
 export class GobanCanvas extends Goban implements GobanCanvasInterface {
     public engine: GobanEngine;
     //private board_div: HTMLElement;
-    /** Protected so the GobanNativeBridge subclass can measure and
-     *  show/hide the canvas when swapping in the native draw layer. */
+    /** Protected so the GobanNativeBridge subclass can measure it: the
+     *  native draw layer is anchored to this canvas's rect. */
     protected board: HTMLCanvasElement;
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
@@ -114,8 +114,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private message_td?: HTMLElement;
     private message_text?: HTMLDivElement;
     private message_timeout?: number;
-    /** Protected for GobanNativeBridge (see `board`). */
-    protected shadow_layer?: HTMLCanvasElement;
+    private shadow_layer?: HTMLCanvasElement;
     private shadow_ctx?: CanvasRenderingContext2D;
     private grid_layer?: HTMLCanvasElement;
     private grid_ctx?: CanvasRenderingContext2D;
@@ -288,6 +287,32 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.removeMoveTreeFromDOM();
         delete this.move_tree_container;
         delete this.title_div;
+    }
+    /**
+     * Show or hide every DOM layer that paints the web board.
+     *
+     * Protected for GobanNativeBridge, which hides the whole stack while
+     * the native draw layer owns the pixels. The stack is recomputed on
+     * each call rather than captured once: the shadow, themed grid
+     * background and crosshair layers all attach lazily, so a layer can
+     * appear long after the native view went active. It deliberately
+     * excludes the message overlay, which stays visible over the board.
+     */
+    protected setBoardLayersVisible(visible: boolean): void {
+        const visibility = visible ? "" : "hidden";
+        const layers: Array<HTMLElement | undefined> = [
+            this.grid_background_layer,
+            this.grid_layer,
+            this.crosshair_layer,
+            this.shadow_layer,
+            this.pen_layer,
+            this.board,
+        ];
+        for (const layer of layers) {
+            if (layer && layer.style.visibility !== visibility) {
+                layer.style.visibility = visibility;
+            }
+        }
     }
     private detachShadowLayer(): void {
         if (this.shadow_layer) {

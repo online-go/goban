@@ -25,6 +25,7 @@ import {
     NativeBridgeTheme,
     NativeBridgeUpdateOptions,
 } from "../../src/Goban/NativeBridgeTransport";
+import { callbacks } from "../../src/Goban/callbacks";
 import { GobanSocket } from "engine";
 import WS from "jest-websocket-mock";
 
@@ -633,5 +634,84 @@ describe("destroy", () => {
 
         expect(transport.callsOf("detach")).toHaveLength(1);
         expect(transport.listener_count).toBe(0);
+    });
+});
+
+describe("web board layers", () => {
+    const crosshair = () => ({ enabled: true, color: "#ff0000", thickness: 1 });
+
+    afterEach(() => {
+        delete callbacks.getLastMoveCrosshair;
+    });
+
+    /** Every DOM layer the canvas renderer paints the board on. The board
+     *  is not one canvas: shadows, the themed grid background and the
+     *  last-move crosshair each get their own layer, attached lazily. */
+    function boardLayers(): HTMLElement[] {
+        return Array.from(
+            board_div.querySelectorAll<HTMLElement>(
+                ".StoneLayer, .ShadowLayer, .GridLayer, .GridBackgroundLayer, .CrosshairLayer, .PenLayer",
+            ),
+        );
+    }
+
+    test("hides the whole layer stack while the native view is active", async () => {
+        const transport = new RecordingTransport();
+        callbacks.getLastMoveCrosshair = crosshair;
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        goban.engine.place(0, 0);
+        goban.redraw(true);
+        await flush();
+
+        const layers = boardLayers();
+        /* More than the stone canvas: hiding only that one would leave a
+         * full board painting underneath the native view. */
+        expect(layers.length).toBeGreaterThan(1);
+        for (const layer of layers) {
+            expect(layer.style.visibility).toBe("hidden");
+        }
+        goban.destroy();
+    });
+
+    test("hides a layer that attaches after the native view went active", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        expect(board_div.querySelector(".CrosshairLayer")).toBeNull();
+
+        /* The crosshair layer is attached lazily, on the first draw that
+         * actually shows a crosshair -- long after we hid the layers that
+         * existed at attach time. */
+        callbacks.getLastMoveCrosshair = crosshair;
+        goban.engine.place(0, 0);
+        goban.redraw(true);
+        await flush();
+
+        const crosshair_layer = board_div.querySelector<HTMLElement>(".CrosshairLayer");
+        expect(crosshair_layer).not.toBeNull();
+        expect(crosshair_layer!.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("restores the whole layer stack when bailing to the canvas", async () => {
+        const transport = new RecordingTransport();
+        callbacks.getLastMoveCrosshair = crosshair;
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        goban.engine.place(0, 0);
+        goban.redraw(true);
+        await flush();
+        expect(goban.nativeBridgeState).toBe("active");
+        expect(boardLayers().length).toBeGreaterThan(1);
+
+        goban.setMode("analyze");
+        await flush();
+
+        expect(goban.nativeBridgeState).toBe("bailed");
+        for (const layer of boardLayers()) {
+            expect(layer.style.visibility).not.toBe("hidden");
+        }
+        goban.destroy();
     });
 });
