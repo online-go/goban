@@ -155,6 +155,24 @@ function config(
     };
 }
 
+/* The first goban built in a worker pays one-time costs that dwarf anything
+ * any test here does: the theme cache starts cold, and node-canvas enumerates
+ * the system fonts the first time the board draws its coordinate labels.
+ * Locally that is ~50ms against ~6ms for every construction after it; on a CI
+ * runner it is enough on its own to blow the project's 1000ms per-test budget.
+ * Pay it once up front so it lands on a hook rather than on whichever test
+ * happens to run first. */
+beforeAll(async () => {
+    const warmup_div = document.createElement("div");
+    document.body.appendChild(warmup_div);
+    const goban = new GobanNativeBridge(
+        config(new RecordingTransport(), { board_div: warmup_div }),
+    );
+    await flush();
+    goban.destroy();
+    warmup_div.remove();
+}, 30000);
+
 beforeEach(() => {
     board_div = document.createElement("div");
     document.body.appendChild(board_div);
