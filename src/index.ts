@@ -23,6 +23,8 @@ export * from "./Goban/callbacks";
 export * from "./Goban/canvas_utils";
 export * from "./Goban/CanvasRenderer";
 export * from "./Goban/SVGRenderer";
+export * from "./Goban/GobanNativeBridge";
+export * from "./Goban/NativeBridgeTransport";
 export * from "./Goban/themes";
 export * from "./Goban/themes/GobanTheme";
 export * from "./Goban/Goban";
@@ -36,9 +38,13 @@ export { placeRenderedImageStone, preRenderImageStone } from "./Goban/themes/ima
 
 import { GobanCanvas, CanvasRendererGobanConfig } from "./Goban/CanvasRenderer";
 import { SVGRenderer, SVGRendererGobanConfig } from "./Goban/SVGRenderer";
+import { GobanNativeBridge, NativeBridgeGobanConfig } from "./Goban/GobanNativeBridge";
 
 export type GobanRenderer = GobanCanvas | SVGRenderer;
-export type GobanRendererConfig = CanvasRendererGobanConfig | SVGRendererGobanConfig;
+export type GobanRendererConfig =
+    | CanvasRendererGobanConfig
+    | SVGRendererGobanConfig
+    | NativeBridgeGobanConfig;
 
 //(window as any)["goban"] = module.exports;
 
@@ -50,10 +56,25 @@ export function setGobanRenderer(_renderer: "svg" | "canvas") {
 
 import { AdHocFormat, JGOF } from "./engine";
 
+/**
+ * Construct the renderer appropriate for `config`.
+ *
+ * Note: a `native_transport` in the config takes precedence over the
+ * renderer selected with {@link setGobanRenderer} -- the instance will be
+ * a {@link GobanNativeBridge} (a GobanCanvas subclass) regardless of any
+ * explicit "svg"/"canvas" choice.
+ */
 export function createGoban(
     config: GobanRendererConfig,
     preloaded_data?: AdHocFormat | JGOF,
 ): GobanRenderer {
+    /* A native transport in the config opts this instance into the
+     * native-bridge backend (a GobanCanvas subclass that drives an
+     * out-of-DOM draw layer and falls back to the canvas whenever the
+     * board needs more than the bridge contract supports). */
+    if ((config as NativeBridgeGobanConfig).native_transport) {
+        return new GobanNativeBridge(config, preloaded_data);
+    }
     if (renderer === "svg") {
         return new SVGRenderer(config, preloaded_data);
     } else {
