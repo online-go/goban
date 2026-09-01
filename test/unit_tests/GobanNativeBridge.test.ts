@@ -956,3 +956,31 @@ describe("other unrenderable board decorations", () => {
         goban.destroy();
     });
 });
+
+describe("attach payload construction", () => {
+    test("a throw while building the payload falls back instead of stranding the bridge", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        /* The attach op runs off a microtask, so patch before it does. The
+         * engine can be mid-swap when a queued attach finally executes;
+         * a blowing-up board flatten stands in for that. */
+        (goban as any).flattenBoard = () => {
+            throw new Error("engine torn");
+        };
+        await flush();
+
+        expect(transport.callsOf("attach")).toHaveLength(0);
+        /* "attaching" would be terminal: syncNative() reads it as "an
+         * attach is in flight" and returns, so nothing would ever attach
+         * or fall back again. */
+        expect(goban.nativeBridgeState).toBe("fallback");
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        goban.redraw(true);
+        await flush();
+        expect(goban.nativeBridgeState).toBe("fallback");
+        expect(transport.callsOf("attach")).toHaveLength(0);
+        goban.destroy();
+    });
+});
