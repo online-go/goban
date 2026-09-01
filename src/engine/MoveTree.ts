@@ -32,14 +32,20 @@ import {
 } from "./formats/JGOF";
 import { escapeSGFText, newlines_to_spaces } from "./util";
 
+/** AI review quality classification of a played move, shown as a colored badge on the stone. */
+export type AIQualityMark = "excellent" | "great" | "good" | "inaccuracy" | "mistake" | "blunder";
+
 export interface MarkInterface {
     triangle?: boolean;
     square?: boolean;
     circle?: boolean;
     cross?: boolean;
     blue_move?: boolean;
+    ai_quality?: AIQualityMark;
     letter?: string;
     subscript?: string;
+    /** Smaller second line of text below the subscript (e.g. AI visit counts) */
+    subscript2?: string;
     transient_letter?: string;
     //score?: string | boolean;
     score?: string;

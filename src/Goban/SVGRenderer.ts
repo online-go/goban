@@ -46,7 +46,8 @@ import {
     CaptureDisplay,
     ResolvedBoardBackground,
 } from "./Goban";
-import { ColoredCircle } from "./InteractiveBase";
+import { ColoredCircle, AI_QUALITY_BADGES } from "./InteractiveBase";
+import { AIQualityMark } from "../engine/MoveTree";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
 
@@ -350,9 +351,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         delete this.message_div;
         delete this.message_td;
         delete this.message_text;
+        this.removeMoveTreeFromDOM();
         delete this.move_tree_container;
-        delete this.move_tree_inner_container;
-        delete this.move_tree_svg;
         delete this.title_div;
     }
     private detachPenLayer(): void {
@@ -909,7 +909,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         ) {
             const m = this.engine.getMoveByLocation(x, y, true);
             if (m) {
-                this.engine.jumpTo(m);
+                this.engine.jumpTo(this.clickJumpTarget(m));
                 this.emit("update");
             }
             return;
@@ -1430,6 +1430,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             pos.triangle ||
             pos.chat_triangle ||
             pos.sub_triangle ||
+            pos.ai_quality ||
             pos.cross ||
             pos.square
         ) {
@@ -1439,6 +1440,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             have_text_to_draw = true;
         }
         if (pos.subscript && pos.subscript.length > 0) {
+            have_text_to_draw = true;
+        }
+        if (pos.subscript2 && pos.subscript2.length > 0) {
+            have_text_to_draw = true;
+        }
+        if (this.colored_circles?.[j][i]) {
             have_text_to_draw = true;
         }
 
@@ -1601,6 +1608,24 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     color = pos.black ? 1 : 2;
                     translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
+                    if (
+                        this.present_next_move &&
+                        this.engine.cur_move.trunk_next &&
+                        this.engine.cur_move.trunk_next.x === i &&
+                        this.engine.cur_move.trunk_next.y === j
+                    ) {
+                        /* the presented next move reads a bit more solidly
+                         * than other mark stones */
+                        stoneAlphaValue = Math.min(1, stoneAlphaValue + 0.15);
+                    }
+                    if (
+                        this.last_hover_square &&
+                        this.last_hover_square.x === i &&
+                        this.last_hover_square.y === j
+                    ) {
+                        /* make the stone stand out while hovered */
+                        stoneAlphaValue = 1.0;
+                    }
                 } else {
                     color = this.engine.player;
                 }
@@ -1915,10 +1940,24 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     this.square_size * 0.4 * this.stone_font_scale,
                     transparent ? 0.6 : 1.0,
                     !!letter,
-                    !!pos.sub_triangle,
+                    !!(pos.sub_triangle || pos.ai_quality),
+                    !!pos.subscript2,
                 );
             } else {
                 cell.clearSubscript();
+            }
+
+            if (pos.subscript2) {
+                letter_was_drawn = true;
+                draw_last_move = false;
+                cell.subscript2(
+                    pos.subscript2,
+                    text_color,
+                    this.square_size * 0.28 * this.stone_font_scale,
+                    transparent ? 0.6 : 1.0,
+                );
+            } else {
+                cell.clearSubscript2();
             }
         }
 
@@ -1957,12 +1996,20 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 cell.clearCircleSymbol();
             }
 
+            if (pos.ai_quality) {
+                draw_last_move = false;
+                cell.aiQualityBadge(pos.ai_quality);
+            } else {
+                cell.clearAIQualityBadge();
+            }
+
             if (
-                pos.triangle ||
-                pos.chat_triangle ||
-                pos.sub_triangle ||
-                alt_marking === "triangle" ||
-                hover_mark === "triangle"
+                !pos.ai_quality &&
+                (pos.triangle ||
+                    pos.chat_triangle ||
+                    pos.sub_triangle ||
+                    alt_marking === "triangle" ||
+                    hover_mark === "triangle")
             ) {
                 draw_last_move = false;
                 cell.triangleSymbol(symbol_color, transparent ? 0.6 : 1.0, !!pos.sub_triangle);
@@ -2019,15 +2066,21 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                             ? this.theme_black_text_color
                             : this.theme_white_text_color;
 
+                    /* While the AI review presents the next move, the last
+                     * move circle takes a back seat to the presented stone */
+                    const last_move_opacity = this.present_next_move
+                        ? Math.min(this.last_move_opacity, 0.4)
+                        : this.last_move_opacity;
+
                     if (this.submit_move) {
                         draw_last_move = false;
-                        cell.lastMove("+", color, this.last_move_opacity);
+                        cell.lastMove("+", color, last_move_opacity);
                     } else {
                         if (should_draw_undo) {
                             draw_last_move = false;
                             cell.lastMove("↶", color, 1.0);
                         } else {
-                            cell.lastMove("o", color, this.last_move_opacity);
+                            cell.lastMove("o", color, last_move_opacity);
                         }
                     }
                 }
@@ -2163,6 +2216,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             pos.triangle ||
             pos.chat_triangle ||
             pos.sub_triangle ||
+            pos.ai_quality ||
             pos.cross ||
             pos.square
         ) {
@@ -2172,6 +2226,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             have_text_to_draw = true;
         }
         if (pos.subscript && pos.subscript.length > 0) {
+            have_text_to_draw = true;
+        }
+        if (pos.subscript2 && pos.subscript2.length > 0) {
+            have_text_to_draw = true;
+        }
+        if (this.colored_circles?.[j][i]) {
             have_text_to_draw = true;
         }
 
@@ -2416,6 +2476,24 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     color = pos.black ? 1 : 2;
                     translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
+                    if (
+                        this.present_next_move &&
+                        this.engine.cur_move.trunk_next &&
+                        this.engine.cur_move.trunk_next.x === i &&
+                        this.engine.cur_move.trunk_next.y === j
+                    ) {
+                        /* the presented next move reads a bit more solidly
+                         * than other mark stones */
+                        stoneAlphaValue = Math.min(1, stoneAlphaValue + 0.15);
+                    }
+                    if (
+                        this.last_hover_square &&
+                        this.last_hover_square.x === i &&
+                        this.last_hover_square.y === j
+                    ) {
+                        /* make the stone stand out while hovered */
+                        stoneAlphaValue = 1.0;
+                    }
                 } else {
                     color = this.engine.player;
                 }
@@ -3621,6 +3699,62 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         return ret;
     }
 
+    /**
+     * The exact geometry of the board grid lines: the global coordinate of
+     * the first vertical (ox) and horizontal (oy) line, the stroke width,
+     * and the same line coordinates relative to a cell's origin
+     * (cell_line_x/cell_line_y, identical for every cell). Line n runs at
+     * ox + n * square_size. Shared by drawLines and the faded line overlays
+     * drawn by cells, so overlays cover the grid lines exactly.
+     */
+    public gridLineMetrics(): {
+        ox: number;
+        oy: number;
+        line_width: number;
+        cell_line_x: number;
+        cell_line_y: number;
+    } {
+        const ss = this.square_size;
+        let base_ox = this.draw_left_labels ? ss : 0;
+        let base_oy = this.draw_top_labels ? ss : 0;
+
+        if (this.bounds.left > 0) {
+            base_ox = -ss * this.bounds.left;
+        }
+        if (this.bounds.top > 0) {
+            base_oy = -ss * this.bounds.top;
+        }
+
+        // lines go through center of our stone grid
+        let ox = base_ox + Math.round(ss / 2);
+        let oy = base_oy + Math.round(ss / 2);
+
+        // Tiny square sizes, as in the ones used to display puzzle icons
+        const TINY_SQUARE_SIZE = 10;
+
+        // Compute a line width that is rounded to the nearest 0.5 so we
+        // get crisp lines
+        const line_width =
+            ss > TINY_SQUARE_SIZE
+                ? Math.round(2 * Math.round(Math.max(1, ss * 0.02))) * 0.5
+                : // for very small boards, like puzzle icons, have faint lines
+                  ss * 0.08;
+        ox -= line_width * 0.5;
+        oy -= line_width * 0.5;
+
+        // Round to half pixel offsets odd widths for crisp lines
+        ox = Math.round(ox * 2.0) * 0.5;
+        oy = Math.round(oy * 2.0) * 0.5;
+
+        return {
+            ox,
+            oy,
+            line_width,
+            cell_line_x: ox - base_ox,
+            cell_line_y: oy - base_oy,
+        };
+    }
+
     private drawLines(force_clear?: boolean): void {
         if (force_clear) {
             if (this.lines_layer) {
@@ -3631,36 +3765,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         if (!this.lines_layer) {
             const ss = this.square_size;
-            let ox = this.draw_left_labels ? ss : 0;
-            let oy = this.draw_top_labels ? ss : 0;
-
-            if (this.bounds.left > 0) {
-                ox = -ss * this.bounds.left;
-            }
-            if (this.bounds.top > 0) {
-                oy = -ss * this.bounds.top;
-            }
-
-            // lines go through center of our stone grid
-            ox += Math.round(ss / 2);
-            oy += Math.round(ss / 2);
+            const { ox, oy, line_width } = this.gridLineMetrics();
 
             // Tiny square sizes, as in the ones used to display puzzle icons
             const TINY_SQUARE_SIZE = 10;
-
-            // Compute a line width that is rounded to the nearest 0.5 so we
-            // get crisp lines
-            const line_width =
-                ss > TINY_SQUARE_SIZE
-                    ? Math.round(2 * Math.round(Math.max(1, ss * 0.02))) * 0.5
-                    : // for very small boards, like puzzle icons, have faint lines
-                      ss * 0.08;
-            ox -= line_width * 0.5;
-            oy -= line_width * 0.5;
-
-            // Round to half pixel offsets odd widths for crisp lines
-            ox = Math.round(ox * 2.0) * 0.5;
-            oy = Math.round(oy * 2.0) * 0.5;
 
             this.lines_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
             const lines_path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -4440,12 +4548,29 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     // Move tree
     //
     public setMoveTreeContainer(container: HTMLElement | null): void {
+        if (this.move_tree_container !== (container ?? undefined)) {
+            this.removeMoveTreeFromDOM();
+        }
         this.move_tree_container = container ?? undefined;
         this.move_tree_redraw();
     }
 
+    /**
+     * Removes this goban's move tree elements from the container so another
+     * goban can take the container over without our stale tree lingering
+     * behind its own.
+     */
+    private removeMoveTreeFromDOM(): void {
+        if (this.move_tree_inner_container) {
+            this.move_tree_inner_container.remove();
+        }
+        delete this.move_tree_inner_container;
+        delete this.move_tree_svg;
+        delete this.move_tree_svg_defs;
+    }
+
     public move_tree_redraw(no_warp?: boolean): void {
-        if (!this.move_tree_container) {
+        if (this.destroyed || !this.move_tree_container) {
             return;
         }
 
@@ -4533,7 +4658,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.engine.move_tree.recomputeIsobranches();
-        const active_path_end = this.engine.cur_move;
+        const active_path_end =
+            this.present_next_move && this.engine.cur_move.trunk_next
+                ? this.engine.cur_move.trunk_next
+                : this.engine.cur_move;
 
         this.engine.move_tree_layout_dirty = false;
 
@@ -4632,22 +4760,23 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 const node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
 
                 if (node) {
-                    if (this.engine.cur_move.id !== node.id) {
-                        this.engine.jumpTo(node);
+                    const target = this.clickJumpTarget(node);
+                    if (this.engine.cur_move.id !== target.id) {
+                        this.engine.jumpTo(target);
                         this.setLabelCharacterFromMarks();
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
                         this.syncReviewMove();
                         this.redraw();
                     }
-                    if (this.engine.cur_move.played_by) {
+                    if (node.played_by) {
                         // note that getRelativeEventPosition handles various
                         // nasty looking things to do with Touch etc, so using it here
                         // gets around that kind of thing, even though in theory it
                         // might be nicer to sent the client absolute coords, maybe.
                         const rpos = getRelativeEventPosition(event, this.move_tree_container);
                         this.emit("played-by-click", {
-                            player_id: this.engine.cur_move.played_by,
+                            player_id: node.played_by,
                             x: rpos.x,
                             y: rpos.y,
                         });
@@ -5177,35 +5306,31 @@ class GCell {
 
         const mid = this.renderer.metrics.mid;
         const ss = this.renderer.square_size;
-        const offset = this.renderer.metrics.offset;
         const width = this.renderer.width;
         const height = this.renderer.height;
 
+        /* Use the exact grid line geometry so the faded lines fully cover
+         * the board lines instead of sitting next to them */
+        const { line_width, cell_line_x, cell_line_y } = this.renderer.gridLineMetrics();
+        const mx = cell_line_x;
+        const my = cell_line_y;
+
         let sx = 0;
         let ex = ss;
-        const mx = ss / 2 - offset;
         let sy = 0;
         let ey = ss;
-        const my = ss / 2 - offset;
 
         if (this.i === 0) {
-            sx += mid;
+            sx = mx;
         }
         if (this.i === width - 1) {
-            ex -= mid;
+            ex = mx;
         }
         if (this.j === 0) {
-            sy += mid;
+            sy = my;
         }
         if (this.j === height - 1) {
-            ey -= mid;
-        }
-
-        if (this.i === width - 1 && this.j === height - 1) {
-            if (mx === ex && my === ey) {
-                ex += 1;
-                ey += 1;
-            }
+            ey = my;
         }
 
         const cx = mid;
@@ -5226,13 +5351,14 @@ class GCell {
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         this.last_faded_lines = path;
         path.setAttribute("stroke", this.renderer.theme_faded_line_color);
-        path.setAttribute("stroke-width", this.renderer.square_size < 5 ? "0.2" : "1");
+        path.setAttribute("stroke-width", `${line_width}px`);
+        path.setAttribute("stroke-linecap", "square");
         path.setAttribute("fill", "none");
         path.setAttribute(
             "d",
             `
-                M ${Math.floor(sx)} ${my} L ${Math.floor(ex)} ${my}
-                M ${mx} ${Math.floor(sy)} L ${mx} ${Math.floor(ey)} 
+                M ${sx} ${my} L ${ex} ${my}
+                M ${mx} ${sy} L ${mx} ${ey}
             `,
         );
         g.prepend(path);
@@ -5422,6 +5548,12 @@ class GCell {
             return;
         }
 
+        /* When redrawing an existing stone (e.g. a translucent mark stone
+         * changing opacity on hover), keep its position in the cell group so
+         * it does not get re-appended above cached elements such as
+         * subscripts and quality badges. */
+        const insert_before = this.last_stone?.nextSibling ?? null;
+
         this.clearStone();
 
         const mid = this.renderer.metrics.mid;
@@ -5468,6 +5600,10 @@ class GCell {
 
         if (transparent) {
             elt.setAttribute("opacity", stone_alpha_value.toString());
+        }
+
+        if (insert_before && insert_before.parentNode === this.g) {
+            this.g.insertBefore(elt, insert_before);
         }
 
         this.last_stone = elt;
@@ -5787,6 +5923,7 @@ class GCell {
     private last_subscript_opacity?: number;
     private last_subscript_room_for_letter?: boolean;
     private last_subscript_room_for_sub_triangle?: boolean;
+    private last_subscript_room_for_second_line?: boolean;
 
     public subscript(
         subscript: string,
@@ -5795,6 +5932,7 @@ class GCell {
         opacity: number,
         room_for_letter: boolean,
         room_for_sub_triangle: boolean,
+        room_for_second_line: boolean = false,
     ): void {
         if (
             this.last_subscript &&
@@ -5803,7 +5941,8 @@ class GCell {
             this.last_subscript_font_size === font_size &&
             this.last_subscript_opacity === opacity &&
             this.last_subscript_room_for_letter === room_for_letter &&
-            this.last_subscript_room_for_sub_triangle === room_for_sub_triangle
+            this.last_subscript_room_for_sub_triangle === room_for_sub_triangle &&
+            this.last_subscript_room_for_second_line === room_for_second_line
         ) {
             return;
         }
@@ -5834,6 +5973,10 @@ class GCell {
             yy -= ss * 0.08;
         }
 
+        if (room_for_second_line) {
+            yy -= ss * 0.15;
+        }
+
         text.setAttribute("y", yy.toString());
         text.textContent = subscript;
 
@@ -5849,6 +5992,7 @@ class GCell {
         this.last_subscript_opacity = opacity;
         this.last_subscript_room_for_letter = room_for_letter;
         this.last_subscript_room_for_sub_triangle = room_for_sub_triangle;
+        this.last_subscript_room_for_second_line = room_for_second_line;
     }
 
     public clearSubscript(): void {
@@ -5861,6 +6005,69 @@ class GCell {
             delete this.last_subscript_opacity;
             delete this.last_subscript_room_for_letter;
             delete this.last_subscript_room_for_sub_triangle;
+            delete this.last_subscript_room_for_second_line;
+        }
+    }
+
+    /*
+     * Second, smaller subscript line (e.g. AI visit counts)
+     */
+    private last_subscript2?: SVGTextElement;
+    private last_subscript2_text?: string;
+    private last_subscript2_color?: string;
+    private last_subscript2_font_size?: number;
+    private last_subscript2_opacity?: number;
+
+    public subscript2(
+        text_content: string,
+        color: string,
+        font_size: number,
+        opacity: number,
+    ): void {
+        if (
+            this.last_subscript2 &&
+            this.last_subscript2_text === text_content &&
+            this.last_subscript2_color === color &&
+            this.last_subscript2_font_size === font_size &&
+            this.last_subscript2_opacity === opacity
+        ) {
+            return;
+        }
+
+        this.clearSubscript2();
+
+        const mid = this.renderer.metrics.mid;
+        const ss = this.renderer.square_size;
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", "subscript2");
+        text.setAttribute("fill", color);
+        text.setAttribute("font-size", `${font_size}px`);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("x", mid.toString());
+        text.setAttribute("y", (mid + ss * 0.32 + font_size * 0.3).toString());
+        text.textContent = text_content;
+
+        if (opacity < 1) {
+            text.setAttribute("fill-opacity", opacity.toString());
+        }
+        this.g.appendChild(text);
+
+        this.last_subscript2 = text;
+        this.last_subscript2_text = text_content;
+        this.last_subscript2_color = color;
+        this.last_subscript2_font_size = font_size;
+        this.last_subscript2_opacity = opacity;
+    }
+
+    public clearSubscript2(): void {
+        if (this.last_subscript2) {
+            this.last_subscript2.remove();
+            delete this.last_subscript2;
+            delete this.last_subscript2_text;
+            delete this.last_subscript2_color;
+            delete this.last_subscript2_font_size;
+            delete this.last_subscript2_opacity;
         }
     }
 
@@ -5989,6 +6196,67 @@ class GCell {
             delete this.last_triangle_symbol_color;
             delete this.last_triangle_symbol_opacity;
             delete this.last_triangle_symbol_as_subscript;
+        }
+    }
+
+    /*
+     * AI quality badge
+     */
+    private last_ai_quality_badge?: SVGGElement;
+    private last_ai_quality_badge_quality?: AIQualityMark;
+
+    public aiQualityBadge(quality: AIQualityMark): void {
+        if (this.last_ai_quality_badge && this.last_ai_quality_badge_quality === quality) {
+            return;
+        }
+
+        this.clearAIQualityBadge();
+
+        const badge = AI_QUALITY_BADGES[quality];
+        if (!badge) {
+            return;
+        }
+
+        const mid = this.renderer.metrics.mid;
+        const ss = this.renderer.square_size;
+        const scale = this.renderer.stone_font_scale;
+        const cx = mid;
+        const cy = mid + ss * 0.3;
+        const r = ss * 0.2 * scale;
+        const font_size = ss * 0.24 * scale;
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", `ai-quality-badge ai-quality-${quality}`);
+
+        const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circ.setAttribute("fill", `var(--move-quality-${quality}, ${badge.color})`);
+        circ.setAttribute("cx", cx.toFixed(2));
+        circ.setAttribute("cy", cy.toFixed(2));
+        circ.setAttribute("r", r.toFixed(2));
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", "ai-quality-symbol");
+        text.setAttribute("fill", "#FFFFFF");
+        text.setAttribute("font-size", `${font_size}px`);
+        text.setAttribute("font-weight", "bold");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("x", cx.toFixed(2));
+        text.setAttribute("y", (cy + font_size * 0.35).toFixed(2));
+        text.textContent = badge.symbol;
+
+        g.appendChild(circ);
+        g.appendChild(text);
+        this.g.appendChild(g);
+
+        this.last_ai_quality_badge = g;
+        this.last_ai_quality_badge_quality = quality;
+    }
+
+    public clearAIQualityBadge(): void {
+        if (this.last_ai_quality_badge) {
+            this.last_ai_quality_badge.remove();
+            delete this.last_ai_quality_badge;
+            delete this.last_ai_quality_badge_quality;
         }
     }
 
