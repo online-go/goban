@@ -55,6 +55,7 @@ class RecordingTransport implements GobanNativeBridgeTransport {
      *  op queue open to provoke races. */
     public next_attach_gate?: Promise<void>;
     public next_detach_gate?: Promise<void>;
+    public next_resume_gate?: Promise<void>;
     private listeners: Array<(event: NativeBridgeIntentPlaceEvent) => void> = [];
 
     attach(opts: NativeBridgeAttachOptions): Promise<void> {
@@ -92,7 +93,9 @@ class RecordingTransport implements GobanNativeBridgeTransport {
     }
     resume(opts: { id: string }): Promise<void> {
         this.calls.push({ method: "resume", opts });
-        return Promise.resolve();
+        const gate = this.next_resume_gate;
+        this.next_resume_gate = undefined;
+        return gate ?? Promise.resolve();
     }
     detach(opts: { id: string }): Promise<void> {
         this.calls.push({ method: "detach", opts });
@@ -712,6 +715,131 @@ describe("web board layers", () => {
         for (const layer of boardLayers()) {
             expect(layer.style.visibility).not.toBe("hidden");
         }
+        goban.destroy();
+    });
+});
+
+/* The native view is hidden from the moment it is suspended until a resume
+ * actually resolves. Hiding the canvas any earlier than that leaves neither
+ * board on screen for the width of a bridge round-trip. */
+describe("no blank board while a resume is in flight", () => {
+    test("re-engaging keeps the canvas visible until resume resolves", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        goban.setMode("analyze");
+        await flush();
+        expect(goban.nativeBridgeState).toBe("bailed");
+
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        const resume_gate = gate();
+        transport.next_resume_gate = resume_gate.promise;
+        goban.setMode("play");
+        await flush();
+
+        /* resume is in flight: the native view is still suspended, so the
+         * canvas is the only board on screen. */
+        expect(transport.callsOf("resume")).toHaveLength(1);
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        resume_gate.open();
+        await flush();
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("resumeNativeView keeps the canvas visible until resume resolves", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+
+        /* Suspend, then bail and re-engage, so the canvas is left up as the
+         * board with no snapshot covering it (the coordinator's suspend
+         * resolved before we were bailed). */
+        await goban.suspendNativeView();
+        goban.setMode("analyze");
+        await flush();
+        goban.setMode("play");
+        await flush();
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        const resume_gate = gate();
+        transport.next_resume_gate = resume_gate.promise;
+        goban.resumeNativeView();
+        await flush();
+
+        expect(transport.callsOf("resume")).toHaveLength(1);
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        resume_gate.open();
+        await flush();
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("a theme change while a resume is in flight does not hide the canvas", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        goban.setMode("analyze");
+        await flush();
+
+        const resume_gate = gate();
+        transport.next_resume_gate = resume_gate.promise;
+        goban.setMode("play");
+        await flush();
+        expect(transport.callsOf("resume")).toHaveLength(1);
+
+        /* "active" no longer implies "the native view is on screen": a
+         * theme change landing in the resume window must leave the canvas
+         * up as the board. */
+        goban.setTheme(
+            {
+                "board": "Kaya",
+                "black": "Glass",
+                "white": "Glass",
+                "removal-graphic": "x",
+                "removal-scale": 1.0,
+                "stone-scale": 1.0,
+            },
+            false,
+        );
+        await flush();
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
+
+        resume_gate.open();
+        await flush();
+        expect(canvas.style.visibility).toBe("hidden");
+        goban.destroy();
+    });
+
+    test("bailing while a resume is in flight leaves the canvas visible", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeBridge(config(transport));
+        await flush();
+        goban.setMode("analyze");
+        await flush();
+
+        const resume_gate = gate();
+        transport.next_resume_gate = resume_gate.promise;
+        goban.setMode("play");
+        await flush();
+        expect(transport.callsOf("resume")).toHaveLength(1);
+
+        /* Back out of play before the resume lands: its continuation must
+         * not hide the canvas over a native view we are re-suspending. */
+        goban.setMode("analyze");
+        await flush();
+        expect(goban.nativeBridgeState).toBe("bailed");
+
+        resume_gate.open();
+        await flush();
+        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
+        expect(canvas.style.visibility).not.toBe("hidden");
         goban.destroy();
     });
 });

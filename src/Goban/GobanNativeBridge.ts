@@ -202,13 +202,14 @@ export class GobanNativeBridge extends GobanCanvas {
         this.native_overlay_suspended = false;
         if (this.native_state === "active" && this.native_transport) {
             const transport = this.native_transport;
-            this.enqueueNativeOp(() => transport.resume({ id: this.nativeId() }), "resume").catch(
-                () => this.recoverFromActiveTransportFailure("resume"),
-            );
-            /* The canvas may have been left visible by a suspension that
-             * predated the attach/re-engage (no snapshot covered the board
-             * then); the native view owns the pixels again now. */
-            this.setCanvasVisible(false);
+            this.enqueueNativeOp(async () => {
+                await transport.resume({ id: this.nativeId() });
+                /* The canvas may have been left visible by a suspension
+                 * that predated the attach/re-engage (no snapshot covered
+                 * the board then); only now does the native view own the
+                 * pixels again. */
+                this.hideCanvasBehindNativeView();
+            }, "resume").catch(() => this.recoverFromActiveTransportFailure("resume"));
         }
         this.scheduleNativeSync();
     }
@@ -237,13 +238,12 @@ export class GobanNativeBridge extends GobanCanvas {
         if (!this.native_transport) {
             return;
         }
-        if (this.native_state === "active" && !this.native_overlay_suspended) {
-            /* setTheme may have re-created the shadow layer; keep it
-             * hidden while the native view owns the pixels. (While an
-             * overlay suspension is in effect the canvas may be serving
-             * as the visible board, so leave it alone.) */
-            this.setCanvasVisible(false);
-        }
+        /* setTheme may have re-created the shadow layer, but there is
+         * nothing to decide here: the scheduleNativeSync() below re-applies
+         * the recorded canvas visibility across the whole layer stack,
+         * including anything just re-created. Re-deriving it here would
+         * only get it wrong -- the canvas is the visible board whenever a
+         * suspend is uncovered or a resume is still in flight. */
         if (this.native_state === "active" || this.native_state === "bailed") {
             const transport = this.native_transport;
             this.enqueueNativeOp(
@@ -531,11 +531,13 @@ export class GobanNativeBridge extends GobanCanvas {
             this.nativeLog("board v1-serviceable again; native re-engage deferred to resume");
             return;
         }
-        this.enqueueNativeOp(() => transport.resume({ id: this.nativeId() }), "resume").catch(() =>
-            this.recoverFromActiveTransportFailure("resume"),
-        );
-        this.setCanvasVisible(false);
-        this.nativeLog("board v1-serviceable again; native view re-engaged");
+        /* The canvas has been the board since bailToCanvas(); it stays up
+         * until the resume lands, below. */
+        this.enqueueNativeOp(async () => {
+            await transport.resume({ id: this.nativeId() });
+            this.hideCanvasBehindNativeView();
+        }, "resume").catch(() => this.recoverFromActiveTransportFailure("resume"));
+        this.nativeLog("board v1-serviceable again; native view re-engaging");
     }
 
     /**
@@ -669,6 +671,28 @@ export class GobanNativeBridge extends GobanCanvas {
             // jsdom and detached elements: fall through to the default
         }
         return "#000000";
+    }
+
+    /**
+     * Hide the web canvas now that a completed transport op has left the
+     * native view owning the pixels.
+     *
+     * Hiding is the one direction that can blank the board, so it may only
+     * ever run once the native view is confirmed visible -- between a
+     * suspend and a *resolved* resume, neither board is on screen.
+     * (Showing the canvas is always safe to do eagerly: the native view
+     * composites above the web content, so an extra web board underneath
+     * it is invisible, never blank.)
+     *
+     * Guarded because the op queue is asynchronous: destroy() or a bail
+     * back to the canvas can land while the resume is still in flight, and
+     * both of those want the canvas left alone.
+     */
+    private hideCanvasBehindNativeView(): void {
+        if (this.destroyed || this.native_state !== "active") {
+            return;
+        }
+        this.setCanvasVisible(false);
     }
 
     private setCanvasVisible(visible: boolean): void {
