@@ -661,3 +661,309 @@ describe("last-move crosshair (SVG)", () => {
         goban.destroy();
     });
 });
+
+describe("AI review marks and placement rooting", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    function rendererSvg(goban: SVGRenderer): SVGSVGElement {
+        return (goban as unknown as { svg: SVGSVGElement }).svg;
+    }
+
+    test("setAIQualityMark renders a colored badge with the quality symbol", () => {
+        const goban = new SVGRenderer(basic3x3Config({ moves: [[0, 0]], mode: "analyze" }));
+
+        goban.setAIQualityMark(0, 0, "blunder");
+
+        const badge = rendererSvg(goban).querySelector(".ai-quality-badge");
+        expect(badge).not.toBeNull();
+        expect(badge?.getAttribute("class")).toContain("ai-quality-blunder");
+        expect(badge?.querySelector("circle")?.getAttribute("fill")).toBe(
+            "var(--move-quality-blunder, #D64545)",
+        );
+        expect(badge?.querySelector("text")?.textContent).toBe("??");
+        goban.destroy();
+    });
+
+    test("ai_quality badge replaces the sub_triangle triangle", () => {
+        const goban = new SVGRenderer(basic3x3Config({ moves: [[0, 0]], mode: "analyze" }));
+        const svg = rendererSvg(goban);
+
+        goban.setMark(0, 0, "sub_triangle", false);
+        expect(svg.querySelector(".triangle")).not.toBeNull();
+
+        goban.setAIQualityMark(0, 0, "great");
+        expect(svg.querySelector(".triangle")).toBeNull();
+        expect(svg.querySelector(".ai-quality-badge text")?.textContent).toBe("!");
+        goban.destroy();
+    });
+
+    test("clearing marks removes the badge", () => {
+        const goban = new SVGRenderer(basic3x3Config({ moves: [[0, 0]], mode: "analyze" }));
+        const svg = rendererSvg(goban);
+
+        goban.setAIQualityMark(0, 0, "mistake");
+        expect(svg.querySelector(".ai-quality-badge")).not.toBeNull();
+
+        goban.engine.cur_move.clearMarks();
+        goban.redraw(true);
+        expect(svg.querySelector(".ai-quality-badge")).toBeNull();
+        goban.destroy();
+    });
+
+    test("hovering a mark stone draws it fully opaque", () => {
+        const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
+        goban.enableStonePlacement();
+        goban.setMark(1, 1, "black", false);
+
+        const svg = rendererSvg(goban);
+        const stoneOpacities = () =>
+            Array.from(svg.querySelectorAll("[opacity]")).map((e) => e.getAttribute("opacity"));
+
+        expect(stoneOpacities()).toContain("0.6");
+        expect(stoneOpacities()).not.toContain("1");
+
+        goban.parent.dispatchEvent(
+            new MouseEvent("mousemove", {
+                clientX: (1 + 1.5) * TEST_SQUARE_SIZE,
+                clientY: (1 + 1.5) * TEST_SQUARE_SIZE,
+            }),
+        );
+
+        expect(stoneOpacities()).toContain("1");
+        goban.destroy();
+    });
+
+    test("hover keeps the mark stone below its subscript and quality badge", () => {
+        const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
+        goban.enableStonePlacement();
+        goban.setMark(1, 1, "black", false);
+        goban.setSubscriptMark(1, 1, "1.5", true);
+        goban.setAIQualityMark(1, 1, "blunder");
+        const svg = rendererSvg(goban);
+
+        goban.parent.dispatchEvent(
+            new MouseEvent("mousemove", {
+                clientX: (1 + 1.5) * TEST_SQUARE_SIZE,
+                clientY: (1 + 1.5) * TEST_SQUARE_SIZE,
+            }),
+        );
+
+        const stone = svg.querySelector('[opacity="1"]')!;
+        const subscript = svg.querySelector(".subscript")!;
+        const badge = svg.querySelector(".ai-quality-badge")!;
+        expect(stone).not.toBeNull();
+        expect(
+            stone.compareDocumentPosition(subscript) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(
+            stone.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        goban.destroy();
+    });
+
+    test("the presented next move's stone draws less translucently", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                ],
+                mode: "analyze",
+            }),
+        );
+        // Sit on move 1; move 2 at (1, 0) is the presented next move
+        goban.showPrevious();
+        goban.setPresentNextMove(true);
+        goban.setMark(1, 0, "white", false);
+
+        const svg = rendererSvg(goban);
+        const opacities = Array.from(svg.querySelectorAll("[opacity]"))
+            .filter((e) => e.getAttribute("class") !== "last-move")
+            .map((e) => e.getAttribute("opacity"));
+        expect(opacities).toContain("0.75");
+        expect(opacities).not.toContain("0.6");
+        goban.destroy();
+    });
+
+    test("the last move circle dims while presenting", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                ],
+                mode: "analyze",
+            }),
+        );
+        goban.showPrevious();
+        const svg = rendererSvg(goban);
+
+        expect(svg.querySelector(".last-move")).not.toBeNull();
+        expect(svg.querySelector(".last-move")?.getAttribute("opacity")).toBeNull();
+
+        goban.setPresentNextMove(true);
+        expect(svg.querySelector(".last-move")?.getAttribute("opacity")).toBe("0.4");
+
+        goban.setPresentNextMove(false);
+        expect(svg.querySelector(".last-move")?.getAttribute("opacity")).toBeNull();
+        goban.destroy();
+    });
+
+    test("shift clicking a stone in presented move space presents that move", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+                mode: "analyze",
+            }),
+        );
+        const event_layer = goban.parent;
+        goban.setPresentNextMove(true);
+
+        // Shift-click the stone of move 2 at (1, 0): the engine lands on
+        // move 1 so that move 2 is the presented move
+        simulateMouseClick(event_layer, { x: 1, y: 0, shiftKey: true });
+
+        expect(goban.engine.cur_move.move_number).toBe(1);
+        expect(goban.engine.cur_move.trunk_next?.move_number).toBe(2);
+        goban.destroy();
+    });
+
+    test("a goban removes its move tree from the container when detached or destroyed", () => {
+        const container = document.createElement("div");
+        document.body.appendChild(container);
+
+        const goban_a = new SVGRenderer(
+            basic3x3Config({
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                ],
+                mode: "analyze",
+            }),
+        );
+        goban_a.setMoveTreeContainer(container);
+        expect(container.children.length).toBe(1);
+
+        // Detaching (as GobanController.destroy does) removes the tree
+        goban_a.setMoveTreeContainer(null);
+        expect(container.children.length).toBe(0);
+        goban_a.destroy();
+
+        // A new goban taking over the container is the only tree in it,
+        // even when the old goban is destroyed without detaching first
+        const goban_b = new SVGRenderer(basic3x3Config({ moves: [[0, 0]], mode: "analyze" }));
+        goban_b.setMoveTreeContainer(container);
+        expect(container.children.length).toBe(1);
+        goban_b.destroy();
+        expect(container.children.length).toBe(0);
+
+        container.remove();
+    });
+
+    test("clearing colored circles removes them from the board", () => {
+        const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
+        const svg = rendererSvg(goban);
+
+        goban.setColoredCircles([{ move: { x: 1, y: 1 }, color: "rgba(0, 130, 255, 0.7)" }], false);
+        expect(svg.querySelector(".colored-circle")).not.toBeNull();
+
+        goban.setColoredCircles([], false);
+        expect(svg.querySelector(".colored-circle")).toBeNull();
+        goban.destroy();
+    });
+
+    test("subscript2 renders a second line below the subscript", () => {
+        const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
+        goban.setSubscriptMark(1, 1, "-1.0", true);
+        goban.setSubscript2Mark(1, 1, "123", true);
+
+        const svg = rendererSvg(goban);
+        const sub = svg.querySelector(".subscript");
+        const sub2 = svg.querySelector(".subscript2");
+        expect(sub?.textContent).toBe("-1.0");
+        expect(sub2?.textContent).toBe("123");
+        expect(parseFloat(sub2!.getAttribute("y")!)).toBeGreaterThan(
+            parseFloat(sub!.getAttribute("y")!),
+        );
+
+        goban.engine.cur_move.clearMarks();
+        goban.redraw(true);
+        expect(svg.querySelector(".subscript2")).toBeNull();
+        goban.destroy();
+    });
+
+    test("clickJumpTarget resolves clicks in presented move space", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+                mode: "analyze",
+            }),
+        );
+        const move3 = goban.engine.cur_move;
+        const move2 = move3.parent!;
+        const root = goban.engine.move_tree;
+
+        // Without presentation, clicks jump to the clicked node
+        expect(goban.clickJumpTarget(move3).id).toBe(move3.id);
+
+        goban.setPresentNextMove(true);
+
+        // A trunk node click presents that move: jump to its parent
+        expect(goban.clickJumpTarget(move3).id).toBe(move2.id);
+        // The root has no parent and is jumped to directly
+        expect(goban.clickJumpTarget(root).id).toBe(root.id);
+
+        // Variation nodes are jumped to directly
+        goban.engine.jumpTo(move2);
+        goban.engine.place(1, 1);
+        const variation = goban.engine.cur_move;
+        expect(variation.trunk).toBe(false);
+        expect(goban.clickJumpTarget(variation).id).toBe(variation.id);
+        goban.destroy();
+    });
+
+    test("clicking the point of the next trunk move follows it instead of branching", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+                mode: "analyze",
+            }),
+        );
+        const event_layer = goban.parent;
+        goban.enableStonePlacement();
+
+        // Step back to move 2, then click where trunk move 3 was played
+        goban.showPrevious();
+        expect(goban.engine.cur_move.move_number).toBe(2);
+
+        simulateMouseClick(event_layer, { x: 2, y: 0 });
+
+        expect(goban.engine.cur_move.move_number).toBe(3);
+        expect(goban.engine.cur_move.trunk).toBe(true);
+        expect(goban.engine.board).toEqual([
+            [1, 2, 1],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+        goban.destroy();
+    });
+});

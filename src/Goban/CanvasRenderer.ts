@@ -50,6 +50,7 @@ import {
     CaptureDisplay,
     ResolvedBoardBackground,
 } from "./Goban";
+import { AI_QUALITY_BADGES } from "./InteractiveBase";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -278,9 +279,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         delete this.message_div;
         delete this.message_td;
         delete this.message_text;
+        this.removeMoveTreeFromDOM();
         delete this.move_tree_container;
-        delete this.move_tree_inner_container;
-        delete this.move_tree_canvas;
         delete this.title_div;
     }
     private detachShadowLayer(): void {
@@ -1023,7 +1023,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         ) {
             const m = this.engine.getMoveByLocation(x, y, true);
             if (m) {
-                this.engine.jumpTo(m);
+                this.engine.jumpTo(this.clickJumpTarget(m));
                 this.emit("update");
             }
             return;
@@ -1649,6 +1649,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             pos.triangle ||
             pos.chat_triangle ||
             pos.sub_triangle ||
+            pos.ai_quality ||
             pos.cross ||
             pos.square
         ) {
@@ -1658,6 +1659,12 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             have_text_to_draw = true;
         }
         if (pos.subscript && pos.subscript.length > 0) {
+            have_text_to_draw = true;
+        }
+        if (pos.subscript2 && pos.subscript2.length > 0) {
+            have_text_to_draw = true;
+        }
+        if (this.colored_circles?.[j][i]) {
             have_text_to_draw = true;
         }
 
@@ -1871,6 +1878,24 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     color = pos.black ? 1 : 2;
                     translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
+                    if (
+                        this.present_next_move &&
+                        this.engine.cur_move.trunk_next &&
+                        this.engine.cur_move.trunk_next.x === i &&
+                        this.engine.cur_move.trunk_next.y === j
+                    ) {
+                        /* the presented next move reads a bit more solidly
+                         * than other mark stones */
+                        stoneAlphaValue = Math.min(1, stoneAlphaValue + 0.15);
+                    }
+                    if (
+                        this.last_hover_square &&
+                        this.last_hover_square.x === i &&
+                        this.last_hover_square.y === j
+                    ) {
+                        /* make the stone stand out while hovered */
+                        stoneAlphaValue = 1.0;
+                    }
                 } else {
                     color = this.engine.player;
                 }
@@ -2277,11 +2302,37 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     yy += this.square_size * 0.3;
                 }
 
+                if (pos.subscript2) {
+                    yy -= this.square_size * 0.15;
+                }
+
                 ctx.textBaseline = "middle";
                 if (transparent) {
                     ctx.globalAlpha = 0.6;
                 }
                 ctx.fillText(subscript, xx, yy);
+                draw_last_move = false;
+                ctx.restore();
+            }
+
+            if (pos.subscript2) {
+                letter_was_drawn = true;
+                ctx.save();
+                ctx.fillStyle = text_color;
+
+                const [, , metrics] = fitText(
+                    ctx,
+                    pos.subscript2,
+                    `bold FONT_SIZEpx ${GOBAN_FONT}`,
+                    this.square_size * 0.28,
+                    this.square_size * 0.7,
+                );
+
+                ctx.textBaseline = "middle";
+                if (transparent) {
+                    ctx.globalAlpha = 0.6;
+                }
+                ctx.fillText(pos.subscript2, cx - metrics.width / 2, cy + this.square_size * 0.35);
                 draw_last_move = false;
                 ctx.restore();
             }
@@ -2330,12 +2381,32 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 ctx.restore();
                 draw_last_move = false;
             }
+            if (pos.ai_quality) {
+                const badge = AI_QUALITY_BADGES[pos.ai_quality];
+                if (badge) {
+                    const oy = this.square_size * 0.3;
+                    const r = this.square_size * 0.2;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.fillStyle = badge.color;
+                    ctx.arc(cx, cy + oy, r, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.font = `bold ${this.square_size * 0.24}px ${GOBAN_FONT}`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(badge.symbol, cx, cy + oy);
+                    ctx.restore();
+                    draw_last_move = false;
+                }
+            }
             if (
-                pos.triangle ||
-                pos.chat_triangle ||
-                pos.sub_triangle ||
-                alt_marking === "triangle" ||
-                hover_mark === "triangle"
+                !pos.ai_quality &&
+                (pos.triangle ||
+                    pos.chat_triangle ||
+                    pos.sub_triangle ||
+                    alt_marking === "triangle" ||
+                    hover_mark === "triangle")
             ) {
                 let scale = 1.0;
                 let oy = 0.0;
@@ -2446,12 +2517,18 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                             ? this.theme_black_text_color
                             : this.theme_white_text_color;
 
+                    /* While the AI review presents the next move, the last
+                     * move circle takes a back seat to the presented stone */
+                    const last_move_opacity = this.present_next_move
+                        ? Math.min(this.last_move_opacity, 0.4)
+                        : this.last_move_opacity;
+
                     if (this.submit_move) {
                         ctx.lineCap = "square";
                         ctx.save();
                         ctx.beginPath();
                         ctx.lineWidth = this.square_size * 0.075;
-                        ctx.globalAlpha = this.last_move_opacity;
+                        ctx.globalAlpha = last_move_opacity;
                         const r = Math.max(1, this.metrics.mid * 0.35) * 0.8;
                         ctx.moveTo(cx - r, cy);
                         ctx.lineTo(cx + r, cy);
@@ -2469,7 +2546,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                             ctx.beginPath();
                             ctx.strokeStyle = color;
                             ctx.lineWidth = this.square_size * 0.075;
-                            ctx.globalAlpha = this.last_move_opacity;
+                            ctx.globalAlpha = last_move_opacity;
                             let r = this.square_size * this.last_move_radius;
                             if (this.submit_move) {
                                 r = this.square_size * 0.3;
@@ -2686,6 +2763,25 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 }
 
                 ret += (translucent ? "T" : "") + color + ",";
+                if (
+                    (pos.black || pos.white) &&
+                    this.last_hover_square &&
+                    this.last_hover_square.x === i &&
+                    this.last_hover_square.y === j
+                ) {
+                    /* hovered mark stones draw less translucently */
+                    ret += "hover,";
+                }
+                if (
+                    (pos.black || pos.white) &&
+                    this.present_next_move &&
+                    this.engine.cur_move.trunk_next &&
+                    this.engine.cur_move.trunk_next.x === i &&
+                    this.engine.cur_move.trunk_next.y === j
+                ) {
+                    /* the presented next move draws less translucently */
+                    ret += "presented,";
+                }
             }
         }
 
@@ -2892,6 +2988,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (pos.subscript) {
                 ret += " _ " + pos.subscript + (transparent ? " fade" : "") + ",";
             }
+            if (pos.subscript2) {
+                ret += " _2 " + pos.subscript2 + ",";
+            }
         }
 
         /* draw special symbols */
@@ -2915,6 +3014,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (pos.circle) {
                 ret += "circle,";
             }
+            if (pos.ai_quality) {
+                ret += "aiq " + pos.ai_quality + ",";
+            }
             if (pos.triangle || pos.chat_triangle || alt_marking === "triangle") {
                 ret += "triangle,";
             }
@@ -2935,6 +3037,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
+                if (this.present_next_move) {
+                    /* the last move circle draws dimmed while presenting */
+                    ret += "dimmed,";
+                }
                 if (this.getShowUndoRequestIndicator() && this.engine.isStoneInUndoRequest(i, j)) {
                     ret += "?" + ",";
                 }
@@ -3560,12 +3666,28 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     // Move tree
     //
     public setMoveTreeContainer(container: HTMLElement | null): void {
+        if (this.move_tree_container !== (container ?? undefined)) {
+            this.removeMoveTreeFromDOM();
+        }
         this.move_tree_container = container ?? undefined;
         this.move_tree_redraw();
     }
 
+    /**
+     * Removes this goban's move tree elements from the container so another
+     * goban can take the container over without our stale tree lingering
+     * behind its own.
+     */
+    private removeMoveTreeFromDOM(): void {
+        if (this.move_tree_inner_container) {
+            this.move_tree_inner_container.remove();
+        }
+        delete this.move_tree_inner_container;
+        delete this.move_tree_canvas;
+    }
+
     public move_tree_redraw(no_warp?: boolean): void {
-        if (!this.move_tree_container) {
+        if (this.destroyed || !this.move_tree_container) {
             return;
         }
 
@@ -3631,7 +3753,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         */
 
         this.engine.move_tree.recomputeIsobranches();
-        const active_path_end = this.engine.cur_move;
+        const active_path_end =
+            this.present_next_move && this.engine.cur_move.trunk_next
+                ? this.engine.cur_move.trunk_next
+                : this.engine.cur_move;
 
         this.engine.move_tree_layout_dirty = false;
 
@@ -3759,22 +3884,23 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 const node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
 
                 if (node) {
-                    if (this.engine.cur_move.id !== node.id) {
-                        this.engine.jumpTo(node);
+                    const target = this.clickJumpTarget(node);
+                    if (this.engine.cur_move.id !== target.id) {
+                        this.engine.jumpTo(target);
                         this.setLabelCharacterFromMarks();
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
                         this.syncReviewMove();
                         this.redraw();
                     }
-                    if (this.engine.cur_move.played_by) {
+                    if (node.played_by) {
                         // note that getRelativeEventPosition handles various
                         // nasty looking things to do with Touch etc, so using it here
                         // gets around that kind of thing, even though in theory it
                         // might be nicer to sent the client absolute coords, maybe.
                         const rpos = getRelativeEventPosition(event);
                         this.emit("played-by-click", {
-                            player_id: this.engine.cur_move.played_by,
+                            player_id: node.played_by,
                             x: rpos.x,
                             y: rpos.y,
                         });
