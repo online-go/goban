@@ -151,6 +151,18 @@ describe("buildOverlays", () => {
         expect(dame.territory).toEqual({ stroke: "#365FE6" });
     });
 
+    test("finished game fades dead stones but does not draw the removal X", () => {
+        const src = source();
+        src.engine.place(1, 1);
+        src.engine.last_official_move = src.engine.cur_move;
+        src.engine.phase = "finished";
+        src.engine.removal[1][1] = true;
+        const o = overlayAt(buildOverlays(src), 1, 1)!;
+        expect(o.stoneAlpha).toBe(0.6);
+        expect(o.xmark).toBeUndefined();
+        expect(buildLastMove(src)).toMatchObject({ x: 1, y: 1, style: "circle" });
+    });
+
     test("score marks become filled territory squares", () => {
         const src = source();
         src.engine.cur_move.getMarks(1, 1).score = "black";

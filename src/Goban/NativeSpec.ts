@@ -234,9 +234,12 @@ function computeOverlay(src: SpecSource, i: number, j: number): OverlayResult | 
         has_content = true;
     }
 
-    /* Removal X */
+    /* Removal X: only while stone removal is live at the last official move
+     * (or scoring's own removed stones) -- unlike stoneAlpha, this does not
+     * extend into a finished game (CanvasRenderer.ts:1624-1638). */
+    const removal_x_dead = inStoneRemoval(src) && !!engine.board[j][i] && !!engine.removal[j][i];
     const draw_removal_x =
-        (removal_dead || se_removed || pos.stone_removed) && src.removal_graphic === "x";
+        (removal_x_dead || se_removed || pos.stone_removed) && src.removal_graphic === "x";
     let last_move_suppressed = false;
     if (draw_removal_x) {
         const color = engine.board[j][i] === JGOFNumericPlayerColor.BLACK ? "black" : "white";
