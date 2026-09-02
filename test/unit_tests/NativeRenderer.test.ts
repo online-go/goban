@@ -132,6 +132,23 @@ async function flush(): Promise<void> {
 
 let board_div: HTMLDivElement;
 
+/** jsdom never lays anything out, so every rect is 0x0 - which is exactly the
+ *  case the renderer refuses to attach to. Present a laid out board div. */
+function setRect(el: HTMLElement, box: { x: number; y: number; width: number; height: number }) {
+    el.getBoundingClientRect = () =>
+        ({
+            x: box.x,
+            y: box.y,
+            left: box.x,
+            top: box.y,
+            right: box.x + box.width,
+            bottom: box.y + box.height,
+            width: box.width,
+            height: box.height,
+            toJSON: () => ({}),
+        }) as DOMRect;
+}
+
 function config(
     transport: RecordingTransport,
     overrides?: Partial<NativeRendererGobanConfig>,
@@ -155,6 +172,7 @@ function config(
 beforeEach(() => {
     board_div = document.createElement("div");
     document.body.appendChild(board_div);
+    setRect(board_div, { x: 0, y: 0, width: 40, height: 40 });
 });
 afterEach(() => board_div.remove());
 
@@ -366,6 +384,54 @@ describe("messages and overlays", () => {
     });
 });
 
+describe("geometry", () => {
+    test("a 0x0 board div is never attached; the attach waits for a size", async () => {
+        const t = new RecordingTransport();
+        /* A board mounted into a hidden column, or before layout runs. */
+        setRect(board_div, { x: 0, y: 0, width: 0, height: 0 });
+        const goban = new GobanNativeRenderer(config(t));
+        await flush();
+        expect(t.callsOf("attach")).toHaveLength(0);
+        expect(goban.nativeState).toBe("pending");
+
+        /* jsdom has no ResizeObserver, so stand in for the one the renderer
+         * keeps on `parent`. */
+        setRect(board_div, { x: 0, y: 0, width: 40, height: 40 });
+        goban.redraw(true);
+        await flush();
+        expect(t.callsOf("attach")).toHaveLength(1);
+        expect(t.callsOf("attach")[0].opts.rect).toMatchObject({ width: 40, height: 40 });
+        expect(goban.nativeState).toBe("active");
+        goban.destroy();
+    });
+
+    test("a viewport change keeps re-measuring across the following frames", async () => {
+        const t = new RecordingTransport();
+        const goban = new GobanNativeRenderer(config(t));
+        await flush();
+        expect(t.callsOf("move")).toHaveLength(0);
+
+        /* Rotation: the box has moved by the time the event fires, and then
+         * moves again as the layout settles a frame later. Only the first of
+         * those is visible to a listener that measures once. */
+        setRect(board_div, { x: 100, y: 0, width: 30, height: 30 });
+        window.dispatchEvent(new Event("orientationchange"));
+        await flush();
+        expect(t.callsOf("move")).toHaveLength(1);
+
+        setRect(board_div, { x: 100, y: 0, width: 24, height: 24 });
+        /* Well inside VIEWPORT_SETTLE_MS, so this can only be the animation
+         * frame pass finding the box in its final place. */
+        expect(typeof requestAnimationFrame).toBe("function");
+        await new Promise((r) => setTimeout(r, 100));
+        await flush();
+        const moves = t.callsOf("move");
+        expect(moves).toHaveLength(2);
+        expect(moves[1].opts.rect).toMatchObject({ x: 100, width: 24, height: 24 });
+        goban.destroy();
+    });
+});
+
 describe("transport rejections", () => {
     test("a rejected update is re-sent on a later sync", async () => {
         const t = new RecordingTransport();
@@ -390,26 +456,32 @@ describe("transport rejections", () => {
         goban.destroy();
     });
 
+    test("a rejected attach retries on its own timer, with nothing to prompt it", async () => {
+        const t = new RecordingTransport();
+        t.reject_attach_once = true;
+        const goban = new GobanNativeRenderer(config(t));
+        await flush();
+        expect(goban.nativeState).toBe("pending");
+        expect(t.callsOf("attach")).toHaveLength(1);
+
+        /* Nothing below touches the goban: the retry armed by the failure is
+         * the only thing that can bring the board back. Without it a rim that
+         * is briefly busy at mount time leaves a permanently blank board. */
+        await new Promise((r) => setTimeout(r, 400));
+        await flush();
+        expect(t.callsOf("attach")).toHaveLength(2);
+        expect(goban.nativeState).toBe("active");
+        goban.destroy();
+    });
+
     test("a rejected move is re-sent on the next sync", async () => {
         const t = new RecordingTransport();
         const goban = new GobanNativeRenderer(config(t));
         await flush();
         expect(t.callsOf("move")).toHaveLength(0);
 
-        /* jsdom reports an all-zero rect, so fake a laid out board div to make
-         * the renderer notice a geometry change at all. */
-        const rect = {
-            x: 5,
-            y: 7,
-            left: 5,
-            top: 7,
-            right: 45,
-            bottom: 47,
-            width: 40,
-            height: 40,
-            toJSON: () => ({}),
-        } as DOMRect;
-        board_div.getBoundingClientRect = () => rect;
+        /* Move the laid out board so the renderer notices a geometry change. */
+        setRect(board_div, { x: 5, y: 7, width: 40, height: 40 });
 
         t.reject_next_move = true;
         goban.redraw(true);

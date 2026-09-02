@@ -61,6 +61,11 @@ export type NativeRendererState = "pending" | "attaching" | "active" | "destroye
  *  the event loop. */
 const RETRY_DELAY_MS = 250;
 
+/** How long after a viewport-level change (rotation, the visual viewport
+ *  resizing) to take one last measurement. Two animation frames catch the
+ *  common case; this catches the tail of an animated rotation. */
+const VIEWPORT_SETTLE_MS = 250;
+
 /** The renderer state changes that make the spec stale. */
 const SYNC_EVENTS = [
     "update",
@@ -96,6 +101,9 @@ export class GobanNativeRenderer extends Goban {
     private unsubscribe: Array<() => void> = [];
     private resize_observer?: ResizeObserver;
     private readonly window_listener = () => this.scheduleSync();
+    private readonly viewport_listener = () => this.remeasureAfterViewportChange();
+    private viewport_frames: number[] = [];
+    private viewport_timeout?: ReturnType<typeof setTimeout>;
 
     private themes: GobanSelectedThemes;
     private resolved!: ResolvedThemes;
@@ -125,6 +133,12 @@ export class GobanNativeRenderer extends Goban {
     constructor(config: NativeRendererGobanConfig, preloaded_data?: AdHocFormat | JGOF) {
         /* TODO: Need to reconcile the clock fields before we can get rid of this `any` cast */
         super(config, preloaded_data as any);
+        /* Size the board div before anything that can throw, so a failure
+         * further down still leaves a correctly sized box in the layout
+         * rather than a 0x0 one that collapses the page around it. */
+        const initial_metrics = this.computeMetrics();
+        this.parent.style.width = `${initial_metrics.width}px`;
+        this.parent.style.height = `${initial_metrics.height}px`;
         this.transport = config.native_transport;
         this.last_move_opacity = config.last_move_opacity ?? 1;
         this.themes = this.getSelectedThemes();
@@ -152,6 +166,8 @@ export class GobanNativeRenderer extends Goban {
         if (typeof window !== "undefined") {
             window.addEventListener("resize", this.window_listener);
             window.addEventListener("scroll", this.window_listener, { passive: true });
+            window.addEventListener("orientationchange", this.viewport_listener);
+            window.visualViewport?.addEventListener("resize", this.viewport_listener);
         }
         this.redraw(true);
     }
@@ -248,6 +264,18 @@ export class GobanNativeRenderer extends Goban {
 
     public override updateScoreEstimation(): void {
         super.updateScoreEstimation();
+        this.scheduleSync();
+    }
+
+    /** The ghost stone is gated on `stone_placement_enabled`, which the base
+     *  flips without emitting anything the sync events cover. */
+    public override enableStonePlacement(): void {
+        super.enableStonePlacement();
+        this.scheduleSync();
+    }
+
+    public override disableStonePlacement(): void {
+        super.disableStonePlacement();
         this.scheduleSync();
     }
 
@@ -366,6 +394,16 @@ export class GobanNativeRenderer extends Goban {
         if (typeof window !== "undefined") {
             window.removeEventListener("resize", this.window_listener);
             window.removeEventListener("scroll", this.window_listener);
+            window.removeEventListener("orientationchange", this.viewport_listener);
+            window.visualViewport?.removeEventListener("resize", this.viewport_listener);
+        }
+        for (const handle of this.viewport_frames) {
+            cancelAnimationFrame(handle);
+        }
+        this.viewport_frames = [];
+        if (this.viewport_timeout !== undefined) {
+            clearTimeout(this.viewport_timeout);
+            delete this.viewport_timeout;
         }
         if (this.message_timeout) {
             clearTimeout(this.message_timeout);
@@ -498,7 +536,15 @@ export class GobanNativeRenderer extends Goban {
                     this.enqueue(() => this.transport.detach({ id: this.id() }), "detach").catch(
                         () => undefined,
                     );
+                    /* The rim drops the old view and the message it was
+                     * showing with it, so forget having sent it and push it
+                     * again behind the re-attach. */
+                    const message = this.message_sent ?? null;
+                    this.message_sent = null;
                     this.attach();
+                    if (message !== null) {
+                        this.pushMessage(message);
+                    }
                     return;
                 }
                 this.pushGeometry();
@@ -510,44 +556,113 @@ export class GobanNativeRenderer extends Goban {
     }
 
     private attach(): void {
+        const rect = this.measureRect();
+        if (rect.width <= 0 || rect.height <= 0) {
+            /* Nothing to attach to yet — a board mounted into a hidden column
+             * or before layout. Staying "pending" leaves the ResizeObserver on
+             * `parent` to re-sync the moment it gets a size; attaching now
+             * would hand the rim a degenerate rect it has to reject. */
+            return;
+        }
         this.state = "attaching";
         this.enqueue(async () => {
             if (this.isDestroyed()) {
                 return;
             }
-            const spec = this.buildSpec();
-            const payload: NativeAttachOptions = {
-                ...spec,
-                id: this.id(),
-                rect: this.measureRect(),
-                interactive: this.interactive,
-                theme: this.buildTheme(),
-            };
             try {
+                const spec = this.buildSpec();
+                /* Claim the theme key before building the theme: an image
+                 * theme that finishes loading during the build clears it
+                 * again, and that deferred re-push must survive. */
+                this.theme_sent_for = this.themeKey();
+                const payload: NativeAttachOptions = {
+                    ...spec,
+                    id: this.id(),
+                    rect,
+                    interactive: this.interactive,
+                    theme: this.buildTheme(),
+                };
                 await this.transport.attach(payload);
+                if (this.isDestroyed()) {
+                    return;
+                }
+                this.state = "active";
+                this.attached_size = { width: spec.width, height: spec.height };
+                this.last_rect = payload.rect;
+                this.last_sent = spec;
+                if (this.overlay_suspended) {
+                    await this.transport
+                        .suspend({ id: this.id() })
+                        .then((r) => this.placeSnapshot(r.snapshot))
+                        .catch(() => undefined);
+                }
+                this.scheduleSync();
             } catch (err) {
+                /* Anything at all — a rejected attach, a theme that could not
+                 * be built, a spec the engine could not produce. Whatever it
+                 * was, the rim has nothing, so drop every claim that it does
+                 * and go back to "pending" so a later sync tries again. There
+                 * is no fallback renderer to fall back to. */
                 if (!this.isDestroyed()) {
                     this.state = "pending";
                 }
-                this.log("attach failed; will retry on the next sync", err);
-                return;
+                this.log("attach failed; will retry", err);
+                this.emit("error", err);
+                this.retryAfterFailure(() => {
+                    delete this.last_rect;
+                    delete this.last_sent;
+                    this.theme_sent_for = undefined;
+                });
             }
-            if (this.isDestroyed()) {
-                return;
-            }
-            this.state = "active";
-            this.attached_size = { width: spec.width, height: spec.height };
-            this.last_rect = payload.rect;
-            this.last_sent = spec;
-            this.theme_sent_for = this.themeKey();
-            if (this.overlay_suspended) {
-                await this.transport
-                    .suspend({ id: this.id() })
-                    .then((r) => this.placeSnapshot(r.snapshot))
-                    .catch(() => undefined);
-            }
-            this.scheduleSync();
         }, "attach").catch(() => undefined);
+    }
+
+    /**
+     * A viewport-level change settles over several frames: on the event
+     * itself the DOM box is still the pre-rotation one, and on some devices
+     * the transition animates. Re-measure on each of the next two animation
+     * frames and once more after the transition should be over, pushing a
+     * `move` whenever the rect actually differs from the last one sent.
+     */
+    private remeasureAfterViewportChange(): void {
+        if (this.isDestroyed()) {
+            return;
+        }
+        this.scheduleSync();
+        if (typeof requestAnimationFrame !== "undefined") {
+            const tick = (remaining: number): void => {
+                const handle = requestAnimationFrame(() => {
+                    this.viewport_frames = this.viewport_frames.filter((h) => h !== handle);
+                    if (this.isDestroyed()) {
+                        return;
+                    }
+                    this.remeasure();
+                    if (remaining > 1) {
+                        tick(remaining - 1);
+                    }
+                });
+                this.viewport_frames.push(handle);
+            };
+            tick(2);
+        }
+        if (this.viewport_timeout !== undefined) {
+            clearTimeout(this.viewport_timeout);
+        }
+        this.viewport_timeout = setTimeout(() => {
+            delete this.viewport_timeout;
+            if (!this.isDestroyed()) {
+                this.remeasure();
+            }
+        }, VIEWPORT_SETTLE_MS);
+    }
+
+    /** Push the board div's current box at the rim if it moved. */
+    private remeasure(): void {
+        if (this.state === "active") {
+            this.pushGeometry();
+        } else {
+            this.scheduleSync();
+        }
     }
 
     private measureRect(): NativeRect {
