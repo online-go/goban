@@ -1769,6 +1769,18 @@ export abstract class GobanInteractive extends GobanBase {
                     }
                 }
 
+                if (!this.getPuzzlePlacementSetting) {
+                    /* Without the setting this silently degrades to "place":
+                     * stones go down and captures resolve, but the puzzle
+                     * never answers and never reports right or wrong, which
+                     * looks like a rendering bug rather than a missing config
+                     * field. Say so once, where it happens. */
+                    console.warn(
+                        "Goban in puzzle mode without getPuzzlePlacementSetting: " +
+                            "placing stones, but no correct/wrong answers will be emitted",
+                    );
+                }
+
                 if (puzzle_mode === "place") {
                     if (!double_tap) {
                         /* we get called for each tap, then once for the final double tap so we only want to process this x2 */

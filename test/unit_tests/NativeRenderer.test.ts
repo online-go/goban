@@ -405,6 +405,30 @@ describe("geometry", () => {
         goban.destroy();
     });
 
+    test("a board that loses its box is detached, and re-attached when it returns", async () => {
+        const t = new RecordingTransport();
+        const goban = new GobanNativeRenderer(config(t));
+        await flush();
+        expect(goban.nativeState).toBe("active");
+
+        /* display:none, e.g. a responsive column dropping out of the layout.
+         * Pushing the degenerate rect at the rim would be rejected and retried
+         * forever. */
+        setRect(board_div, { x: 0, y: 0, width: 0, height: 0 });
+        goban.redraw(true);
+        await flush();
+        expect(t.callsOf("detach")).toHaveLength(1);
+        expect(t.callsOf("move")).toHaveLength(0);
+        expect(goban.nativeState).toBe("pending");
+
+        setRect(board_div, { x: 0, y: 0, width: 40, height: 40 });
+        goban.redraw(true);
+        await flush();
+        expect(t.callsOf("attach")).toHaveLength(2);
+        expect(goban.nativeState).toBe("active");
+        goban.destroy();
+    });
+
     test("a viewport change keeps re-measuring across the following frames", async () => {
         const t = new RecordingTransport();
         const goban = new GobanNativeRenderer(config(t));

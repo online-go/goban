@@ -547,7 +547,9 @@ export class GobanNativeRenderer extends Goban {
                     }
                     return;
                 }
-                this.pushGeometry();
+                if (!this.pushGeometry()) {
+                    return;
+                }
                 this.pushTheme();
                 this.pushSpec();
                 return;
@@ -672,8 +674,20 @@ export class GobanNativeRenderer extends Goban {
         return { x: r.left + sx, y: r.top + sy, width: r.width, height: r.height };
     }
 
-    private pushGeometry(): void {
+    /** Returns false when the board no longer has a box and has been torn
+     *  down, so the caller must not go on pushing state at the rim. */
+    private pushGeometry(): boolean {
         const rect = this.measureRect();
+        if (rect.width <= 0 || rect.height <= 0) {
+            /* The board div lost its box — a responsive column dropping out of
+             * the layout is the usual way. There is no rect to move to, and a
+             * rim that rejects the degenerate one (both of ours do) would be
+             * asked again on every retry, forever. Tear the view down instead
+             * and wait: the ResizeObserver on `parent` re-attaches the moment
+             * the box comes back. */
+            this.detachUntilLaidOut();
+            return false;
+        }
         const l = this.last_rect;
         if (
             l &&
@@ -682,11 +696,26 @@ export class GobanNativeRenderer extends Goban {
             l.width === rect.width &&
             l.height === rect.height
         ) {
-            return;
+            return true;
         }
         this.last_rect = rect;
         this.enqueue(() => this.transport.move({ id: this.id(), rect }), "move").catch(() =>
             this.retryAfterFailure(() => delete this.last_rect),
+        );
+        return true;
+    }
+
+    /** Drop the rim's view of a board that currently has no box on the page,
+     *  back to the same state a board starts in. */
+    private detachUntilLaidOut(): void {
+        this.state = "pending";
+        delete this.last_rect;
+        delete this.last_sent;
+        delete this.attached_size;
+        this.theme_sent_for = undefined;
+        this.message_sent = null;
+        this.enqueue(() => this.transport.detach({ id: this.id() }), "detach").catch(
+            () => undefined,
         );
     }
 
