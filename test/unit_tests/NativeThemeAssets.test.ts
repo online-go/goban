@@ -63,6 +63,22 @@ describe("NativeThemeAssets", () => {
         expect(theme.boardImageUrl).toMatch(/kaya\.jpg$/);
     });
 
+    test("a second identical render reuses the encoded PNGs", () => {
+        const resolved = resolveThemes(themes as any);
+        /* Radius 17 is used by no other test in this file, so the first call
+         * here is guaranteed to be a cache miss. */
+        const first = renderStoneAssets(resolved, 17, 35, () => undefined);
+
+        const proto = (global as any).HTMLCanvasElement.prototype;
+        const encode = jest.spyOn(proto, "toDataURL");
+        const second = renderStoneAssets(resolveThemes(themes as any), 17, 35, () => undefined);
+
+        expect(encode).not.toHaveBeenCalled();
+        expect(second.blackStones).toEqual(first.blackStones);
+        expect(second.whiteStones).toEqual(first.whiteStones);
+        encode.mockRestore();
+    });
+
     describe("devicePixelRatio scaling", () => {
         afterEach(() => {
             Object.defineProperty(window, "devicePixelRatio", {

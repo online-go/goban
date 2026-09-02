@@ -26,6 +26,24 @@ const src_dir = path.join(__dirname, "..", "..", "src", "Goban");
 const canvas_src = fs.readFileSync(path.join(src_dir, "CanvasRenderer.ts"), "utf-8");
 const spec_src = fs.readFileSync(path.join(src_dir, "NativeSpec.ts"), "utf-8");
 
+/** NativeSpec with its comments removed: a field named only in a comment is
+ *  not consumed by anything. */
+const spec_code = spec_src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+/**
+ * Does NativeSpec read `name` as a property? A raw substring match would be
+ * satisfied by the word appearing anywhere at all - a comment, a longer
+ * identifier, a string literal - so match an actual property access.
+ *
+ * What this guard proves is *consumption*: that every input the canvas draws
+ * from also reaches the native spec builder. It says nothing about whether
+ * the native spec then renders it the way the canvas does; only the rims and
+ * the eye can say that.
+ */
+function consumedByNativeSpec(name: string): boolean {
+    return new RegExp(`\\.${name}\\b`).test(spec_code);
+}
+
 /** Every mark field the canvas renderer reads while drawing a square. */
 function markFieldsRead(source: string): Set<string> {
     const start = source.indexOf("private __drawSquare(");
@@ -62,7 +80,9 @@ const RENDERER_STATE_INPUTS = [
     "puzzle_player_move_mode",
     "getPuzzlePlacementSetting",
     "last_move_opacity",
-    "submit_move",
+    // The canvas reads `this.submit_move`; SpecSource carries the same input
+    // as a boolean, so that is the name to look for.
+    "submit_move_pending",
     "dont_draw_last_move",
 ];
 
@@ -73,13 +93,13 @@ describe("native renderer drawing parity", () => {
         // __drawSquare/drawingHash anchors ever stop matching (method rename, reorder):
         // today there are well over 10 fields, so a drop that large signals the anchors moved.
         expect(fields.size).toBeGreaterThan(10);
-        const missing = [...fields].filter((f) => !spec_src.includes(`.${f}`));
+        const missing = [...fields].filter((f) => !consumedByNativeSpec(f));
         expect(missing).toEqual([]);
     });
 
     test("every renderer state input the canvas draws from is consumed by NativeSpec", () => {
         const missing = RENDERER_STATE_INPUTS.filter(
-            (name) => !spec_src.includes(name.split(".").pop()!),
+            (name) => !consumedByNativeSpec(name.split(".").pop()!),
         );
         expect(missing).toEqual([]);
     });

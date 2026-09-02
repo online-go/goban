@@ -41,6 +41,12 @@ export function resolveThemes(themes: GobanSelectedThemes): ResolvedThemes {
  * call - including the one a board resize triggers - builds fresh instances. */
 const stone_cache: { [key: string]: any } = {};
 
+/* The encoded PNGs, keyed by everything that decides their pixels. Encoding
+ * a full stone set is by far the most expensive part of building a native
+ * theme, and a board resize that lands back on the same stone radius asks for
+ * byte-identical strings. Only settled stones are cached - see below. */
+const asset_cache: { [key: string]: string[] } = {};
+
 /**
  * Pre-renders (and caches) the stone variants of one theme at one radius.
  * Shared by the native theme assets and the move tree widget so a goban only
@@ -71,11 +77,29 @@ export function preRenderedStones(
  * theme watcher.
  */
 export function forgetPreRenderedStones(theme_name: string): void {
-    for (const key of Object.keys(stone_cache)) {
-        if (key.startsWith(`black-${theme_name}-`) || key.startsWith(`white-${theme_name}-`)) {
-            delete stone_cache[key];
+    for (const cache of [stone_cache, asset_cache]) {
+        for (const key of Object.keys(cache)) {
+            if (key.startsWith(`black-${theme_name}-`) || key.startsWith(`white-${theme_name}-`)) {
+                delete cache[key];
+            }
         }
     }
+}
+
+/**
+ * An image backed theme returns stone objects whose pixels arrive later and
+ * are drawn into the same objects in place, so the pre-render cache stays
+ * correct across the load. The PNGs we encode from them do not: caching those
+ * before the images land would freeze the placeholder forever.
+ */
+function stonesAreSettled(stones: any[]): boolean {
+    return stones.every((stone) => !(stone && stone.image_loaded === false));
+}
+
+/** The scale `resizeDeviceScaledCanvas` bakes into the bitmaps, read live
+ *  because that is how it reads it. */
+function pixelRatio(): number {
+    return (typeof window !== "undefined" && window.devicePixelRatio) || 1;
 }
 
 /**
@@ -92,7 +116,13 @@ export function renderStoneAssets(
 ): { blackStones: string[]; whiteStones: string[]; stoneImageSize: number } {
     void cell_px;
     const side = Math.ceil(radius * 3);
+    const dpr = pixelRatio();
     const render = (theme: GobanTheme, color: "black" | "white"): string[] => {
+        const cache_key = `${color}-${theme.theme_name}-${radius}-${dpr}`;
+        const cached = asset_cache[cache_key];
+        if (cached) {
+            return cached;
+        }
         const stones = preRenderedStones(
             theme,
             color,
@@ -102,7 +132,7 @@ export function renderStoneAssets(
         );
         const list = Array.isArray(stones) ? stones : [stones];
         const casts_shadow = theme.stoneCastsShadow(radius);
-        return list.map((stone: any) => {
+        const encoded = list.map((stone: any) => {
             const canvas = createDeviceScaledCanvas(side, side);
             resizeDeviceScaledCanvas(canvas, side, side);
             const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -117,6 +147,10 @@ export function renderStoneAssets(
             }
             return canvas.toDataURL("image/png");
         });
+        if (stonesAreSettled(list)) {
+            asset_cache[cache_key] = encoded;
+        }
+        return encoded;
     };
     return {
         blackStones: render(resolved.black, "black"),

@@ -581,6 +581,8 @@ export function buildGhost(src: SpecSource): NativeGhost | null {
             engine.isActivePlayer(src.player_id) &&
             engine.cur_move === engine.last_official_move)
     ) {
+        /* The rim raises this to 1.0 where the ghosted point holds a stone,
+         * matching the canvas; see NativeGhost.xmark. */
         ghost.xmark = { color: "#888888", alpha: 0.2 };
         has_content = true;
     }

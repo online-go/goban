@@ -113,6 +113,10 @@ export interface NativeGhost {
     stone?: { color: 1 | 2; alpha: number };
     texts?: NativeText[];
     shapes?: NativeShape[];
+    /** Removal X preview. The ghost carries no per-point context, so the rim
+     *  decides the opacity the way the canvas does: `alpha` applies where the
+     *  ghosted point is empty, and a point that already holds a stone draws
+     *  the X at full opacity. */
     xmark?: { color: string; alpha: number };
     territory?: { fill?: string; stroke: string };
     /** When present, the ghost only appears at these intersections. */
