@@ -42,7 +42,7 @@ import {
     SpecSource,
 } from "./NativeSpec";
 import { buildNativeTheme, resolveThemes, ResolvedThemes } from "./NativeThemeAssets";
-import { MoveTreeCanvas, MoveTreeHost } from "./MoveTreeCanvas";
+import { MoveTreeCanvas } from "./MoveTreeCanvas";
 
 export interface NativeRendererGobanConfig extends GobanConfig {
     native_transport: GobanNativeTransport;
@@ -125,17 +125,18 @@ export class GobanNativeRenderer extends Goban {
         this.themes = this.getSelectedThemes();
         this.applyThemes(this.themes);
         this.move_tree = new MoveTreeCanvas(
-            this as unknown as MoveTreeHost,
+            this,
             () => this.resolved,
             () => this.themes,
         );
-        this.move_tree.setContainer(config.move_tree_container ?? null);
 
         const watcher = this.watchSelectedThemes((themes) => this.setTheme(themes, false));
         this.on("destroy", () => watcher.remove());
 
         this.engine = this.post_config_constructor();
         this.emit("engine.updated", this.engine);
+
+        this.move_tree.setContainer(config.move_tree_container ?? null);
         this.ready = true;
 
         for (const ev of SYNC_EVENTS) {

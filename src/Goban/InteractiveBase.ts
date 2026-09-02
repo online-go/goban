@@ -2166,7 +2166,7 @@ export abstract class GobanInteractive extends GobanBase {
             this.label_character = seq1[(seq1.indexOf(this.label_character) + 1) % seq1.length];
         }
     }
-    protected setLabelCharacterFromMarks(set_override?: "numbers" | "letters"): void {
+    public setLabelCharacterFromMarks(set_override?: "numbers" | "letters"): void {
         if (set_override === "letters" || /^[a-zA-Z]$/.test(this.label_character)) {
             const seq1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             let idx = -1;

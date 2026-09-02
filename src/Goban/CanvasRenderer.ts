@@ -21,12 +21,12 @@ import { AdHocFormat } from "../engine/formats/AdHocFormat";
 import { GobanConfig } from "../GobanBase";
 import { GobanEngine } from "../engine";
 import { MoveTree } from "../engine/MoveTree";
+import { MoveTreeCanvas } from "./MoveTreeCanvas";
 import { GobanTheme, THEMES } from "./themes";
 import { MoveTreePenMarks } from "../engine/MoveTree";
 import {
     createDeviceScaledCanvas,
     resizeDeviceScaledCanvas,
-    allocateCanvasOrError,
     getRelativeEventPosition,
 } from "./canvas_utils";
 import { _ } from "../engine/translate";
@@ -51,18 +51,7 @@ const __theme_cache: {
     white: {},
 };
 
-declare let ResizeObserver: any;
-
 export interface CanvasRendererGobanConfig extends GobanConfig {}
-
-interface ViewPortInterface {
-    offset_x: number;
-    offset_y: number;
-    minx: number;
-    miny: number;
-    maxx: number;
-    maxy: number;
-}
 
 const HOT_PINK = "#ff69b4";
 
@@ -77,7 +66,6 @@ export interface GobanCanvasInterface {
     setByoYomiLabel(label: string): void;
     setLastMoveOpacity(opacity: number): void;
 
-    move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void;
     move_tree_redraw(no_warp?: boolean): void;
     setMoveTreeContainer(container: HTMLElement | null): void;
 
@@ -119,9 +107,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
      * vertical lines are drawn as single strokes under the stones. */
     private crosshair_layer?: HTMLCanvasElement;
     private crosshair_ctx?: CanvasRenderingContext2D;
-    public move_tree_container?: HTMLElement;
-    private move_tree_inner_container?: HTMLDivElement;
-    private move_tree_canvas?: HTMLCanvasElement;
+    private move_tree_widget: MoveTreeCanvas;
 
     private __borders_initialized: boolean = false;
     private byoyomi_label: string = "";
@@ -183,8 +169,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         this.parent.appendChild(this.board);
         this.bindPointerBindings(this.board);
 
-        this.move_tree_container = config.move_tree_container;
-
         this.handleShiftKey = (ev) => {
             if (this.destroyed) {
                 return;
@@ -208,6 +192,16 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         // this.theme_white
         // this.theme_black
         this.setTheme(this.getSelectedThemes(), true);
+        this.move_tree_widget = new MoveTreeCanvas(
+            this,
+            () => ({
+                board: this.theme_board,
+                black: this.theme_black,
+                white: this.theme_white,
+                themes: this.themes,
+            }),
+            () => this.themes,
+        );
         let first_pass = true;
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
             if (!this.engine) {
@@ -230,6 +224,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         this.engine = this.post_config_constructor();
         this.emit("engine.updated", this.engine);
+
+        this.move_tree_widget.setContainer(config.move_tree_container ?? null);
 
         this.ready_to_draw = true;
         this.redraw(true);
@@ -275,8 +271,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         delete this.message_div;
         delete this.message_td;
         delete this.message_text;
-        this.removeMoveTreeFromDOM();
-        delete this.move_tree_container;
+        this.move_tree_widget.destroy();
         delete this.title_div;
     }
     /**
@@ -3123,30 +3118,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     );
                 __theme_cache.black[themes.black].creation_order.push(this.theme_stone_radius);
             }
-
-            if (!(MoveTree.stone_radius in __theme_cache.white[themes.white])) {
-                __theme_cache.white[themes.white][MoveTree.stone_radius] =
-                    this.theme_white.preRenderWhite(
-                        MoveTree.stone_radius,
-                        23434,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.white[themes.white].creation_order.push(MoveTree.stone_radius);
-            }
-            if (!(MoveTree.stone_radius in __theme_cache.black[themes.black])) {
-                __theme_cache.black[themes.black][MoveTree.stone_radius] =
-                    this.theme_black.preRenderBlack(
-                        MoveTree.stone_radius,
-                        2081,
-                        deferredRenderCallback,
-                    );
-                __theme_cache.black[themes.black].creation_order.push(MoveTree.stone_radius);
-            }
         } catch (e) {
-            console.error(`Error pre-rendering stones.`, {
-                themes,
-                move_tree_stone_radius: MoveTree.stone_radius,
-            });
+            console.error(`Error pre-rendering stones.`, { themes });
             throw e;
         }
 
@@ -3283,259 +3256,16 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     //
     // Move tree
     //
-    public setMoveTreeContainer(container: HTMLElement | null): void {
-        if (this.move_tree_container !== (container ?? undefined)) {
-            this.removeMoveTreeFromDOM();
-        }
-        this.move_tree_container = container ?? undefined;
-        this.move_tree_redraw();
+    public get move_tree_container(): HTMLElement | undefined {
+        return this.move_tree_widget.container;
     }
 
-    /**
-     * Removes this goban's move tree elements from the container so another
-     * goban can take the container over without our stale tree lingering
-     * behind its own.
-     */
-    private removeMoveTreeFromDOM(): void {
-        if (this.move_tree_inner_container) {
-            this.move_tree_inner_container.remove();
-        }
-        delete this.move_tree_inner_container;
-        delete this.move_tree_canvas;
+    public setMoveTreeContainer(container: HTMLElement | null): void {
+        this.move_tree_widget.setContainer(container);
     }
 
     public move_tree_redraw(no_warp?: boolean): void {
-        if (this.destroyed || !this.move_tree_container) {
-            return;
-        }
-
-        let do_init = false;
-        if (!this.move_tree_inner_container) {
-            do_init = true;
-            this.move_tree_inner_container = document.createElement("div");
-            this.move_tree_canvas = allocateCanvasOrError();
-            this.move_tree_inner_container.appendChild(this.move_tree_canvas);
-            this.move_tree_container.appendChild(this.move_tree_inner_container);
-            this.move_tree_bindCanvasEvents(this.move_tree_canvas);
-            this.move_tree_container.style.position = "relative";
-            this.move_tree_canvas.style.position = "absolute";
-
-            try {
-                const observer = new ResizeObserver(() => {
-                    this.move_tree_redraw(true);
-                });
-                observer.observe(this.move_tree_container);
-                this.on("destroy", () => {
-                    observer.disconnect();
-                });
-            } catch (e) {
-                // ResizeObserver is still fairly new and might not exist
-            }
-        }
-
-        if (!this.move_tree_canvas) {
-            console.warn(`move_tree_redraw called without move_tree_canvas set`);
-            return;
-        }
-
-        if (do_init || this.move_tree_inner_container.parentNode !== this.move_tree_container) {
-            const move_tree_on_scroll = (event: Event) => {
-                try {
-                    this.move_tree_redraw(true);
-                } catch (e) {
-                    console.error(e);
-                }
-            };
-
-            this.move_tree_container.appendChild(this.move_tree_inner_container);
-            this.move_tree_container.style.position = "relative";
-            this.move_tree_container.removeEventListener("scroll", move_tree_on_scroll);
-            this.move_tree_container.addEventListener("scroll", move_tree_on_scroll);
-            const mt = this.move_tree_container;
-            this.on("destroy", () => {
-                mt.removeEventListener("scroll", move_tree_on_scroll);
-            });
-        }
-
-        /*
-        if (this.move_tree_canvas.width !== this.move_tree_container.outerWidth ||
-            this.move_tree_canvas.height !== this.move_tree_container.outerHeight
-        ) {
-            console.log(this.move_tree_canvas.width, this.move_tree_container.outerWidth,
-                this.move_tree_canvas.height, this.move_tree_container.outerHeight);
-            this.move_tree_canvas.width = this.move_tree_container.outerWidth;
-            this.move_tree_canvas.height = this.move_tree_container.outerHeight;
-            this.move_tree_canvas.style.width = this.move_tree_container.outerWidth + "px";
-            this.move_tree_canvas.style.height = this.move_tree_container.outerHeight + "px";
-        }
-        */
-
-        this.engine.move_tree.recomputeIsobranches();
-        const active_path_end =
-            this.present_next_move && this.engine.cur_move.trunk_next
-                ? this.engine.cur_move.trunk_next
-                : this.engine.cur_move;
-
-        this.engine.move_tree_layout_dirty = false;
-
-        active_path_end.setActivePath(++MoveTree.active_path_number);
-
-        /*
-        if (!this.move_tree_container.data("move-tree-redraw-on-scroll")) {
-            let debounce = false;
-            this.redraw_on_scroll = () => {
-                MoveTree.redraw_root.redraw(MoveTree.redraw_config, true);
-            };
-            this.move_tree_container.data("move-tree-redraw-on-scroll", this.redraw_on_scroll);
-            this.move_tree_container.scroll(this.redraw_on_scroll);
-        }
-        */
-
-        const canvas = this.move_tree_canvas;
-        const engine = this.engine;
-
-        this.engine.move_tree_layout_vector = [];
-        const layout_hash = {};
-        this.engine.move_tree.layout(0, 0, layout_hash, 0);
-        this.engine.move_tree_layout_hash = layout_hash;
-        let max_height = 0;
-        for (let i = 0; i < this.engine.move_tree_layout_vector.length; ++i) {
-            max_height = Math.max(this.engine.move_tree_layout_vector[i] + 1, max_height);
-        }
-
-        const div_clientWidth = this.move_tree_container.clientWidth;
-        const div_clientHeight = this.move_tree_container.clientHeight;
-        const width = Math.max(
-            div_clientWidth,
-            this.engine.move_tree_layout_vector.length * MoveTree.stone_square_size,
-        );
-        const height = Math.max(div_clientHeight, max_height * MoveTree.stone_square_size);
-
-        let div_scroll_top = this.move_tree_container.scrollTop;
-        let div_scroll_left = this.move_tree_container.scrollLeft;
-
-        if (canvas.width !== div_clientWidth || canvas.height !== div_clientHeight) {
-            resizeDeviceScaledCanvas(
-                canvas,
-                this.move_tree_container.clientWidth,
-                this.move_tree_container.clientHeight,
-            );
-        }
-
-        this.move_tree_inner_container.style.width = width + "px";
-        this.move_tree_inner_container.style.height = height + "px";
-
-        if (!no_warp) {
-            /* make sure our active stone is visible, but don't scroll around unnecessarily */
-            if (
-                div_scroll_left > active_path_end.layout_cx ||
-                div_scroll_left + div_clientWidth - 20 < active_path_end.layout_cx ||
-                div_scroll_top > active_path_end.layout_cy ||
-                div_scroll_top + div_clientHeight - 20 < active_path_end.layout_cy
-            ) {
-                this.move_tree_container.scrollLeft =
-                    active_path_end.layout_cx - div_clientWidth / 2;
-                this.move_tree_container.scrollTop =
-                    active_path_end.layout_cy - div_clientHeight / 2;
-                div_scroll_top = this.move_tree_container.scrollTop;
-                div_scroll_left = this.move_tree_container.scrollLeft;
-            }
-        }
-
-        canvas.style.top = div_scroll_top + "px";
-        canvas.style.left = div_scroll_left + "px";
-
-        const viewport = {
-            offset_x: div_scroll_left,
-            offset_y: div_scroll_top,
-            minx: div_scroll_left - MoveTree.stone_square_size,
-            miny: div_scroll_top - MoveTree.stone_square_size,
-            maxx: div_scroll_left + div_clientWidth + MoveTree.stone_square_size,
-            maxy: div_scroll_top + div_clientHeight + MoveTree.stone_square_size,
-        };
-
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) {
-            throw new Error(`Failed to get drawing context for move tree canvas`);
-        }
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        this.move_tree_hilightNode(ctx, active_path_end, "#6BAADA", viewport);
-
-        if (engine.cur_review_move && engine.cur_review_move.id !== active_path_end.id) {
-            this.move_tree_hilightNode(ctx, engine.cur_review_move, "#6BDA6B", viewport);
-        }
-
-        ctx.save();
-        ctx.lineWidth = 1.0;
-        ctx.strokeStyle = this.theme_line_color;
-        this.move_tree_recursiveDrawPath(ctx, this.engine.move_tree, viewport);
-        ctx.restore();
-
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        const text_size = 10;
-        ctx.font = `bold ${text_size}px Verdana,Arial,sans-serif`;
-        ctx.textBaseline = "middle";
-        this.move_tree_drawRecursive(
-            ctx,
-            this.engine.move_tree,
-            MoveTree.active_path_number,
-            viewport,
-        );
-        ctx.restore();
-    }
-    public move_tree_bindCanvasEvents(canvas: HTMLCanvasElement): void {
-        const handler = (event: TouchEvent | MouseEvent) => {
-            try {
-                if (!this.move_tree_container) {
-                    throw new Error(`move_tree_container was not set`);
-                }
-
-                const ox = this.move_tree_container.scrollLeft;
-                const oy = this.move_tree_container.scrollTop;
-                const pos = getRelativeEventPosition(event);
-                pos.x += ox;
-                pos.y += oy;
-                const i = Math.floor(pos.x / MoveTree.stone_square_size);
-                const j = Math.floor(pos.y / MoveTree.stone_square_size);
-                const node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
-
-                if (node) {
-                    const target = this.clickJumpTarget(node);
-                    if (this.engine.cur_move.id !== target.id) {
-                        this.engine.jumpTo(target);
-                        this.setLabelCharacterFromMarks();
-                        this.updateTitleAndStonePlacement();
-                        this.emit("update");
-                        this.syncReviewMove();
-                        this.redraw();
-                    }
-                    if (node.played_by) {
-                        // note that getRelativeEventPosition handles various
-                        // nasty looking things to do with Touch etc, so using it here
-                        // gets around that kind of thing, even though in theory it
-                        // might be nicer to sent the client absolute coords, maybe.
-                        const rpos = getRelativeEventPosition(event);
-                        this.emit("played-by-click", {
-                            player_id: node.played_by,
-                            x: rpos.x,
-                            y: rpos.y,
-                        });
-                    }
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        };
-
-        canvas.addEventListener("touchstart", handler);
-        canvas.addEventListener("mousedown", handler);
-
-        this.on("destroy", () => {
-            canvas.removeEventListener("touchstart", handler);
-            canvas.removeEventListener("mousedown", handler);
-        });
+        this.move_tree_widget.redraw(no_warp);
     }
 
     protected computeThemeStoneRadius(): number {
@@ -3553,262 +3283,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
     private getStoneScale(): number {
         const stone_scale = this.themes["stone-scale"];
         return Math.min(Number.isFinite(stone_scale) ? stone_scale : 1.0, 1.0);
-    }
-
-    move_tree_drawStone(
-        ctx: CanvasRenderingContext2D,
-        node: MoveTree,
-        active_path_number: number,
-        viewport: ViewPortInterface,
-    ): void {
-        const stone_idx = node.move_number * 31;
-        const cx = node.layout_cx - viewport.offset_x;
-        const cy = node.layout_cy - viewport.offset_y;
-        const color = node.player;
-        const on_path = node.active_path_number === active_path_number;
-
-        if (!on_path) {
-            ctx.save();
-            ctx.globalAlpha = 0.4;
-        }
-
-        const theme_white_stones = __theme_cache.white[this.themes.white][MoveTree.stone_radius];
-        const theme_black_stones = __theme_cache.black[this.themes.black][MoveTree.stone_radius];
-
-        if (!theme_white_stones || !theme_black_stones) {
-            throw new Error(
-                "Failed to load stone images for given radius" + this.theme_stone_radius,
-            );
-        }
-
-        if (color === 1) {
-            const stone = theme_black_stones[stone_idx % theme_black_stones.length];
-            this.theme_black.placeBlackStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
-        } else if (color === 2) {
-            const stone = theme_white_stones[stone_idx % theme_white_stones.length];
-            this.theme_white.placeWhiteStone(ctx, null, stone, cx, cy, MoveTree.stone_radius);
-        } else {
-            return;
-        }
-
-        const text_color = color === 1 ? this.theme_black_text_color : this.theme_white_text_color;
-
-        let label = "";
-        switch (callbacks.getMoveTreeNumbering ? callbacks.getMoveTreeNumbering() : "move-number") {
-            case "move-coordinates":
-                label = node.pretty_coordinates;
-                break;
-
-            case "none":
-                label = "";
-                break;
-
-            case "move-number":
-            default:
-                if (node.pretty_coordinates === "pass") {
-                    label = String(".");
-                } else {
-                    label = String(node.move_number);
-                }
-                break;
-        }
-
-        if (node.label !== label) {
-            node.label = label;
-            delete node.label_metrics;
-        }
-
-        ctx.fillStyle = text_color;
-        //ctx.strokeStyle=text_outline_color;
-        if (!node.label_metrics) {
-            node.label_metrics = ctx.measureText(node.label);
-        }
-        const metrics = node.label_metrics;
-        const xx = cx - metrics.width / 2;
-        const yy =
-            cy +
-            (/WebKit|Trident/.test(navigator.userAgent)
-                ? MoveTree.stone_radius * -0.01
-                : 1); /* middle centering is different on firefox */
-        //ctx.strokeText(node.label, xx, yy);
-        ctx.fillText(node.label, xx, yy);
-
-        if (!on_path) {
-            ctx.restore();
-        }
-
-        let ring_color = null;
-
-        if (node.text) {
-            ring_color = "#3333ff";
-        }
-        if (node.correct_answer) {
-            ring_color = "#33ff33";
-        }
-        if (node.wrong_answer) {
-            ring_color = "#ff3333";
-        }
-        if (ring_color) {
-            ctx.beginPath();
-            ctx.strokeStyle = ring_color;
-            ctx.lineWidth = 2.0;
-            ctx.arc(cx, cy, MoveTree.stone_radius, 0, 2 * Math.PI, true);
-            ctx.stroke();
-        }
-    }
-    move_tree_drawRecursive(
-        ctx: CanvasRenderingContext2D,
-        node: MoveTree,
-        active_path_number: number,
-        viewport: ViewPortInterface,
-    ): void {
-        if (node.trunk_next) {
-            this.move_tree_drawRecursive(ctx, node.trunk_next, active_path_number, viewport);
-        }
-        for (let i = 0; i < node.branches.length; ++i) {
-            this.move_tree_drawRecursive(ctx, node.branches[i], active_path_number, viewport);
-        }
-
-        if (
-            !viewport ||
-            (node.layout_cx >= viewport.minx &&
-                node.layout_cx <= viewport.maxx &&
-                node.layout_cy >= viewport.miny &&
-                node.layout_cy <= viewport.maxy)
-        ) {
-            this.move_tree_drawStone(ctx, node, active_path_number, viewport);
-        }
-    }
-    move_tree_hilightNode(
-        ctx: CanvasRenderingContext2D,
-        node: MoveTree,
-        color: string,
-        viewport: ViewPortInterface,
-    ): void {
-        ctx.beginPath();
-        const sx =
-            Math.round(node.layout_cx - MoveTree.stone_square_size * 0.5) - viewport.offset_x;
-        const sy =
-            Math.round(node.layout_cy - MoveTree.stone_square_size * 0.5) - viewport.offset_y;
-        ctx.rect(sx, sy, MoveTree.stone_square_size, MoveTree.stone_square_size);
-        ctx.fillStyle = color;
-        ctx.fill();
-    }
-
-    move_tree_drawPath(
-        ctx: CanvasRenderingContext2D,
-        node: MoveTree,
-        viewport: ViewPortInterface,
-    ): void {
-        if (node.parent) {
-            if (node.parent.layout_cx < viewport.minx && node.layout_cx < viewport.minx) {
-                return;
-            }
-            if (node.parent.layout_cy < viewport.miny && node.layout_cy < viewport.miny) {
-                return;
-            }
-            if (node.parent.layout_cx > viewport.maxx && node.layout_cx > viewport.maxx) {
-                return;
-            }
-            if (node.parent.layout_cy > viewport.maxy && node.layout_cy > viewport.maxy) {
-                return;
-            }
-
-            ctx.beginPath();
-            ctx.strokeStyle = node.trunk ? "#000000" : MoveTree.line_colors[node.line_color];
-            const ox = viewport.offset_x;
-            const oy = viewport.offset_y;
-            ctx.moveTo(node.parent.layout_cx - ox, node.parent.layout_cy - oy);
-            ctx.quadraticCurveTo(
-                node.layout_cx - MoveTree.stone_square_size * 0.5 - ox,
-                node.layout_cy - oy,
-                node.layout_cx - ox,
-                node.layout_cy - oy,
-            );
-            ctx.stroke();
-        }
-    }
-    move_tree_drawIsoBranchTo(
-        ctx: CanvasRenderingContext2D,
-        from_node: MoveTree,
-        to_node: MoveTree,
-        viewport: ViewPortInterface,
-    ): void {
-        let A: MoveTree = from_node;
-        let B: MoveTree = to_node;
-
-        /* don't render if it's off screen */
-        if (A.layout_cx < viewport.minx && B.layout_cx < viewport.minx) {
-            return;
-        }
-        if (A.layout_cy < viewport.miny && B.layout_cy < viewport.miny) {
-            return;
-        }
-        if (A.layout_cx > viewport.maxx && B.layout_cx > viewport.maxx) {
-            return;
-        }
-        if (A.layout_cy > viewport.maxy && B.layout_cy > viewport.maxy) {
-            return;
-        }
-
-        /*
-        let isStrong = (a, b):boolean => {
-            return a.trunk_next === null && a.branches.length === 0 && (b.trunk_next != null || b.branches.length !== 0);
-        };
-        */
-
-        // isStrong(B, A)) {
-        if (
-            B.trunk_next === null &&
-            B.branches.length === 0 &&
-            (A.trunk_next !== null || A.branches.length !== 0)
-        ) {
-            const t = A;
-            A = B;
-            B = t;
-        }
-
-        //isStrong(A, B);
-        const strong =
-            A.trunk_next == null &&
-            A.branches.length === 0 &&
-            (B.trunk_next !== null || B.branches.length !== 0);
-
-        const ox = viewport.offset_x;
-        const oy = viewport.offset_y;
-        ctx.beginPath();
-        ctx.strokeStyle = MoveTree.isobranch_colors[strong ? "strong" : "weak"];
-        const cur_line_width = ctx.lineWidth;
-        ctx.lineWidth = 2;
-        ctx.moveTo(B.layout_cx - ox, B.layout_cy - oy);
-        const my = strong ? B.layout_cy : (A.layout_cy + B.layout_cy) / 2;
-        const mx = (A.layout_cx + B.layout_cx) / 2 + MoveTree.stone_square_size * 0.5;
-        ctx.quadraticCurveTo(mx - ox, my - oy, A.layout_cx - ox, A.layout_cy - oy);
-        ctx.stroke();
-        ctx.lineWidth = cur_line_width;
-    }
-    move_tree_recursiveDrawPath(
-        ctx: CanvasRenderingContext2D,
-        node: MoveTree,
-        viewport: ViewPortInterface,
-    ): void {
-        if (node.trunk_next) {
-            this.move_tree_recursiveDrawPath(ctx, node.trunk_next, viewport);
-        }
-        for (let i = 0; i < node.branches.length; ++i) {
-            this.move_tree_recursiveDrawPath(ctx, node.branches[i], viewport);
-        }
-
-        if (node.isobranches) {
-            for (let i = 0; i < node.isobranches.length; ++i) {
-                this.move_tree_drawIsoBranchTo(ctx, node, node.isobranches[i], viewport);
-            }
-        }
-
-        /* only consider x, since lines can extend awhile on the y */
-        //if (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx) {
-        this.move_tree_drawPath(ctx, node, viewport);
-        //}
     }
 
     //
