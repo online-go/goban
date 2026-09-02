@@ -16,9 +16,7 @@
 
 import { GobanEngine } from "../engine";
 import { MoveTree } from "../engine/MoveTree";
-import { GobanSelectedThemes } from "./Goban";
-import { ResolvedThemes } from "./NativeThemeAssets";
-import { GobanTheme } from "./themes";
+import { preRenderedStones, ResolvedThemes } from "./NativeThemeAssets";
 import { callbacks } from "./callbacks";
 import {
     allocateCanvasOrError,
@@ -65,25 +63,14 @@ export interface MoveTreeHost {
 export class MoveTreeCanvas {
     private readonly host: MoveTreeHost;
     private readonly resolved: () => ResolvedThemes;
-    private readonly themes: () => GobanSelectedThemes;
 
     private _container?: HTMLElement;
     private inner_container?: HTMLDivElement;
     private canvas?: HTMLCanvasElement;
 
-    /** Pre-rendered stones at `MoveTree.stone_radius`, keyed by theme name.
-     *  The theme instance is kept alongside so a re-themed host (a new theme
-     *  object under the same name, as "Custom" does) re-renders. */
-    private stone_cache: { [key: string]: { theme: GobanTheme; stones: any } } = {};
-
-    constructor(
-        host: MoveTreeHost,
-        resolved: () => ResolvedThemes,
-        themes: () => GobanSelectedThemes,
-    ) {
+    constructor(host: MoveTreeHost, resolved: () => ResolvedThemes) {
         this.host = host;
         this.resolved = resolved;
-        this.themes = themes;
     }
 
     public get container(): HTMLElement | undefined {
@@ -114,7 +101,6 @@ export class MoveTreeCanvas {
     public destroy(): void {
         this.removeFromDOM();
         delete this._container;
-        this.stone_cache = {};
     }
 
     public redraw(no_warp?: boolean): void {
@@ -318,23 +304,20 @@ export class MoveTreeCanvas {
         });
     }
 
-    /** Pre-renders (and caches) the tree-sized stones for one of the
-     *  currently selected stone themes. */
+    /** Tree-sized stones for one of the currently selected stone themes, from
+     *  the cache shared with the native theme assets. Selecting by name means
+     *  a board resize (which rebuilds the theme objects) is free; the "Custom"
+     *  themes are busted by the renderers' theme watchers, which call
+     *  `forgetPreRenderedStones`. */
     private getStones(color: "black" | "white"): any {
         const theme = color === "black" ? this.resolved().black : this.resolved().white;
-        const key = `${color}-${this.themes()[color]}-${MoveTree.stone_radius}`;
-        const cached = this.stone_cache[key];
-        if (cached && cached.theme === theme) {
-            return cached.stones;
-        }
-
-        const on_deferred = () => this.redraw();
-        const stones =
-            color === "black"
-                ? theme.preRenderBlack(MoveTree.stone_radius, 2081, on_deferred)
-                : theme.preRenderWhite(MoveTree.stone_radius, 23434, on_deferred);
-        this.stone_cache[key] = { theme, stones };
-        return stones;
+        return preRenderedStones(
+            theme,
+            color,
+            MoveTree.stone_radius,
+            color === "black" ? 2081 : 23434,
+            () => this.redraw(),
+        );
     }
 
     private drawStone(

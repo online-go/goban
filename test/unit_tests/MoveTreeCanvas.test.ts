@@ -28,6 +28,11 @@ import {
     NativeUpdateOptions,
 } from "../../src/Goban/NativeTransport";
 import { GobanBase } from "../../src/GobanBase";
+import type { GobanSelectedThemes } from "../../src/Goban/Goban";
+import { callbacks } from "../../src/Goban/callbacks";
+import { THEMES } from "../../src/Goban/themes";
+import { forgetPreRenderedStones } from "../../src/Goban/NativeThemeAssets";
+import { MoveTree } from "../../src/engine/MoveTree";
 import { GobanSocket } from "engine";
 import WS from "jest-websocket-mock";
 
@@ -176,5 +181,85 @@ describe("move tree widget", () => {
         expectRenderedTree(move_tree_container);
         goban.destroy();
         expect(move_tree_container.querySelector("canvas")).toBeNull();
+    });
+});
+
+describe("move tree stone cache", () => {
+    /** How many times the theme pre-rendered stones at the move tree's radius.
+     *  The board's own stones use a different (square-size derived) radius, so
+     *  filtering on the radius isolates the tree's renders. */
+    function treeRenders(spy: jest.SpyInstance): number {
+        return spy.mock.calls.filter((call) => call[0] === MoveTree.stone_radius).length;
+    }
+
+    function themesWithBlack(black: string): GobanSelectedThemes {
+        return {
+            "white": "Shell",
+            "black": black,
+            "board": "Kaya",
+            "removal-graphic": "square",
+            "removal-scale": 1.0,
+            "stone-scale": 1.0,
+            "stone-shadows": "none",
+        };
+    }
+
+    afterEach(() => {
+        delete callbacks.getSelectedThemes;
+        jest.restoreAllMocks();
+    });
+
+    test("a board resize does not re-render the tree's stones, a new theme does", () => {
+        callbacks.getSelectedThemes = () => themesWithBlack("Slate");
+        const goban = new GobanCanvas({
+            square_size: 10,
+            board_div,
+            interactive: true,
+            server_socket: mock_socket,
+            width: 3,
+            height: 3,
+            move_tree_container,
+        });
+        playTwoMovesAndAVariation(goban);
+        goban.move_tree_redraw();
+        expectRenderedTree(move_tree_container);
+
+        const slate = jest.spyOn(THEMES["black"]["Slate"].prototype, "preRenderBlack");
+
+        goban.setSquareSize(20);
+        goban.move_tree_redraw();
+        expect(treeRenders(slate)).toBe(0);
+
+        const night = jest.spyOn(THEMES["black"]["Night"].prototype, "preRenderBlack");
+        goban.setTheme(themesWithBlack("Night"), true);
+        goban.move_tree_redraw();
+        expect(treeRenders(night)).toBe(1);
+
+        goban.destroy();
+    });
+
+    test("forgetPreRenderedStones makes the tree re-render a busted theme", () => {
+        callbacks.getSelectedThemes = () => themesWithBlack("Glass");
+        const goban = new GobanCanvas({
+            square_size: 10,
+            board_div,
+            interactive: true,
+            server_socket: mock_socket,
+            width: 3,
+            height: 3,
+            move_tree_container,
+        });
+        playTwoMovesAndAVariation(goban);
+        goban.move_tree_redraw();
+
+        const glass = jest.spyOn(THEMES["black"]["Glass"].prototype, "preRenderBlack");
+        goban.move_tree_redraw();
+        expect(treeRenders(glass)).toBe(0);
+
+        forgetPreRenderedStones("Glass");
+        goban.move_tree_redraw();
+        expect(treeRenders(glass)).toBe(1);
+
+        goban.destroy();
     });
 });

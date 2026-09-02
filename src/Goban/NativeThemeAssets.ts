@@ -34,11 +34,19 @@ export function resolveThemes(themes: GobanSelectedThemes): ResolvedThemes {
     return { board, white: new WhiteTheme(board), black: new BlackTheme(board), themes };
 }
 
-/* Stone objects are cached per theme+radius exactly as the canvas renderer
- * does, so the deferred (image-loading) themes reuse their in-flight loads. */
+/* Stone objects are cached per theme name + radius exactly as the canvas
+ * renderer does, so the deferred (image-loading) themes reuse their in-flight
+ * loads and a re-themed or resized goban doesn't re-render what it already
+ * has. Keyed by name rather than by theme instance because every setTheme
+ * call - including the one a board resize triggers - builds fresh instances. */
 const stone_cache: { [key: string]: any } = {};
 
-function preRendered(
+/**
+ * Pre-renders (and caches) the stone variants of one theme at one radius.
+ * Shared by the native theme assets and the move tree widget so a goban only
+ * ever pays for a given theme/radius pair once.
+ */
+export function preRenderedStones(
     theme: GobanTheme,
     color: "black" | "white",
     radius: number,
@@ -56,6 +64,21 @@ function preRendered(
 }
 
 /**
+ * Drops every cached pre-render belonging to a theme name. The "Custom"
+ * themes are the reason this exists: their pixels come from user settings
+ * rather than from the name, so the name alone stops identifying the stones
+ * as soon as the user edits them. Renderers call this from their selected
+ * theme watcher.
+ */
+export function forgetPreRenderedStones(theme_name: string): void {
+    for (const key of Object.keys(stone_cache)) {
+        if (key.startsWith(`black-${theme_name}-`) || key.startsWith(`white-${theme_name}-`)) {
+            delete stone_cache[key];
+        }
+    }
+}
+
+/**
  * Renders every variant of the selected stone themes into a square canvas
  * of 3 radii (stone centered, shadow baked in when the theme casts one at
  * this radius) and returns PNG data URLs. The canvas is device scaled, so
@@ -70,7 +93,7 @@ export function renderStoneAssets(
     void cell_px;
     const side = Math.ceil(radius * 3);
     const render = (theme: GobanTheme, color: "black" | "white"): string[] => {
-        const stones = preRendered(
+        const stones = preRenderedStones(
             theme,
             color,
             radius,

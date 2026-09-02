@@ -22,6 +22,7 @@ import { GobanConfig } from "../GobanBase";
 import { GobanEngine } from "../engine";
 import { MoveTree } from "../engine/MoveTree";
 import { MoveTreeCanvas } from "./MoveTreeCanvas";
+import { forgetPreRenderedStones } from "./NativeThemeAssets";
 import { GobanTheme, THEMES } from "./themes";
 import { MoveTreePenMarks } from "../engine/MoveTree";
 import {
@@ -192,16 +193,12 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         // this.theme_white
         // this.theme_black
         this.setTheme(this.getSelectedThemes(), true);
-        this.move_tree_widget = new MoveTreeCanvas(
-            this,
-            () => ({
-                board: this.theme_board,
-                black: this.theme_black,
-                white: this.theme_white,
-                themes: this.themes,
-            }),
-            () => this.themes,
-        );
+        this.move_tree_widget = new MoveTreeCanvas(this, () => ({
+            board: this.theme_board,
+            black: this.theme_black,
+            white: this.theme_white,
+            themes: this.themes,
+        }));
         let first_pass = true;
         const watcher = this.watchSelectedThemes((themes: GobanSelectedThemes) => {
             if (!this.engine) {
@@ -217,6 +214,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             delete __theme_cache.black?.["Custom"];
             delete __theme_cache.white?.["Custom"];
             delete __theme_cache.board?.["Custom"];
+            forgetPreRenderedStones("Custom");
             this.setTheme(themes, first_pass ? true : false);
             first_pass = false;
         });

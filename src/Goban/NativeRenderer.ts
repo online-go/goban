@@ -41,7 +41,12 @@ import {
     penMarksToBoardUnits,
     SpecSource,
 } from "./NativeSpec";
-import { buildNativeTheme, resolveThemes, ResolvedThemes } from "./NativeThemeAssets";
+import {
+    buildNativeTheme,
+    forgetPreRenderedStones,
+    resolveThemes,
+    ResolvedThemes,
+} from "./NativeThemeAssets";
 import { MoveTreeCanvas } from "./MoveTreeCanvas";
 
 export interface NativeRendererGobanConfig extends GobanConfig {
@@ -124,11 +129,7 @@ export class GobanNativeRenderer extends Goban {
         this.last_move_opacity = config.last_move_opacity ?? 1;
         this.themes = this.getSelectedThemes();
         this.applyThemes(this.themes);
-        this.move_tree = new MoveTreeCanvas(
-            this,
-            () => this.resolved,
-            () => this.themes,
-        );
+        this.move_tree = new MoveTreeCanvas(this, () => this.resolved);
 
         const watcher = this.watchSelectedThemes((themes) => this.setTheme(themes, false));
         this.on("destroy", () => watcher.remove());
@@ -333,6 +334,10 @@ export class GobanNativeRenderer extends Goban {
 
     protected setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
         this.themes = themes;
+        /* The "Custom" stones are drawn from user settings rather than from
+         * the theme name the shared cache keys on, so a theme change has to
+         * bust them explicitly. */
+        forgetPreRenderedStones("Custom");
         this.applyThemes(themes);
         this.theme_sent_for = undefined;
         if (!dont_redraw) {
