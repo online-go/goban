@@ -16,6 +16,8 @@
 
 (global as any).CLIENT = true;
 
+import { loadImage } from "canvas";
+
 import {
     resolveThemes,
     renderStoneAssets,
@@ -59,5 +61,27 @@ describe("NativeThemeAssets", () => {
         const resolved = resolveThemes({ ...themes, board: "Kaya" } as any);
         const theme = buildNativeTheme(resolved, 12, 25, "#000000", () => undefined);
         expect(theme.boardImageUrl).toMatch(/kaya\.jpg$/);
+    });
+
+    describe("devicePixelRatio scaling", () => {
+        afterEach(() => {
+            Object.defineProperty(window, "devicePixelRatio", {
+                value: 1,
+                configurable: true,
+            });
+        });
+
+        test("bakes stone bitmaps at devicePixelRatio resolution", async () => {
+            Object.defineProperty(window, "devicePixelRatio", {
+                value: 2,
+                configurable: true,
+            });
+
+            const resolved = resolveThemes(themes as any);
+            const assets = renderStoneAssets(resolved, 12, 25, () => undefined);
+            const image = await loadImage(assets.blackStones[0]);
+            expect(image.width).toBe(2 * assets.stoneImageSize);
+            expect(image.height).toBe(2 * assets.stoneImageSize);
+        });
     });
 });

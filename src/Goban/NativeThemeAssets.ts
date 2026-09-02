@@ -16,7 +16,7 @@
 
 import { GobanTheme, THEMES } from "./themes";
 import { GobanSelectedThemes } from "./Goban";
-import { createDeviceScaledCanvas } from "./canvas_utils";
+import { createDeviceScaledCanvas, resizeDeviceScaledCanvas } from "./canvas_utils";
 import { NativeTheme } from "./NativeTransport";
 
 export interface ResolvedThemes {
@@ -81,6 +81,7 @@ export function renderStoneAssets(
         const casts_shadow = theme.stoneCastsShadow(radius);
         return list.map((stone: any) => {
             const canvas = createDeviceScaledCanvas(side, side);
+            resizeDeviceScaledCanvas(canvas, side, side);
             const ctx = canvas.getContext("2d", { willReadFrequently: true });
             if (!ctx) {
                 throw new Error("no 2d context for stone asset");
