@@ -25,6 +25,7 @@ export * from "./Goban/CanvasRenderer";
 export * from "./Goban/SVGRenderer";
 export * from "./Goban/GobanNativeBridge";
 export * from "./Goban/NativeBridgeTransport";
+export * from "./Goban/NativeTransport";
 export * from "./Goban/themes";
 export * from "./Goban/themes/GobanTheme";
 export * from "./Goban/Goban";
