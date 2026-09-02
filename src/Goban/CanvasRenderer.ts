@@ -85,9 +85,7 @@ export interface GobanCanvasInterface {
 export class GobanCanvas extends Goban implements GobanCanvasInterface {
     public engine: GobanEngine;
     //private board_div: HTMLElement;
-    /** Protected so the GobanNativeBridge subclass can measure it: the
-     *  native draw layer is anchored to this canvas's rect. */
-    protected board: HTMLCanvasElement;
+    private board: HTMLCanvasElement;
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
     private ready_to_draw: boolean = false;
@@ -132,22 +130,19 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         "stone-scale": 1.0,
         "stone-shadows": "default",
     };
-    /** Protected so GobanNativeBridge can resolve theme colors. */
-    protected theme_black!: GobanTheme;
+    private theme_black!: GobanTheme;
     private theme_black_stone_color: string = HOT_PINK;
     private theme_black_stones: Array<any> = [];
     private theme_black_text_color: string = HOT_PINK;
     private theme_blank_text_color: string = HOT_PINK;
-    /** Protected so GobanNativeBridge can resolve theme colors. */
-    protected theme_board!: GobanTheme;
+    private theme_board!: GobanTheme;
     private theme_faded_line_color: string = HOT_PINK;
     private theme_faded_star_color: string = HOT_PINK;
     //private theme_faded_text_color:string;
     private theme_line_color: string = "";
     private theme_star_color: string = "";
     private theme_stone_radius: number = 10;
-    /** Protected so GobanNativeBridge can resolve theme colors. */
-    protected theme_white!: GobanTheme;
+    private theme_white!: GobanTheme;
     private theme_white_stone_color: string = HOT_PINK;
     private theme_white_stones: Array<any> = [];
     private theme_white_text_color: string = HOT_PINK;
@@ -271,32 +266,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         delete this.message_text;
         this.move_tree_widget.destroy();
         delete this.title_div;
-    }
-    /**
-     * Show or hide every DOM layer that paints the web board.
-     *
-     * Protected for GobanNativeBridge, which hides the whole stack while
-     * the native draw layer owns the pixels. The stack is recomputed on
-     * each call rather than captured once: the shadow, themed grid
-     * background and crosshair layers all attach lazily, so a layer can
-     * appear long after the native view went active. It deliberately
-     * excludes the message overlay, which stays visible over the board.
-     */
-    protected setBoardLayersVisible(visible: boolean): void {
-        const visibility = visible ? "" : "hidden";
-        const layers: Array<HTMLElement | undefined> = [
-            this.grid_background_layer,
-            this.grid_layer,
-            this.crosshair_layer,
-            this.shadow_layer,
-            this.pen_layer,
-            this.board,
-        ];
-        for (const layer of layers) {
-            if (layer && layer.style.visibility !== visibility) {
-                layer.style.visibility = visibility;
-            }
-        }
     }
     private detachShadowLayer(): void {
         if (this.shadow_layer) {

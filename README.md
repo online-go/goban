@@ -15,6 +15,19 @@ To import into an application targeting node, use the [goban-engine](https://www
 import { ... } from "goban-engine";
 ```
 
+`goban` provides two DOM renderers, `GobanCanvas` and `SVGRenderer`, selected via `setGobanRenderer()` and constructed with `createGoban()`.
+
+### GobanNativeRenderer
+
+A third renderer for native mobile shells. It draws nothing itself: it
+computes a `NativeBoardSpec` (stones, per-intersection overlays, ghost,
+pen marks, labels, bounds) and pre-rendered stone bitmaps and pushes them
+through the `GobanNativeTransport` you inject via
+`config.native_transport`; the platform's draw layer reports `intentPlace`
+and `intentPen` events back. See `src/Goban/NativeTransport.ts` for the
+contract and `test/unit_tests/NativeParity.test.ts` for the guard that keeps
+it in step with the canvas renderer.
+
 # Documentation
 
 https://docs.online-go.com/goban/
