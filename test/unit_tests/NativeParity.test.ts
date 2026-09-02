@@ -28,10 +28,16 @@ const spec_src = fs.readFileSync(path.join(src_dir, "NativeSpec.ts"), "utf-8");
 
 /** Every mark field the canvas renderer reads while drawing a square. */
 function markFieldsRead(source: string): Set<string> {
-    const draw_square = source.slice(
-        source.indexOf("private __drawSquare("),
-        source.indexOf("private drawingHash("),
-    );
+    const start = source.indexOf("private __drawSquare(");
+    const end = source.indexOf("private drawingHash(");
+    if (start === -1 || end === -1) {
+        throw new Error(
+            "NativeParity guard: could not find the __drawSquare/drawingHash anchors in " +
+                "CanvasRenderer.ts -- update the anchors in markFieldsRead(), the guard is blind " +
+                "without them",
+        );
+    }
+    const draw_square = source.slice(start, end);
     const fields = new Set<string>();
     for (const m of draw_square.matchAll(/\bpos\.([a-zA-Z_][a-zA-Z0-9_]*)/g)) {
         fields.add(m[1]);
@@ -62,7 +68,12 @@ const RENDERER_STATE_INPUTS = [
 
 describe("native renderer drawing parity", () => {
     test("every mark field the canvas draws is consumed by NativeSpec", () => {
-        const missing = [...markFieldsRead(canvas_src)].filter((f) => !spec_src.includes(`.${f}`));
+        const fields = markFieldsRead(canvas_src);
+        // Guards against the extraction silently degrading to an empty set if the
+        // __drawSquare/drawingHash anchors ever stop matching (method rename, reorder):
+        // today there are well over 10 fields, so a drop that large signals the anchors moved.
+        expect(fields.size).toBeGreaterThan(10);
+        const missing = [...fields].filter((f) => !spec_src.includes(`.${f}`));
         expect(missing).toEqual([]);
     });
 
