@@ -45,6 +45,12 @@ interface RecordedCall {
 export class RecordingTransport implements GobanNativeTransport {
     public calls: RecordedCall[] = [];
     public reject_attach_once = false;
+    /** One-shot rejections, consumed on use. */
+    public reject_next_update = false;
+    public reject_next_move = false;
+    /** When set, the next suspend resolves only after this gate does; lets a
+     *  test hold the serial op queue open and race a resume against it. */
+    public next_suspend_gate?: Promise<void>;
     private place_listeners: Array<(e: NativeIntentPlaceEvent) => void> = [];
     private pen_listeners: Array<(e: NativeIntentPenEvent) => void> = [];
 
@@ -58,10 +64,18 @@ export class RecordingTransport implements GobanNativeTransport {
     }
     update(opts: NativeUpdateOptions): Promise<void> {
         this.calls.push({ method: "update", opts });
+        if (this.reject_next_update) {
+            this.reject_next_update = false;
+            return Promise.reject(new Error("rim busy"));
+        }
         return Promise.resolve();
     }
     move(opts: { id: string; rect: NativeRect }): Promise<void> {
         this.calls.push({ method: "move", opts });
+        if (this.reject_next_move) {
+            this.reject_next_move = false;
+            return Promise.reject(new Error("rim busy"));
+        }
         return Promise.resolve();
     }
     setTheme(opts: { id: string; theme: NativeTheme }): Promise<void> {
@@ -74,7 +88,10 @@ export class RecordingTransport implements GobanNativeTransport {
     }
     suspend(opts: { id: string }): Promise<{ snapshot: string }> {
         this.calls.push({ method: "suspend", opts });
-        return Promise.resolve({ snapshot: "data:image/png;base64,SNAP" });
+        const snapshot = { snapshot: "data:image/png;base64,SNAP" };
+        const gate = this.next_suspend_gate;
+        delete this.next_suspend_gate;
+        return gate ? gate.then(() => snapshot) : Promise.resolve(snapshot);
     }
     resume(opts: { id: string }): Promise<void> {
         this.calls.push({ method: "resume", opts });
@@ -318,6 +335,24 @@ describe("messages and overlays", () => {
         goban.destroy();
     });
 
+    test("a resume during an in-flight suspend leaves no stale snapshot", async () => {
+        const t = new RecordingTransport();
+        const goban = new GobanNativeRenderer(config(t));
+        await flush();
+
+        let open_gate: () => void = () => undefined;
+        t.next_suspend_gate = new Promise<void>((r) => (open_gate = r));
+        const pending = goban.suspendNativeView();
+        goban.resumeNativeView();
+        open_gate();
+        await pending;
+        await flush();
+
+        expect(t.callsOf("resume")).toHaveLength(1);
+        expect(board_div.querySelector("img")).toBeNull();
+        goban.destroy();
+    });
+
     test("theme change pushes new assets", async () => {
         const t = new RecordingTransport();
         const goban = new GobanNativeRenderer(config(t));
@@ -327,6 +362,65 @@ describe("messages and overlays", () => {
         const themes = t.callsOf("setTheme");
         expect(themes.length).toBeGreaterThan(0);
         expect(themes[themes.length - 1].opts.theme.cellPx).toBe(20);
+        goban.destroy();
+    });
+});
+
+describe("transport rejections", () => {
+    test("a rejected update is re-sent on a later sync", async () => {
+        const t = new RecordingTransport();
+        const goban = new GobanNativeRenderer(config(t, { one_click_submit: true }));
+        await flush();
+        goban.enableStonePlacement();
+
+        const placed = JSON.stringify([0, 0, 0, 0, 0, 0, 0, 1, 0]);
+        t.reject_next_update = true;
+        t.emitPlace({ id: `goban-${goban.goban_id}`, x: 1, y: 2 });
+        await flush();
+        expect(t.lastUpdate().board).toEqual(JSON.parse(placed));
+
+        /* The rim never received that first update, so the board has to be
+         * sent again rather than diffed away against state it never saw. */
+        goban.setMark(0, 0, "triangle");
+        await flush();
+        const carrying_board = t
+            .callsOf("update")
+            .filter((c) => JSON.stringify(c.opts.board) === placed);
+        expect(carrying_board.length).toBeGreaterThan(1);
+        goban.destroy();
+    });
+
+    test("a rejected move is re-sent on the next sync", async () => {
+        const t = new RecordingTransport();
+        const goban = new GobanNativeRenderer(config(t));
+        await flush();
+        expect(t.callsOf("move")).toHaveLength(0);
+
+        /* jsdom reports an all-zero rect, so fake a laid out board div to make
+         * the renderer notice a geometry change at all. */
+        const rect = {
+            x: 5,
+            y: 7,
+            left: 5,
+            top: 7,
+            right: 45,
+            bottom: 47,
+            width: 40,
+            height: 40,
+            toJSON: () => ({}),
+        } as DOMRect;
+        board_div.getBoundingClientRect = () => rect;
+
+        t.reject_next_move = true;
+        goban.redraw(true);
+        await flush();
+        expect(t.callsOf("move")).toHaveLength(1);
+
+        goban.setMark(0, 0, "triangle");
+        await flush();
+        const moves = t.callsOf("move");
+        expect(moves).toHaveLength(2);
+        expect(moves[1].opts.rect).toEqual(moves[0].opts.rect);
         goban.destroy();
     });
 });

@@ -51,6 +51,11 @@ export interface NativeRendererGobanConfig extends GobanConfig {
 
 export type NativeRendererState = "pending" | "attaching" | "active" | "destroyed";
 
+/** How long to wait before re-syncing after a transport call is rejected.
+ *  Long enough that a rim rejecting everything backs off instead of spinning
+ *  the event loop. */
+const RETRY_DELAY_MS = 250;
+
 /** The renderer state changes that make the spec stale. */
 const SYNC_EVENTS = [
     "update",
@@ -103,8 +108,11 @@ export class GobanNativeRenderer extends Goban {
     private byoyomi_label = "";
     private message_timeout?: number;
     /** The last message text handed to the rim, so a redundant clear (e.g.
-     *  the one showMessage does first) doesn't round-trip. */
-    private message_sent: string | null = null;
+     *  the one showMessage does first) doesn't round-trip. `undefined` means
+     *  "unknown" (the last push was rejected), which forces the next one
+     *  through. */
+    private message_sent: string | null | undefined = null;
+    private retry_timeout?: ReturnType<typeof setTimeout>;
     private overlay_suspended = false;
     private snapshot_img?: HTMLImageElement;
     private move_tree: MoveTreeCanvas;
@@ -357,6 +365,10 @@ export class GobanNativeRenderer extends Goban {
             clearTimeout(this.message_timeout);
             delete this.message_timeout;
         }
+        if (this.retry_timeout !== undefined) {
+            clearTimeout(this.retry_timeout);
+            delete this.retry_timeout;
+        }
         const was_attached = this.state === "active" || this.state === "attaching";
         this.state = "destroyed";
         if (was_attached) {
@@ -395,13 +407,32 @@ export class GobanNativeRenderer extends Goban {
         return next;
     }
 
+    /** A transport call was rejected: the rim never received the field, so
+     *  drop the bookkeeping that claims it did and re-sync shortly. Without
+     *  this the next diff compares against state the rim never saw and the
+     *  change is lost forever. */
+    private retryAfterFailure(invalidate: () => void): void {
+        invalidate();
+        if (this.isDestroyed() || this.retry_timeout !== undefined) {
+            return;
+        }
+        this.retry_timeout = setTimeout(() => {
+            delete this.retry_timeout;
+            this.scheduleSync();
+        }, RETRY_DELAY_MS);
+    }
+
     private pushMessage(text: string | null): void {
         if (this.message_sent === text || this.isDestroyed()) {
             return;
         }
         this.message_sent = text;
         this.enqueue(() => this.transport.setMessage({ id: this.id(), text }), "setMessage").catch(
-            () => undefined,
+            () => {
+                /* The rim never got it; a sync won't re-push messages, but the
+                 * next show/clear must not be deduplicated away. */
+                this.message_sent = undefined;
+            },
         );
     }
 
@@ -533,8 +564,8 @@ export class GobanNativeRenderer extends Goban {
             return;
         }
         this.last_rect = rect;
-        this.enqueue(() => this.transport.move({ id: this.id(), rect }), "move").catch(
-            () => undefined,
+        this.enqueue(() => this.transport.move({ id: this.id(), rect }), "move").catch(() =>
+            this.retryAfterFailure(() => delete this.last_rect),
         );
     }
 
@@ -550,7 +581,7 @@ export class GobanNativeRenderer extends Goban {
         this.theme_sent_for = key;
         const theme = this.buildTheme();
         this.enqueue(() => this.transport.setTheme({ id: this.id(), theme }), "setTheme").catch(
-            () => undefined,
+            () => this.retryAfterFailure(() => (this.theme_sent_for = undefined)),
         );
     }
 
@@ -677,7 +708,9 @@ export class GobanNativeRenderer extends Goban {
             return;
         }
         this.last_sent = spec;
-        this.enqueue(() => this.transport.update(update), "update").catch(() => undefined);
+        this.enqueue(() => this.transport.update(update), "update").catch(() =>
+            this.retryAfterFailure(() => delete this.last_sent),
+        );
     }
 
     private onIntentPlace(event: NativeIntentPlaceEvent): void {
@@ -705,6 +738,12 @@ export class GobanNativeRenderer extends Goban {
     }
 
     private placeSnapshot(snapshot: string): void {
+        /* The suspend may have been in flight when a resume (or a destroy)
+         * came in; pinning this now would leave an opaque image over a board
+         * the rim has already started drawing again. */
+        if (!this.overlay_suspended || this.isDestroyed()) {
+            return;
+        }
         this.removeSnapshot();
         const img = document.createElement("img");
         img.src = snapshot;
