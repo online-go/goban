@@ -22,8 +22,16 @@ import {
     Score,
     ConditionalMoveTree,
     GobanMoveError,
+    IGobanSocket,
 } from "../engine";
-import { NumberMatrix, encodeMove, makeMatrix, makeEmptyMatrix } from "../engine/util";
+import {
+    NumberMatrix,
+    encodeMove,
+    encodeMoves,
+    makeMatrix,
+    makeEmptyMatrix,
+    getRandomInt,
+} from "../engine/util";
 import { MoveTree, MarkInterface, AIQualityMark } from "../engine/MoveTree";
 import { ScoreEstimator } from "../engine/ScoreEstimator";
 import { computeAverageMoveTime, niceInterval, matricesAreEqual } from "../engine/util";
@@ -102,6 +110,10 @@ export abstract class GobanInteractive extends GobanBase {
     public abstract sendTimedOut(): void;
     public abstract sent_timed_out_message: boolean; /// Expected to be true if sendTimedOut has been called
     protected abstract sendMove(mv: MoveCommand, cb?: () => void): boolean;
+    /** Implemented by OGSConnectivity; declared here so tapAtImpl can use it. */
+    protected abstract socket: IGobanSocket;
+    /** Implemented by OGSConnectivity; declared here so tapAtImpl can use it. */
+    protected abstract syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void;
 
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: ConditionalMoveTree = new ConditionalMoveTree(null);
@@ -290,6 +302,10 @@ export abstract class GobanInteractive extends GobanBase {
     protected __last_pt: { i: number; j: number; valid: boolean } = { i: -1, j: -1, valid: false };
     protected __update_move_tree: any = null; /* timer */
     protected analysis_move_counter: number;
+    /** True while a puzzle's automatic opponent reply is pending (tapAtImpl
+     *  schedules it); renderers hide the hover stone and tapAtImpl refuses
+     *  input meanwhile. */
+    protected autoplaying_puzzle_move: boolean = false;
     protected stone_removal_auto_scoring_done?: boolean = false;
     protected bounded_height: number;
     protected bounded_width: number;
@@ -1625,6 +1641,410 @@ export abstract class GobanInteractive extends GobanBase {
         this.tapAt(mv.x, mv.y, false);
     }
     protected abstract tapAt(x: number, y: number, double_tap: boolean): void;
+    protected tapAtImpl(
+        x: number,
+        y: number,
+        double_tap: boolean,
+        right_click: boolean,
+        shift_key: boolean,
+        press_duration_ms: number,
+    ): void {
+        // Validate stone placement is enabled
+        if (
+            !(
+                this.stone_placement_enabled &&
+                (this.player_id ||
+                    !this.engine.players.black.id ||
+                    this.mode === "analyze" ||
+                    this.mode === "puzzle")
+            )
+        ) {
+            return;
+        }
+
+        // Validate bounds
+        if (x < 0 || y < 0 || x >= this.engine.width || y >= this.engine.height) {
+            return;
+        }
+
+        if (!this.double_click_submit) {
+            double_tap = false;
+        }
+
+        if (
+            this.mode === "analyze" &&
+            shift_key &&
+            /* don't warp to move tree position when shift clicking in stone edit mode */
+            !(
+                this.analyze_tool === "stone" &&
+                (this.analyze_subtool === "black" || this.analyze_subtool === "white")
+            ) &&
+            /* nor when in labeling mode */
+            this.analyze_tool !== "label"
+        ) {
+            const m = this.engine.getMoveByLocation(x, y, true);
+            if (m) {
+                this.engine.jumpTo(this.clickJumpTarget(m));
+                this.emit("update");
+            }
+            return;
+        }
+
+        if (this.mode === "analyze" && this.analyze_tool === "label") {
+            return;
+        }
+
+        this.submit_move = undefined;
+
+        const tap_time = Date.now();
+        let removed_count = 0;
+        const removed_stones: Array<JGOFIntersection> = [];
+
+        const submit = () => {
+            const submit_time = Date.now();
+            if (!this.one_click_submit && (!this.double_click_submit || !double_tap)) {
+                /* then submit button was pressed, so check to make sure this didn't happen too quick */
+                const delta = submit_time - tap_time;
+                if (delta <= 50) {
+                    console.info(
+                        "Submit button pressed only ",
+                        delta,
+                        "ms after stone was placed, presuming bad click",
+                    );
+                    return;
+                }
+            }
+            const sent = this.sendMove({
+                game_id: this.game_id,
+                move: encodeMove(x, y),
+            });
+            if (sent) {
+                this.playMovementSound();
+                this.setTitle(_("Submitting..."));
+
+                if (removed_count) {
+                    this.debouncedEmitCapturedStones(removed_stones);
+                }
+
+                this.disableStonePlacement();
+                delete this.move_selected;
+            } else {
+                console.log("Move not sent, not playing movement sound");
+            }
+        };
+        /* we disable clicking if we've been initialized with the view user,
+         * unless the board is a demo board (thus black_player_id is 0).  */
+        try {
+            let force_redraw = false;
+
+            if (
+                this.engine.phase === "stone removal" &&
+                this.engine.isActivePlayer(this.player_id) &&
+                this.engine.cur_move === this.engine.last_official_move
+            ) {
+                const { removed, group } = this.engine.toggleSingleGroupRemoval(
+                    x,
+                    y,
+                    shift_key || press_duration_ms > 500,
+                );
+
+                if (group.length) {
+                    this.socket.send("game/removed_stones/set", {
+                        game_id: this.game_id,
+                        removed: removed,
+                        stones: encodeMoves(group),
+                    });
+                }
+            } else if (this.mode === "puzzle") {
+                let puzzle_mode = "place";
+                let color: JGOFNumericPlayerColor = 0;
+                if (this.getPuzzlePlacementSetting) {
+                    const s = this.getPuzzlePlacementSetting();
+                    puzzle_mode = s.mode;
+                    if (s.mode === "setup") {
+                        color = s.color;
+                        if (this.shift_key_is_down || right_click) {
+                            color = color === 1 ? 2 : 1;
+                        }
+                    }
+                }
+
+                if (puzzle_mode === "place") {
+                    if (!double_tap) {
+                        /* we get called for each tap, then once for the final double tap so we only want to process this x2 */
+                        this.engine.place(x, y, true, false, true, false, false);
+                        this.emit("puzzle-place", {
+                            x,
+                            y,
+                            width: this.engine.width,
+                            height: this.engine.height,
+                            color: this.engine.colorToMove(),
+                        });
+                    }
+                }
+                if (puzzle_mode === "play") {
+                    /* we get called for each tap, then once for the final double tap so we only want to process this x2 */
+                    /* Also, if we just placed a piece and the computer is waiting to place it's piece (autoplaying), then
+                     * don't allow anything to be placed. */
+                    if (!double_tap && !this.autoplaying_puzzle_move) {
+                        let calls = 0;
+
+                        if (
+                            this.engine.puzzle_player_move_mode !== "fixed" ||
+                            this.engine.cur_move.lookupMove(x, y, this.engine.player, false)
+                        ) {
+                            const puzzle_place = (mv_x: number, mv_y: number): void => {
+                                ++calls;
+
+                                removed_count = this.engine.place(
+                                    mv_x,
+                                    mv_y,
+                                    true,
+                                    false,
+                                    true,
+                                    false,
+                                    false,
+                                    removed_stones,
+                                );
+                                this.emit("puzzle-place", {
+                                    x: mv_x,
+                                    y: mv_y,
+                                    width: this.engine.width,
+                                    height: this.engine.height,
+                                    color: this.engine.colorToMove(),
+                                });
+                                if (this.engine.cur_move.wrong_answer) {
+                                    this.emit("puzzle-wrong-answer");
+                                }
+                                if (this.engine.cur_move.correct_answer) {
+                                    this.emit("puzzle-correct-answer");
+                                }
+
+                                if (this.engine.cur_move.branches.length === 0) {
+                                    const isobranches =
+                                        this.engine.cur_move.findStrongIsobranches();
+                                    if (isobranches.length > 0) {
+                                        const w = getRandomInt(0, isobranches.length);
+                                        const which = isobranches[w];
+                                        console.info(
+                                            "Following isomorphism (" +
+                                                (w + 1) +
+                                                " of " +
+                                                isobranches.length +
+                                                ")",
+                                        );
+                                        this.engine.jumpTo(which);
+                                        this.emit("update");
+                                    }
+                                }
+
+                                if (this.engine.cur_move.branches.length) {
+                                    const next =
+                                        this.engine.cur_move.branches[
+                                            getRandomInt(0, this.engine.cur_move.branches.length)
+                                        ];
+
+                                    if (
+                                        calls === 1 &&
+                                        /* only move if it's the "ai" turn.. if we undo we can get into states where we
+                                         * are playing for the ai for some moves so don't auto-move blindly */ ((next.player ===
+                                            2 &&
+                                            this.engine.config.initial_player === "black") ||
+                                            (next.player === 1 &&
+                                                this.engine.config.initial_player === "white")) &&
+                                        this.engine.puzzle_opponent_move_mode !== "manual"
+                                    ) {
+                                        this.autoplaying_puzzle_move = true;
+                                        setTimeout(() => {
+                                            this.autoplaying_puzzle_move = false;
+                                            puzzle_place(next.x, next.y);
+                                            this.emit("update");
+                                        }, this.puzzle_autoplace_delay);
+                                    }
+                                } else {
+                                    /* default to wrong answer, but only if there are no nodes prior to us that were marked
+                                     * as correct */
+                                    let c: MoveTree | null = this.engine.cur_move;
+                                    let parent_was_correct = false;
+                                    while (c) {
+                                        if (c.correct_answer) {
+                                            parent_was_correct = true;
+                                            break;
+                                        }
+                                        c = c.parent;
+                                    }
+                                    if (!parent_was_correct) {
+                                        /* default to wrong answer - we say ! here because we will have already emitted
+                                         * puzzle-wrong-answer if wrong_answer was true above. */
+                                        if (!this.engine.cur_move.wrong_answer) {
+                                            this.emit("puzzle-wrong-answer");
+                                        }
+                                        //break;
+                                    }
+                                }
+                            };
+                            puzzle_place(x, y);
+                        }
+                    }
+                }
+                if (puzzle_mode === "setup") {
+                    if (this.engine.board[y][x] === color) {
+                        this.engine.initialStatePlace(x, y, 0);
+                    } else {
+                        this.engine.initialStatePlace(x, y, color);
+                    }
+                }
+                this.emit("update");
+                if (removed_count > 0) {
+                    this.emit("audio-capture-stones", {
+                        count: removed_count,
+                        already_captured: 0,
+                    });
+                    this.debouncedEmitCapturedStones(removed_stones);
+                }
+            } else if (
+                this.engine.phase === "play" ||
+                (this.engine.phase === "finished" && this.mode === "analyze")
+            ) {
+                if (this.move_selected) {
+                    if (this.mode === "play") {
+                        this.engine.cur_move.removeIfNoChildren();
+                    }
+
+                    /* If same stone is clicked again, simply remove it */
+                    let same_stone_clicked = false;
+                    if (this.move_selected.x === x && this.move_selected.y === y) {
+                        delete this.move_selected;
+                        same_stone_clicked = true;
+                    }
+
+                    this.engine.jumpTo(this.engine.last_official_move);
+
+                    /* If same stone is clicked again, simply remove it */
+                    if (same_stone_clicked) {
+                        this.updatePlayerToMoveTitle();
+                        if (!double_tap) {
+                            this.emit("update");
+                            return;
+                        }
+                    }
+                }
+                this.move_selected = { x: x, y: y };
+
+                /* Place our stone */
+                try {
+                    if (
+                        !(
+                            this.mode === "analyze" &&
+                            this.analyze_tool === "stone" &&
+                            this.analyze_subtool !== "alternate"
+                        )
+                    ) {
+                        removed_count = this.engine.place(
+                            x,
+                            y,
+                            true,
+                            true,
+                            undefined,
+                            undefined,
+                            undefined,
+                            removed_stones,
+                        );
+
+                        if (this.mode === "analyze") {
+                            if (this.engine.handicapMovesLeft() > 0) {
+                                this.engine.place(-1, -1);
+                            }
+                        }
+                    } else {
+                        if (!this.edit_color) {
+                            throw new Error(`Edit place called with invalid edit_color value`);
+                        }
+
+                        let edit_color = this.engine.playerByColor(this.edit_color);
+                        if (shift_key && edit_color === 1) {
+                            /* if we're going to place a black on an empty square but we're holding down shift, place white */
+                            edit_color = 2;
+                        } else if (shift_key && edit_color === 2) {
+                            /* if we're going to place a black on an empty square but we're holding down shift, place white */
+                            edit_color = 1;
+                        }
+                        if (this.engine.board[y][x] === edit_color) {
+                            this.engine.editPlace(x, y, 0);
+                        } else {
+                            this.engine.editPlace(x, y, edit_color);
+                        }
+                    }
+
+                    if (this.mode === "analyze" && this.analyze_tool === "stone") {
+                        let c: MoveTree | null = this.engine.cur_move;
+                        while (c && !c.trunk) {
+                            let mark: any = c.getMoveNumberDifferenceFromTrunk();
+                            if (c.edited) {
+                                mark = "triangle";
+                            }
+
+                            if (c.x >= 0 && c.y >= 0 && !this.engine.board[c.y][c.x]) {
+                                this.clearTransientMark(c.x, c.y, mark);
+                            } else {
+                                this.setTransientMark(c.x, c.y, mark, true);
+                            }
+                            c = c.parent;
+                        }
+                    }
+
+                    if (this.isPlayerController()) {
+                        this.syncReviewMove();
+                        force_redraw = true;
+                    }
+                } catch (e) {
+                    delete this.move_selected;
+                    this.updatePlayerToMoveTitle();
+                    throw e;
+                }
+
+                switch (this.mode) {
+                    case "play":
+                        //if (this.one_click_submit || double_tap || this.engine.game_type === "temporary") {
+                        if (this.one_click_submit || double_tap) {
+                            submit();
+                        } else {
+                            this.submit_move = submit;
+                        }
+                        break;
+                    case "analyze":
+                        delete this.move_selected;
+                        this.updateTitleAndStonePlacement();
+                        this.emit("update");
+                        this.playMovementSound();
+                        break;
+                    case "conditional":
+                        this.followConditionalSegment(x, y);
+                        delete this.move_selected;
+                        this.updateTitleAndStonePlacement();
+                        this.emit("update");
+                        this.playMovementSound();
+                        break;
+                }
+
+                if (force_redraw) {
+                    this.redraw();
+                }
+            }
+        } catch (e) {
+            delete this.move_selected;
+            const err = e instanceof Error ? e : new Error(String(e));
+            // stone already placed is just to be ignored, it's not really an error.
+            if (
+                !(err instanceof GobanMoveError) ||
+                err.message_id !== "stone_already_placed_here"
+            ) {
+                this.errorHandler(err);
+                this.emit("error", "stone_already_placed_here");
+            }
+            this.emit("update");
+        }
+    }
     public setMarkByPrettyCoordinates(
         coordinates: string,
         mark: number | string,
