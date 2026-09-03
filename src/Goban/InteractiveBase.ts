@@ -70,16 +70,16 @@ export interface ColoredCircle {
 /**
  * Badge shown on a stone for each AI review move quality classification:
  * the symbol drawn in white on a filled circle of the given color. The
- * colors mirror the `--move-quality-*` CSS variables used by the
- * online-go.com AI review summary table; renderers use the CSS variable
- * when available and fall back to these values.
+ * colors are the light theme values of the `--move-quality-*` CSS
+ * variables defined by online-go.com; renderers use the CSS variable when
+ * available and fall back to these values.
  */
 export const AI_QUALITY_BADGES: {
     [quality in AIQualityMark]: { symbol: string; color: string };
 } = {
-    excellent: { symbol: "!!", color: "#2E86AB" },
-    great: { symbol: "!", color: "#3DA35D" },
-    good: { symbol: "+", color: "#6AB04C" },
+    excellent: { symbol: "!!", color: "#3C8CCD" },
+    great: { symbol: "!", color: "#369D57" },
+    good: { symbol: "+", color: "#559A35" },
     inaccuracy: { symbol: "-", color: "#E8A838" },
     mistake: { symbol: "?", color: "#E87D3E" },
     blunder: { symbol: "??", color: "#D64545" },

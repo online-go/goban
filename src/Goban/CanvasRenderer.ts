@@ -2419,7 +2419,10 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     const r = this.square_size * 0.2;
                     ctx.save();
                     ctx.beginPath();
-                    ctx.fillStyle = badge.color;
+                    ctx.fillStyle =
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue(`--move-quality-${pos.ai_quality}`)
+                            .trim() || badge.color;
                     ctx.arc(cx, cy + oy, r, 0, 2 * Math.PI, false);
                     ctx.fill();
                     ctx.fillStyle = "#FFFFFF";
