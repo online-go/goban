@@ -307,7 +307,6 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
         return render_cache[cache_key];
     }
 
-    // cspell: words dcsr
     const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
     radius = Math.max(0.1, radius);

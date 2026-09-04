@@ -51,10 +51,5 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: Spell check
-        uses: streetsidesoftware/cspell-action@v5
-        with:
-            files: src/**/*.{ts,tsx}
-
       - name: Build
         run: npm run build-production

@@ -2,7 +2,6 @@
  * Copyright (C)  Online-Go.com
  * Copyright (C)  Benjamin P. Jones
  */
-// cspell: disable
 
 (global as any).CLIENT = true;
 

@@ -864,7 +864,7 @@ export function autoscore(
 function debug_ownership_output(title: string, ownership: number[][]) {
     begin_board(title);
     let out = "   ";
-    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+    const x_coords = "ABCDEFGHJKLMNOPQRST";
 
     for (let x = 0; x < ownership[0].length; ++x) {
         out += `${x_coords[x]}`;
@@ -919,7 +919,7 @@ function colorizeOwnership(ownership: number): string {
 function debug_board_output(title: string, board: JGOFNumericPlayerColor[][]) {
     begin_board(title);
     let out = "   ";
-    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+    const x_coords = "ABCDEFGHJKLMNOPQRST";
 
     for (let x = 0; x < board[0].length; ++x) {
         out += `${x_coords[x]}`;
@@ -960,7 +960,7 @@ function debug_board_output(title: string, board: JGOFNumericPlayerColor[][]) {
 function debug_board_string_output(title: string, board: string[][]) {
     begin_board(title);
     let out = "   ";
-    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+    const x_coords = "ABCDEFGHJKLMNOPQRST";
 
     for (let x = 0; x < board[0].length; ++x) {
         out += `${x_coords[x]}`;
@@ -1012,7 +1012,7 @@ function colorizeIntersection(c: string): string {
 function debug_boolean_board(title: string, board: (boolean | number)[][], mark = "S") {
     begin_board(title);
     let out = "   ";
-    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+    const x_coords = "ABCDEFGHJKLMNOPQRST";
 
     for (let x = 0; x < board[0].length; ++x) {
         out += `${x_coords[x]}`;
@@ -1089,7 +1089,7 @@ function debug_groups(title: string, groups: StoneStringBuilder) {
 function debug_group_map(title: string, board: string[][]) {
     begin_board(title);
     let out = "   ";
-    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+    const x_coords = "ABCDEFGHJKLMNOPQRST";
 
     for (let x = 0; x < board[0].length; ++x) {
         out += `${x_coords[x]}`;
