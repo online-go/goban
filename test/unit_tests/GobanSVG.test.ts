@@ -684,10 +684,11 @@ describe("AI review marks and placement rooting", () => {
         const badge = rendererSvg(goban).querySelector(".ai-quality-badge");
         expect(badge).not.toBeNull();
         expect(badge?.getAttribute("class")).toContain("ai-quality-blunder");
-        expect(badge?.querySelector("circle")?.getAttribute("fill")).toBe(
-            "var(--move-quality-blunder, #D64545)",
-        );
-        expect(badge?.querySelector("text")?.textContent).toBe("??");
+        const shape = badge?.querySelector("polygon");
+        expect(shape?.getAttribute("fill")).toBe("var(--move-quality-blunder, #D64545)");
+        expect(shape?.getAttribute("stroke")).toBe("rgba(0, 0, 0, 0.75)");
+        expect(shape?.getAttribute("points")?.split(" ")).toHaveLength(3);
+        expect(badge?.querySelector("text")).toBeNull();
         goban.destroy();
     });
 
@@ -700,7 +701,9 @@ describe("AI review marks and placement rooting", () => {
 
         goban.setAIQualityMark(0, 0, "great");
         expect(svg.querySelector(".triangle")).toBeNull();
-        expect(svg.querySelector(".ai-quality-badge text")?.textContent).toBe("!");
+        expect(svg.querySelector(".ai-quality-badge")?.getAttribute("class")).toContain(
+            "ai-quality-great",
+        );
         goban.destroy();
     });
 
@@ -768,55 +771,7 @@ describe("AI review marks and placement rooting", () => {
         goban.destroy();
     });
 
-    test("the presented next move's stone draws less translucently", () => {
-        const goban = new SVGRenderer(
-            basic3x3Config({
-                moves: [
-                    [0, 0],
-                    [1, 0],
-                ],
-                mode: "analyze",
-            }),
-        );
-        // Sit on move 1; move 2 at (1, 0) is the presented next move
-        goban.showPrevious();
-        goban.setPresentNextMove(true);
-        goban.setMark(1, 0, "white", false);
-
-        const svg = rendererSvg(goban);
-        const opacities = Array.from(svg.querySelectorAll("[opacity]"))
-            .filter((e) => e.getAttribute("class") !== "last-move")
-            .map((e) => e.getAttribute("opacity"));
-        expect(opacities).toContain("0.75");
-        expect(opacities).not.toContain("0.6");
-        goban.destroy();
-    });
-
-    test("the last move circle dims while presenting", () => {
-        const goban = new SVGRenderer(
-            basic3x3Config({
-                moves: [
-                    [0, 0],
-                    [1, 0],
-                ],
-                mode: "analyze",
-            }),
-        );
-        goban.showPrevious();
-        const svg = rendererSvg(goban);
-
-        expect(svg.querySelector(".last-move")).not.toBeNull();
-        expect(svg.querySelector(".last-move")?.getAttribute("opacity")).toBeNull();
-
-        goban.setPresentNextMove(true);
-        expect(svg.querySelector(".last-move")?.getAttribute("opacity")).toBe("0.4");
-
-        goban.setPresentNextMove(false);
-        expect(svg.querySelector(".last-move")?.getAttribute("opacity")).toBeNull();
-        goban.destroy();
-    });
-
-    test("shift clicking a stone in presented move space presents that move", () => {
+    test("shift clicking a stone jumps to that move even while the next trunk move is marked", () => {
         const goban = new SVGRenderer(
             basic3x3Config({
                 moves: [
@@ -828,14 +783,13 @@ describe("AI review marks and placement rooting", () => {
             }),
         );
         const event_layer = goban.parent;
-        goban.setPresentNextMove(true);
+        goban.showPrevious();
+        goban.showPrevious();
+        goban.setMark(1, 0, "white", true);
 
-        // Shift-click the stone of move 2 at (1, 0): the engine lands on
-        // move 1 so that move 2 is the presented move
         simulateMouseClick(event_layer, { x: 1, y: 0, shiftKey: true });
 
-        expect(goban.engine.cur_move.move_number).toBe(1);
-        expect(goban.engine.cur_move.trunk_next?.move_number).toBe(2);
+        expect(goban.engine.cur_move.move_number).toBe(2);
         goban.destroy();
     });
 
@@ -900,40 +854,6 @@ describe("AI review marks and placement rooting", () => {
         goban.engine.cur_move.clearMarks();
         goban.redraw(true);
         expect(svg.querySelector(".subscript2")).toBeNull();
-        goban.destroy();
-    });
-
-    test("clickJumpTarget resolves clicks in presented move space", () => {
-        const goban = new SVGRenderer(
-            basic3x3Config({
-                moves: [
-                    [0, 0],
-                    [1, 0],
-                    [2, 0],
-                ],
-                mode: "analyze",
-            }),
-        );
-        const move3 = goban.engine.cur_move;
-        const move2 = move3.parent!;
-        const root = goban.engine.move_tree;
-
-        // Without presentation, clicks jump to the clicked node
-        expect(goban.clickJumpTarget(move3).id).toBe(move3.id);
-
-        goban.setPresentNextMove(true);
-
-        // A trunk node click presents that move: jump to its parent
-        expect(goban.clickJumpTarget(move3).id).toBe(move2.id);
-        // The root has no parent and is jumped to directly
-        expect(goban.clickJumpTarget(root).id).toBe(root.id);
-
-        // Variation nodes are jumped to directly
-        goban.engine.jumpTo(move2);
-        goban.engine.place(1, 1);
-        const variation = goban.engine.cur_move;
-        expect(variation.trunk).toBe(false);
-        expect(goban.clickJumpTarget(variation).id).toBe(variation.id);
         goban.destroy();
     });
 
