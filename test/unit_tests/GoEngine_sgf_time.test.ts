@@ -7,7 +7,6 @@
  *
  *  http://www.apache.org/licenses/LICENSE-2.0
  */
-// cspell: disable
 
 (global as any).CLIENT = true;
 

@@ -65,7 +65,6 @@ export function preRenderImageStone(
     deferredRenderCallback: () => void,
     show_shadow: boolean = true,
 ): StoneTypeArray {
-    // cspell: words dcsr
     const dcsr = deviceCanvasScalingRatio();
     radius *= dcsr;
 

@@ -12,7 +12,6 @@
  * mirrors the browser dropping those synthesized events when the DOM changes
  * between presses.
  */
-// cspell: disable
 
 (global as any).CLIENT = true;
 
