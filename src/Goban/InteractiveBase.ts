@@ -85,6 +85,21 @@ export const AI_QUALITY_BADGES: {
     blunder: { symbol: "??", color: "#D64545" },
 };
 
+/**
+ * Geometry of the move quality badge, in fractions of the square size. It is
+ * the same small upward triangle as the sub_triangle mark (circumradius 0.15
+ * of the square, drawn low on the stone), filled with the quality color and
+ * outlined dark. The quality is conveyed by the color alone.
+ */
+export const AI_QUALITY_BADGE = {
+    /** Vertical offset of the triangle's center from the stone center */
+    offset_y: 0.3,
+    /** Circumradius of the triangle */
+    radius: 0.15,
+    border_width: 0.0375,
+    border_color: "rgba(0, 0, 0, 0.75)",
+};
+
 export interface MoveCommand {
     //game_id?: number | string;
     game_id: number;
@@ -123,46 +138,6 @@ export abstract class GobanInteractive extends GobanBase {
     public showing_scores: boolean = false;
     public stalling_score_estimate?: StallingScoreEstimate;
     public width: number;
-
-    /**
-     * When true, the goban operates in "presented move" space: the current
-     * move's trunk_next is treated as the move being shown to the user. The
-     * move tree highlights it and ends the active path there, clicks that
-     * jump to a played trunk move (move tree nodes, board shift-clicks)
-     * resolve through clickJumpTarget so the clicked move becomes the
-     * presented one, the presented stone draws more solidly, and the last
-     * move circle is dimmed. The AI review sets this while it presents the
-     * next trunk move as a translucent stone on the board.
-     */
-    private _present_next_move: boolean = false;
-
-    public get present_next_move(): boolean {
-        return this._present_next_move;
-    }
-    public setPresentNextMove(enabled: boolean): void {
-        if (this._present_next_move === enabled) {
-            return;
-        }
-        this._present_next_move = enabled;
-        this.move_tree_redraw();
-        /* Board rendering also depends on this flag (presented stone
-         * opacity, dimmed last move circle) */
-        this.redraw(true);
-    }
-
-    /**
-     * Resolves which node a click that jumps to a played move (a move tree
-     * node, a board shift-click) should land on. In presented move space a
-     * click on a trunk node jumps to its parent, so the clicked move becomes
-     * the presented move; variation nodes and the root are jumped to
-     * directly.
-     */
-    public clickJumpTarget(node: MoveTree): MoveTree {
-        if (this._present_next_move && node.trunk && node.parent) {
-            return node.parent;
-        }
-        return node;
-    }
 
     public pause_control?: AdHocPauseControl;
     public paused_since?: number;

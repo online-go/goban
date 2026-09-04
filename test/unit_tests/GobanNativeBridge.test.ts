@@ -866,27 +866,6 @@ describe("no blank board while a resume is in flight", () => {
  * expressible in contract v1 (which carries only stones, colorToMove and a
  * last-move ring), so all of it has to reach the web canvas. */
 describe("AI review board state", () => {
-    test("presenting the next move bails to the canvas and clearing re-engages", async () => {
-        const transport = new RecordingTransport();
-        const goban = new GobanNativeBridge(config(transport));
-        await flush();
-        expect(goban.nativeBridgeState).toBe("active");
-
-        goban.setPresentNextMove(true);
-        await flush();
-
-        expect(goban.nativeBridgeState).toBe("bailed");
-        const canvas = board_div.querySelector("#board-canvas") as HTMLCanvasElement;
-        expect(canvas.style.visibility).not.toBe("hidden");
-
-        goban.setPresentNextMove(false);
-        await flush();
-
-        expect(goban.nativeBridgeState).toBe("active");
-        expect(canvas.style.visibility).toBe("hidden");
-        goban.destroy();
-    });
-
     test("an ai_quality badge bails to the canvas", async () => {
         const transport = new RecordingTransport();
         const goban = new GobanNativeBridge(config(transport));

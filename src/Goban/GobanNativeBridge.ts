@@ -388,16 +388,6 @@ export class GobanNativeBridge extends GobanCanvas {
      * canvas; non-"play" engine phases (stone removal, finished) need
      * removal/score drawing, so they fall back too.
      *
-     * `present_next_move` is the AI review's presented-move space, where
-     * the board shows a move that has not been played: a translucent stone
-     * at the current move's trunk_next, over a last-move ring dimmed to
-     * make room for it. Contract v1 models neither -- its `board` carries
-     * only played stones and its `lastMove` draws one fixed ring -- so a
-     * presented board is never serviceable. In practice the presented
-     * stone arrives as a mark and `hasMarks()` would catch it, but the flag
-     * is what actually means "not a plain board", and it also dims the ring
-     * on its own.
-     *
      * The conditions below are the renderer's own `drawingHash()` -- the
      * canonical list of everything that changes a drawn square -- minus
      * what v1 carries. The one entry deliberately left out is the
@@ -411,7 +401,6 @@ export class GobanNativeBridge extends GobanCanvas {
             this.mode === "play" &&
             this.engine.phase === "play" &&
             this.engine.width === this.engine.height &&
-            !this.present_next_move &&
             !this.scoring_mode &&
             !this.heatmap &&
             !this.colored_circles &&
