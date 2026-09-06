@@ -34,18 +34,68 @@ export function resolveThemes(themes: GobanSelectedThemes): ResolvedThemes {
     return { board, white: new WhiteTheme(board), black: new BlackTheme(board), themes };
 }
 
+/**
+ * The number of `color-theme-radius` entries each pre-render cache keeps.
+ * A board holds two (black and white) per radius it has been shown at, the
+ * move tree two more at its fixed radius, so this covers a handful of boards
+ * and a run of resizes. Beyond it the least recently used entry goes: a
+ * board being dragged through many sizes otherwise pins a full stone set
+ * (dozens of canvases, and their encoded PNGs) for every size it passed
+ * through, for the life of the page. The canvas renderer bounds its own
+ * stone cache for the same reason, and on iOS canvas memory is scarce.
+ */
+export const PRE_RENDER_CACHE_CAPACITY = 32;
+
+/** Insertion ordered map that drops its least recently used entry past
+ *  `capacity`. A hit moves the entry to the back, so a caller that asks for
+ *  the same stones on every redraw (the move tree) is never evicted by a
+ *  board that keeps changing size. */
+class LRUCache<V> {
+    private map = new Map<string, V>();
+    constructor(private capacity: number) {}
+
+    get(key: string): V | undefined {
+        const value = this.map.get(key);
+        if (value !== undefined) {
+            this.map.delete(key);
+            this.map.set(key, value);
+        }
+        return value;
+    }
+
+    set(key: string, value: V): void {
+        this.map.delete(key);
+        this.map.set(key, value);
+        while (this.map.size > this.capacity) {
+            const oldest = this.map.keys().next().value;
+            if (oldest === undefined) {
+                break;
+            }
+            this.map.delete(oldest);
+        }
+    }
+
+    deleteWhere(predicate: (key: string) => boolean): void {
+        for (const key of [...this.map.keys()]) {
+            if (predicate(key)) {
+                this.map.delete(key);
+            }
+        }
+    }
+}
+
 /* Stone objects are cached per theme name + radius exactly as the canvas
  * renderer does, so the deferred (image-loading) themes reuse their in-flight
  * loads and a re-themed or resized goban doesn't re-render what it already
  * has. Keyed by name rather than by theme instance because every setTheme
  * call - including the one a board resize triggers - builds fresh instances. */
-const stone_cache: { [key: string]: any } = {};
+const stone_cache = new LRUCache<any>(PRE_RENDER_CACHE_CAPACITY);
 
 /* The encoded PNGs, keyed by everything that decides their pixels. Encoding
  * a full stone set is by far the most expensive part of building a native
  * theme, and a board resize that lands back on the same stone radius asks for
  * byte-identical strings. Only settled stones are cached - see below. */
-const asset_cache: { [key: string]: string[] } = {};
+const asset_cache = new LRUCache<string[]>(PRE_RENDER_CACHE_CAPACITY);
 
 /**
  * Pre-renders (and caches) the stone variants of one theme at one radius.
@@ -60,13 +110,15 @@ export function preRenderedStones(
     on_deferred: () => void,
 ): any {
     const key = `${color}-${theme.theme_name}-${radius}`;
-    if (!(key in stone_cache)) {
-        stone_cache[key] =
+    let stones = stone_cache.get(key);
+    if (stones === undefined) {
+        stones =
             color === "black"
                 ? theme.preRenderBlack(radius, seed, on_deferred)
                 : theme.preRenderWhite(radius, seed, on_deferred);
+        stone_cache.set(key, stones);
     }
-    return stone_cache[key];
+    return stones;
 }
 
 /**
@@ -77,13 +129,10 @@ export function preRenderedStones(
  * theme watcher.
  */
 export function forgetPreRenderedStones(theme_name: string): void {
-    for (const cache of [stone_cache, asset_cache]) {
-        for (const key of Object.keys(cache)) {
-            if (key.startsWith(`black-${theme_name}-`) || key.startsWith(`white-${theme_name}-`)) {
-                delete cache[key];
-            }
-        }
-    }
+    const belongs = (key: string) =>
+        key.startsWith(`black-${theme_name}-`) || key.startsWith(`white-${theme_name}-`);
+    stone_cache.deleteWhere(belongs);
+    asset_cache.deleteWhere(belongs);
 }
 
 /**
@@ -119,7 +168,7 @@ export function renderStoneAssets(
     const dpr = pixelRatio();
     const render = (theme: GobanTheme, color: "black" | "white"): string[] => {
         const cache_key = `${color}-${theme.theme_name}-${radius}-${dpr}`;
-        const cached = asset_cache[cache_key];
+        const cached = asset_cache.get(cache_key);
         if (cached) {
             return cached;
         }
@@ -148,7 +197,7 @@ export function renderStoneAssets(
             return canvas.toDataURL("image/png");
         });
         if (stonesAreSettled(list)) {
-            asset_cache[cache_key] = encoded;
+            asset_cache.set(cache_key, encoded);
         }
         return encoded;
     };

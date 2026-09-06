@@ -22,6 +22,8 @@ import {
     resolveThemes,
     renderStoneAssets,
     buildNativeTheme,
+    preRenderedStones,
+    PRE_RENDER_CACHE_CAPACITY,
 } from "../../src/Goban/NativeThemeAssets";
 
 const themes = {
@@ -76,6 +78,35 @@ describe("NativeThemeAssets", () => {
         expect(encode).not.toHaveBeenCalled();
         expect(second.blackStones).toEqual(first.blackStones);
         expect(second.whiteStones).toEqual(first.whiteStones);
+        encode.mockRestore();
+    });
+
+    test("the caches are bounded and keep what is used", () => {
+        /* Plain stones keep this cheap: one variant per color. Radii from
+         * 200 up are used by no other test, so every render below is a miss
+         * until the cache says otherwise. */
+        const plain = resolveThemes({ ...themes, white: "Plain", black: "Plain" } as any);
+        const first = preRenderedStones(plain.black, "black", 200, 2081, () => undefined);
+        renderStoneAssets(plain, 200, 400, () => undefined);
+
+        /* Each render inserts a black and a white entry; walk enough other
+         * radii to fill the cache while touching radius 200's stones on the
+         * way, as the move tree does with its own on every redraw. */
+        for (let i = 0; i < PRE_RENDER_CACHE_CAPACITY; i++) {
+            renderStoneAssets(plain, 201 + i, 400, () => undefined);
+            preRenderedStones(plain.black, "black", 200, 2081, () => undefined);
+        }
+        expect(preRenderedStones(plain.black, "black", 200, 2081, () => undefined)).toBe(first);
+
+        /* The untouched white entry at radius 200 was evicted and renders anew. */
+        const white_before = preRenderedStones(plain.white, "white", 200, 23434, () => undefined);
+        expect(preRenderedStones(plain.white, "white", 200, 23434, () => undefined)).toBe(
+            white_before,
+        );
+        const proto = (global as any).HTMLCanvasElement.prototype;
+        const encode = jest.spyOn(proto, "toDataURL");
+        renderStoneAssets(plain, 200, 400, () => undefined);
+        expect(encode).toHaveBeenCalled();
         encode.mockRestore();
     });
 
