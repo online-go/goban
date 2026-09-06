@@ -104,8 +104,11 @@ export interface NativeOverlay {
     ownership?: { color: 1 | 2; size: number };
     texts?: NativeText[];
     shapes?: NativeShape[];
-    /** AI quality badge: filled circle r=0.2 at dy=0.3 with bold white text. */
-    badge?: { color: string; text: string };
+    /** AI quality badge: the sub_triangle geometry (upward triangle,
+     *  circumradius 0.15 cell, centered dy=0.3 below the stone center),
+     *  filled with `color` and stroked rgba(0,0,0,0.75) at 0.0375 cell with
+     *  round joins. No text: the color alone carries the classification. */
+    badge?: { color: string };
 }
 
 /** What the rim shows at the snapped finger point while a touch is down. */
@@ -192,6 +195,11 @@ export interface NativeIntentPlaceEvent {
     id: string;
     x: number;
     y: number;
+    /** How long the finger was down, in milliseconds. During stone removal
+     *  a press over 500 ms forces the tapped group's removal state, the way
+     *  a shift-click or long press does on the canvas. Omitted means a
+     *  plain tap. */
+    pressDurationMs?: number;
 }
 
 export interface NativeIntentPenEvent {

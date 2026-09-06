@@ -377,7 +377,7 @@ function computeOverlay(src: SpecSource, i: number, j: number): OverlayResult | 
     if (pos.ai_quality) {
         const badge = AI_QUALITY_BADGES[pos.ai_quality];
         if (badge) {
-            o.badge = { color: badge.color, text: badge.symbol };
+            o.badge = { color: badge.color };
             last_move_suppressed = true;
             has_content = true;
         }

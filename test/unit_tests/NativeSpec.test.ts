@@ -194,7 +194,7 @@ describe("buildOverlays", () => {
         const o = overlayAt(buildOverlays(src), 2, 0)!;
         expect(o.badge).toBeDefined();
         expect(typeof o.badge!.color).toBe("string");
-        expect(o.badge!.text.length).toBeGreaterThan(0);
+        expect(Object.keys(o.badge!)).toEqual(["color"]);
     });
 
     test("score estimator ownership squares skip points the owner already holds", () => {

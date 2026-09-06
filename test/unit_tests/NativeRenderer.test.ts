@@ -253,6 +253,18 @@ describe("updates", () => {
         goban.destroy();
     });
 
+    test("intentPlace forwards the press duration to the shared tap path", async () => {
+        const t = new RecordingTransport();
+        const goban = new GobanNativeRenderer(config(t));
+        await flush();
+        const tap = jest.spyOn(goban as any, "tapAtImpl").mockImplementation(() => undefined);
+        t.emitPlace({ id: `goban-${goban.goban_id}`, x: 1, y: 2, pressDurationMs: 800 });
+        t.emitPlace({ id: `goban-${goban.goban_id}`, x: 0, y: 0 });
+        expect(tap).toHaveBeenNthCalledWith(1, 1, 2, false, false, false, 800);
+        expect(tap).toHaveBeenNthCalledWith(2, 0, 0, false, false, false, 0);
+        goban.destroy();
+    });
+
     test("identical state sends no update", async () => {
         const t = new RecordingTransport();
         const goban = new GobanNativeRenderer(config(t));

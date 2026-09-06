@@ -356,8 +356,8 @@ export class GobanNativeRenderer extends Goban {
         this.drawing_enabled = false;
     }
 
-    protected tapAt(x: number, y: number, double_tap: boolean): void {
-        this.tapAtImpl(x, y, double_tap, false, false, 0);
+    protected tapAt(x: number, y: number, double_tap: boolean, press_duration_ms = 0): void {
+        this.tapAtImpl(x, y, double_tap, false, false, press_duration_ms);
     }
 
     protected setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
@@ -867,7 +867,7 @@ export class GobanNativeRenderer extends Goban {
         if (event.id !== this.id() || this.state !== "active") {
             return;
         }
-        this.tapAt(event.x, event.y, false);
+        this.tapAt(event.x, event.y, false, event.pressDurationMs ?? 0);
     }
 
     /** A finished pen stroke: replay it through the same review-sync path
