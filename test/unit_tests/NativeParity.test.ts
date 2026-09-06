@@ -78,6 +78,7 @@ const RENDERER_STATE_INPUTS = [
     "isStoneInUndoRequest",
     "puzzle_player_move_mode",
     "getPuzzlePlacementSetting",
+    "isInPushedAnalysis",
     "last_move_opacity",
     // The canvas reads `this.submit_move`; SpecSource carries the same input
     // as a boolean, so that is the name to look for.
@@ -175,7 +176,6 @@ describe("native renderer drawing parity", () => {
             ["chat_triangle", (s) => (s.engine.cur_move.getMarks(0, 0).chat_triangle = true)],
             ["sub_triangle", (s) => (s.engine.cur_move.getMarks(0, 0).sub_triangle = true)],
             ["ai_quality", (s) => (s.engine.cur_move.getMarks(0, 0).ai_quality = "blunder" as any)],
-            ["transient_letter", (s) => (s.engine.cur_move.getMarks(0, 0).transient_letter = "7")],
             [
                 "blue_move + circle",
                 (s) => {

@@ -234,6 +234,29 @@ describe("buildOverlays", () => {
         const o = overlayAt(buildOverlays(src), 2, 2)!;
         expect(o.texts![0]).toMatchObject({ value: "1" });
     });
+
+    test("variation move numbers in play mode only during pushed analysis", () => {
+        const variation = (is_pushed: boolean) => {
+            const src = source({
+                mode: "play",
+                show_variation_move_numbers: true,
+                isInPushedAnalysis: () => is_pushed,
+            });
+            src.engine = new GobanEngine({
+                width: 3,
+                height: 3,
+                moves: [
+                    [0, 0],
+                    [1, 1],
+                ],
+            });
+            src.engine.jumpTo(src.engine.cur_move.parent!);
+            src.engine.place(2, 2);
+            return overlayAt(buildOverlays(src), 2, 2);
+        };
+        expect(variation(true)?.texts?.[0]).toMatchObject({ value: "1" });
+        expect(variation(false)?.texts).toBeUndefined();
+    });
 });
 
 describe("buildLastMove", () => {

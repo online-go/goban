@@ -797,6 +797,7 @@ export class GobanNativeRenderer extends Goban {
             byoyomi_label: this.byoyomi_label,
             label_character: this.label_character,
             getPuzzlePlacementSetting: this.getPuzzlePlacementSetting,
+            isInPushedAnalysis: this.isInPushedAnalysis,
             removal_graphic: this.themes["removal-graphic"] === "square" ? "square" : "x",
             colors: this.colors,
         };

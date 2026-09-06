@@ -64,6 +64,7 @@ export interface SpecSource {
     byoyomi_label: string;
     label_character: string;
     getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
+    isInPushedAnalysis?: () => boolean;
     removal_graphic: "x" | "square";
     colors: {
         black_stone: string;
@@ -80,7 +81,7 @@ function movetreeContains(src: SpecSource, x: number, y: number): boolean {
 
 /** The variation move number the canvas draws (`alt_marking`). */
 function altMarking(src: SpecSource, x: number, y: number): string | undefined {
-    if (src.mode === "play") {
+    if (src.mode === "play" && !src.isInPushedAnalysis?.()) {
         return undefined;
     }
     let cur: MoveTree | null = src.engine.cur_move;
@@ -329,9 +330,6 @@ function computeOverlay(src: SpecSource, i: number, j: number): OverlayResult | 
         if (m && !m.trunk && !m.edited) {
             letter = m.getMoveNumberDifferenceFromTrunk().toString();
         }
-    }
-    if (pos.transient_letter && !letter) {
-        letter = pos.transient_letter;
     }
     let letter_was_drawn = false;
     if (letter) {
