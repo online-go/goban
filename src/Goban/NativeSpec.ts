@@ -55,7 +55,6 @@ export interface SpecSource {
     highlight_movetree_moves: boolean;
     show_variation_move_numbers: boolean;
     show_undo_request_indicator: boolean;
-    present_next_move: boolean;
     dont_draw_last_move: boolean;
     last_move_radius: number;
     circle_radius: number;
@@ -211,16 +210,7 @@ function computeOverlay(src: SpecSource, i: number, j: number): OverlayResult | 
         }
     } else if (pos.black || pos.white) {
         const color: 1 | 2 = pos.black ? 1 : 2;
-        let alpha = src.variation_stone_opacity;
-        if (
-            src.present_next_move &&
-            engine.cur_move.trunk_next &&
-            engine.cur_move.trunk_next.x === i &&
-            engine.cur_move.trunk_next.y === j
-        ) {
-            alpha = Math.min(1, alpha + 0.15);
-        }
-        o.stone = { color, alpha };
+        o.stone = { color, alpha: src.variation_stone_opacity };
         text_color = color === 1 ? src.colors.black_text : src.colors.white_text;
         has_content = true;
     }
@@ -475,9 +465,7 @@ export function buildLastMove(src: SpecSource): NativeLastMove | null {
     }
     const stone_color = engine.board[m.y][m.x];
     const color = stone_color === 1 ? src.colors.black_text : src.colors.white_text;
-    const alpha = src.present_next_move
-        ? Math.min(src.last_move_opacity, 0.4)
-        : src.last_move_opacity;
+    const alpha = src.last_move_opacity;
     return {
         x: m.x,
         y: m.y,

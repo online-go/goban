@@ -38,7 +38,7 @@ import {
     CaptureDisplay,
     ResolvedBoardBackground,
 } from "./Goban";
-import { ColoredCircle, AI_QUALITY_BADGES } from "./InteractiveBase";
+import { ColoredCircle, AI_QUALITY_BADGES, AI_QUALITY_BADGE } from "./InteractiveBase";
 import { AIQualityMark } from "../engine/MoveTree";
 
 //import { GobanCanvasConfig, GobanCanvasInterface } from "./GobanCanvas";
@@ -1194,16 +1194,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
                     if (
-                        this.present_next_move &&
-                        this.engine.cur_move.trunk_next &&
-                        this.engine.cur_move.trunk_next.x === i &&
-                        this.engine.cur_move.trunk_next.y === j
-                    ) {
-                        /* the presented next move reads a bit more solidly
-                         * than other mark stones */
-                        stoneAlphaValue = Math.min(1, stoneAlphaValue + 0.15);
-                    }
-                    if (
                         this.last_hover_square &&
                         this.last_hover_square.x === i &&
                         this.last_hover_square.y === j
@@ -1651,11 +1641,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                             ? this.theme_black_text_color
                             : this.theme_white_text_color;
 
-                    /* While the AI review presents the next move, the last
-                     * move circle takes a back seat to the presented stone */
-                    const last_move_opacity = this.present_next_move
-                        ? Math.min(this.last_move_opacity, 0.4)
-                        : this.last_move_opacity;
+                    const last_move_opacity = this.last_move_opacity;
 
                     if (this.submit_move) {
                         draw_last_move = false;
@@ -2061,16 +2047,6 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     color = pos.black ? 1 : 2;
                     translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
-                    if (
-                        this.present_next_move &&
-                        this.engine.cur_move.trunk_next &&
-                        this.engine.cur_move.trunk_next.x === i &&
-                        this.engine.cur_move.trunk_next.y === j
-                    ) {
-                        /* the presented next move reads a bit more solidly
-                         * than other mark stones */
-                        stoneAlphaValue = Math.min(1, stoneAlphaValue + 0.15);
-                    }
                     if (
                         this.last_hover_square &&
                         this.last_hover_square.x === i &&
@@ -4243,14 +4219,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
 
         this.engine.move_tree.recomputeIsobranches();
-        const active_path_end =
-            this.present_next_move && this.engine.cur_move.trunk_next
-                ? this.engine.cur_move.trunk_next
-                : this.engine.cur_move;
-
         this.engine.move_tree_layout_dirty = false;
 
-        active_path_end.setActivePath(++MoveTree.active_path_number);
+        this.engine.cur_move.setActivePath(++MoveTree.active_path_number);
 
         //const canvas = this.move_tree_canvas;
         const svg = this.move_tree_svg;
@@ -4282,15 +4253,15 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (!no_warp) {
             /* make sure our active stone is visible, but don't scroll around unnecessarily */
             if (
-                div_scroll_left > active_path_end.layout_cx ||
-                div_scroll_left + div_clientWidth - 20 < active_path_end.layout_cx ||
-                div_scroll_top > active_path_end.layout_cy ||
-                div_scroll_top + div_clientHeight - 20 < active_path_end.layout_cy
+                div_scroll_left > this.engine.cur_move.layout_cx ||
+                div_scroll_left + div_clientWidth - 20 < this.engine.cur_move.layout_cx ||
+                div_scroll_top > this.engine.cur_move.layout_cy ||
+                div_scroll_top + div_clientHeight - 20 < this.engine.cur_move.layout_cy
             ) {
                 this.move_tree_container.scrollLeft =
-                    active_path_end.layout_cx - div_clientWidth / 2;
+                    this.engine.cur_move.layout_cx - div_clientWidth / 2;
                 this.move_tree_container.scrollTop =
-                    active_path_end.layout_cy - div_clientHeight / 2;
+                    this.engine.cur_move.layout_cy - div_clientHeight / 2;
                 div_scroll_top = this.move_tree_container.scrollTop;
                 div_scroll_left = this.move_tree_container.scrollLeft;
             }
@@ -4313,9 +4284,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             svg.appendChild(this.move_tree_svg_defs);
         }
 
-        this.move_tree_hilightNode(svg, active_path_end, "#6BAADA", viewport);
+        this.move_tree_hilightNode(svg, this.engine.cur_move, "#6BAADA", viewport);
 
-        if (engine.cur_review_move && engine.cur_review_move.id !== active_path_end.id) {
+        if (engine.cur_review_move && engine.cur_review_move.id !== this.engine.cur_move.id) {
             this.move_tree_hilightNode(svg, engine.cur_review_move, "#6BDA6B", viewport);
         }
 
@@ -4345,9 +4316,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 const node = this.engine.move_tree.getNodeAtLayoutPosition(i, j);
 
                 if (node) {
-                    const target = this.clickJumpTarget(node);
-                    if (this.engine.cur_move.id !== target.id) {
-                        this.engine.jumpTo(target);
+                    if (this.engine.cur_move.id !== node.id) {
+                        this.engine.jumpTo(node);
                         this.setLabelCharacterFromMarks();
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
@@ -5804,33 +5774,30 @@ class GCell {
 
         const mid = this.renderer.metrics.mid;
         const ss = this.renderer.square_size;
-        const scale = this.renderer.stone_font_scale;
         const cx = mid;
-        const cy = mid + ss * 0.3;
-        const r = ss * 0.2 * scale;
-        const font_size = ss * 0.24 * scale;
+        const cy = mid + ss * AI_QUALITY_BADGE.offset_y;
 
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", `ai-quality-badge ai-quality-${quality}`);
 
-        const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circ.setAttribute("fill", `var(--move-quality-${quality}, ${badge.color})`);
-        circ.setAttribute("cx", cx.toFixed(2));
-        circ.setAttribute("cy", cy.toFixed(2));
-        circ.setAttribute("r", r.toFixed(2));
+        /* Upward triangle with a dark border */
+        const shape = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        shape.setAttribute("fill", `var(--move-quality-${quality}, ${badge.color})`);
+        shape.setAttribute("stroke", AI_QUALITY_BADGE.border_color);
+        shape.setAttribute("stroke-width", (ss * AI_QUALITY_BADGE.border_width).toFixed(2));
+        shape.setAttribute("stroke-linejoin", "round");
+        const r = ss * AI_QUALITY_BADGE.radius;
+        const points: string[] = [];
+        let theta = -(Math.PI * 2) / 4;
+        for (let i = 0; i < 3; i++) {
+            points.push(
+                `${(cx + r * Math.cos(theta)).toFixed(2)},${(cy + r * Math.sin(theta)).toFixed(2)}`,
+            );
+            theta += (Math.PI * 2) / 3;
+        }
+        shape.setAttribute("points", points.join(" "));
 
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("class", "ai-quality-symbol");
-        text.setAttribute("fill", "#FFFFFF");
-        text.setAttribute("font-size", `${font_size}px`);
-        text.setAttribute("font-weight", "bold");
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("x", cx.toFixed(2));
-        text.setAttribute("y", (cy + font_size * 0.35).toFixed(2));
-        text.textContent = badge.symbol;
-
-        g.appendChild(circ);
-        g.appendChild(text);
+        g.appendChild(shape);
         this.g.appendChild(g);
 
         this.last_ai_quality_badge = g;

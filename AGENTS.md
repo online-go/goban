@@ -25,7 +25,7 @@ yarn run lint:fix        # Auto-fix ESLint issues
 yarn run prettier       # Format code with Prettier
 yarn run prettier:check # Check Prettier formatting
 yarn run checks         # Run both lint and prettier:check
-yarn run spellcheck     # Run cspell on TypeScript files
+yarn run type-check     # TypeScript type checking without emitting files
 ```
 
 ### Testing
@@ -125,7 +125,6 @@ Engine code must work in both browser and Node.js environments. Use environment-
 - **Prettier**: Code formatting enforcement
 - **JSDoc**: Required documentation with alignment checking
 - **Header enforcement**: Copyright headers required on all files
-- **Spell checking**: cspell for consistent terminology
 
 ### Module Resolution
 

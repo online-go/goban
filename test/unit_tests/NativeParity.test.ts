@@ -72,7 +72,6 @@ const RENDERER_STATE_INPUTS = [
     "score_estimator",
     "stalling_score_estimate",
     "show_variation_move_numbers",
-    "present_next_move",
     "byoyomi_label",
     "label_character",
     "engine.removal",
@@ -124,7 +123,6 @@ describe("native renderer drawing parity", () => {
                 highlight_movetree_moves: false,
                 show_variation_move_numbers: false,
                 show_undo_request_indicator: true,
-                present_next_move: false,
                 dont_draw_last_move: false,
                 last_move_radius: 0.25,
                 circle_radius: 0.25,
@@ -217,13 +215,6 @@ describe("native renderer drawing parity", () => {
                     s.mode = "analyze";
                     s.analyze_tool = "label";
                     s.analyze_subtool = "letters";
-                },
-            ],
-            [
-                "present_next_move",
-                (s) => {
-                    s.engine.place(0, 0);
-                    s.present_next_move = true;
                 },
             ],
             [

@@ -43,8 +43,6 @@ export interface MoveTreeHost {
     engine: GobanEngine;
     destroyed: boolean;
     square_size: number;
-    present_next_move: boolean;
-    clickJumpTarget(node: MoveTree): MoveTree;
     syncReviewMove(): void;
     setLabelCharacterFromMarks(): void;
     updateTitleAndStonePlacement(): void;
@@ -159,14 +157,11 @@ export class MoveTreeCanvas {
         const engine = this.host.engine;
 
         engine.move_tree.recomputeIsobranches();
-        const active_path_end =
-            this.host.present_next_move && engine.cur_move.trunk_next
-                ? engine.cur_move.trunk_next
-                : engine.cur_move;
+        const cur_move = engine.cur_move;
 
         engine.move_tree_layout_dirty = false;
 
-        active_path_end.setActivePath(++MoveTree.active_path_number);
+        cur_move.setActivePath(++MoveTree.active_path_number);
 
         const canvas = this.canvas;
 
@@ -200,13 +195,13 @@ export class MoveTreeCanvas {
         if (!no_warp) {
             /* make sure our active stone is visible, but don't scroll around unnecessarily */
             if (
-                div_scroll_left > active_path_end.layout_cx ||
-                div_scroll_left + div_clientWidth - 20 < active_path_end.layout_cx ||
-                div_scroll_top > active_path_end.layout_cy ||
-                div_scroll_top + div_clientHeight - 20 < active_path_end.layout_cy
+                div_scroll_left > cur_move.layout_cx ||
+                div_scroll_left + div_clientWidth - 20 < cur_move.layout_cx ||
+                div_scroll_top > cur_move.layout_cy ||
+                div_scroll_top + div_clientHeight - 20 < cur_move.layout_cy
             ) {
-                this._container.scrollLeft = active_path_end.layout_cx - div_clientWidth / 2;
-                this._container.scrollTop = active_path_end.layout_cy - div_clientHeight / 2;
+                this._container.scrollLeft = cur_move.layout_cx - div_clientWidth / 2;
+                this._container.scrollTop = cur_move.layout_cy - div_clientHeight / 2;
                 div_scroll_top = this._container.scrollTop;
                 div_scroll_left = this._container.scrollLeft;
             }
@@ -230,9 +225,9 @@ export class MoveTreeCanvas {
         }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        this.hilightNode(ctx, active_path_end, "#6BAADA", viewport);
+        this.hilightNode(ctx, cur_move, "#6BAADA", viewport);
 
-        if (engine.cur_review_move && engine.cur_review_move.id !== active_path_end.id) {
+        if (engine.cur_review_move && engine.cur_review_move.id !== cur_move.id) {
             this.hilightNode(ctx, engine.cur_review_move, "#6BDA6B", viewport);
         }
 
@@ -268,9 +263,8 @@ export class MoveTreeCanvas {
                 const node = this.host.engine.move_tree.getNodeAtLayoutPosition(i, j);
 
                 if (node) {
-                    const target = this.host.clickJumpTarget(node);
-                    if (this.host.engine.cur_move.id !== target.id) {
-                        this.host.engine.jumpTo(target);
+                    if (this.host.engine.cur_move.id !== node.id) {
+                        this.host.engine.jumpTo(node);
                         this.host.setLabelCharacterFromMarks();
                         this.host.updateTitleAndStonePlacement();
                         this.host.emit("update");

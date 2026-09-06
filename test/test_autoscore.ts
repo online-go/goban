@@ -372,7 +372,7 @@ if (require.main === module) {
 
 function print_mismatches(board: boolean[][]) {
     let out = "   ";
-    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+    const x_coords = "ABCDEFGHJKLMNOPQRST";
 
     for (let x = 0; x < board[0].length; ++x) {
         out += `${x_coords[x]}`;
@@ -402,7 +402,7 @@ function print_mismatches(board: boolean[][]) {
 
 function print_expected(board: string[]) {
     let out = "   ";
-    const x_coords = "ABCDEFGHJKLMNOPQRST"; // cspell: disable-line
+    const x_coords = "ABCDEFGHJKLMNOPQRST";
 
     for (let x = 0; x < board[0].length; ++x) {
         out += `${x_coords[x]}`;

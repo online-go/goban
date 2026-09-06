@@ -788,7 +788,6 @@ export class GobanNativeRenderer extends Goban {
             highlight_movetree_moves: this.highlight_movetree_moves,
             show_variation_move_numbers: this.show_variation_move_numbers,
             show_undo_request_indicator: this.getShowUndoRequestIndicator(),
-            present_next_move: this.present_next_move,
             dont_draw_last_move: this.dont_draw_last_move,
             last_move_radius: this.last_move_radius,
             circle_radius: this.circle_radius,

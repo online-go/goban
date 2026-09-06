@@ -78,19 +78,34 @@ export interface ColoredCircle {
 /**
  * Badge shown on a stone for each AI review move quality classification:
  * the symbol drawn in white on a filled circle of the given color. The
- * colors mirror the `--move-quality-*` CSS variables used by the
- * online-go.com AI review summary table; renderers use the CSS variable
- * when available and fall back to these values.
+ * colors are the light theme values of the `--move-quality-*` CSS
+ * variables defined by online-go.com; renderers use the CSS variable when
+ * available and fall back to these values.
  */
 export const AI_QUALITY_BADGES: {
     [quality in AIQualityMark]: { symbol: string; color: string };
 } = {
-    excellent: { symbol: "!!", color: "#2E86AB" },
-    great: { symbol: "!", color: "#3DA35D" },
-    good: { symbol: "+", color: "#6AB04C" },
+    excellent: { symbol: "!!", color: "#3C8CCD" },
+    great: { symbol: "!", color: "#369D57" },
+    good: { symbol: "+", color: "#559A35" },
     inaccuracy: { symbol: "-", color: "#E8A838" },
     mistake: { symbol: "?", color: "#E87D3E" },
     blunder: { symbol: "??", color: "#D64545" },
+};
+
+/**
+ * Geometry of the move quality badge, in fractions of the square size. It is
+ * the same small upward triangle as the sub_triangle mark (circumradius 0.15
+ * of the square, drawn low on the stone), filled with the quality color and
+ * outlined dark. The quality is conveyed by the color alone.
+ */
+export const AI_QUALITY_BADGE = {
+    /** Vertical offset of the triangle's center from the stone center */
+    offset_y: 0.3,
+    /** Circumradius of the triangle */
+    radius: 0.15,
+    border_width: 0.0375,
+    border_color: "rgba(0, 0, 0, 0.75)",
 };
 
 export interface MoveCommand {
@@ -135,46 +150,6 @@ export abstract class GobanInteractive extends GobanBase {
     public showing_scores: boolean = false;
     public stalling_score_estimate?: StallingScoreEstimate;
     public width: number;
-
-    /**
-     * When true, the goban operates in "presented move" space: the current
-     * move's trunk_next is treated as the move being shown to the user. The
-     * move tree highlights it and ends the active path there, clicks that
-     * jump to a played trunk move (move tree nodes, board shift-clicks)
-     * resolve through clickJumpTarget so the clicked move becomes the
-     * presented one, the presented stone draws more solidly, and the last
-     * move circle is dimmed. The AI review sets this while it presents the
-     * next trunk move as a translucent stone on the board.
-     */
-    private _present_next_move: boolean = false;
-
-    public get present_next_move(): boolean {
-        return this._present_next_move;
-    }
-    public setPresentNextMove(enabled: boolean): void {
-        if (this._present_next_move === enabled) {
-            return;
-        }
-        this._present_next_move = enabled;
-        this.move_tree_redraw();
-        /* Board rendering also depends on this flag (presented stone
-         * opacity, dimmed last move circle) */
-        this.redraw(true);
-    }
-
-    /**
-     * Resolves which node a click that jumps to a played move (a move tree
-     * node, a board shift-click) should land on. In presented move space a
-     * click on a trunk node jumps to its parent, so the clicked move becomes
-     * the presented move; variation nodes and the root are jumped to
-     * directly.
-     */
-    public clickJumpTarget(node: MoveTree): MoveTree {
-        if (this._present_next_move && node.trunk && node.parent) {
-            return node.parent;
-        }
-        return node;
-    }
 
     public pause_control?: AdHocPauseControl;
     public paused_since?: number;
@@ -1684,7 +1659,7 @@ export abstract class GobanInteractive extends GobanBase {
         ) {
             const m = this.engine.getMoveByLocation(x, y, true);
             if (m) {
-                this.engine.jumpTo(this.clickJumpTarget(m));
+                this.engine.jumpTo(m);
                 this.emit("update");
             }
             return;

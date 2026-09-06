@@ -43,7 +43,7 @@ import {
     CaptureDisplay,
     ResolvedBoardBackground,
 } from "./Goban";
-import { AI_QUALITY_BADGES } from "./InteractiveBase";
+import { AI_QUALITY_BADGES, AI_QUALITY_BADGE } from "./InteractiveBase";
 
 const __theme_cache: {
     [bw: string]: { [name: string]: { [size: string]: any } };
@@ -1459,16 +1459,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
                     if (
-                        this.present_next_move &&
-                        this.engine.cur_move.trunk_next &&
-                        this.engine.cur_move.trunk_next.x === i &&
-                        this.engine.cur_move.trunk_next.y === j
-                    ) {
-                        /* the presented next move reads a bit more solidly
-                         * than other mark stones */
-                        stoneAlphaValue = Math.min(1, stoneAlphaValue + 0.15);
-                    }
-                    if (
                         this.last_hover_square &&
                         this.last_hover_square.x === i &&
                         this.last_hover_square.y === j
@@ -1964,18 +1954,27 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (pos.ai_quality) {
                 const badge = AI_QUALITY_BADGES[pos.ai_quality];
                 if (badge) {
-                    const oy = this.square_size * 0.3;
-                    const r = this.square_size * 0.2;
+                    const ss = this.square_size;
+                    const by = cy + ss * AI_QUALITY_BADGE.offset_y;
                     ctx.save();
                     ctx.beginPath();
-                    ctx.fillStyle = badge.color;
-                    ctx.arc(cx, cy + oy, r, 0, 2 * Math.PI, false);
+                    ctx.fillStyle =
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue(`--move-quality-${pos.ai_quality}`)
+                            .trim() || badge.color;
+                    const r = ss * AI_QUALITY_BADGE.radius;
+                    let theta = -(Math.PI * 2) / 4;
+                    ctx.moveTo(cx + r * Math.cos(theta), by + r * Math.sin(theta));
+                    theta += (Math.PI * 2) / 3;
+                    ctx.lineTo(cx + r * Math.cos(theta), by + r * Math.sin(theta));
+                    theta += (Math.PI * 2) / 3;
+                    ctx.lineTo(cx + r * Math.cos(theta), by + r * Math.sin(theta));
+                    ctx.closePath();
                     ctx.fill();
-                    ctx.fillStyle = "#FFFFFF";
-                    ctx.font = `bold ${this.square_size * 0.24}px ${GOBAN_FONT}`;
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    ctx.fillText(badge.symbol, cx, cy + oy);
+                    ctx.lineWidth = ss * AI_QUALITY_BADGE.border_width;
+                    ctx.lineJoin = "round";
+                    ctx.strokeStyle = AI_QUALITY_BADGE.border_color;
+                    ctx.stroke();
                     ctx.restore();
                     draw_last_move = false;
                 }
@@ -2097,11 +2096,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                             ? this.theme_black_text_color
                             : this.theme_white_text_color;
 
-                    /* While the AI review presents the next move, the last
-                     * move circle takes a back seat to the presented stone */
-                    const last_move_opacity = this.present_next_move
-                        ? Math.min(this.last_move_opacity, 0.4)
-                        : this.last_move_opacity;
+                    const last_move_opacity = this.last_move_opacity;
 
                     if (this.submit_move) {
                         ctx.lineCap = "square";
@@ -2351,16 +2346,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 ) {
                     /* hovered mark stones draw less translucently */
                     ret += "hover,";
-                }
-                if (
-                    (pos.black || pos.white) &&
-                    this.present_next_move &&
-                    this.engine.cur_move.trunk_next &&
-                    this.engine.cur_move.trunk_next.x === i &&
-                    this.engine.cur_move.trunk_next.y === j
-                ) {
-                    /* the presented next move draws less translucently */
-                    ret += "presented,";
                 }
             }
         }
@@ -2617,10 +2602,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
-                if (this.present_next_move) {
-                    /* the last move circle draws dimmed while presenting */
-                    ret += "dimmed,";
-                }
                 if (this.getShowUndoRequestIndicator() && this.engine.isStoneInUndoRequest(i, j)) {
                     ret += "?" + ",";
                 }

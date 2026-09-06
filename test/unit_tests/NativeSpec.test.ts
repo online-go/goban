@@ -46,7 +46,6 @@ function source(overrides: Partial<SpecSource> = {}): SpecSource {
         highlight_movetree_moves: false,
         show_variation_move_numbers: false,
         show_undo_request_indicator: true,
-        present_next_move: false,
         dont_draw_last_move: false,
         last_move_radius: 0.25,
         circle_radius: 0.25,
@@ -251,10 +250,10 @@ describe("buildLastMove", () => {
         });
     });
 
-    test("plus while a move awaits submission, dimmed when presenting the next move", () => {
-        const src = source({ submit_move_pending: true, present_next_move: true });
+    test("plus while a move awaits submission", () => {
+        const src = source({ submit_move_pending: true });
         src.engine.place(1, 2);
-        expect(buildLastMove(src)).toMatchObject({ style: "plus", alpha: 0.4 });
+        expect(buildLastMove(src)).toMatchObject({ style: "plus", alpha: 1 });
     });
 
     test("suppressed by text at the same point", () => {
