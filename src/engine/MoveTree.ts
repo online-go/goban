@@ -926,9 +926,9 @@ export class MoveTree {
     static active_path_number: number = 0;
     static current_line_color: number = 0;
 
-    /* Muted earth tones rather than saturated primaries: these are drawn as
-     * thin branch lines over the move tree's grey, and the hosts that show a
-     * variation's colour beside its name put them next to text. */
+    /* Muted earth tones: these are drawn as thin branch lines over the move
+     * tree's grey, and the hosts that show a variation's colour beside its
+     * name put them next to text. */
     static readonly LINE_COLORS_DARK: ReadonlyArray<string> = [
         "#9E5245", // brick
         "#61804A", // moss
