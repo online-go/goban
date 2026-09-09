@@ -926,16 +926,36 @@ export class MoveTree {
     static active_path_number: number = 0;
     static current_line_color: number = 0;
 
-    static line_colors: Array<string> = [
-        "#ff0000",
-        "#00ff00",
-        "#0000ff",
-        "#00ffff",
-        "#ffff00",
-        "#FF9A00",
-        "#9200FF",
-        //"#ff00ff"
+    /* Muted earth tones rather than saturated primaries: these are drawn as
+     * thin branch lines over the move tree's grey, and the hosts that show a
+     * variation's colour beside its name put them next to text. */
+    static readonly LINE_COLORS_DARK: ReadonlyArray<string> = [
+        "#9E5245", // brick
+        "#61804A", // moss
+        "#4A6C90", // denim
+        "#3F7E78", // teal
+        "#B39A4E", // wheat
+        "#B5713C", // clay
+        "#7B5C8A", // plum
     ];
+
+    /* The same seven hues for a host with a light interface, where the darker
+     * set reads heavy beside light text and panels. */
+    static readonly LINE_COLORS_LIGHT: ReadonlyArray<string> = [
+        "#C07A6B", // brick
+        "#86A461", // moss
+        "#6E90B8", // denim
+        "#63A69E", // teal
+        "#C9AE5E", // wheat
+        "#CE8F58", // clay
+        "#9C7BAA", // plum
+    ];
+
+    /* The palette in use, indexed by a node's `line_color`. A host with a
+     * light interface assigns `LINE_COLORS_LIGHT`; the slots hold the same
+     * hue in either set, so a branch keeps its colour family across the
+     * change. Hosts assign this array rather than mutate it. */
+    static line_colors: Array<string> = [...MoveTree.LINE_COLORS_DARK];
 
     static isobranch_colors = {
         strong: "#C100FF",
