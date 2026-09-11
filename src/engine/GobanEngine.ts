@@ -481,29 +481,40 @@ export class GobanEngine extends BoardState {
             (undo_requested_move_count ?? 0) > 0 ? undo_requested_move_count : undefined;
     }
 
-    public getUndoRequestStones(): Array<{ x: number; y: number; move_number: number }> {
+    /**
+     * Returns the game move the pending undo request is for, if that move
+     * is in the line we are currently viewing. Returns null if there is no
+     * undo request, if we are viewing an earlier position, or if we are
+     * viewing an analysis branch that leaves the game at or before that move.
+     */
+    private getUndoRequestedMoveInCurrentLine(): MoveTree | null {
         const requestedMoveNumber = this.undo_requested;
         if (requestedMoveNumber === undefined || !this.cur_move) {
-            return [];
+            return null;
         }
 
-        // If we are viewing an earlier branch, do not attempt to render markers.
         if (this.cur_move.move_number < requestedMoveNumber) {
-            return [];
+            return null;
         }
-
-        const remainingToMark = Math.max(1, this.undo_requested_move_count);
-        const stones: Array<{ x: number; y: number; move_number: number }> = [];
 
         let node: MoveTree | null = this.cur_move;
-        let remaining = remainingToMark;
-
-        // First, navigate to the requested move if we're viewing a later position
         while (node && node.move_number > requestedMoveNumber) {
             node = node.parent;
         }
 
-        // Now mark the requested number of moves going backwards
+        if (!node?.trunk) {
+            return null;
+        }
+
+        return node;
+    }
+
+    public getUndoRequestStones(): Array<{ x: number; y: number; move_number: number }> {
+        const stones: Array<{ x: number; y: number; move_number: number }> = [];
+
+        let node = this.getUndoRequestedMoveInCurrentLine();
+        let remaining = Math.max(1, this.undo_requested_move_count);
+
         while (node && remaining > 0) {
             if (node.x >= 0 && node.y >= 0) {
                 stones.push({ x: node.x, y: node.y, move_number: node.move_number });
@@ -516,23 +527,7 @@ export class GobanEngine extends BoardState {
     }
 
     public isStoneInUndoRequest(x: number, y: number): boolean {
-        const requestedMoveNumber = this.undo_requested;
-        if (requestedMoveNumber === undefined || !this.cur_move) {
-            return false;
-        }
-
-        // If we are viewing an earlier branch, do not attempt to render markers.
-        if (this.cur_move.move_number < requestedMoveNumber) {
-            return false;
-        }
-
-        // Walk backwards from current move to find the requested move
-        let node: MoveTree | null = this.cur_move;
-        while (node && node.move_number > requestedMoveNumber) {
-            node = node.parent;
-        }
-
-        // Now walk backwards from the requested move for N moves
+        let node = this.getUndoRequestedMoveInCurrentLine();
         let remaining = this.undo_requested_move_count;
         while (node && remaining > 0) {
             if (node.x === x && node.y === y) {
