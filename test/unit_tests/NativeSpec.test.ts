@@ -171,7 +171,7 @@ describe("buildOverlays", () => {
 
     test("undo request draws the undo glyph and suppresses the last move ring", () => {
         const src = source();
-        src.engine.place(1, 1);
+        src.engine.place(1, 1, false, false, true, true, true);
         src.engine.undo_requested = src.engine.cur_move.move_number;
         const o = overlayAt(buildOverlays(src), 1, 1)!;
         expect(o.texts![0]).toMatchObject({ value: "↶", color: "#ffffff" });

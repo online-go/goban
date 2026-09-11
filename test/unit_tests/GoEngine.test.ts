@@ -753,6 +753,11 @@ describe("state", () => {
     expect(engine.getStoneRemovalString()).toBe("bb");
 });
 
+/** Places a game (trunk) move, the way moves received from the server are placed. */
+function placeGameMove(engine: GobanEngine, x: number, y: number): void {
+    engine.place(x, y, false, false, true, true, true);
+}
+
 describe("multi-move undo", () => {
     describe("undo_requested_by", () => {
         test("defaults to undefined", () => {
@@ -825,8 +830,8 @@ describe("multi-move undo", () => {
     describe("getUndoRequestStones", () => {
         test("returns empty array when no undo requested", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(2, 2);
-            engine.place(3, 3);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
 
             expect(engine.getUndoRequestStones()).toEqual([]);
         });
@@ -840,8 +845,8 @@ describe("multi-move undo", () => {
 
         test("returns single stone for single move undo", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(2, 2);
-            engine.place(3, 3);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
 
             engine.undo_requested = 2;
             engine.undo_requested_move_count = 1;
@@ -852,10 +857,10 @@ describe("multi-move undo", () => {
 
         test("returns multiple stones for multi-move undo", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
-            engine.place(2, 2);
-            engine.place(3, 3);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
 
             engine.undo_requested = 4;
             engine.undo_requested_move_count = 3;
@@ -870,9 +875,9 @@ describe("multi-move undo", () => {
 
         test("handles passes by not including them in output", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(-1, -1);
-            engine.place(2, 2);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, -1, -1);
+            placeGameMove(engine, 2, 2);
 
             engine.undo_requested = 3;
             engine.undo_requested_move_count = 2;
@@ -883,10 +888,10 @@ describe("multi-move undo", () => {
 
         test("returns empty array when viewing earlier branch", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
+            placeGameMove(engine, 0, 0);
             const move1 = engine.cur_move;
-            engine.place(1, 1);
-            engine.place(2, 2);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
 
             engine.undo_requested = 3;
             engine.undo_requested_move_count = 2;
@@ -898,11 +903,11 @@ describe("multi-move undo", () => {
 
         test("navigates from later position to requested move", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
-            engine.place(2, 2);
-            engine.place(3, 3);
-            engine.place(4, 4);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
+            placeGameMove(engine, 4, 4);
 
             engine.undo_requested = 3;
             engine.undo_requested_move_count = 2;
@@ -916,8 +921,8 @@ describe("multi-move undo", () => {
 
         test("handles requesting more moves than available", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
 
             engine.undo_requested = 2;
             engine.undo_requested_move_count = 10;
@@ -933,7 +938,7 @@ describe("multi-move undo", () => {
     describe("isStoneInUndoRequest", () => {
         test("returns false when no undo requested", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(2, 2);
+            placeGameMove(engine, 2, 2);
 
             expect(engine.isStoneInUndoRequest(2, 2)).toBe(false);
         });
@@ -947,8 +952,8 @@ describe("multi-move undo", () => {
 
         test("returns true for stone in single move undo", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(2, 2);
-            engine.place(3, 3);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
 
             engine.undo_requested = 2;
             engine.undo_requested_move_count = 1;
@@ -959,10 +964,10 @@ describe("multi-move undo", () => {
 
         test("returns true for all stones in multi-move undo", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
-            engine.place(2, 2);
-            engine.place(3, 3);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
 
             engine.undo_requested = 4;
             engine.undo_requested_move_count = 3;
@@ -975,10 +980,10 @@ describe("multi-move undo", () => {
 
         test("returns false when viewing earlier branch", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
+            placeGameMove(engine, 0, 0);
             const move1 = engine.cur_move;
-            engine.place(1, 1);
-            engine.place(2, 2);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
 
             engine.undo_requested = 3;
             engine.undo_requested_move_count = 2;
@@ -991,11 +996,11 @@ describe("multi-move undo", () => {
 
         test("correctly identifies stones from later position", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
-            engine.place(2, 2);
-            engine.place(3, 3);
-            engine.place(4, 4);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
+            placeGameMove(engine, 4, 4);
 
             engine.undo_requested = 3;
             engine.undo_requested_move_count = 2;
@@ -1008,8 +1013,8 @@ describe("multi-move undo", () => {
 
         test("handles stones that do not exist in move tree", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
 
             engine.undo_requested = 2;
             engine.undo_requested_move_count = 1;
@@ -1021,10 +1026,10 @@ describe("multi-move undo", () => {
     describe("consistency and edge cases", () => {
         test("getUndoRequestStones and isStoneInUndoRequest are consistent with passes", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
-            engine.place(-1, -1);
-            engine.place(2, 2);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, -1, -1);
+            placeGameMove(engine, 2, 2);
 
             engine.undo_requested = 4;
             engine.undo_requested_move_count = 3;
@@ -1038,10 +1043,10 @@ describe("multi-move undo", () => {
 
         test("handles multiple consecutive passes", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(-1, -1);
-            engine.place(-1, -1);
-            engine.place(1, 1);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, -1, -1);
+            placeGameMove(engine, -1, -1);
+            placeGameMove(engine, 1, 1);
 
             engine.undo_requested = 4;
             engine.undo_requested_move_count = 3;
@@ -1053,31 +1058,86 @@ describe("multi-move undo", () => {
             }
         });
 
-        test("handles move tree branches correctly", () => {
+        test("does not mark an analysis move played in place of the requested move", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
+            placeGameMove(engine, 0, 0);
+            const fork = engine.cur_move;
+            placeGameMove(engine, 1, 1);
+
+            engine.undo_requested = 2;
+            engine.undo_requested_move_count = 1;
+
+            engine.jumpTo(fork);
+            engine.place(3, 3);
+
+            expect(engine.getUndoRequestStones()).toEqual([]);
+            expect(engine.isStoneInUndoRequest(3, 3)).toBe(false);
+            expect(engine.isStoneInUndoRequest(1, 1)).toBe(false);
+        });
+
+        test("does not mark analysis moves that branch before the requested moves", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
             const fork = engine.cur_move;
 
-            engine.place(2, 2);
-            engine.place(3, 3);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
+
+            engine.undo_requested = 4;
+            engine.undo_requested_move_count = 2;
 
             engine.jumpTo(fork);
             engine.place(4, 4);
             engine.place(0, 1);
 
-            engine.undo_requested = 4;
-            engine.undo_requested_move_count = 2;
-
-            expect(engine.isStoneInUndoRequest(0, 1)).toBe(true);
-            expect(engine.isStoneInUndoRequest(4, 4)).toBe(true);
+            expect(engine.getUndoRequestStones()).toEqual([]);
+            expect(engine.isStoneInUndoRequest(0, 1)).toBe(false);
+            expect(engine.isStoneInUndoRequest(4, 4)).toBe(false);
             expect(engine.isStoneInUndoRequest(3, 3)).toBe(false);
             expect(engine.isStoneInUndoRequest(2, 2)).toBe(false);
         });
 
+        test("marks the requested moves when an analysis branch starts after them", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
+            const fork = engine.cur_move;
+            placeGameMove(engine, 3, 3);
+
+            engine.undo_requested = 3;
+            engine.undo_requested_move_count = 2;
+
+            engine.jumpTo(fork);
+            engine.place(4, 4);
+
+            expect(engine.getUndoRequestStones()).toEqual([
+                { x: 2, y: 2, move_number: 3 },
+                { x: 1, y: 1, move_number: 2 },
+            ]);
+            expect(engine.isStoneInUndoRequest(4, 4)).toBe(false);
+        });
+
+        test("marks the requested move when analysis replays the game move", () => {
+            const engine = new GobanEngine({ width: 5, height: 5 });
+            placeGameMove(engine, 0, 0);
+            const fork = engine.cur_move;
+            placeGameMove(engine, 1, 1);
+
+            engine.undo_requested = 2;
+            engine.undo_requested_move_count = 1;
+
+            engine.jumpTo(fork);
+            engine.place(1, 1);
+
+            expect(engine.getUndoRequestStones()).toEqual([{ x: 1, y: 1, move_number: 2 }]);
+            expect(engine.isStoneInUndoRequest(1, 1)).toBe(true);
+        });
+
         test("handles undo_requested at move 0", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
+            placeGameMove(engine, 0, 0);
 
             engine.undo_requested = 0;
             engine.undo_requested_move_count = 1;
@@ -1087,10 +1147,10 @@ describe("multi-move undo", () => {
 
         test("handles same position with capture and retake", () => {
             const engine = new GobanEngine({ width: 3, height: 3 });
-            engine.place(0, 0);
-            engine.place(1, 0);
-            engine.place(0, 1);
-            engine.place(1, 1);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 0);
+            placeGameMove(engine, 0, 1);
+            placeGameMove(engine, 1, 1);
 
             engine.undo_requested = 4;
             engine.undo_requested_move_count = 3;
@@ -1106,11 +1166,11 @@ describe("multi-move undo", () => {
 
         test("getUndoRequestStones and isStoneInUndoRequest are always consistent", () => {
             const engine = new GobanEngine({ width: 5, height: 5 });
-            engine.place(0, 0);
-            engine.place(1, 1);
-            engine.place(2, 2);
-            engine.place(3, 3);
-            engine.place(4, 4);
+            placeGameMove(engine, 0, 0);
+            placeGameMove(engine, 1, 1);
+            placeGameMove(engine, 2, 2);
+            placeGameMove(engine, 3, 3);
+            placeGameMove(engine, 4, 4);
 
             for (let moveCount = 1; moveCount <= 5; moveCount++) {
                 engine.undo_requested = 5;
