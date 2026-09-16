@@ -4,7 +4,7 @@
  */
 (global as any).CLIENT = true;
 
-import { GobanSocket, closeErrorCodeToString } from "engine";
+import { GobanSocket, GobanSocketMessageParseErrorDetails, closeErrorCodeToString } from "engine";
 import WS from "jest-websocket-mock";
 import * as protocol from "engine/protocol";
 
@@ -78,6 +78,42 @@ describe("GobanSocket tests", () => {
         await server2.connected;
         expect(client.connected).toBe(true);
     }, 1000);
+
+    test("Unparseable message reports details and reconnects", async () => {
+        const port = ++last_port;
+        const server = new WS(`ws://localhost:${port}`);
+        const client = new GobanSocket(`ws://localhost:${port}`, { dont_ping: true, quiet: true });
+        await server.connected;
+
+        const errors: GobanSocketMessageParseErrorDetails[] = [];
+        client.on("message_parse_error", (details) => errors.push(details));
+        const disconnects: number[] = [];
+        client.on("disconnect", (code) => disconnects.push(code));
+
+        const bad = '["active-bots",{"1":{"id":1,"username":"' + "x".repeat(1000);
+        server.send(bad);
+        await sleep(10);
+
+        expect(errors).toHaveLength(1);
+        expect(errors[0].length).toBe(bad.length);
+        expect(errors[0].head).toBe(bad.slice(0, 256));
+        expect(errors[0].tail).toBe(bad.slice(-256));
+        expect(errors[0].messages_received).toBe(0);
+        expect(errors[0].ms_since_open).toBeGreaterThanOrEqual(0);
+        expect(disconnects).toEqual([4000]);
+
+        await server.connected;
+        await sleep(100);
+        expect(client.connected).toBe(true);
+
+        server.send("not json");
+        await sleep(10);
+        expect(errors).toHaveLength(2);
+        expect(client.connected).toBe(true);
+
+        client.disconnect();
+        server.close();
+    });
 
     test("sendPromise", async () => {
         const [server, client] = await sockets();
