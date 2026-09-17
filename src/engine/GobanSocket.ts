@@ -33,8 +33,32 @@ export interface GobanSocketEvents extends ServerToClient {
 
     /* Emitted when the time since ping exceeds options.timeout_delay */
     timeout: () => void;
+
+    /**
+     * Emitted when a message from the server cannot be parsed. The socket
+     * is closed and reconnects after this event.
+     */
+    message_parse_error: (details: GobanSocketMessageParseErrorDetails) => void;
     //[key: string]: (...data: any[]) => void;
 }
+
+export interface GobanSocketMessageParseErrorDetails {
+    /** The parser exception message */
+    error: string;
+    /** Length of the raw message, or -1 if the message is not a string */
+    length: number;
+    /** First characters of the raw message */
+    head: string;
+    /** Last characters of the raw message */
+    tail: string;
+    /** Milliseconds since the socket that received the message opened */
+    ms_since_open: number;
+    /** Messages received on this socket before the one that failed */
+    messages_received: number;
+}
+
+const PARSE_ERROR_SNIPPET_LENGTH = 256;
+const MIN_PARSE_ERROR_RECONNECT_INTERVAL = 60000;
 
 interface ErrorResponse {
     code: string;
@@ -160,6 +184,7 @@ export class GobanSocket<
     private authentication?: DataArgument<SendProtocol["authenticate"]>;
     private manually_disconnected = false;
     private current_ping_interval: number;
+    private last_parse_error_reconnect = 0;
 
     constructor(url: string, options: GobanSocketOptions = {}) {
         super();
@@ -278,8 +303,11 @@ export class GobanSocket<
 
     private connect(): WebSocket {
         const socket = new WebSocket(this.url);
+        let opened_at = 0;
+        let messages_received = 0;
 
         socket.addEventListener("open", (_event: Event) => {
+            opened_at = Date.now();
             if (!this.options.quiet) {
                 console.log("GobanSocket connected to " + this.url);
             }
@@ -361,13 +389,41 @@ export class GobanSocket<
             try {
                 payload = JSON.parse(event.data);
             } catch (e) {
-                console.error("Error parsing message", {
-                    event,
-                    data: event?.data,
-                    exception: e,
-                });
-                throw new Error("Error parsing message: " + event?.data);
+                const raw = event?.data;
+                const text = typeof raw === "string" ? raw : "";
+                const details: GobanSocketMessageParseErrorDetails = {
+                    error: e instanceof Error ? e.message : String(e),
+                    length: typeof raw === "string" ? raw.length : -1,
+                    head: text.slice(0, PARSE_ERROR_SNIPPET_LENGTH),
+                    tail: text.slice(-PARSE_ERROR_SNIPPET_LENGTH),
+                    ms_since_open: opened_at ? Date.now() - opened_at : -1,
+                    messages_received,
+                };
+                console.error("Error parsing message", details);
+
+                /* The connection can not be trusted after a corrupt message,
+                 * and the lost message leaves our state stale, so we
+                 * reconnect to get a fresh connection and fresh state. The
+                 * reconnects are rate limited so that a client which gets a
+                 * corrupt message on every connection does not loop. */
+                const now = Date.now();
+                if (
+                    socket === this.socket &&
+                    socket.readyState === WebSocket.OPEN &&
+                    now - this.last_parse_error_reconnect >= MIN_PARSE_ERROR_RECONNECT_INTERVAL
+                ) {
+                    this.last_parse_error_reconnect = now;
+                    socket.close(4000, "Unparseable message");
+                }
+
+                try {
+                    this.emit("message_parse_error", details);
+                } catch (handler_error) {
+                    console.error("Error in message_parse_error handler", handler_error);
+                }
+                return;
             }
+            ++messages_received;
             const [id_or_command, data, err] = payload;
 
             if (typeof id_or_command === "number") {
