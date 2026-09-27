@@ -516,12 +516,22 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
         let mouse_disabled: any = 0;
 
+        // Buttons 3 and 4 are the browser back/forward thumb buttons. Cancelling
+        // them stops history navigation while the pointer is over the board.
+        const isHistoryNavigationButton = (ev: MouseEvent) => ev.button === 3 || ev.button === 4;
+
         const onClick = (ev: MouseEvent) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             // pointerUp is now handled in onMouseUp for reliability during rapid DOM updates
             ev.preventDefault();
             return false;
         };
         const onDblClick = (ev: MouseEvent) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, true);
@@ -530,6 +540,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             return false;
         };
         const onMouseDown = (ev: MouseEvent) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             if (!mouse_disabled) {
                 pointerDown(ev);
             }
@@ -537,6 +550,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             return false;
         };
         const onMouseUp = (ev: MouseEvent) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             if (!mouse_disabled) {
                 // Handle click in mouseup since click events may not be synthesized
                 // reliably during rapid DOM updates (e.g., AI review streaming)
