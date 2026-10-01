@@ -31,10 +31,13 @@ describe("AIReviewData", () => {
 
     beforeEach(async () => {
         socket_server = new WS(`ws://localhost:${port}`, { jsonProtocol: true });
-        mock_socket = new GobanSocket<ClientToAIServer, AIServerToClient>(`ws://localhost:${port}`, {
-            dont_ping: true,
-            quiet: true,
-        });
+        mock_socket = new GobanSocket<ClientToAIServer, AIServerToClient>(
+            `ws://localhost:${port}`,
+            {
+                dont_ping: true,
+                quiet: true,
+            },
+        );
         await socket_server.connected;
     });
 
@@ -389,7 +392,7 @@ describe("AIReviewData", () => {
                 {
                     uuid: "uuid-707",
                     game_id: 707,
-                    ai_review_id: 10
+                    ai_review_id: 10,
                 },
             ]);
 
@@ -409,6 +412,71 @@ describe("AIReviewData", () => {
                 (msg: any) => Array.isArray(msg) && msg[0] === "ai-analyze-variation",
             );
             expect(analysisRequests.length).toBe(1);
+
+            reviewData.destroy();
+        });
+
+        test("should forget a variation the server stopped short and ask for it again", async () => {
+            const engine = new GobanEngine({ width: 9, height: 9 });
+            engine.place(2, 2);
+            const variation_move = engine.cur_move;
+
+            const ai_review: JGOFAIReview = {
+                id: 11,
+                uuid: "uuid-808",
+                type: "full",
+                engine: "katago",
+                engine_version: "1.11.0",
+                network: "b20",
+                network_size: "20b",
+                strength: 2800,
+                date: Date.now(),
+                win_rate: 0.55,
+                moves: {},
+            };
+
+            const reviewData = new AIReviewData(mock_socket, engine.move_tree, ai_review, 808);
+            const nextUpdate = () => new Promise((resolve) => reviewData.once("update", resolve));
+            /* Earlier tests leave instances whose sockets reconnect to this
+             * server, so their messages are interleaved with ours. */
+            const requestsSent = () =>
+                socket_server.messages.filter(
+                    (msg: any) =>
+                        Array.isArray(msg) &&
+                        msg[0] === "ai-analyze-variation" &&
+                        msg[1].uuid === "uuid-808",
+                );
+            const waitForRequests = async (count: number) => {
+                for (let i = 0; i < 100 && requestsSent().length < count; ++i) {
+                    await new Promise((resolve) => setTimeout(resolve, 10));
+                }
+                expect(requestsSent()).toHaveLength(count);
+            };
+
+            reviewData.analyze_variation("uuid-808", 808, 11, variation_move, engine.move_tree);
+            await waitForRequests(1);
+            expect(requestsSent()[0]).toEqual([
+                "ai-analyze-variation",
+                { uuid: "uuid-808", game_id: 808, ai_review_id: 11, from: 0, variation: "cc" },
+            ]);
+
+            let update = nextUpdate();
+            socket_server.send([
+                "uuid-808",
+                { "variation-0-cc": { move_number: 1, win_rate: 0.5, branches: [] } },
+            ]);
+            expect(await update).toEqual({ type: "variation", variation_key: "0-cc" });
+            expect(reviewData.analyzed_variations?.["0-cc"]).toBeDefined();
+
+            reviewData.analyze_variation("uuid-808", 808, 11, variation_move, engine.move_tree);
+            update = nextUpdate();
+            socket_server.send(["uuid-808", { "variation_stopped-0-cc": true }]);
+            expect(await update).toEqual({ type: "variation", variation_key: "0-cc" });
+            expect(reviewData.analyzed_variations?.["0-cc"]).toBeUndefined();
+            expect(requestsSent()).toHaveLength(1);
+
+            reviewData.analyze_variation("uuid-808", 808, 11, variation_move, engine.move_tree);
+            await waitForRequests(2);
 
             reviewData.destroy();
         });

@@ -56,6 +56,7 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
     public readonly uuid: string;
     private ai_review: JGOFAIReview;
     public readonly move_tree: MoveTree;
+    private readonly game_id: number | string;
     private analysis_requests_made: { [id: string]: boolean } = {};
 
     constructor(
@@ -69,6 +70,7 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
         this.uuid = ai_review.uuid;
         this.ai_review = deepClone(ai_review);
         this.move_tree = move_tree;
+        this.game_id = game_id;
 
         /* Set up socket listeners */
         const onConnect = () => {
@@ -317,6 +319,22 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
                                 });
                             }
                         }
+                    } else if (key.startsWith("variation_stopped-")) {
+                        /* The server stopped our search of this variation short,
+                         * because we moved on to another position. What we have
+                         * of it is incomplete, so forget it and ask again the
+                         * next time the variation is analyzed. */
+                        const var_key = key.slice("variation_stopped-".length);
+                        delete this.ai_review?.analyzed_variations?.[var_key];
+                        delete this.analysis_requests_made[
+                            this.variationRequestKey(
+                                this.uuid,
+                                this.game_id,
+                                this.ai_review?.id,
+                                var_key,
+                            )
+                        ];
+                        updated_variations.push(var_key);
                     } else if (/variation-([0-9]+)-([!12a-z.A-Z-]+)/.test(key)) {
                         if (!this.ai_review) {
                             console.warn(
@@ -365,7 +383,12 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
         const trunk_move_string = trunk_move.getMoveStringToThisPoint();
         const cur_move_string = cur_move.getMoveStringToThisPoint();
         const variation = cur_move_string.slice(trunk_move_string.length);
-        const key = `${uuid}-${game_id}-${ai_review_id}-${trunk_move.move_number}-${variation}`;
+        const key = this.variationRequestKey(
+            uuid,
+            game_id,
+            ai_review_id,
+            `${trunk_move.move_number}-${variation}`,
+        );
         if (key in this.analysis_requests_made) {
             return;
         }
@@ -390,6 +413,15 @@ export class AIReviewData extends EventEmitter<AIReviewDataEvents> implements JG
             variation: variation,
         };
         this.socket.send("ai-analyze-variation", req);
+    }
+
+    private variationRequestKey(
+        uuid: string,
+        game_id: number | string,
+        ai_review_id: number | undefined,
+        var_key: string,
+    ): string {
+        return `${uuid}-${game_id}-${ai_review_id}-${var_key}`;
     }
 
     public categorize(
