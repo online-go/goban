@@ -435,6 +435,43 @@ describe("onTap", () => {
         jest.useRealTimers();
     }, 500);
 
+    test("back and forward mouse buttons are left to the browser", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+
+        goban.enableStonePlacement();
+
+        for (const button of [3, 4]) {
+            for (const type of ["mousedown", "mouseup", "click"] as const) {
+                const ev = new MouseEvent(type, {
+                    clientX: 15,
+                    clientY: 15,
+                    button,
+                    bubbles: true,
+                    cancelable: true,
+                });
+                canvas.dispatchEvent(ev);
+                expect(ev.defaultPrevented).toBe(false);
+            }
+        }
+
+        expect(goban.engine.board).toEqual([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]);
+
+        const left = new MouseEvent("mousedown", {
+            clientX: 15,
+            clientY: 15,
+            button: 0,
+            bubbles: true,
+            cancelable: true,
+        });
+        canvas.dispatchEvent(left);
+        expect(left.defaultPrevented).toBe(true);
+    });
+
     test("Right clicking in play mode should have no effect.", () => {
         const goban = new GobanCanvas(basic3x3Config());
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;

@@ -667,7 +667,14 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         let mouse_disabled: any = 0;
 
+        // Buttons 3 and 4 are the browser back/forward thumb buttons. Cancelling
+        // them stops history navigation while the pointer is over the board.
+        const isHistoryNavigationButton = (ev: MouseEvent) => ev.button === 3 || ev.button === 4;
+
         canvas.addEventListener("click", (ev) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             // pointerUp is handled in the mouseup listener below for reliability
             // during rapid DOM updates: the browser drops click/dblclick when the
             // DOM under the cursor is mutated between presses (e.g. after an
@@ -676,6 +683,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return false;
         });
         canvas.addEventListener("mouseup", (ev) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             // Only the primary button is handled here. Right-clicks must keep
             // flowing through the `contextmenu` handler below, which calls
             // pointerUp and preventDefault()s the native menu (Firefox does not
@@ -688,6 +698,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return false;
         });
         canvas.addEventListener("dblclick", (ev) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             if (!mouse_disabled) {
                 dragging = true;
                 pointerUp(ev, true);
@@ -696,6 +709,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             return false;
         });
         canvas.addEventListener("mousedown", (ev) => {
+            if (isHistoryNavigationButton(ev)) {
+                return;
+            }
             if (!mouse_disabled) {
                 pointerDown(ev);
             }
