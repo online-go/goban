@@ -50,7 +50,10 @@ export interface AIServerToClient {
         }>;
     }) => void;
 
-    /** AI review messages are streamed back to the AI review UUID. */
+    /** AI review messages are streamed back to the AI review UUID: `metadata`,
+     * `move-<n>`, `variation-<from>-<moves>` (sent while the search runs and
+     * when it ends), and `variation_stopped-<from>-<moves>` when the server
+     * stopped our search of that variation short because we moved on. */
     [uuid: string]: (data: any) => void;
 
     /** AI position analysis messages streaming back to a particular channel */
