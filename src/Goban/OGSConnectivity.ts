@@ -636,12 +636,16 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.setLastOfficialMove();
                     delete this.move_selected;
 
+                    // The sound belongs to the move that just arrived. If the
+                    // viewer is browsing an earlier position we jump back next,
+                    // and the root node looks like a pass (-1, -1).
+                    this.playMovementSound();
+
                     if (jump_to_move) {
                         this.engine.jumpTo(jump_to_move);
                     }
 
                     this.emit("update");
-                    this.playMovementSound();
                     if (removed_count) {
                         console.log("audio-capture-stones", {
                             count: removed_count,
