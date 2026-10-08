@@ -279,6 +279,26 @@ describe("buildLastMove", () => {
         expect(buildLastMove(src)).toMatchObject({ style: "plus", alpha: 1 });
     });
 
+    test("plus remains on an empty point after a suicide", () => {
+        const engine = new GobanEngine({ width: 3, height: 3, rules: "nz" });
+        engine.place(2, 2);
+        engine.place(1, 0);
+        engine.place(-1, -1);
+        engine.place(0, 1);
+        engine.place(0, 0);
+        expect(engine.board[0][0]).toBe(0);
+
+        const src = source({ submit_move_pending: true });
+        src.engine = engine;
+
+        expect(buildLastMove(src)).toMatchObject({
+            x: 0,
+            y: 0,
+            style: "plus",
+            color: "#000000",
+        });
+    });
+
     test("suppressed by text at the same point", () => {
         const src = source();
         src.engine.place(1, 2);

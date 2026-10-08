@@ -886,3 +886,41 @@ describe("AI review marks and placement rooting", () => {
         goban.destroy();
     });
 });
+
+describe("suicide submit mark", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    test("a staged suicide shows a plus on the empty point", () => {
+        const goban = new SVGRenderer(basic3x3Config({ rules: "nz", mode: "play" }));
+        // White surrounds the corner, then black plays there and the stone is removed.
+        goban.engine.place(2, 2);
+        goban.engine.place(1, 0);
+        goban.engine.place(-1, -1);
+        goban.engine.place(0, 1);
+        goban.engine.place(0, 0);
+
+        expect(goban.engine.board[0][0]).toBe(0);
+        expect(goban.engine.cur_move.x).toBe(0);
+        expect(goban.engine.cur_move.y).toBe(0);
+
+        goban.submit_move = () => {
+            /* staged, not sent */
+        };
+        goban.redraw(true);
+
+        const plus = (goban as unknown as { svg: SVGSVGElement }).svg.querySelector(
+            "path.last-move",
+        );
+        expect(plus).not.toBeNull();
+        expect(plus?.getAttribute("stroke")).toBe(goban.theme_black_stone_color);
+
+        goban.destroy();
+    });
+});

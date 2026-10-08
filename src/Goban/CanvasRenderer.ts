@@ -2093,10 +2093,15 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
 
         /* Draw last move */
         if (draw_last_move && this.engine && this.engine.cur_move) {
+            const submit_on_empty =
+                !!this.submit_move &&
+                this.engine.cur_move.x === i &&
+                this.engine.cur_move.y === j &&
+                !this.engine.board[j][i];
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
-                this.engine.board[j][i] &&
+                (this.engine.board[j][i] || submit_on_empty) &&
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
@@ -2107,10 +2112,13 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 }
 
                 if (i >= 0 && j >= 0) {
-                    const color =
-                        stone_color === 1
+                    const color = stone_color
+                        ? stone_color === 1
                             ? this.theme_black_text_color
-                            : this.theme_white_text_color;
+                            : this.theme_white_text_color
+                        : this.engine.cur_move.player === 1
+                          ? this.theme_black_stone_color
+                          : this.theme_white_stone_color;
 
                     const last_move_opacity = this.last_move_opacity;
 
@@ -2614,7 +2622,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
-                this.engine.board[j][i] &&
+                (this.engine.board[j][i] || (!!this.submit_move && !this.engine.board[j][i])) &&
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";
