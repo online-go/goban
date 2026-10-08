@@ -659,7 +659,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     ev.target === div &&
                     currentElement &&
                     currentElement instanceof HTMLElement &&
-                    currentElement.tagName.toLowerCase() === "input"
+                    (currentElement.tagName.toLowerCase() === "input" ||
+                        currentElement.tagName.toLowerCase() === "textarea")
                 ) {
                     currentElement.blur();
                 }
