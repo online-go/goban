@@ -782,7 +782,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     ev.target === canvas &&
                     currentElement &&
                     currentElement instanceof HTMLElement &&
-                    currentElement.tagName.toLowerCase() === "input"
+                    (currentElement.tagName.toLowerCase() === "input" ||
+                        currentElement.tagName.toLowerCase() === "textarea")
                 ) {
                     currentElement.blur();
                 }
