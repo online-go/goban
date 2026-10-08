@@ -886,3 +886,100 @@ describe("AI review marks and placement rooting", () => {
         goban.destroy();
     });
 });
+
+describe("analyze mode keeps its place", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    function game() {
+        return new SVGRenderer(
+            basic3x3Config({
+                game_id: 3166,
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+            }),
+        );
+    }
+
+    function acceptUndo(move_count = 1) {
+        mock_socket.emit("game/3166/undo_accepted", {
+            move_number: 2,
+            undo_move_count: move_count,
+        });
+    }
+
+    test("an undo while browsing an earlier move leaves the viewer there", () => {
+        const goban = game();
+        goban.setMode("analyze");
+        goban.showPrevious();
+        goban.showPrevious();
+        expect(goban.engine.cur_move.move_number).toBe(1);
+
+        goban.engine.undo_requested = 3;
+        acceptUndo(1);
+
+        expect(goban.mode).toBe("analyze");
+        expect(goban.engine.cur_move.move_number).toBe(1);
+        expect(goban.engine.last_official_move.move_number).toBe(2);
+        goban.destroy();
+    });
+
+    test("an undo of the move being viewed follows the official game", () => {
+        const goban = game();
+        goban.setMode("analyze");
+        expect(goban.engine.cur_move.move_number).toBe(3);
+
+        goban.engine.undo_requested = 3;
+        acceptUndo(1);
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.cur_move.move_number).toBe(2);
+        expect(goban.engine.last_official_move.move_number).toBe(2);
+        goban.destroy();
+    });
+
+    test("an undo while following the game still rewinds", () => {
+        const goban = game();
+        expect(goban.mode).toBe("play");
+        goban.engine.undo_requested = 3;
+        acceptUndo(1);
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.cur_move.move_number).toBe(2);
+        expect(goban.engine.last_official_move.move_number).toBe(2);
+        goban.destroy();
+    });
+
+    test("the game ending does not pull an analyze viewer to the last move", () => {
+        const goban = game();
+        goban.setMode("analyze");
+        goban.showPrevious();
+        goban.showPrevious();
+
+        mock_socket.emit("game/3166/phase", "finished");
+
+        expect(goban.mode).toBe("analyze");
+        expect(goban.engine.phase).toBe("finished");
+        expect(goban.engine.cur_move.move_number).toBe(1);
+        goban.destroy();
+    });
+
+    test("the game ending still updates a viewer who is following play", () => {
+        const goban = game();
+        mock_socket.emit("game/3166/phase", "stone removal");
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.phase).toBe("stone removal");
+        expect(goban.engine.cur_move.move_number).toBe(3);
+        goban.destroy();
+    });
+});
