@@ -311,6 +311,7 @@ export abstract class GobanInteractive extends GobanBase {
     protected label_character: string;
     protected label_mark: string = "[UNSET]";
     protected last_hover_square?: JGOFIntersection;
+
     protected last_move?: MoveTree;
     protected last_phase?: GobanEnginePhase;
     protected last_review_message: ReviewMessage;
@@ -1453,6 +1454,20 @@ export abstract class GobanInteractive extends GobanBase {
         return ret;
     }
     */
+
+    /** True when this empty point is the stone a click would play.
+     *  The preview must use that color, not a variation or AI ghost mark. */
+    protected placementHoverAt(x: number, y: number): boolean {
+        return !!(
+            this.stone_placement_enabled &&
+            this.last_hover_square &&
+            this.last_hover_square.x === x &&
+            this.last_hover_square.y === y &&
+            (this.mode !== "analyze" || this.analyze_tool === "stone") &&
+            !this.scoring_mode &&
+            this.engine
+        );
+    }
 
     public setMarks(
         marks: { [mark: string]: string },

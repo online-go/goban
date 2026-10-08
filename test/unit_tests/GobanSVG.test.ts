@@ -742,6 +742,36 @@ describe("AI review marks and placement rooting", () => {
         goban.destroy();
     });
 
+    test("hovering an AI ghost mark shows the color to play, not the ghost color", () => {
+        const goban = new SVGRenderer(basic3x3Config({ moves: [[0, 0]], mode: "analyze" }));
+        goban.enableStonePlacement();
+        expect(goban.engine.player).toBe(2);
+        goban.setMark(1, 1, "black", false);
+        const svg = rendererSvg(goban);
+        const blackIds = (goban as unknown as { theme_black_stones: string[] }).theme_black_stones;
+        const whiteIds = (goban as unknown as { theme_white_stones: string[] }).theme_white_stones;
+        const href = (el: Element | null) => (el?.getAttribute("href") ?? "").replace(/^#/, "");
+
+        const ghost = svg.querySelector('[opacity="0.6"]');
+        expect(blackIds).toContain(href(ghost));
+        expect(whiteIds).not.toContain(href(ghost));
+
+        goban.parent.dispatchEvent(
+            new MouseEvent("mousemove", {
+                clientX: (1 + 1.5) * TEST_SQUARE_SIZE,
+                clientY: (1 + 1.5) * TEST_SQUARE_SIZE,
+            }),
+        );
+
+        const opaque = svg.querySelector('[opacity="1"]');
+        expect(whiteIds).toContain(href(opaque));
+        expect(blackIds).not.toContain(href(opaque));
+
+        simulateMouseClick(goban.parent, { x: 1, y: 1 });
+        expect(goban.engine.board[1][1]).toBe(2);
+        goban.destroy();
+    });
+
     test("hover keeps the mark stone below its subscript and quality badge", () => {
         const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
         goban.enableStonePlacement();
