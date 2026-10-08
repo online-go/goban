@@ -277,6 +277,38 @@ describe("onTap", () => {
         ]);
     });
 
+    test("analyze mode during stone removal plays a variation instead of marking stones dead", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                black_player_id: 1,
+                white_player_id: 2,
+                player_id: 1,
+            }),
+        );
+        goban.engine.place(1, 1, true, false, false, false, true);
+        goban.engine.setLastOfficialMove();
+        goban.engine.phase = "stone removal";
+        goban.setMode("play");
+        goban.enableStonePlacement();
+
+        const toggle = jest.spyOn(goban.engine, "toggleSingleGroupRemoval");
+        simulateMouseClick(goban.parent, { x: 1, y: 1 });
+        expect(toggle).toHaveBeenCalledTimes(1);
+        expect(goban.engine.cur_move.move_number).toBe(1);
+
+        toggle.mockClear();
+        goban.setMode("analyze");
+        simulateMouseClick(goban.parent, { x: 0, y: 0 });
+
+        expect(toggle).not.toHaveBeenCalled();
+        expect(goban.engine.cur_move.x).toBe(0);
+        expect(goban.engine.cur_move.y).toBe(0);
+        expect(goban.engine.board[0][0]).toBe(2);
+        expect(goban.mode).toBe("analyze");
+
+        goban.destroy();
+    });
+
     test("clicking the midpoint of two intersections has no effect", () => {
         const goban = new SVGRenderer(basic3x3Config());
         const event_layer = goban.parent;

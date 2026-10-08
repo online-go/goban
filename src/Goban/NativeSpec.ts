@@ -100,6 +100,7 @@ function altMarking(src: SpecSource, x: number, y: number): string | undefined {
 function inStoneRemoval(src: SpecSource): boolean {
     return (
         src.engine.phase === "stone removal" &&
+        src.mode !== "analyze" &&
         src.engine.last_official_move === src.engine.cur_move
     );
 }
@@ -269,7 +270,8 @@ function computeOverlay(src: SpecSource, i: number, j: number): OverlayResult | 
 
     /* Scores */
     const territory_phase =
-        engine.phase === "stone removal" || (engine.phase === "finished" && src.mode === "play");
+        (engine.phase === "stone removal" && src.mode !== "analyze") ||
+        (engine.phase === "finished" && src.mode === "play");
     if (
         (pos.score &&
             (engine.phase !== "finished" || src.mode === "play" || src.mode === "analyze")) ||
@@ -496,7 +498,9 @@ export function buildGhost(src: SpecSource): NativeGhost | null {
     const shows_stone =
         (src.mode !== "analyze" || src.analyze_tool === "stone") &&
         !src.scoring_mode &&
-        (engine.phase === "play" || (engine.phase === "finished" && src.mode === "analyze"));
+        (engine.phase === "play" ||
+            (src.mode === "analyze" &&
+                (engine.phase === "finished" || engine.phase === "stone removal")));
     if (shows_stone) {
         let color: 1 | 2;
         if (
@@ -564,6 +568,7 @@ export function buildGhost(src: SpecSource): NativeGhost | null {
     if (
         (src.mode === "analyze" && src.analyze_tool === "removal") ||
         (engine.phase === "stone removal" &&
+            src.mode !== "analyze" &&
             engine.isActivePlayer(src.player_id) &&
             engine.cur_move === engine.last_official_move)
     ) {

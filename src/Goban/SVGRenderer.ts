@@ -1134,7 +1134,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     this.engine &&
                     !this.scoring_mode &&
                     (this.engine.phase === "play" ||
-                        (this.engine.phase === "finished" && this.mode === "analyze")) &&
+                        ((this.engine.phase === "finished" ||
+                            this.engine.phase === "stone removal") &&
+                            this.mode === "analyze")) &&
                     (this.engine.puzzle_player_move_mode !== "fixed" ||
                         movetree_contains_this_square ||
                         (this.getPuzzlePlacementSetting &&
@@ -1144,7 +1146,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     this.score_estimator.board[j][i] &&
                     this.score_estimator.removal[j][i]) ||
                 (this.engine &&
-                    this.engine.phase === "stone removal" &&
+                    this.stoneRemovalScoringActive() &&
                     this.engine.board[j][i] &&
                     this.engine.removal[j][i]) ||
                 pos.black ||
@@ -1164,7 +1166,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     translucent = true;
                 } else if (
                     this.engine &&
-                    ((this.engine.phase === "stone removal" &&
+                    ((this.stoneRemovalScoringActive() &&
                         this.engine.last_official_move === this.engine.cur_move) ||
                         (this.engine.phase === "finished" && this.mode !== "analyze")) &&
                     this.engine.board &&
@@ -1277,7 +1279,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 /* Red X if the stone is marked for removal */
                 if (
                     (this.engine &&
-                        this.engine.phase === "stone removal" &&
+                        this.stoneRemovalScoringActive() &&
                         this.engine.last_official_move === this.engine.cur_move &&
                         this.engine.board[j][i] &&
                         this.engine.removal[j][i]) ||
@@ -1307,7 +1309,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 this.last_hover_square &&
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j) ||
-            (this.engine.phase === "stone removal" &&
+            (this.stoneRemovalScoringActive() &&
                 this.engine.isActivePlayer(this.player_id) &&
                 this.engine.cur_move === this.engine.last_official_move &&
                 this.last_hover_square &&
@@ -1369,7 +1371,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 (this.score_estimator.territory[j][i] ||
                     (this.score_estimator.removal[j][i] &&
                         this.score_estimator.board[j][i] === 0))) ||
-            ((this.engine.phase === "stone removal" ||
+            ((this.stoneRemovalScoringActive() ||
                 (this.engine.phase === "finished" && this.mode === "play")) &&
                 this.engine.board[j][i] === 0 &&
                 (this.engine.removal[j][i] || pos.needs_sealing)) ||
@@ -1394,7 +1396,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
 
             if (
-                (this.engine.phase === "stone removal" ||
+                (this.stoneRemovalScoringActive() ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                 this.engine.board[j][i] === 0 &&
                 this.engine.removal[j][i]
@@ -1988,7 +1990,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     this.engine &&
                     !this.scoring_mode &&
                     (this.engine.phase === "play" ||
-                        (this.engine.phase === "finished" && this.mode === "analyze")) &&
+                        ((this.engine.phase === "finished" ||
+                            this.engine.phase === "stone removal") &&
+                            this.mode === "analyze")) &&
                     (this.engine.puzzle_player_move_mode !== "fixed" ||
                         movetree_contains_this_square ||
                         (this.getPuzzlePlacementSetting &&
@@ -1998,7 +2002,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     this.score_estimator.board[j][i] &&
                     this.score_estimator.removal[j][i]) ||
                 (this.engine &&
-                    this.engine.phase === "stone removal" &&
+                    this.stoneRemovalScoringActive() &&
                     this.engine.board[j][i] &&
                     this.engine.removal[j][i]) ||
                 pos.black ||
@@ -2018,7 +2022,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     translucent = true;
                 } else if (
                     this.engine &&
-                    ((this.engine.phase === "stone removal" &&
+                    ((this.stoneRemovalScoringActive() &&
                         this.engine.last_official_move === this.engine.cur_move) ||
                         (this.engine.phase === "finished" && this.mode !== "analyze")) &&
                     this.engine.board &&
@@ -2179,7 +2183,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 /* Red X if the stone is marked for removal */
                 if (
                     (this.engine &&
-                        this.engine.phase === "stone removal" &&
+                        this.stoneRemovalScoringActive() &&
                         this.engine.last_official_move === this.engine.cur_move &&
                         this.engine.board[j][i] &&
                         this.engine.removal[j][i]) ||
@@ -2206,7 +2210,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 this.last_hover_square &&
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j) ||
-            (this.engine.phase === "stone removal" &&
+            (this.stoneRemovalScoringActive() &&
                 this.engine.isActivePlayer(this.player_id) &&
                 this.engine.cur_move === this.engine.last_official_move &&
                 this.last_hover_square &&
@@ -2320,7 +2324,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     (this.score_estimator.territory[j][i] ||
                         (this.score_estimator.removal[j][i] &&
                             this.score_estimator.board[j][i] === 0))) ||
-                ((this.engine.phase === "stone removal" ||
+                ((this.stoneRemovalScoringActive() ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
                     (this.engine.removal[j][i] || pos.needs_sealing)) ||
@@ -2349,7 +2353,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 }
 
                 if (
-                    (this.engine.phase === "stone removal" ||
+                    (this.stoneRemovalScoringActive() ||
                         (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
                     this.engine.removal[j][i]
@@ -2909,7 +2913,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     this.engine &&
                     !this.scoring_mode &&
                     (this.engine.phase === "play" ||
-                        (this.engine.phase === "finished" && this.mode === "analyze")) &&
+                        ((this.engine.phase === "finished" ||
+                            this.engine.phase === "stone removal") &&
+                            this.mode === "analyze")) &&
                     (this.engine.puzzle_player_move_mode !== "fixed" ||
                         movetree_contains_this_square ||
                         (this.getPuzzlePlacementSetting &&
@@ -2919,7 +2925,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     this.score_estimator.board[j][i] &&
                     this.score_estimator.removal[j][i]) ||
                 (this.engine &&
-                    this.engine.phase === "stone removal" &&
+                    this.stoneRemovalScoringActive() &&
                     this.engine.board[j][i] &&
                     this.engine.removal[j][i]) ||
                 pos.black ||
@@ -2937,7 +2943,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     translucent = true;
                 } else if (
                     this.engine &&
-                    this.engine.phase === "stone removal" &&
+                    this.stoneRemovalScoringActive() &&
                     this.engine.board &&
                     this.engine.removal &&
                     this.engine.board[j][i] &&
@@ -2989,7 +2995,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
 
                 if (
                     (this.engine &&
-                        this.engine.phase === "stone removal" &&
+                        this.stoneRemovalScoringActive() &&
                         this.engine.last_official_move === this.engine.cur_move &&
                         this.engine.board[j][i] &&
                         this.engine.removal[j][i]) ||
@@ -3015,7 +3021,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 this.last_hover_square &&
                 this.last_hover_square.x === i &&
                 this.last_hover_square.y === j) ||
-            (this.engine.phase === "stone removal" &&
+            (this.stoneRemovalScoringActive() &&
                 this.engine.isActivePlayer(this.player_id) &&
                 this.engine.cur_move === this.engine.last_official_move &&
                 this.last_hover_square &&
@@ -3051,7 +3057,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             let transparent = false;
             if (
                 this.engine &&
-                (this.scoring_mode || this.engine.phase === "stone removal") &&
+                (this.scoring_mode || this.stoneRemovalScoringActive()) &&
                 this.stone_placement_enabled &&
                 this.last_hover_square &&
                 this.last_hover_square.x === i &&
@@ -3093,7 +3099,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     (this.score_estimator.territory[j][i] ||
                         (this.score_estimator.removal[j][i] &&
                             this.score_estimator.board[j][i] === 0))) ||
-                ((this.engine.phase === "stone removal" ||
+                ((this.stoneRemovalScoringActive() ||
                     (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
                     (this.engine.removal[j][i] || pos.needs_sealing)) ||
@@ -3121,7 +3127,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 }
 
                 if (
-                    (this.engine.phase === "stone removal" ||
+                    (this.stoneRemovalScoringActive() ||
                         (this.engine.phase === "finished" && this.mode === "play")) &&
                     this.engine.board[j][i] === 0 &&
                     this.engine.removal[j][i]
