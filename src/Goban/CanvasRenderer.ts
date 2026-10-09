@@ -1472,7 +1472,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         color = this.engine.player;
                     }
                 } else if (pos.black || pos.white) {
-                    color = pos.black ? 1 : 2;
+                    color = this.placementHoverAt(i, j) ? this.engine.player : pos.black ? 1 : 2;
                     translucent = true;
                     stoneAlphaValue = this.variation_stone_opacity;
                     if (
@@ -2320,7 +2320,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                         color = this.engine.player;
                     }
                 } else if (pos.black || pos.white) {
-                    color = pos.black ? 1 : 2;
+                    color = this.placementHoverAt(i, j) ? this.engine.player : pos.black ? 1 : 2;
                     translucent = true;
                 } else {
                     color = this.engine.player;
