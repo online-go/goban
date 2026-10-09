@@ -33,6 +33,7 @@ import {
     GobanSocketEvents,
     ConditionalMoveTree,
     GobanEngine,
+    type GobanEngineConfig,
     JGOFIntersection,
     JGOFPauseState,
     JGOFPlayerClock,
@@ -861,8 +862,17 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     obj.gamedata.phase = "finished";
                 }
 
-                this.load(obj.gamedata);
-                this.review_had_gamedata = true;
+                // A later gamedata on an open review is a metadata refresh
+                // (name, players, rules, komi, outcome). Moves, variations
+                // and comments arrive as their own review messages, so
+                // loading this object again replaces the tree with an
+                // empty one. See online-go.com issues 2447 and 2821.
+                if (this.done_loading_review && this.review_had_gamedata) {
+                    this.applyReviewMetadata(obj.gamedata);
+                } else {
+                    this.load(obj.gamedata);
+                    this.review_had_gamedata = true;
+                }
             }
 
             if (obj.player_update && this.engine.player_pool) {
@@ -1099,6 +1109,80 @@ export abstract class OGSConnectivity extends GobanInteractive {
         }
 
         return;
+    }
+
+    /**
+     * Copy review header fields onto the open board without touching the
+     * move tree. Used when a review that is already loaded receives another
+     * gamedata message.
+     */
+    private applyReviewMetadata(gamedata: GobanEngineConfig): void {
+        const engine = this.engine;
+        if (!engine) {
+            return;
+        }
+
+        const assign = (target: GobanEngineConfig) => {
+            if (gamedata.game_name !== undefined) {
+                target.game_name = gamedata.game_name;
+            }
+            if (gamedata.komi !== undefined) {
+                target.komi = gamedata.komi;
+            }
+            if (gamedata.rules !== undefined) {
+                target.rules = gamedata.rules;
+            }
+            if (gamedata.outcome !== undefined) {
+                target.outcome = gamedata.outcome;
+            }
+            if (gamedata.handicap !== undefined) {
+                target.handicap = gamedata.handicap;
+            }
+        };
+
+        assign(this.config);
+        assign(engine.config);
+
+        if (typeof gamedata.komi === "number") {
+            engine.komi = gamedata.komi;
+        }
+        if (gamedata.rules) {
+            engine.rules = gamedata.rules;
+        }
+        if (gamedata.outcome !== undefined) {
+            engine.outcome = gamedata.outcome;
+        }
+        if (typeof gamedata.handicap === "number") {
+            engine.handicap = gamedata.handicap;
+        }
+        if (gamedata.game_name !== undefined) {
+            (engine as unknown as { game_name?: string }).game_name = gamedata.game_name;
+        }
+
+        const incoming = gamedata.players;
+        if (incoming) {
+            for (const color of ["black", "white"] as const) {
+                const src = incoming[color];
+                const dst = engine.players?.[color];
+                if (!src || !dst) {
+                    continue;
+                }
+                if (src.username !== undefined) {
+                    dst.username = src.username;
+                }
+                if (src.name !== undefined) {
+                    dst.name = src.name;
+                }
+                if (src.rank !== undefined) {
+                    dst.rank = src.rank;
+                }
+                if (src.pro !== undefined) {
+                    dst.pro = src.pro;
+                }
+            }
+        }
+
+        this.emit("update");
     }
 
     protected disconnect(): void {
