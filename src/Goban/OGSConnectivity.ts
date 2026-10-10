@@ -405,7 +405,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     } else {
                         delete this.stone_removal_auto_scoring_done;
                         delete this.engine.auto_scoring_done;
-                        this.cancelServerAutoScoringWait();
+                        this.serverAutoScoringEnded();
                     }
 
                     this.updateTitleAndStonePlacement();

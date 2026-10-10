@@ -213,6 +213,22 @@ describe("stone removal autoscoring", () => {
         goban.destroy();
     });
 
+    test("leaving stone removal mid-wait clears the busy state", () => {
+        const { goban, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+        const clearMessage = jest.spyOn(goban, "clearMessage");
+        jest.spyOn(goban, "performStoneRemovalAutoScoring").mockImplementation(() => {});
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        clearMessage.mockClear();
+        receive(`game/${GAME_ID}/phase`, "finished");
+
+        expect(complete).toHaveBeenCalledTimes(1);
+        expect(clearMessage).toHaveBeenCalled();
+        goban.destroy();
+    });
+
     test("waits again after a game that had a proposal resumes and passes out again", () => {
         const { goban, receive } = makeGoban();
         const started = jest.fn();
