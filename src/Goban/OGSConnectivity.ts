@@ -401,6 +401,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.emit("phase", new_phase);
 
                     if (this.engine.phase === "stone removal") {
+                        // A phase message means a fresh stone removal: a
+                        // flag loaded earlier belongs to a previous one.
+                        delete this.engine.auto_scoring_done;
                         this.startStoneRemovalAutoScoring();
                     } else {
                         delete this.stone_removal_auto_scoring_done;

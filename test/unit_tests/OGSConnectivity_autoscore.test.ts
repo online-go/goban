@@ -319,6 +319,22 @@ describe("stone removal autoscoring", () => {
         goban.destroy();
     });
 
+    test("a stale flag loaded during play does not stop the next stone removal's wait", () => {
+        const { goban, receive } = makeGoban();
+        const started = jest.fn();
+        goban.on("stone-removal.auto-scoring-started", started);
+        jest.spyOn(goban, "performStoneRemovalAutoScoring").mockImplementation(() => {});
+
+        // A game resumed from stone removal can still carry the flag; a
+        // client that loads during that play phase must not trust it.
+        receive(`game/${GAME_ID}/gamedata`, gamedata({ phase: "play", auto_scoring_done: true }));
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+
+        expect(started).toHaveBeenCalledTimes(1);
+        expect(goban.engine.auto_scoring_done).toBeFalsy();
+        goban.destroy();
+    });
+
     test("waits again on load without auto_scoring_done", () => {
         const { goban, receive } = makeGoban();
         const started = jest.fn();
