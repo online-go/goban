@@ -207,6 +207,11 @@ export interface GobanEngineConfig extends BoardConfig {
     /** Intersections that need to be sealed before scoring should happen */
     needs_sealing?: JGOFSealingIntersection[];
 
+    /** Set once a dead-stone proposal, the server's or a client's, has been
+     *  applied in the current stone removal phase. A client that loads a
+     *  game with this set does not score it again. */
+    auto_scoring_done?: boolean;
+
     // this is weird, we should migrate away from this
     ogs?: {
         black_stones: string;
@@ -562,6 +567,7 @@ export class GobanEngine extends BoardState {
     private loading_sgf: boolean = false;
     private move_before_jump?: MoveTree;
     public needs_sealing?: Array<JGOFSealingIntersection>;
+    public auto_scoring_done?: boolean;
     //private mv:Move;
     public score_prisoners: boolean = false;
     public score_stones: boolean = false;
@@ -753,6 +759,9 @@ export class GobanEngine extends BoardState {
             }
 
             this.emit("stone-removal.needs-sealing", config.needs_sealing);
+        }
+        if (config.auto_scoring_done) {
+            this.auto_scoring_done = true;
         }
 
         function unpackMoveTree(cur: MoveTree, tree: MoveTreeJson): void {
