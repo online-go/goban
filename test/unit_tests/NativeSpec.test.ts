@@ -150,6 +150,22 @@ describe("buildOverlays", () => {
         expect(dame.territory).toEqual({ stroke: "#365FE6" });
     });
 
+    test("analyze mode hides stone-removal marks so a variation can be read", () => {
+        const src = source({ mode: "analyze" });
+        src.engine.place(0, 0);
+        src.engine.last_official_move = src.engine.cur_move;
+        src.engine.phase = "stone removal";
+        src.engine.removal[0][0] = true;
+        src.engine.removal[2][2] = true;
+        const overlays = buildOverlays(src);
+        expect(overlayAt(overlays, 0, 0)?.xmark).toBeUndefined();
+        expect(overlayAt(overlays, 0, 0)?.stoneAlpha).toBeUndefined();
+        expect(overlayAt(overlays, 2, 2)?.territory).toBeUndefined();
+        const ghost = buildGhost(src);
+        expect(ghost?.stone).toEqual({ color: 2, alpha: 0.6 });
+        expect(ghost?.xmark).toBeUndefined();
+    });
+
     test("finished game fades dead stones but does not draw the removal X", () => {
         const src = source();
         src.engine.place(1, 1);

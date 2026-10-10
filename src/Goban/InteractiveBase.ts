@@ -1189,10 +1189,22 @@ export abstract class GobanInteractive extends GobanBase {
         return this.engine.isLastOfficialMove();
     }
 
+    /** Dead-stone marks and removal clicks belong to scoring. Analyze mode
+     *  on the same phase is a normal variation board, so those stay off. */
+    protected stoneRemovalScoringActive(): boolean {
+        return this.engine.phase === "stone removal" && this.mode !== "analyze";
+    }
+
     public updateTitleAndStonePlacement(): void {
         this.updatePlayerToMoveTitle();
 
-        if (this.engine.phase === "stone removal" || this.scoring_mode) {
+        if (
+            this.mode === "analyze" &&
+            (this.engine.phase === "finished" || this.engine.phase === "stone removal")
+        ) {
+            this.disableStonePlacement();
+            this.enableStonePlacement();
+        } else if (this.engine.phase === "stone removal" || this.scoring_mode) {
             this.enableStonePlacement();
         } else if (this.engine.phase === "play") {
             switch (this.mode) {
@@ -1216,9 +1228,6 @@ export abstract class GobanInteractive extends GobanBase {
             }
         } else if (this.engine.phase === "finished") {
             this.disableStonePlacement();
-            if (this.mode === "analyze") {
-                this.enableStonePlacement();
-            }
         }
     }
 
@@ -1728,7 +1737,7 @@ export abstract class GobanInteractive extends GobanBase {
             let force_redraw = false;
 
             if (
-                this.engine.phase === "stone removal" &&
+                this.stoneRemovalScoringActive() &&
                 this.engine.isActivePlayer(this.player_id) &&
                 this.engine.cur_move === this.engine.last_official_move
             ) {
@@ -1906,7 +1915,8 @@ export abstract class GobanInteractive extends GobanBase {
                 }
             } else if (
                 this.engine.phase === "play" ||
-                (this.engine.phase === "finished" && this.mode === "analyze")
+                (this.mode === "analyze" &&
+                    (this.engine.phase === "finished" || this.engine.phase === "stone removal"))
             ) {
                 if (this.move_selected) {
                     if (this.mode === "play") {
