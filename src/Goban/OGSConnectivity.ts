@@ -39,6 +39,7 @@ import {
     JGOFPlayerSummary,
     JGOFTimeControl,
     MarkInterface,
+    MAX_REMOTE_SCORING_BOARD_SIZE,
     niceInterval,
     ReviewMessage,
     ScoreEstimator,
@@ -58,6 +59,12 @@ declare let swal: any;
 interface JGOFPlayerClockWithTimedOut extends JGOFPlayerClock {
     timed_out: boolean;
 }
+
+/** How long a player's client waits for the server's dead-stone proposal
+ * before scoring locally. A scorer that fails fast is reported by the
+ * server's failure broadcast, which ends the wait at once; this bounds the
+ * wait for a scorer that is slow or hung, or a server that never answers. */
+export const SERVER_AUTOSCORE_WAIT_MS = 15000;
 /**
  * This class serves as a functionality layer encapsulating the logic connection
  * that manages connections to the online-go.com servers.
@@ -70,14 +77,24 @@ export abstract class OGSConnectivity extends GobanInteractive {
     protected socket!: IGobanSocket;
     protected socket_event_bindings: Array<[keyof GobanSocketEvents, () => void]> = [];
     protected connectToReviewSent?: boolean;
+    private server_autoscore_timer?: ReturnType<typeof setTimeout>;
 
     constructor(config: GobanConfig, preloaded_data?: GobanConfig) {
         super(config, preloaded_data);
         this.setGameClock(null);
 
-        this.on("load", (config) => {
-            if (this.engine.phase === "stone removal" && !this.stone_removal_auto_scoring_done) {
-                this.performStoneRemovalAutoScoring();
+        this.on("load", () => {
+            if (this.engine.phase !== "stone removal") {
+                return;
+            }
+            if (this.engine.auto_scoring_done) {
+                // The loaded state carries a proposal; a wait started before
+                // the reload would otherwise end in local scoring over it.
+                this.serverAutoScoringEnded();
+                return;
+            }
+            if (!this.stone_removal_auto_scoring_done) {
+                this.startStoneRemovalAutoScoring();
             }
         });
     }
@@ -97,6 +114,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
     public override destroy(): void {
         super.destroy();
+        this.cancelServerAutoScoringWait();
         if (this.socket) {
             this.disconnect();
         }
@@ -383,9 +401,11 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.emit("phase", new_phase);
 
                     if (this.engine.phase === "stone removal") {
-                        this.performStoneRemovalAutoScoring();
+                        this.startStoneRemovalAutoScoring();
                     } else {
                         delete this.stone_removal_auto_scoring_done;
+                        delete this.engine.auto_scoring_done;
+                        this.cancelServerAutoScoringWait();
                     }
 
                     this.updateTitleAndStonePlacement();
@@ -733,22 +753,42 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     if ("strict_seki_mode" in cfg) {
                         this.engine.strict_seki_mode = cfg.strict_seki_mode;
                     } else {
-                        const removed = cfg.removed;
-                        const stones = cfg.stones;
-                        let moves: JGOFMove[];
-                        if (!stones) {
-                            moves = [];
-                        } else {
-                            moves = this.engine.decodeMoves(stones);
+                        if (cfg.auto_scored) {
+                            this.engine.clearRemoved();
                         }
+                        const removed: boolean = cfg.auto_scored ? true : cfg.removed;
+                        const stones: string = cfg.auto_scored ? cfg.all_removed : cfg.stones;
+                        const moves: JGOFMove[] = stones ? this.engine.decodeMoves(stones) : [];
 
                         for (let i = 0; i < moves.length; ++i) {
                             this.engine.setRemoved(moves[i].x, moves[i].y, removed, false);
                         }
+                        if (cfg.needs_sealing) {
+                            this.engine.needs_sealing = cfg.needs_sealing;
+                            this.emit("stone-removal.needs-sealing", cfg.needs_sealing);
+                        }
                         this.emit("stone-removal.updated");
+
+                        if (cfg.auto_scored) {
+                            this.engine.auto_scoring_done = true;
+                        }
+                        // Any marks ending up on the server mean it will not
+                        // propose: either this is its proposal, or someone
+                        // scored first and the server yields to them.
+                        this.serverAutoScoringEnded();
                     }
                     this.updateTitleAndStonePlacement();
                     this.emit("update");
+                },
+            );
+            this._socket_on(
+                (prefix + "auto_scoring_failed") as keyof GobanSocketEvents,
+                (): void => {
+                    if (this.disconnectedFromGame || !this.server_autoscore_timer) {
+                        return;
+                    }
+                    this.cancelServerAutoScoringWait();
+                    this.performStoneRemovalAutoScoring();
                 },
             );
             this._socket_on(
@@ -1464,21 +1504,83 @@ export abstract class OGSConnectivity extends GobanInteractive {
         });
     }
 
-    public performStoneRemovalAutoScoring(): void {
+    /** True for the player whose client takes part in stone removal
+     * scoring: a seated player viewing the game screen. */
+    private isStoneRemovalAutoScoringPlayer(): boolean {
         try {
-            if (
-                !(window as any)["user"] ||
-                !this.on_game_screen ||
-                !this.engine ||
-                (((window as any)["user"].id as number) !== this.engine.players.black.id &&
-                    ((window as any)["user"].id as number) !== this.engine.players.white.id)
-            ) {
-                return;
-            }
+            const user_id = (window as any)["user"]?.id as number | undefined;
+            return (
+                !!user_id &&
+                this.on_game_screen &&
+                !!this.engine &&
+                (user_id === this.engine.players.black.id ||
+                    user_id === this.engine.players.white.id)
+            );
         } catch (e) {
             console.error(e);
+            return false;
+        }
+    }
+
+    /**
+     * Entry point when the game is in stone removal. The server proposes
+     * the dead stones for boards it can score, so this waits for that; a
+     * larger board is scored locally; a game whose data already carries a
+     * proposal needs nothing.
+     */
+    private startStoneRemovalAutoScoring(): void {
+        if (!this.isStoneRemovalAutoScoringPlayer()) {
             return;
         }
+        if (this.engine.auto_scoring_done) {
+            this.serverAutoScoringEnded();
+            return;
+        }
+        if (
+            this.width > MAX_REMOTE_SCORING_BOARD_SIZE ||
+            this.height > MAX_REMOTE_SCORING_BOARD_SIZE
+        ) {
+            this.performStoneRemovalAutoScoring();
+            return;
+        }
+        this.awaitServerAutoScoring();
+    }
+
+    private awaitServerAutoScoring(): void {
+        this.cancelServerAutoScoringWait();
+        this.stone_removal_auto_scoring_done = true;
+        this.showMessage("processing", undefined, -1);
+        this.emit("stone-removal.auto-scoring-started");
+        this.server_autoscore_timer = setTimeout(() => {
+            delete this.server_autoscore_timer;
+            console.warn("No dead-stone proposal from the server, scoring locally");
+            this.performStoneRemovalAutoScoring();
+        }, SERVER_AUTOSCORE_WAIT_MS);
+    }
+
+    private cancelServerAutoScoringWait(): void {
+        if (this.server_autoscore_timer) {
+            clearTimeout(this.server_autoscore_timer);
+            delete this.server_autoscore_timer;
+        }
+    }
+
+    /** The stone removal state is settled without this client scoring:
+     * ends the wait if one is running. */
+    private serverAutoScoringEnded(): void {
+        if (!this.server_autoscore_timer) {
+            return;
+        }
+        this.cancelServerAutoScoringWait();
+        this.clearMessage();
+        this.emit("stone-removal.auto-scoring-complete");
+    }
+
+    public performStoneRemovalAutoScoring(): void {
+        if (!this.isStoneRemovalAutoScoringPlayer()) {
+            return;
+        }
+        this.cancelServerAutoScoringWait();
 
         this.stone_removal_auto_scoring_done = true;
 
