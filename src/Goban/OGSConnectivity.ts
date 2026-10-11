@@ -365,9 +365,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         return;
                     }
 
-                    // Someone browsing an earlier move in analyze mode is not
-                    // following the live game. Don't pull them to the new phase.
-                    if (this.mode !== "analyze") {
+                    // A spectator browsing in analyze mode is not following the live
+                    // game. A player has to come back, or auto-scoring marks
+                    // the position they were looking at.
+                    if (this.mode !== "analyze" || this.engine.isActivePlayer(this.player_id)) {
                         this.setMode("play");
                     }
                     if (new_phase !== "finished") {
