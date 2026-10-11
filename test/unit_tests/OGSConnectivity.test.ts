@@ -7,7 +7,6 @@
 import WS from "jest-websocket-mock";
 import { TestGoban } from "../../src/index";
 import { GobanSocket } from "engine";
-import { SVGRenderer } from "../../src/Goban/SVGRenderer";
 import { MoveTree } from "../../src/engine/MoveTree";
 
 let last_port = 38880;
@@ -114,6 +113,16 @@ describe("OGSConnectivity isInPushedAnalysis guard", () => {
 });
 
 describe("a saved review is replayed from the full log", () => {
+    class ReviewBoard extends TestGoban {
+        public drawing = true;
+        protected override enableDrawing(): void {
+            this.drawing = true;
+        }
+        protected override disableDrawing(): void {
+            this.drawing = false;
+        }
+    }
+
     function walk(node: MoveTree, into: { nodes: number; text: string; pens: number }) {
         into.nodes += 1;
         into.text += node.text || "";
@@ -127,18 +136,14 @@ describe("a saved review is replayed from the full log", () => {
         const port = ++last_port;
         const server = new WS(`ws://localhost:${port}`, { jsonProtocol: true });
         const client = new GobanSocket(`ws://localhost:${port}`, { dont_ping: true, quiet: true });
-        const board_div = document.createElement("div");
-        document.body.appendChild(board_div);
-        const goban = new SVGRenderer({
+        const goban = new ReviewBoard({
             review_id: 2447,
             server_socket: client,
-            square_size: 10,
-            board_div,
-            interactive: true,
             width: 9,
             height: 9,
             isPlayerController: () => asController,
         });
+        (goban as any).post_config_constructor();
         await server.connected;
 
         const onFull = (goban as any).socket_event_bindings.find(
@@ -182,7 +187,7 @@ describe("a saved review is replayed from the full log", () => {
 
         expect(errors).not.toHaveBeenCalled();
         expect(ended).toBe(2);
-        expect((goban as any).drawing_enabled).toBe(true);
+        expect(goban.drawing).toBe(true);
         expect(first.nodes).toBeGreaterThan(1);
         expect(second).toEqual(first);
         expect(second.text).toBe("first comment");
@@ -195,7 +200,6 @@ describe("a saved review is replayed from the full log", () => {
         client.disconnect();
         server.close();
         goban.destroy();
-        board_div.remove();
     }
 
     test("the controller keeps the tree, the comment and the pen mark", async () => {
