@@ -455,10 +455,6 @@ export function buildLastMove(src: SpecSource): NativeLastMove | null {
         return null;
     }
     const stone_color = engine.board[m.y][m.x];
-    // Suicide removes the stone. The submit plus still marks where it was played.
-    if (!stone_color && !src.submit_move_pending) {
-        return null;
-    }
     if (!(engine.phase === "play" || engine.phase === "finished")) {
         return null;
     }
@@ -470,9 +466,7 @@ export function buildLastMove(src: SpecSource): NativeLastMove | null {
         ? stone_color === 1
             ? src.colors.black_text
             : src.colors.white_text
-        : m.player === 1
-          ? src.colors.black_stone
-          : src.colors.white_stone;
+        : src.colors.blank_text;
     const alpha = src.last_move_opacity;
     return {
         x: m.x,

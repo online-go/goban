@@ -897,18 +897,16 @@ describe("suicide submit mark", () => {
         board_div.remove();
     });
 
-    test("a staged suicide shows a plus on the empty point", () => {
+    test("a white suicide on Book shows a visible plus, then the last-move circle", () => {
         const goban = new SVGRenderer(basic3x3Config({ rules: "nz", mode: "play" }));
-        // White surrounds the corner, then black plays there and the stone is removed.
-        goban.engine.place(2, 2);
+        goban.setTheme({ ...selectedThemes(), board: "Book" }, true);
         goban.engine.place(1, 0);
-        goban.engine.place(-1, -1);
+        goban.engine.place(2, 2);
         goban.engine.place(0, 1);
         goban.engine.place(0, 0);
 
         expect(goban.engine.board[0][0]).toBe(0);
-        expect(goban.engine.cur_move.x).toBe(0);
-        expect(goban.engine.cur_move.y).toBe(0);
+        expect(goban.engine.cur_move.player).toBe(2);
 
         goban.submit_move = () => {
             /* staged, not sent */
@@ -919,7 +917,15 @@ describe("suicide submit mark", () => {
             "path.last-move",
         );
         expect(plus).not.toBeNull();
-        expect(plus?.getAttribute("stroke")).toBe(goban.theme_black_stone_color);
+        expect(plus?.getAttribute("stroke")).toBe("#000000");
+
+        goban.submit_move = undefined;
+        goban.redraw(true);
+        const circle = (goban as unknown as { svg: SVGSVGElement }).svg.querySelector(
+            "circle.last-move",
+        );
+        expect(circle).not.toBeNull();
+        expect(circle?.getAttribute("stroke")).toBe("#000000");
 
         goban.destroy();
     });
