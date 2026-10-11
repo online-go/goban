@@ -157,10 +157,14 @@ describe("buildOverlays", () => {
         src.engine.phase = "stone removal";
         src.engine.removal[0][0] = true;
         src.engine.removal[2][2] = true;
+        src.engine.cur_move.getMarks(0, 0).stone_removed = true;
+        src.engine.cur_move.getMarks(2, 2).score = "black";
+        src.engine.cur_move.getMarks(1, 1).needs_sealing = true;
         const overlays = buildOverlays(src);
         expect(overlayAt(overlays, 0, 0)?.xmark).toBeUndefined();
         expect(overlayAt(overlays, 0, 0)?.stoneAlpha).toBeUndefined();
         expect(overlayAt(overlays, 2, 2)?.territory).toBeUndefined();
+        expect(overlayAt(overlays, 1, 1)?.territory).toBeUndefined();
         const ghost = buildGhost(src);
         expect(ghost?.stone).toEqual({ color: 2, alpha: 0.6 });
         expect(ghost?.xmark).toBeUndefined();

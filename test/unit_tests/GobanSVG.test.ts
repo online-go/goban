@@ -309,6 +309,43 @@ describe("onTap", () => {
         goban.destroy();
     });
 
+    test("an opponent removal update is kept when the player is on a variation", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                game_id: 1109,
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                ],
+                phase: "stone removal",
+                player_id: 1,
+                players: {
+                    black: { id: 1, username: "b" },
+                    white: { id: 2, username: "w" },
+                },
+            }),
+        );
+        goban.setMode("analyze");
+        goban.engine.place(0, 1);
+        expect(goban.engine.cur_move).not.toBe(goban.engine.last_official_move);
+
+        mock_socket.emit("game/1109/removed_stones", {
+            removed: true,
+            stones: "aa",
+            all_removed: "aa",
+        });
+
+        const official = goban.engine.last_official_move;
+        expect(official.state.removal[0][0]).toBe(true);
+        expect(official.getMarks(0, 0).stone_removed).toBe(true);
+        expect(goban.engine.cur_move.getMarks(0, 0).stone_removed).not.toBe(true);
+
+        goban.setMode("play");
+        expect(goban.engine.cur_move).toBe(official);
+        expect(goban.engine.getStoneRemovalString()).toBe("aa");
+        goban.destroy();
+    });
+
     test("clicking the midpoint of two intersections has no effect", () => {
         const goban = new SVGRenderer(basic3x3Config());
         const event_layer = goban.parent;

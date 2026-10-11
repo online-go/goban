@@ -141,7 +141,10 @@ interface OverlayResult {
  *  when nothing beyond the plain stone/grid is drawn there. */
 function computeOverlay(src: SpecSource, i: number, j: number): OverlayResult | null {
     const engine = src.engine;
-    const pos: MarkInterface = engine.cur_move.getMarks(i, j) ?? {};
+    let pos: MarkInterface = engine.cur_move.getMarks(i, j) ?? {};
+    if (engine.phase === "stone removal" && src.mode === "analyze") {
+        pos = { ...pos, stone_removed: false, score: undefined, needs_sealing: false };
+    }
     const stone_color = engine.board[j][i];
     const o: NativeOverlay = { x: i, y: j };
     let has_content = false;

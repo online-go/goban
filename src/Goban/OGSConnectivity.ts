@@ -742,8 +742,20 @@ export abstract class OGSConnectivity extends GobanInteractive {
                             moves = this.engine.decodeMoves(stones);
                         }
 
+                        const official = this.engine.cur_move === this.engine.last_official_move;
                         for (let i = 0; i < moves.length; ++i) {
-                            this.engine.setRemoved(moves[i].x, moves[i].y, removed, false);
+                            const { x, y } = moves[i];
+                            if (official) {
+                                this.engine.setRemoved(x, y, removed, false);
+                            } else if (x >= 0 && y >= 0) {
+                                // The player is on a variation. Keep the update
+                                // on the game, not on the line they are trying.
+                                const node = this.engine.last_official_move;
+                                node.state.removal[y][x] = removed;
+                                const marks = node.getMarks(x, y);
+                                marks.stone_removed = removed;
+                                marks.remove = removed;
+                            }
                         }
                         this.emit("stone-removal.updated");
                     }

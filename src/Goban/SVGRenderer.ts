@@ -990,6 +990,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             console.error("No position for ", j, i);
             pos = {};
         }
+        if (this.engine?.phase === "stone removal" && this.mode === "analyze") {
+            pos = { ...pos, stone_removed: false, score: undefined, needs_sealing: false };
+        }
         const should_draw_undo =
             this.engine &&
             this.getShowUndoRequestIndicator() &&
@@ -1767,6 +1770,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (!pos) {
             console.error("No position for ", j, i);
             pos = {};
+        }
+        if (this.engine?.phase === "stone removal" && this.mode === "analyze") {
+            pos = { ...pos, stone_removed: false, score: undefined, needs_sealing: false };
         }
         let alt_marking: string | undefined;
         if (
@@ -2875,6 +2881,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         if (!pos) {
             console.error("No position for ", j, i);
             pos = {};
+        }
+        if (this.engine?.phase === "stone removal" && this.mode === "analyze") {
+            pos = { ...pos, stone_removed: false, score: undefined, needs_sealing: false };
         }
         let alt_marking: string | undefined;
         if (

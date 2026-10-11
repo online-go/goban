@@ -1205,6 +1205,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             console.error("No position for ", j, i);
             pos = {};
         }
+        if (this.engine?.phase === "stone removal" && this.mode === "analyze") {
+            pos = { ...pos, stone_removed: false, score: undefined, needs_sealing: false };
+        }
         const should_draw_undo =
             this.engine &&
             this.getShowUndoRequestIndicator() &&
@@ -2227,6 +2230,9 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         if (!pos) {
             console.error("No position for ", j, i);
             pos = {};
+        }
+        if (this.engine?.phase === "stone removal" && this.mode === "analyze") {
+            pos = { ...pos, stone_removed: false, score: undefined, needs_sealing: false };
         }
         let alt_marking: string | undefined;
         if (
