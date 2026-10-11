@@ -279,6 +279,39 @@ describe("buildLastMove", () => {
         expect(buildLastMove(src)).toMatchObject({ style: "plus", alpha: 1 });
     });
 
+    test("plus on an empty suicide point uses the blank text color", () => {
+        const engine = new GobanEngine({ width: 3, height: 3, rules: "nz" });
+        engine.place(1, 0);
+        engine.place(2, 2);
+        engine.place(0, 1);
+        engine.place(0, 0);
+        expect(engine.board[0][0]).toBe(0);
+        expect(engine.cur_move.player).toBe(2);
+
+        const colors = {
+            ...source().colors,
+            white_stone: "#ffffff",
+            blank_text: "#000000",
+        };
+        const pending = source({ submit_move_pending: true, colors });
+        pending.engine = engine;
+        expect(buildLastMove(pending)).toMatchObject({
+            x: 0,
+            y: 0,
+            style: "plus",
+            color: "#000000",
+        });
+
+        const sent = source({ colors });
+        sent.engine = engine;
+        expect(buildLastMove(sent)).toMatchObject({
+            x: 0,
+            y: 0,
+            style: "circle",
+            color: "#000000",
+        });
+    });
+
     test("suppressed by text at the same point", () => {
         const src = source();
         src.engine.place(1, 2);

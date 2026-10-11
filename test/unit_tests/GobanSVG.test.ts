@@ -917,6 +917,50 @@ describe("AI review marks and placement rooting", () => {
     });
 });
 
+describe("suicide submit mark", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    test("a white suicide on Book shows a visible plus, then the last-move circle", () => {
+        const goban = new SVGRenderer(basic3x3Config({ rules: "nz", mode: "play" }));
+        goban.setTheme({ ...selectedThemes(), board: "Book" }, true);
+        goban.engine.place(1, 0);
+        goban.engine.place(2, 2);
+        goban.engine.place(0, 1);
+        goban.engine.place(0, 0);
+
+        expect(goban.engine.board[0][0]).toBe(0);
+        expect(goban.engine.cur_move.player).toBe(2);
+
+        goban.submit_move = () => {
+            /* staged, not sent */
+        };
+        goban.redraw(true);
+
+        const plus = (goban as unknown as { svg: SVGSVGElement }).svg.querySelector(
+            "path.last-move",
+        );
+        expect(plus).not.toBeNull();
+        expect(plus?.getAttribute("stroke")).toBe("#000000");
+
+        goban.submit_move = undefined;
+        goban.redraw(true);
+        const circle = (goban as unknown as { svg: SVGSVGElement }).svg.querySelector(
+            "circle.last-move",
+        );
+        expect(circle).not.toBeNull();
+        expect(circle?.getAttribute("stroke")).toBe("#000000");
+
+        goban.destroy();
+    });
+});
+
 describe("touch on the board blurs the chat field", () => {
     beforeEach(() => {
         board_div = document.createElement("div");

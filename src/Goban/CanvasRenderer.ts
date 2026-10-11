@@ -2097,7 +2097,6 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
-                this.engine.board[j][i] &&
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
@@ -2108,10 +2107,11 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                 }
 
                 if (i >= 0 && j >= 0) {
-                    const color =
-                        stone_color === 1
+                    const color = stone_color
+                        ? stone_color === 1
                             ? this.theme_black_text_color
-                            : this.theme_white_text_color;
+                            : this.theme_white_text_color
+                        : this.theme_blank_text_color;
 
                     const last_move_opacity = this.last_move_opacity;
 
@@ -2615,7 +2615,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
-                this.engine.board[j][i] &&
+                (this.engine.board[j][i] || (!!this.submit_move && !this.engine.board[j][i])) &&
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";

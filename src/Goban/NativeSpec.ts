@@ -451,9 +451,10 @@ export function buildLastMove(src: SpecSource): NativeLastMove | null {
     }
     const engine = src.engine;
     const m = engine.cur_move;
-    if (!m || m.x < 0 || m.y < 0 || !engine.board[m.y][m.x]) {
+    if (!m || m.x < 0 || m.y < 0) {
         return null;
     }
+    const stone_color = engine.board[m.y][m.x];
     if (!(engine.phase === "play" || engine.phase === "finished")) {
         return null;
     }
@@ -461,8 +462,11 @@ export function buildLastMove(src: SpecSource): NativeLastMove | null {
     if (result?.suppressLastMove) {
         return null;
     }
-    const stone_color = engine.board[m.y][m.x];
-    const color = stone_color === 1 ? src.colors.black_text : src.colors.white_text;
+    const color = stone_color
+        ? stone_color === 1
+            ? src.colors.black_text
+            : src.colors.white_text
+        : src.colors.blank_text;
     const alpha = src.last_move_opacity;
     return {
         x: m.x,
