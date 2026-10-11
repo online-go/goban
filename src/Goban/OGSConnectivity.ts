@@ -365,7 +365,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         return;
                     }
 
-                    this.setMode("play");
+                    // A spectator browsing in analyze mode is not following the live
+                    // game. A player has to come back, or auto-scoring marks
+                    // the position they were looking at.
+                    if (this.mode !== "analyze" || this.engine.isActivePlayer(this.player_id)) {
+                        this.setMode("play");
+                    }
                     if (new_phase !== "finished") {
                         this.engine.clearRemoved();
                     }
@@ -514,11 +519,28 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.engine.undo_requested_by = undefined;
                     this.engine.undo_requested_move_count = undefined;
 
-                    this.setMode("play");
+                    // Rewind the official game, but leave a viewer who is
+                    // looking at a move that still exists where they were.
+                    const preserve = this.mode === "analyze" ? this.engine.cur_move : null;
+                    if (preserve) {
+                        this.engine.jumpToLastOfficialMove();
+                    } else {
+                        this.setMode("play");
+                    }
                     for (let i = 0; i < steps; i++) {
                         this.engine.showPrevious();
                     }
                     this.engine.setLastOfficialMove();
+                    if (preserve) {
+                        const branch_point = preserve.getBranchPoint();
+                        if (
+                            branch_point.move_number <= this.engine.last_official_move.move_number
+                        ) {
+                            this.engine.jumpTo(preserve);
+                        } else {
+                            this.setMode("play", true);
+                        }
+                    }
 
                     this.setConditionalTree();
 

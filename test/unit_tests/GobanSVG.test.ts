@@ -917,6 +917,161 @@ describe("AI review marks and placement rooting", () => {
     });
 });
 
+describe("analyze mode keeps its place", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    function game() {
+        return new SVGRenderer(
+            basic3x3Config({
+                game_id: 3166,
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+            }),
+        );
+    }
+
+    function acceptUndo(move_count = 1) {
+        mock_socket.emit("game/3166/undo_accepted", {
+            move_number: 2,
+            undo_move_count: move_count,
+        });
+    }
+
+    test("an undo while browsing an earlier move leaves the viewer there", () => {
+        const goban = game();
+        goban.setMode("analyze");
+        goban.showPrevious();
+        goban.showPrevious();
+        expect(goban.engine.cur_move.move_number).toBe(1);
+
+        goban.engine.undo_requested = 3;
+        acceptUndo(1);
+
+        expect(goban.mode).toBe("analyze");
+        expect(goban.engine.cur_move.move_number).toBe(1);
+        expect(goban.engine.last_official_move.move_number).toBe(2);
+        goban.destroy();
+    });
+
+    test("an undo of the move being viewed follows the official game", () => {
+        const goban = game();
+        goban.setMode("analyze");
+        expect(goban.engine.cur_move.move_number).toBe(3);
+
+        goban.engine.undo_requested = 3;
+        acceptUndo(1);
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.cur_move.move_number).toBe(2);
+        expect(goban.engine.last_official_move.move_number).toBe(2);
+        goban.destroy();
+    });
+
+    test("an undo while following the game still rewinds", () => {
+        const goban = game();
+        expect(goban.mode).toBe("play");
+        goban.engine.undo_requested = 3;
+        acceptUndo(1);
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.cur_move.move_number).toBe(2);
+        expect(goban.engine.last_official_move.move_number).toBe(2);
+        goban.destroy();
+    });
+
+    test("the game ending does not pull an analyze viewer to the last move", () => {
+        const goban = game();
+        goban.setMode("analyze");
+        goban.showPrevious();
+        goban.showPrevious();
+
+        mock_socket.emit("game/3166/phase", "finished");
+
+        expect(goban.mode).toBe("analyze");
+        expect(goban.engine.phase).toBe("finished");
+        expect(goban.engine.cur_move.move_number).toBe(1);
+        goban.destroy();
+    });
+
+    test("a player looking at an earlier move comes back for stone removal", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                game_id: 3166,
+                player_id: 123,
+                players: {
+                    black: { id: 123, username: "p1" },
+                    white: { id: 456, username: "p2" },
+                },
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+            }),
+        );
+        goban.setMode("analyze");
+        goban.showPrevious();
+        expect(goban.engine.cur_move.move_number).toBe(2);
+
+        mock_socket.emit("game/3166/phase", "stone removal");
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.phase).toBe("stone removal");
+        expect(goban.engine.cur_move.move_number).toBe(3);
+        expect(goban.engine.cur_move).toBe(goban.engine.last_official_move);
+        goban.destroy();
+    });
+
+    test("a player on a variation comes back to the official game for stone removal", () => {
+        const goban = new SVGRenderer(
+            basic3x3Config({
+                game_id: 3166,
+                player_id: 123,
+                players: {
+                    black: { id: 123, username: "p1" },
+                    white: { id: 456, username: "p2" },
+                },
+                moves: [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                ],
+            }),
+        );
+        goban.setMode("analyze");
+        goban.showPrevious();
+        goban.engine.place(0, 1);
+        expect(goban.engine.cur_move.trunk).toBe(false);
+
+        mock_socket.emit("game/3166/phase", "stone removal");
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.cur_move.trunk).toBe(true);
+        expect(goban.engine.cur_move).toBe(goban.engine.last_official_move);
+        goban.destroy();
+    });
+
+    test("the game ending still updates a viewer who is following play", () => {
+        const goban = game();
+        mock_socket.emit("game/3166/phase", "stone removal");
+
+        expect(goban.mode).toBe("play");
+        expect(goban.engine.phase).toBe("stone removal");
+        expect(goban.engine.cur_move.move_number).toBe(3);
+        goban.destroy();
+    });
+});
+
 describe("touch on the board blurs the chat field", () => {
     beforeEach(() => {
         board_div = document.createElement("div");
