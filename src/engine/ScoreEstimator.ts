@@ -94,6 +94,10 @@ export function set_local_ownership_estimator(estimator: LocalEstimator) {
     local_ownership_estimator = estimator;
 }
 
+/** Largest board the remote (KataGo) scorer analyses; bigger boards are
+ * estimated locally. */
+export const MAX_REMOTE_SCORING_BOARD_SIZE = 19;
+
 export class ScoreEstimator extends BoardState {
     white: PlayerScore = {
         total: 0,
@@ -164,7 +168,11 @@ export class ScoreEstimator extends BoardState {
     }
 
     public estimateScore(trials: number, tolerance: number, autoscore: boolean): Promise<void> {
-        if (!this.prefer_remote || this.height > 19 || this.width > 19) {
+        if (
+            !this.prefer_remote ||
+            this.height > MAX_REMOTE_SCORING_BOARD_SIZE ||
+            this.width > MAX_REMOTE_SCORING_BOARD_SIZE
+        ) {
             return this.estimateScoreLocal(trials, tolerance);
         }
 

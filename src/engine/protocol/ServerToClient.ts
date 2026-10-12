@@ -22,7 +22,11 @@ import type {
     BotConfig,
     RuleSet,
 } from "./ClientToServer";
-import type { JGOFTimeControl, JGOFTimeControlSystem } from "../formats/JGOF";
+import type {
+    JGOFSealingIntersection,
+    JGOFTimeControl,
+    JGOFTimeControlSystem,
+} from "../formats/JGOF";
 import type { ConditionalMoveResponse } from "../ConditionalMoveTree";
 import type { GobanEngineConfig, Score, ReviewMessage } from "../GobanEngine";
 import type { AdHocPackedMove } from "../formats/AdHocFormat";
@@ -507,10 +511,22 @@ export interface ServerToClient {
                   stones: string;
                   /** Current state of all removed stones */
                   all_removed: string;
+                  /** Intersections that still need sealing before the game
+                   * can be scored. Sent with the server's proposal. */
+                  needs_sealing?: JGOFSealingIntersection[];
+                  /** True when this is the server's dead-stone proposal:
+                   * `all_removed` is the whole proposal and replaces any
+                   * earlier marks. */
+                  auto_scored?: boolean;
               }
             | { strict_seki_mode: boolean },
     ) => void;
     [k: `game/${number}/removed_stones`]: ServerToClient["game/:id/removed_stones"];
+
+    /** The server could not produce a dead-stone proposal for this stone
+     * removal phase; a player's client scores locally instead. */
+    "game/:id/auto_scoring_failed": (data: Record<string, never>) => void;
+    [k: `game/${number}/auto_scoring_failed`]: ServerToClient["game/:id/auto_scoring_failed"];
 
     /** The stone removal phase has been completed, this is the final state and
      * indicates a phase change to the given phase (should always be

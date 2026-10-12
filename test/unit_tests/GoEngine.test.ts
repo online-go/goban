@@ -1198,3 +1198,15 @@ describe("multi-move undo", () => {
         });
     });
 });
+
+describe("auto_scoring_done", () => {
+    test("is carried from the config", () => {
+        const engine = new GobanEngine({ width: 9, height: 9, auto_scoring_done: true });
+        expect(engine.auto_scoring_done).toBe(true);
+    });
+
+    test("is falsy when the config does not carry it", () => {
+        const engine = new GobanEngine({ width: 9, height: 9 });
+        expect(engine.auto_scoring_done).toBeFalsy();
+    });
+});
