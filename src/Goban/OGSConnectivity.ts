@@ -85,6 +85,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
         this.on("load", () => {
             if (this.engine.phase !== "stone removal") {
+                // A game that ends by resignation, timeout or annulment
+                // reloads instead of sending a phase message.
+                delete this.stone_removal_auto_scoring_done;
+                this.serverAutoScoringEnded();
                 return;
             }
             if (this.engine.auto_scoring_done) {
@@ -1561,6 +1565,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
         }, SERVER_AUTOSCORE_WAIT_MS);
     }
 
+    protected isAwaitingServerAutoScoring(): boolean {
+        return !!this.server_autoscore_timer;
+    }
+
     private cancelServerAutoScoringWait(): void {
         if (this.server_autoscore_timer) {
             clearTimeout(this.server_autoscore_timer);
@@ -1636,6 +1644,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         return;
                     }
                     completed = true;
+
+                    if (this.engine.phase !== "stone removal") {
+                        this.clearMessage();
+                        this.emit("stone-removal.auto-scoring-complete");
+                        return;
+                    }
 
                     const current_removed = this.engine.getStoneRemovalString();
                     const new_removed = se.getProbablyDead();

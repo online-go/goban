@@ -9,7 +9,7 @@
 
 (global as any).CLIENT = true;
 
-import { TestGoban } from "../../src/index";
+import { init_remote_ownership_estimator, TestGoban } from "../../src/index";
 import { SERVER_AUTOSCORE_WAIT_MS } from "../../src/Goban/OGSConnectivity";
 
 const GAME_ID = 7;
@@ -356,6 +356,80 @@ describe("stone removal autoscoring", () => {
         receive(`game/${GAME_ID}/phase`, "stone removal");
 
         expect(local).toHaveBeenCalledTimes(1);
+        goban.destroy();
+    });
+
+    test("ignores the player's stone removal clicks while waiting for the proposal", () => {
+        const { goban, send, receive } = makeGoban();
+        jest.spyOn(goban, "performStoneRemovalAutoScoring").mockImplementation(() => {});
+        // shift-click forces the mark even on a group that looks alive
+        const tap = (x: number, y: number) => (goban as any).tapAtImpl(x, y, false, false, true, 0);
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        tap(1, 0);
+
+        expect(sentRemovedStones(send)).toHaveLength(0);
+        expect(goban.engine.removal[0][1]).toBe(false);
+
+        receive(`game/${GAME_ID}/removed_stones`, {
+            removed: true,
+            stones: "aa",
+            all_removed: "aa",
+            auto_scored: true,
+        });
+        tap(1, 0);
+
+        expect(sentRemovedStones(send)).toHaveLength(1);
+        expect(goban.engine.removal[0][0]).toBe(true);
+        expect(goban.engine.removal[0][1]).toBe(true);
+        goban.destroy();
+    });
+
+    test("a game that ends by reload during the wait is not scored", () => {
+        const { goban, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+        const local = jest
+            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .mockImplementation(() => {});
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        receive(
+            `game/${GAME_ID}/gamedata`,
+            gamedata({ phase: "finished", outcome: "Resignation", winner: WHITE }),
+        );
+        jest.advanceTimersByTime(SERVER_AUTOSCORE_WAIT_MS);
+
+        expect(complete).toHaveBeenCalledTimes(1);
+        expect(local).not.toHaveBeenCalled();
+        goban.destroy();
+    });
+
+    test("a local score that lands after the game ended changes nothing", async () => {
+        let finishScoring!: (res: any) => void;
+        init_remote_ownership_estimator(() => new Promise((resolve) => (finishScoring = resolve)));
+        const { goban, send, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        goban.performStoneRemovalAutoScoring();
+        await jest.advanceTimersByTimeAsync(10);
+        receive(
+            `game/${GAME_ID}/gamedata`,
+            gamedata({ phase: "finished", outcome: "Resignation", winner: WHITE }),
+        );
+        finishScoring({
+            ownership: Array.from({ length: 9 }, () => Array(9).fill(-1)),
+            autoscored_removed: [{ x: 0, y: 0 }],
+            autoscored_board_state: Array.from({ length: 9 }, () => Array(9).fill(2)),
+            autoscored_needs_sealing: [],
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(sentRemovedStones(send)).toHaveLength(0);
+        expect(goban.engine.removal[0][0]).toBe(false);
+        expect(complete).toHaveBeenCalled();
         goban.destroy();
     });
 
