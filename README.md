@@ -76,6 +76,11 @@ Be ready for CI check on PR:
 -   run tests `npm test`
 -   run prettify `npm run prettier`
 
+When you open the PR, make sure **Allow edits and access to secrets by maintainers** is selected. This lets the maintainers push fixes to your branch. The "Allow edits by maintainers" check fails on pull requests that do not allow it.
+
+-   If you forgot, select it in the sidebar of the pull request, then push a commit.
+-   GitHub does not show this option when your fork belongs to an organization. Fork the repository to your personal account instead.
+
 [Optional] You can also set up a pre-commit to run checks locally before you commit:
 
 ```
