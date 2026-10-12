@@ -847,3 +847,46 @@ describe("custom board grid background (canvas layers)", () => {
         goban.destroy();
     });
 });
+
+describe("last move on an empty point", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    function drawingHash(goban: GobanCanvas, i: number, j: number): string {
+        return (goban as unknown as { drawingHash(i: number, j: number): string }).drawingHash(
+            i,
+            j,
+        );
+    }
+
+    test("a sent suicide changes the cell's drawing hash", () => {
+        const goban = new GobanCanvas(basic3x3Config({ rules: "nz" }));
+        goban.engine.place(1, 0);
+        goban.engine.place(2, 2);
+        goban.engine.place(0, 1);
+        goban.engine.place(0, 0);
+        expect(goban.engine.board[0][0]).toBe(0);
+
+        const at_suicide = drawingHash(goban, 0, 0);
+        goban.engine.showPrevious();
+        expect(drawingHash(goban, 0, 0)).not.toBe(at_suicide);
+
+        goban.destroy();
+    });
+
+    test("erasing a stone in edit mode does not mark the empty point", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        goban.engine.place(1, 1);
+        goban.engine.editPlace(1, 1, 0);
+
+        expect(drawingHash(goban, 1, 1)).not.toContain("last_move");
+
+        goban.destroy();
+    });
+});
