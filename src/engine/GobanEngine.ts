@@ -101,7 +101,10 @@ export interface GobanEnginePlayerEntry {
 
     /** XXX: The server is using these, the client may or may not be, we need to normalize this */
     name?: string;
-    pro?: boolean;
+
+    /** Players with OGS accounts send professional, players without OGS accounts (e.g. on demo boards) send pro */
+    pro?: boolean | 0 | 1;
+    professional?: boolean;
 }
 
 // The word "array" is deliberately included in the type name to differentiate from a move tree.
@@ -184,6 +187,15 @@ export interface GobanEngineConfig extends BoardConfig {
 
     /** a bit confusing — this reflects the last time a pause was started, even if the game is not currently paused */
     paused_since?: number;
+    pause_on_weekends?: boolean;
+
+    undo_requested?: number; // move number
+    undo_requested_by?: number; // user ID
+    undo_requested_move_count?: number;
+
+    state_version?: number;
+    malkovich_present?: boolean;
+    meta_groups?: number[];
 
     /** Optional bot parameters */
     bot_parameters?: {

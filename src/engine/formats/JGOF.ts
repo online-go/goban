@@ -215,7 +215,7 @@ export interface JGOFFischerTimeControl {
     initial_time: number;
     time_increment: number;
     max_time: number;
-    pause_on_weekends: boolean;
+    pause_on_weekends?: boolean;
 }
 export interface JGOFByoYomiTimeControl {
     system: "byoyomi";
@@ -223,7 +223,7 @@ export interface JGOFByoYomiTimeControl {
     main_time: number;
     period_time: number;
     periods: number;
-    pause_on_weekends: boolean;
+    pause_on_weekends?: boolean;
 }
 export interface JGOFCanadianTimeControl {
     system: "canadian";
@@ -231,24 +231,24 @@ export interface JGOFCanadianTimeControl {
     main_time: number;
     period_time: number;
     stones_per_period: number;
-    pause_on_weekends: boolean;
+    pause_on_weekends?: boolean;
 }
 export interface JGOFSimpleTimeControl {
     system: "simple";
     speed: JGOFTimeControlSpeed;
     per_move: number;
-    pause_on_weekends: boolean;
+    pause_on_weekends?: boolean;
 }
 export interface JGOFAbsoluteTimeControl {
     system: "absolute";
     speed: JGOFTimeControlSpeed;
     total_time: number;
-    pause_on_weekends: boolean;
+    pause_on_weekends?: boolean;
 }
 export interface JGOFNoneTimeControl {
     system: "none";
     speed: "correspondence";
-    pause_on_weekends: boolean;
+    pause_on_weekends?: boolean;
 }
 
 export type JGOFTimeControl =
