@@ -1108,7 +1108,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         }
 
                         this.disableDrawing();
-                        /* TODO: Clear our state here better */
+                        // A save sends the whole log again. Replay it from an
+                        // empty tree, including for the controller. Leaving
+                        // the flag set makes the controller skip the moves.
+                        this.done_loading_review = false;
 
                         this.emit("review.load-start");
                         bulk_processing = true;
