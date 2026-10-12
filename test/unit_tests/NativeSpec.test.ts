@@ -312,6 +312,14 @@ describe("buildLastMove", () => {
         });
     });
 
+    test("no last move where a stone was erased in edit mode", () => {
+        const src = source();
+        src.engine.place(1, 1);
+        src.engine.editPlace(1, 1, 0);
+        expect(src.engine.board[1][1]).toBe(0);
+        expect(buildLastMove(src)).toBeNull();
+    });
+
     test("suppressed by text at the same point", () => {
         const src = source();
         src.engine.place(1, 2);

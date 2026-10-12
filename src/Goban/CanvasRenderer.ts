@@ -2097,6 +2097,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
+                (this.engine.board[j][i] || !this.engine.cur_move.edited) &&
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 this.last_move = this.engine.cur_move;
@@ -2615,7 +2616,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (
                 this.engine.cur_move.x === i &&
                 this.engine.cur_move.y === j &&
-                (this.engine.board[j][i] || (!!this.submit_move && !this.engine.board[j][i])) &&
+                (this.engine.board[j][i] || !this.engine.cur_move.edited) &&
                 (this.engine.phase === "play" || this.engine.phase === "finished")
             ) {
                 ret += "last_move,";

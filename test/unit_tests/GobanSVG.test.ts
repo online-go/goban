@@ -929,6 +929,20 @@ describe("suicide submit mark", () => {
 
         goban.destroy();
     });
+
+    test("erasing a stone in edit mode does not leave a last-move circle", () => {
+        const goban = new SVGRenderer(basic3x3Config());
+        goban.engine.place(1, 1);
+        goban.engine.editPlace(1, 1, 0);
+        goban.redraw(true);
+
+        expect(goban.engine.board[1][1]).toBe(0);
+        expect(
+            (goban as unknown as { svg: SVGSVGElement }).svg.querySelector("circle.last-move"),
+        ).toBeNull();
+
+        goban.destroy();
+    });
 });
 
 describe("touch on the board blurs the chat field", () => {

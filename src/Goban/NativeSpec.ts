@@ -455,6 +455,9 @@ export function buildLastMove(src: SpecSource): NativeLastMove | null {
         return null;
     }
     const stone_color = engine.board[m.y][m.x];
+    if (!stone_color && m.edited) {
+        return null;
+    }
     if (!(engine.phase === "play" || engine.phase === "finished")) {
         return null;
     }
