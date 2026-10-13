@@ -21,6 +21,8 @@ import type {
     RemoteStorageReplication,
     BotConfig,
     RuleSet,
+    Ratings,
+    GameChatTranslatedMessage,
 } from "./ClientToServer";
 import type {
     JGOFSealingIntersection,
@@ -29,7 +31,7 @@ import type {
 } from "../formats/JGOF";
 import type { ConditionalMoveResponse } from "../ConditionalMoveTree";
 import type { GobanEngineConfig, Score, ReviewMessage } from "../GobanEngine";
-import type { AdHocPackedMove } from "../formats/AdHocFormat";
+import type { AdHocPackedMove, AdHocPauseControl } from "../formats/AdHocFormat";
 
 interface Vote {
     voter_id: number;
@@ -125,7 +127,7 @@ export interface ServerToClient {
 
     /** Updates whether a user is online or not. Subscribe to these updates for
      *  particular users using the `user/monitor` command. */
-    "user/state": (data: { [player_id: number]: boolean }) => void;
+    "user/state": (data: { [player_id: number]: 0 | 1 }) => void;
     /** A notification that should be displayed to the user
      *  These are not strongly modeled, see
      *     https://github.com/online-go/online-go.com/blob/devel/src/components/Notifications/Notifications.tsx
@@ -166,11 +168,8 @@ export interface ServerToClient {
     "automatch/available/add": (data: {
         uuid: string;
         preferences: AutomatchPreferences;
-        player: {
-            id: number;
-            username: string;
-        };
-        created: number;
+        player: AutomatchAvailableUser;
+        created?: number;
     }) => void;
 
     /** An automatch offer was removed */
@@ -455,7 +454,9 @@ export interface ServerToClient {
     [k: `game/${number}/error`]: ServerToClient["game/:id/error"];
 
     /** Update the entire game state */
-    "game/:id/gamedata": (data: GobanEngineConfig) => void;
+    "game/:id/gamedata": (
+        data: GobanEngineConfig & { [key: `pauses_left_${number}`]: number },
+    ) => void;
     [k: `game/${number}/gamedata`]: ServerToClient["game/:id/gamedata"];
 
     /** Update latency information for a player */
@@ -595,14 +596,18 @@ export interface ServerToClient {
 
 export interface GameChatLine {
     chat_id: string;
-    body: string | AnalysisComment | ReviewComment;
+    body: string | GameChatTranslatedMessage | AnalysisComment | ReviewComment;
     date: number;
     move_number: number;
     from?: number;
     moves?: string;
-    channel: string;
+    channel?: string;
     player_id: number;
     username?: string;
+    professional: 0 | 1; // Yes, a number rather than a bool
+    ui_class: string;
+    ranking: number;
+    ratings?: Ratings;
 }
 interface AnalysisComment {
     type: "analysis";
@@ -667,10 +672,27 @@ export interface GameClock {
     pause?: {
         paused?: boolean;
         paused_since?: number;
-        pause_control?: {
-            [key: string]: boolean;
-        };
+        pause_control?: AdHocPauseControl;
+        pausing_player_id?: number;
+        pauses_left?: number;
     };
+}
+
+export interface AutomatchAvailableUser {
+    "id": number;
+    "username": string;
+    "bounded_rank": number;
+    "unbounded_rank": number;
+    "country"?: string;
+    "deviation": number;
+    "icon-url"?: string;
+    "ui_class"?: string;
+    "professional": 0 | 1;
+    "starting_rank_hint"?: string;
+    "rank": number;
+    "rank_deviation": number;
+    "rating": number;
+    "ratings": Ratings;
 }
 
 export interface SeekgraphDeleteMessage {

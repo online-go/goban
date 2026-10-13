@@ -795,6 +795,7 @@ export interface AutomatchPreferences {
         condition: AutomatchCondition;
         value: "enabled" | "disabled";
     };
+    time_control?: unknown;
 }
 
 /** This enum defines the various replication strategies for the remote storage
@@ -843,6 +844,7 @@ interface GameListPlayer {
     rank: number;
     professional: boolean;
     accepted: boolean;
+    ui_class?: string;
     ratings: {
         version: number;
         overall: {
@@ -885,6 +887,7 @@ export interface GameListEntry {
     bot_game?: boolean;
     ranked?: boolean;
     handicap?: number;
+    handicap_rank_difference?: number;
     tournament_id?: number;
     ladder_id?: number;
     komi?: number;
@@ -900,7 +903,7 @@ export interface GameListEntry {
 export interface User {
     id: number;
     username: string;
-    ratings?: { [speed_size: string]: Glicko2 };
+    ratings?: Ratings;
     ranking?: number;
     professional?: boolean;
     country?: string;
@@ -913,6 +916,19 @@ export interface Glicko2 {
     volatility: number;
     games_played?: number;
 }
+
+export type Ratings = {
+    version?: number;
+    overall: Glicko2;
+} & {
+    [game_type in
+        | Size
+        | Speed
+        | `${Speed}-${Size}`
+        | `league-${number}-${Size}`
+        | `league-${number}-${Speed}`
+        | `league-${number}-${Speed}-${Size}`]?: Glicko2;
+};
 
 export interface GameChatTranslatedMessage {
     type: "translated";
