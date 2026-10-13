@@ -4,13 +4,27 @@
 
 /*
  * A player's client waits for the server's dead-stone proposal at stone
- * removal and scores locally only when the server cannot.
+ * removal and scores locally only when the server cannot. The board stays
+ * interactive while it waits.
  */
 
 (global as any).CLIENT = true;
 
-import { TestGoban } from "../../src/index";
+jest.mock("../../src/engine/ownership_estimators/wasm_estimator", () => ({
+    ...jest.requireActual("../../src/engine/ownership_estimators/wasm_estimator"),
+    init_wasm_ownership_estimator: jest.fn(() => Promise.resolve(true)),
+}));
+
+import {
+    init_remote_ownership_estimator,
+    set_local_ownership_estimator,
+    TestGoban,
+} from "../../src/index";
 import { SERVER_AUTOSCORE_WAIT_MS } from "../../src/Goban/OGSConnectivity";
+import {
+    init_wasm_ownership_estimator,
+    wasm_estimate_ownership,
+} from "../../src/engine/ownership_estimators/wasm_estimator";
 
 const GAME_ID = 7;
 const BLACK = 123;
@@ -78,6 +92,11 @@ function sentRemovedStones(send: jest.Mock): unknown[] {
     return send.mock.calls.filter((call) => call[0] === "game/removed_stones/set");
 }
 
+/** shift-click forces the mark even on a group that looks alive */
+function tap(goban: TestGoban, x: number, y: number): void {
+    (goban as any).tapAtImpl(x, y, false, false, true, 0);
+}
+
 describe("stone removal autoscoring", () => {
     beforeEach(() => {
         jest.useFakeTimers();
@@ -94,7 +113,7 @@ describe("stone removal autoscoring", () => {
         const started = jest.fn();
         goban.on("stone-removal.auto-scoring-started", started);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
@@ -113,7 +132,7 @@ describe("stone removal autoscoring", () => {
         goban.on("stone-removal.auto-scoring-complete", complete);
         goban.on("stone-removal.needs-sealing", sealing);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
@@ -137,9 +156,9 @@ describe("stone removal autoscoring", () => {
         goban.destroy();
     });
 
-    test("a proposal replaces marks made before it arrived", () => {
+    test("the board takes the whole state from an autoscore result", () => {
         const { goban, receive } = makeGoban();
-        jest.spyOn(goban, "performStoneRemovalAutoScoring").mockImplementation(() => {});
+        jest.spyOn(goban as any, "scoreStoneRemovalLocally").mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
         receive(`game/${GAME_ID}/removed_stones`, {
@@ -164,7 +183,7 @@ describe("stone removal autoscoring", () => {
     test("scores locally when the server reports failure", () => {
         const { goban, receive } = makeGoban();
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
@@ -179,7 +198,7 @@ describe("stone removal autoscoring", () => {
     test("scores locally when no proposal arrives in time", () => {
         const { goban, receive } = makeGoban();
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
         const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -200,7 +219,7 @@ describe("stone removal autoscoring", () => {
         const started = jest.fn();
         goban.on("stone-removal.auto-scoring-started", started);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
@@ -218,7 +237,7 @@ describe("stone removal autoscoring", () => {
         const complete = jest.fn();
         goban.on("stone-removal.auto-scoring-complete", complete);
         const clearMessage = jest.spyOn(goban, "clearMessage");
-        jest.spyOn(goban, "performStoneRemovalAutoScoring").mockImplementation(() => {});
+        jest.spyOn(goban as any, "scoreStoneRemovalLocally").mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
         clearMessage.mockClear();
@@ -234,7 +253,7 @@ describe("stone removal autoscoring", () => {
         const started = jest.fn();
         goban.on("stone-removal.auto-scoring-started", started);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
@@ -256,13 +275,14 @@ describe("stone removal autoscoring", () => {
         goban.destroy();
     });
 
-    test("ends the wait without scoring when another client marks stones first", () => {
+    test("a manual mark from either player does not end the wait", () => {
         const { goban, receive } = makeGoban();
         const complete = jest.fn();
         goban.on("stone-removal.auto-scoring-complete", complete);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
+        const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
         receive(`game/${GAME_ID}/removed_stones`, {
@@ -271,10 +291,11 @@ describe("stone removal autoscoring", () => {
             all_removed: "ba",
         });
 
-        expect(complete).toHaveBeenCalledTimes(1);
         expect(goban.engine.removal[0][1]).toBe(true);
+        expect(complete).not.toHaveBeenCalled();
         jest.advanceTimersByTime(SERVER_AUTOSCORE_WAIT_MS);
-        expect(local).not.toHaveBeenCalled();
+        expect(local).toHaveBeenCalledTimes(1);
+        warn.mockRestore();
         goban.destroy();
     });
 
@@ -283,7 +304,7 @@ describe("stone removal autoscoring", () => {
         const complete = jest.fn();
         goban.on("stone-removal.auto-scoring-complete", complete);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
@@ -304,7 +325,7 @@ describe("stone removal autoscoring", () => {
         const started = jest.fn();
         goban.on("stone-removal.auto-scoring-started", started);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(
@@ -323,7 +344,7 @@ describe("stone removal autoscoring", () => {
         const { goban, receive } = makeGoban();
         const started = jest.fn();
         goban.on("stone-removal.auto-scoring-started", started);
-        jest.spyOn(goban, "performStoneRemovalAutoScoring").mockImplementation(() => {});
+        jest.spyOn(goban as any, "scoreStoneRemovalLocally").mockImplementation(() => {});
 
         // A game resumed from stone removal can still carry the flag; a
         // client that loads during that play phase must not trust it.
@@ -339,7 +360,7 @@ describe("stone removal autoscoring", () => {
         const { goban, receive } = makeGoban();
         const started = jest.fn();
         goban.on("stone-removal.auto-scoring-started", started);
-        jest.spyOn(goban, "performStoneRemovalAutoScoring").mockImplementation(() => {});
+        jest.spyOn(goban as any, "scoreStoneRemovalLocally").mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/gamedata`, gamedata({ phase: "stone removal" }));
 
@@ -350,12 +371,183 @@ describe("stone removal autoscoring", () => {
     test("scores locally at once on a 25x25 board", () => {
         const { goban, receive } = makeGoban({ width: 25, height: 25 });
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
 
         expect(local).toHaveBeenCalledTimes(1);
+        goban.destroy();
+    });
+
+    test("the player can mark stones while waiting for the proposal", () => {
+        const { goban, send, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+        jest.spyOn(goban as any, "scoreStoneRemovalLocally").mockImplementation(() => {});
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        tap(goban, 1, 0);
+
+        expect(sentRemovedStones(send)).toEqual([
+            [
+                "game/removed_stones/set",
+                expect.objectContaining({ removed: true, stones: "ba" }),
+            ],
+        ]);
+        expect((sentRemovedStones(send)[0] as any)[1].auto_scored).toBeUndefined();
+        expect(goban.engine.removal[0][1]).toBe(true);
+        expect(complete).not.toHaveBeenCalled();
+
+        receive(`game/${GAME_ID}/removed_stones`, {
+            removed: true,
+            stones: "aaba",
+            all_removed: "aaba",
+            auto_scored: true,
+        });
+
+        expect(goban.engine.removal[0][0]).toBe(true);
+        expect(goban.engine.removal[0][1]).toBe(true);
+        expect(complete).toHaveBeenCalledTimes(1);
+        goban.destroy();
+    });
+
+    test("the fallback scores with WASM and leaves the merge to the server", async () => {
+        const remote = jest.fn(() => Promise.reject(new Error("remote scorer called")));
+        init_remote_ownership_estimator(remote);
+        const local = jest.fn((board: number[][]) => board.map((row) => row.map(() => 1)));
+        set_local_ownership_estimator(local);
+        const { goban, send, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+        const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        await jest.advanceTimersByTimeAsync(SERVER_AUTOSCORE_WAIT_MS + 10);
+
+        expect(local).toHaveBeenCalled();
+        expect(remote).not.toHaveBeenCalled();
+        expect(sentRemovedStones(send)).toEqual([
+            [
+                "game/removed_stones/set",
+                expect.objectContaining({
+                    removed: true,
+                    stones: expect.stringMatching(/^(..)+$/),
+                    auto_scored: true,
+                }),
+            ],
+        ]);
+        expect((sentRemovedStones(send)[0] as any)[1].replace).toBeUndefined();
+        expect(goban.engine.getStoneRemovalString()).toBe("");
+        expect(complete).toHaveBeenCalledTimes(1);
+        warn.mockRestore();
+        set_local_ownership_estimator(wasm_estimate_ownership);
+        goban.destroy();
+    });
+
+    test("a fallback without a loaded WASM estimator sends nothing", async () => {
+        (init_wasm_ownership_estimator as jest.Mock).mockRejectedValueOnce(
+            "score estimator not available",
+        );
+        const { goban, send, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+        const showMessage = jest.spyOn(goban, "showMessage");
+        const error = jest.spyOn(console, "error").mockImplementation(() => {});
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        receive(`game/${GAME_ID}/auto_scoring_failed`, {});
+        await jest.advanceTimersByTimeAsync(10);
+
+        expect(sentRemovedStones(send)).toHaveLength(0);
+        expect(showMessage).toHaveBeenCalledWith("error", expect.anything(), 3000);
+        expect(complete).toHaveBeenCalledTimes(1);
+        error.mockRestore();
+        goban.destroy();
+    });
+
+    test("the Auto-score button's result replaces the manual marks", async () => {
+        let finishScoring!: (res: any) => void;
+        init_remote_ownership_estimator(() => new Promise((resolve) => (finishScoring = resolve)));
+        const { goban, send, receive } = makeGoban();
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        receive(`game/${GAME_ID}/removed_stones`, {
+            removed: true,
+            stones: "ba",
+            all_removed: "ba",
+        });
+        goban.performStoneRemovalAutoScoring();
+        await jest.advanceTimersByTimeAsync(10);
+        finishScoring({
+            ownership: Array.from({ length: 9 }, () => Array(9).fill(-1)),
+            autoscored_removed: [{ x: 0, y: 0 }],
+            autoscored_board_state: Array.from({ length: 9 }, () => Array(9).fill(2)),
+            autoscored_needs_sealing: [],
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(sentRemovedStones(send)).toEqual([
+            [
+                "game/removed_stones/set",
+                expect.objectContaining({
+                    removed: true,
+                    stones: "aa",
+                    auto_scored: true,
+                    replace: true,
+                }),
+            ],
+        ]);
+        expect(goban.engine.removal[0][0]).toBe(true);
+        expect(goban.engine.removal[0][1]).toBe(false);
+        goban.destroy();
+    });
+
+    test("a game that ends by reload during the wait is not scored", () => {
+        const { goban, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+        const local = jest
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
+            .mockImplementation(() => {});
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        receive(
+            `game/${GAME_ID}/gamedata`,
+            gamedata({ phase: "finished", outcome: "Resignation", winner: WHITE }),
+        );
+        jest.advanceTimersByTime(SERVER_AUTOSCORE_WAIT_MS);
+
+        expect(complete).toHaveBeenCalledTimes(1);
+        expect(local).not.toHaveBeenCalled();
+        goban.destroy();
+    });
+
+    test("a local score that lands after the game ended changes nothing", async () => {
+        let finishScoring!: (res: any) => void;
+        init_remote_ownership_estimator(() => new Promise((resolve) => (finishScoring = resolve)));
+        const { goban, send, receive } = makeGoban();
+        const complete = jest.fn();
+        goban.on("stone-removal.auto-scoring-complete", complete);
+
+        receive(`game/${GAME_ID}/phase`, "stone removal");
+        goban.performStoneRemovalAutoScoring();
+        await jest.advanceTimersByTimeAsync(10);
+        receive(
+            `game/${GAME_ID}/gamedata`,
+            gamedata({ phase: "finished", outcome: "Resignation", winner: WHITE }),
+        );
+        finishScoring({
+            ownership: Array.from({ length: 9 }, () => Array(9).fill(-1)),
+            autoscored_removed: [{ x: 0, y: 0 }],
+            autoscored_board_state: Array.from({ length: 9 }, () => Array(9).fill(2)),
+            autoscored_needs_sealing: [],
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(sentRemovedStones(send)).toHaveLength(0);
+        expect(goban.engine.removal[0][0]).toBe(false);
+        expect(complete).toHaveBeenCalled();
         goban.destroy();
     });
 
@@ -365,7 +557,7 @@ describe("stone removal autoscoring", () => {
         const started = jest.fn();
         goban.on("stone-removal.auto-scoring-started", started);
         const local = jest
-            .spyOn(goban, "performStoneRemovalAutoScoring")
+            .spyOn(goban as any, "scoreStoneRemovalLocally")
             .mockImplementation(() => {});
 
         receive(`game/${GAME_ID}/phase`, "stone removal");
