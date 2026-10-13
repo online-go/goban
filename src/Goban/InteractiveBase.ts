@@ -129,8 +129,6 @@ export abstract class GobanInteractive extends GobanBase {
     protected abstract socket: IGobanSocket;
     /** Implemented by OGSConnectivity; declared here so tapAtImpl can use it. */
     protected abstract syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void;
-    /** Implemented by OGSConnectivity; declared here so tapAtImpl can use it. */
-    protected abstract isAwaitingServerAutoScoring(): boolean;
 
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: ConditionalMoveTree = new ConditionalMoveTree(null);
@@ -1734,10 +1732,6 @@ export abstract class GobanInteractive extends GobanBase {
                 this.engine.isActivePlayer(this.player_id) &&
                 this.engine.cur_move === this.engine.last_official_move
             ) {
-                if (this.isAwaitingServerAutoScoring()) {
-                    // A mark now would make the server drop its proposal
-                    return;
-                }
                 const { removed, group } = this.engine.toggleSingleGroupRemoval(
                     x,
                     y,

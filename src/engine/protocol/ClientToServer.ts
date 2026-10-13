@@ -237,6 +237,17 @@ export interface ClientToServer extends ClientToServerBase {
          * source of confusion. This field is deprecated and will likely be
          * removed in the future.*/
         strict_seki_mode?: boolean;
+
+        /** True if `stones` is a whole autoscore result, sent with `removed`
+         * true, rather than a toggle. The server merges it with the players'
+         * manual marks, the manual marks winning, unless `replace` is set. It
+         * is dropped if an autoscore result was already applied. */
+        auto_scored?: boolean;
+
+        /** With `auto_scored`, the result replaces the whole stone removal
+         * state, including the manual marks, and is always applied. Used by
+         * the "Auto-score" button. */
+        replace?: boolean;
     }) => void;
 
     /** Rejects the removed stones and resumes the game from the stone removal phase */

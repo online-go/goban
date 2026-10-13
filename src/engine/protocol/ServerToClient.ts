@@ -512,11 +512,12 @@ export interface ServerToClient {
                   /** Current state of all removed stones */
                   all_removed: string;
                   /** Intersections that still need sealing before the game
-                   * can be scored. Sent with the server's proposal. */
+                   * can be scored. Sent with an autoscore result. */
                   needs_sealing?: JGOFSealingIntersection[];
-                  /** True when this is the server's dead-stone proposal:
-                   * `all_removed` is the whole proposal and replaces any
-                   * earlier marks. */
+                  /** True when this is an autoscore result: the server's
+                   * dead-stone proposal or a client's result, merged with the
+                   * players' manual marks, or the result of the "Auto-score"
+                   * button. `all_removed` is the whole new state. */
                   auto_scored?: boolean;
               }
             | { strict_seki_mode: boolean },

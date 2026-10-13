@@ -33,6 +33,7 @@ import {
     GobanSocketEvents,
     ConditionalMoveTree,
     GobanEngine,
+    init_wasm_ownership_estimator,
     JGOFIntersection,
     JGOFPauseState,
     JGOFPlayerClock,
@@ -777,12 +778,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.emit("stone-removal.updated");
 
                         if (cfg.auto_scored) {
+                            // The server's proposal or a client's result,
+                            // merged with the manual marks. A manual mark
+                            // does not stop the server from proposing.
                             this.engine.auto_scoring_done = true;
+                            this.serverAutoScoringEnded();
                         }
-                        // Any marks ending up on the server mean it will not
-                        // propose: either this is its proposal, or someone
-                        // scored first and the server yields to them.
-                        this.serverAutoScoringEnded();
                     }
                     this.updateTitleAndStonePlacement();
                     this.emit("update");
@@ -795,7 +796,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         return;
                     }
                     this.cancelServerAutoScoringWait();
-                    this.performStoneRemovalAutoScoring();
+                    this.scoreStoneRemovalLocally();
                 },
             );
             this._socket_on(
@@ -1547,7 +1548,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
             this.width > MAX_REMOTE_SCORING_BOARD_SIZE ||
             this.height > MAX_REMOTE_SCORING_BOARD_SIZE
         ) {
-            this.performStoneRemovalAutoScoring();
+            this.scoreStoneRemovalLocally();
             return;
         }
         this.awaitServerAutoScoring();
@@ -1561,12 +1562,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.server_autoscore_timer = setTimeout(() => {
             delete this.server_autoscore_timer;
             console.warn("No dead-stone proposal from the server, scoring locally");
-            this.performStoneRemovalAutoScoring();
+            this.scoreStoneRemovalLocally();
         }, SERVER_AUTOSCORE_WAIT_MS);
-    }
-
-    protected isAwaitingServerAutoScoring(): boolean {
-        return !!this.server_autoscore_timer;
     }
 
     private cancelServerAutoScoringWait(): void {
@@ -1587,7 +1584,24 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.emit("stone-removal.auto-scoring-complete");
     }
 
+    /**
+     * The "Auto-score" button. Scores with the remote scorer, and the result
+     * replaces the stone removal state, including the players' manual marks.
+     */
     public performStoneRemovalAutoScoring(): void {
+        this.runStoneRemovalAutoScoring(false);
+    }
+
+    /**
+     * Scores with the local WASM estimator when the server has no proposal.
+     * The server merges the result with the players' manual marks and
+     * broadcasts it, so the board is not changed here.
+     */
+    protected scoreStoneRemovalLocally(): void {
+        this.runStoneRemovalAutoScoring(true);
+    }
+
+    private runStoneRemovalAutoScoring(fallback: boolean): void {
         if (!this.isStoneRemovalAutoScoringPlayer()) {
             return;
         }
@@ -1597,6 +1611,24 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
         this.showMessage("processing", undefined, -1);
         this.emit("stone-removal.auto-scoring-started");
+
+        const finish = () => {
+            this.clearMessage();
+            this.emit("stone-removal.auto-scoring-complete");
+        };
+        const fail = () => {
+            finish();
+            this.showMessage(
+                "error",
+                {
+                    error: {
+                        message: _("Auto-scoring failed, please manually score the game"),
+                    },
+                },
+                3000,
+            );
+        };
+
         const do_score_estimation = () => {
             let se: ScoreEstimator;
             try {
@@ -1605,15 +1637,14 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this,
                     AUTOSCORE_TRIALS,
                     AUTOSCORE_TOLERANCE,
-                    true /* prefer remote */,
+                    !fallback /* prefer remote */,
                     true /* autoscore */,
                     /* Don't use existing stone removal markings for auto scoring */
                     makeMatrix(this.width, this.height, false),
                 );
             } catch (err) {
                 console.error("Failed to create ScoreEstimator:", err);
-                this.clearMessage();
-                this.emit("stone-removal.auto-scoring-complete");
+                finish();
                 return;
             }
 
@@ -1624,17 +1655,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 }
                 completed = true;
                 console.error("Auto-scoring timed out after 30 seconds");
-                this.clearMessage();
-                this.emit("stone-removal.auto-scoring-complete");
-                this.showMessage(
-                    "error",
-                    {
-                        error: {
-                            message: _("Auto-scoring failed, please manually score the game"),
-                        },
-                    },
-                    3000,
-                );
+                fail();
             }, 30000);
 
             se.when_ready
@@ -1645,14 +1666,27 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     }
                     completed = true;
 
-                    if (this.engine.phase !== "stone removal") {
-                        this.clearMessage();
-                        this.emit("stone-removal.auto-scoring-complete");
+                    if (
+                        this.engine.phase !== "stone removal" ||
+                        (fallback && this.engine.auto_scoring_done)
+                    ) {
+                        finish();
                         return;
                     }
 
-                    const current_removed = this.engine.getStoneRemovalString();
                     const new_removed = se.getProbablyDead();
+
+                    if (fallback) {
+                        this.socket.send("game/removed_stones/set", {
+                            game_id: this.game_id,
+                            removed: true,
+                            needs_sealing: se.autoscored_needs_sealing,
+                            stones: new_removed,
+                            auto_scored: true,
+                        });
+                        finish();
+                        return;
+                    }
 
                     this.engine.clearRemoved();
                     const moves = this.engine.decodeMoves(new_removed);
@@ -1670,19 +1704,14 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
                     this.socket.send("game/removed_stones/set", {
                         game_id: this.game_id,
-                        removed: false,
-                        needs_sealing: se.autoscored_needs_sealing,
-                        stones: current_removed,
-                    });
-                    this.socket.send("game/removed_stones/set", {
-                        game_id: this.game_id,
                         removed: true,
                         needs_sealing: se.autoscored_needs_sealing,
                         stones: new_removed,
+                        auto_scored: true,
+                        replace: true,
                     });
 
-                    this.clearMessage();
-                    this.emit("stone-removal.auto-scoring-complete");
+                    finish();
                 })
                 .catch((err) => {
                     clearTimeout(timeout_handle);
@@ -1692,21 +1721,25 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     completed = true;
 
                     console.error(`Auto-scoring error: `, err);
-                    this.clearMessage();
-                    this.emit("stone-removal.auto-scoring-complete");
-                    this.showMessage(
-                        "error",
-                        {
-                            error: {
-                                message: _("Auto-scoring failed, please manually score the game"),
-                            },
-                        },
-                        3000,
-                    );
+                    fail();
                 });
         };
 
-        setTimeout(do_score_estimation, 10);
+        setTimeout(() => {
+            if (!fallback) {
+                do_score_estimation();
+                return;
+            }
+            // An estimator that is not loaded returns no ownership, which
+            // would mark every stone dead.
+            Promise.resolve()
+                .then(() => init_wasm_ownership_estimator())
+                .then(do_score_estimation)
+                .catch((err) => {
+                    console.error("Local score estimator not available:", err);
+                    fail();
+                });
+        }, 10);
     }
 
     public acceptRemovedStones(): void {
