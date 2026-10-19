@@ -751,6 +751,19 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         let startX = 0;
         let startY = 0;
 
+        // Android Chrome scrolls a focused chat field into view on touchstart,
+        // before touchend. Blur here as well so that scroll does not start.
+        const blurFocusedTextControl = () => {
+            const currentElement = document.activeElement;
+            if (
+                currentElement instanceof HTMLElement &&
+                (currentElement.tagName.toLowerCase() === "input" ||
+                    currentElement.tagName.toLowerCase() === "textarea")
+            ) {
+                currentElement.blur();
+            }
+        };
+
         const onTouchStart = (ev: TouchEvent) => {
             try {
                 if (mouse_disabled) {
@@ -767,6 +780,7 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
                     startX = ev.touches[0].clientX;
                     startY = ev.touches[0].clientY;
                     pointerDown(ev);
+                    blurFocusedTextControl();
                 } else if (dragging) {
                     pointerOut(ev);
                 }
@@ -776,16 +790,8 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
         };
         const onTouchEnd = (ev: TouchEvent) => {
             try {
-                // Stop a touch screen device always auto scrolling to the chat input box if it is active when you make a move
-                const currentElement = document.activeElement;
-                if (
-                    ev.target === canvas &&
-                    currentElement &&
-                    currentElement instanceof HTMLElement &&
-                    (currentElement.tagName.toLowerCase() === "input" ||
-                        currentElement.tagName.toLowerCase() === "textarea")
-                ) {
-                    currentElement.blur();
+                if (ev.target === canvas) {
+                    blurFocusedTextControl();
                 }
 
                 if (mouse_disabled) {
