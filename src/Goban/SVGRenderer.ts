@@ -627,6 +627,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             }
         };
 
+        const isBoardTouch = (ev: TouchEvent): boolean =>
+            (typeof ev.composedPath === "function" && ev.composedPath().includes(div)) ||
+            (ev.target instanceof Node && div.contains(ev.target));
+
         const onTouchStart = (ev: TouchEvent) => {
             try {
                 if (mouse_disabled) {
@@ -637,7 +641,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 }, 5000);
                 getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === div) {
+                if (isBoardTouch(ev)) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     startX = ev.touches[0].clientX;
@@ -667,7 +671,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             try {
                 this.activeTouchCompleter = undefined;
 
-                if (ev.target === div) {
+                if (isBoardTouch(ev)) {
                     blurFocusedTextControl();
                 }
 
@@ -678,7 +682,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     mouse_disabled = 0;
                 }, 5000);
 
-                if (ev.target === div) {
+                if (isBoardTouch(ev)) {
                     if (
                         Math.sqrt(
                             (startX - lastX) * (startX - lastX) +
@@ -706,7 +710,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 }, 5000);
                 getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === div) {
+                if (isBoardTouch(ev)) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     if (this.mode === "analyze" && this.analyze_tool === "draw") {
