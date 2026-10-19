@@ -138,6 +138,24 @@ describe("GobanSocket tests", () => {
         );
     });
 
+    test("Authenticate before connecting sends authenticate once", async () => {
+        const port = ++last_port;
+        const server = new WS(`ws://localhost:${port}`, { jsonProtocol: true });
+        const client = new GobanSocket(`ws://localhost:${port}`, { dont_ping: true, quiet: true });
+
+        client.authenticate({ jwt: "test" });
+        await server.connected;
+        await expect(server).toReceiveMessage(
+            expect.arrayContaining(["authenticate", { jwt: "test" }]),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const authentications = server.messages.filter(
+            (msg: any) => Array.isArray(msg) && msg[0] === "authenticate",
+        );
+        expect(authentications).toHaveLength(1);
+    });
+
     test("ping", async () => {
         const [server, client] = await sockets({ dont_ping: false, quiet: true });
         await expect(server).toReceiveMessage(expect.arrayContaining(["net/ping"]));

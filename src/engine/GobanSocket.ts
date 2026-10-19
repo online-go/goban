@@ -231,7 +231,10 @@ export class GobanSocket<
 
     public authenticate(authentication: DataArgument<SendProtocol["authenticate"]>): void {
         this.authentication = authentication;
-        this.send("authenticate", authentication);
+        /* When we aren't connected yet, the open handler sends it for us */
+        if (this.connected) {
+            this.send("authenticate", authentication);
+        }
     }
 
     private sendAuthentication(): void {
