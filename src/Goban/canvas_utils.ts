@@ -183,6 +183,11 @@ export function deviceCanvasScalingRatio() {
             1;
         const ratio = devicePixelRatio / backingStoreRatio;
         __deviceCanvasScalingRatio = ratio;
+
+        /* Release the backing store of this probe canvas now. Canvas memory is
+         * limited on WebKit and is otherwise held until garbage collection. */
+        canvas.width = 0;
+        canvas.height = 0;
     }
 
     return __deviceCanvasScalingRatio;

@@ -198,6 +198,34 @@ function pasteAlpha(
     }
     ctx.putImageData(image, 0, 0);
 }
+let warned_about_image_data = false;
+/**
+ * Returns the pixels of the canvas, or null when the browser cannot read them
+ * back. WebKit throws InvalidStateError from getImageData when the canvas
+ * backing store is not available, usually because the canvas memory limit of
+ * the browser is exhausted. That limit is shared with other tabs, so we cannot
+ * prevent it. Callers skip their pixel effects in that case instead of failing
+ * the whole render.
+ */
+function tryGetImageData(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+): ImageData | null {
+    try {
+        return ctx.getImageData(0, 0, width, height);
+    } catch (e) {
+        if (e instanceof DOMException && e.name === "InvalidStateError") {
+            if (!warned_about_image_data) {
+                warned_about_image_data = true;
+                console.warn("Unable to read canvas pixels, rendering stones without shading", e);
+            }
+            return null;
+        }
+        throw e;
+    }
+}
+
 function applyPhongShading(
     ctx: CanvasRenderingContext2D,
     ss: number,
@@ -209,7 +237,10 @@ function applyPhongShading(
     specular_light_distance: number,
     light: vec3,
 ) {
-    const image = ctx.getImageData(0, 0, ss, ss);
+    const image = tryGetImageData(ctx, ss, ss);
+    if (!image) {
+        return;
+    }
 
     const r2 = (radius + 1) * (radius + 1); /* alpha will save us from overrunning the image*/
     const look: vec3 = [0, 0, 1];
@@ -257,7 +288,13 @@ export function clearAboveColor(
     g: number,
     b: number,
 ): void {
-    const image = ctx.getImageData(0, 0, width, height);
+    const image = tryGetImageData(ctx, width, height);
+    if (!image) {
+        /* Without the pixels we cannot remove the disk that casts the
+         * shadow, so clear everything rather than leave the disk visible. */
+        ctx.clearRect(0, 0, width, height);
+        return;
+    }
 
     let idx = 0;
     for (let y = 0; y < height; ++y) {
