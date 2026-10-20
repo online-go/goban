@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { GobanTheme } from "./GobanTheme";
+import { GobanTheme, SVGStoneParameters } from "./GobanTheme";
 import { ThemesInterface } from "./";
 import { _ } from "../../engine/translate";
 import { deviceCanvasScalingRatio, allocateCanvasOrError } from "../canvas_utils";
 
-type StoneType = { stone: HTMLCanvasElement; shadow: HTMLCanvasElement };
+type StoneType = { stone: HTMLCanvasElement; shadow: HTMLCanvasElement; options: RenderOptions };
 type StoneTypeArray = Array<StoneType>;
 interface RenderOptions {
     base_color: string;
@@ -226,48 +226,62 @@ function tryGetImageData(
     }
 }
 
+/** Returns the color of a stone pixel at offset (x, y) from the stone center. */
+function phongShade(
+    r: number,
+    g: number,
+    b: number,
+    x: number,
+    y: number,
+    radius: number,
+    options: RenderOptions,
+): [number, number, number] {
+    const look: vec3 = [0, 0, 1];
+    const N = stone_normal(x, y, radius);
+    const diffuse_intensity = dot(N, options.light) / options.diffuse_light_distance;
+    const H = normalized(add(options.light, look));
+    const specular_intensity =
+        Math.pow(dot(N, H), options.specular_hardness) / options.specular_light_distance;
+
+    const hsl = rgbToHsl(r, g, b);
+    hsl[2] = Math.min(
+        1,
+        hsl[2] * (options.ambient + diffuse_intensity) +
+            diffuse_intensity * 0.5 +
+            specular_intensity,
+    );
+    return hslToRgb(hsl[0], hsl[1], hsl[2]);
+}
+
+/** Returns false when the canvas pixels cannot be read, so no shading was applied. */
 function applyPhongShading(
     ctx: CanvasRenderingContext2D,
     ss: number,
     center: number,
     radius: number,
-    ambient: number,
-    specular_hardness: number,
-    diffuse_light_distance: number,
-    specular_light_distance: number,
-    light: vec3,
-) {
+    options: RenderOptions,
+): boolean {
     const image = tryGetImageData(ctx, ss, ss);
     if (!image) {
-        return;
+        return false;
     }
 
     const r2 = (radius + 1) * (radius + 1); /* alpha will save us from overrunning the image*/
-    const look: vec3 = [0, 0, 1];
 
     let idx = 0;
     for (let y = -center; y < ss - center; ++y) {
         for (let x = -center; x < ss - center; ++x) {
             const xxyy = x * x + y * y;
             if (xxyy < r2) {
-                const r = image.data[idx];
-                const g = image.data[idx + 1];
-                const b = image.data[idx + 2];
-
-                const N = stone_normal(x, y, radius);
-                const diffuse_intensity = dot(N, light) / diffuse_light_distance;
-                const H = normalized(add(light, look));
-                const specular_intensity =
-                    Math.pow(dot(N, H), specular_hardness) / specular_light_distance;
-
-                const hsl = rgbToHsl(r, g, b);
-                hsl[2] = Math.min(
-                    1,
-                    hsl[2] * (ambient + diffuse_intensity) +
-                        diffuse_intensity * 0.5 +
-                        specular_intensity,
+                const rgb = phongShade(
+                    image.data[idx],
+                    image.data[idx + 1],
+                    image.data[idx + 2],
+                    x,
+                    y,
+                    radius,
+                    options,
                 );
-                const rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
 
                 image.data[idx] = rgb[0];
                 image.data[idx + 1] = rgb[1];
@@ -279,6 +293,47 @@ function applyPhongShading(
     }
 
     ctx.putImageData(image, 0, 0);
+    return true;
+}
+
+/**
+ * Returns a radial gradient that approximates the stones of preRenderStone.
+ * The SVG renderer uses it when the browser cannot encode the stone canvas.
+ * The focus of the gradient is the brightest point on the line through the
+ * stone center in the direction of the light. The stops sample phongShade on
+ * the line from that point to the opposite edge of the stone.
+ */
+function phongGradient(options: RenderOptions): SVGStoneParameters["gradient"] {
+    const [r, g, b] = (options.base_color.match(/[\d.]+/g) ?? []).map(Number);
+    const radius = 100;
+    const dir = normalized([options.light[0], options.light[1], 0]);
+    const brightness = (rgb: vec3) => rgb[0] + rgb[1] + rgb[2];
+
+    let focus: vec3 = [0, 0, 0];
+    let best = -1;
+    for (let s = -radius; s <= radius; ++s) {
+        const p = scale(dir, s);
+        const v = brightness(phongShade(r, g, b, p[0], p[1], radius, options));
+        if (v > best) {
+            best = v;
+            focus = p;
+        }
+    }
+
+    const edge = scale(dir, -radius);
+    const stops = [];
+    const n_stops = 10;
+    for (let i = 0; i <= n_stops; ++i) {
+        const p = add(focus, scale(add(edge, scale(focus, -1)), i / n_stops));
+        const rgb = phongShade(r, g, b, p[0], p[1], radius, options).map(Math.round);
+        stops.push({ offset: (100 * i) / n_stops, color: `rgb(${rgb.join(",")})` });
+    }
+
+    return {
+        stops,
+        fx: 0.5 + focus[0] / (2 * radius),
+        fy: 0.5 + focus[1] / (2 * radius),
+    };
 }
 export function clearAboveColor(
     ctx: CanvasRenderingContext2D,
@@ -458,17 +513,7 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
         }
     }
 
-    applyPhongShading(
-        ctx,
-        ss,
-        center,
-        radius,
-        options.ambient,
-        options.specular_hardness,
-        options.diffuse_light_distance,
-        options.specular_light_distance,
-        options.light,
-    );
+    const shaded = applyPhongShading(ctx, ss, center, radius, options);
 
     if (!stoneCastsShadow(radius)) {
         ctx.beginPath();
@@ -484,8 +529,12 @@ function preRenderStone(radius: number, seed: number, options: RenderOptions): S
 
     renderShadow(shadow_ctx, center, radius, sss);
 
-    render_cache[cache_key] = [{ stone: stone, shadow: shadow }];
-    return render_cache[cache_key];
+    const ret = [{ stone, shadow, options }];
+    /* Do not cache an unshaded stone, so that a later render can try again. */
+    if (shaded) {
+        render_cache[cache_key] = ret;
+    }
+    return ret;
 }
 function placeRenderedStone(
     ctx: CanvasRenderingContext2D,
@@ -559,6 +608,21 @@ export default function (THEMES: ThemesInterface) {
             for (let i = 0; i < rendered.length; ++i) {
                 const id = this.def_uid(`white-shell-${i}-${radius}`);
 
+                /* Browsers return "data:," when they cannot encode the canvas,
+                 * for example when WebKit has no canvas memory left. That
+                 * image draws nothing, so draw the stone as a vector instead. */
+                const url = rendered[i].stone.toDataURL();
+                if (url === "data:,") {
+                    defs.appendChild(
+                        this.renderSVG(
+                            { id, gradient: phongGradient(rendered[i].options) },
+                            radius,
+                        ),
+                    );
+                    ret.push(id);
+                    continue;
+                }
+
                 const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
                 img.setAttribute("id", id);
                 //img.setAttribute("width", rendered[i].stone.width.toString());
@@ -567,11 +631,7 @@ export default function (THEMES: ThemesInterface) {
                 img.setAttribute("height", `${Math.ceil(radius * 2)}`);
                 img.setAttribute("x", "0");
                 img.setAttribute("y", "0");
-                img.setAttributeNS(
-                    "http://www.w3.org/1999/xlink",
-                    "href",
-                    rendered[i].stone.toDataURL(),
-                );
+                img.setAttributeNS("http://www.w3.org/1999/xlink", "href", url);
 
                 defs.appendChild(img);
                 ret.push(id);
