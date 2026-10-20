@@ -419,26 +419,21 @@ export class MoveTreeCanvas {
 
     private drawRecursive(
         ctx: CanvasRenderingContext2D,
-        node: MoveTree,
+        root: MoveTree,
         active_path_number: number,
         viewport: ViewPortInterface,
     ): void {
-        if (node.trunk_next) {
-            this.drawRecursive(ctx, node.trunk_next, active_path_number, viewport);
-        }
-        for (let i = 0; i < node.branches.length; ++i) {
-            this.drawRecursive(ctx, node.branches[i], active_path_number, viewport);
-        }
-
-        if (
-            !viewport ||
-            (node.layout_cx >= viewport.minx &&
-                node.layout_cx <= viewport.maxx &&
-                node.layout_cy >= viewport.miny &&
-                node.layout_cy <= viewport.maxy)
-        ) {
-            this.drawStone(ctx, node, active_path_number, viewport);
-        }
+        root.traversePostOrder((node) => {
+            if (
+                !viewport ||
+                (node.layout_cx >= viewport.minx &&
+                    node.layout_cx <= viewport.maxx &&
+                    node.layout_cy >= viewport.miny &&
+                    node.layout_cy <= viewport.maxy)
+            ) {
+                this.drawStone(ctx, node, active_path_number, viewport);
+            }
+        });
     }
 
     private hilightNode(
@@ -553,25 +548,20 @@ export class MoveTreeCanvas {
 
     private recursiveDrawPath(
         ctx: CanvasRenderingContext2D,
-        node: MoveTree,
+        root: MoveTree,
         viewport: ViewPortInterface,
     ): void {
-        if (node.trunk_next) {
-            this.recursiveDrawPath(ctx, node.trunk_next, viewport);
-        }
-        for (let i = 0; i < node.branches.length; ++i) {
-            this.recursiveDrawPath(ctx, node.branches[i], viewport);
-        }
-
-        if (node.isobranches) {
-            for (let i = 0; i < node.isobranches.length; ++i) {
-                this.drawIsoBranchTo(ctx, node, node.isobranches[i], viewport);
+        root.traversePostOrder((node) => {
+            if (node.isobranches) {
+                for (let i = 0; i < node.isobranches.length; ++i) {
+                    this.drawIsoBranchTo(ctx, node, node.isobranches[i], viewport);
+                }
             }
-        }
 
-        /* only consider x, since lines can extend awhile on the y */
-        //if (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx) {
-        this.drawPath(ctx, node, viewport);
-        //}
+            /* only consider x, since lines can extend awhile on the y */
+            //if (this.layout_cx >= viewport.minx && this.layout_cx <= viewport.maxx) {
+            this.drawPath(ctx, node, viewport);
+            //}
+        });
     }
 }

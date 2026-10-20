@@ -159,6 +159,26 @@ describe("move tree widget", () => {
         expect(move_tree_container.querySelector("canvas")).toBeNull();
     });
 
+    test("GobanCanvas draws a variation that is deeper than the call stack", () => {
+        const goban = new GobanCanvas({
+            square_size: 10,
+            board_div,
+            interactive: true,
+            server_socket: mock_socket,
+            width: 3,
+            height: 3,
+            move_tree_container,
+        });
+        playTwoMovesAndAVariation(goban);
+        for (let i = 0; i < 20000; ++i) {
+            goban.engine.place(-1, -1);
+        }
+
+        expect(() => goban.move_tree_redraw()).not.toThrow();
+        expectRenderedTree(move_tree_container);
+        goban.destroy();
+    });
+
     test("GobanNativeRenderer draws the same tree", async () => {
         const config: NativeRendererGobanConfig = {
             square_size: 10,

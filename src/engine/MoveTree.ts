@@ -106,6 +106,23 @@ interface BoardStateWithIsobranchHash extends BoardState {
     isobranch_hash?: string;
 }
 
+/** The local state of one step of MoveTree.layout, see there. */
+interface LayoutFrame {
+    node: MoveTree;
+    x: number;
+    min_y: number;
+    /** The line color passed in for this node */
+    line_color: number;
+    next_line_color: number;
+    /** Index of the branch being laid out */
+    branch: number;
+    stage: "enter" | "trunk_done" | "next_branch" | "branch_done";
+}
+
+function newLayoutFrame(node: MoveTree, x: number, min_y: number, line_color: number): LayoutFrame {
+    return { node, x, min_y, line_color, next_line_color: 0, branch: 0, stage: "enter" };
+}
+
 /* TODO: If we're on the server side, we shouldn't be doing anything with marks */
 export class MoveTree {
     public static readonly stone_radius = 11;
@@ -192,41 +209,58 @@ export class MoveTree {
 
     /** Serializes our MoveTree into a MoveTreeJson object */
     public toJson(): MoveTreeJson {
-        const ret: MoveTreeJson = {
-            x: this.x,
-            y: this.y,
-        };
+        /* Iterative, because a long variation would overflow the call stack.
+         * A child's object is created with only x and y when its parent is
+         * visited, and the rest of its fields are added when the child is
+         * visited, so the key order is the same as a recursive build. */
+        const root: MoveTreeJson = { x: this.x, y: this.y };
+        const stack: Array<[MoveTree, MoveTreeJson]> = [[this, root]];
 
-        if (this.pen_marks && this.pen_marks.length) {
-            ret.pen_marks = this.pen_marks;
-        }
-        if (this.hasMarks()) {
-            ret.marks = [];
-            this.foreachMarkedPosition((x, y) => {
-                ret.marks?.push({ x: x, y: y, marks: this.getMarks(x, y) });
-            });
-        }
-        if (this.text) {
-            ret.text = this.text;
-        }
+        while (stack.length > 0) {
+            const [node, ret] = stack.pop() as [MoveTree, MoveTreeJson];
+            const children: Array<[MoveTree, MoveTreeJson]> = [];
 
-        if (this.trunk_next) {
-            ret.trunk_next = this.trunk_next.toJson();
-        }
-        if (this.branches.length) {
-            ret.branches = [];
-            for (let i = 0; i < this.branches.length; ++i) {
-                ret.branches.push(this.branches[i].toJson());
+            if (node.pen_marks && node.pen_marks.length) {
+                ret.pen_marks = node.pen_marks;
+            }
+            if (node.hasMarks()) {
+                ret.marks = [];
+                node.foreachMarkedPosition((x, y) => {
+                    ret.marks?.push({ x: x, y: y, marks: node.getMarks(x, y) });
+                });
+            }
+            if (node.text) {
+                ret.text = node.text;
+            }
+
+            if (node.trunk_next) {
+                ret.trunk_next = { x: node.trunk_next.x, y: node.trunk_next.y };
+                children.push([node.trunk_next, ret.trunk_next]);
+            }
+            if (node.branches.length) {
+                ret.branches = [];
+                for (let i = 0; i < node.branches.length; ++i) {
+                    const branch: MoveTreeJson = {
+                        x: node.branches[i].x,
+                        y: node.branches[i].y,
+                    };
+                    ret.branches.push(branch);
+                    children.push([node.branches[i], branch]);
+                }
+            }
+            if (node.correct_answer) {
+                ret.correct_answer = node.correct_answer;
+            }
+            if (node.wrong_answer) {
+                ret.wrong_answer = node.wrong_answer;
+            }
+
+            for (let i = children.length - 1; i >= 0; --i) {
+                stack.push(children[i]);
             }
         }
-        if (this.correct_answer) {
-            ret.correct_answer = this.correct_answer;
-        }
-        if (this.wrong_answer) {
-            ret.wrong_answer = this.wrong_answer;
-        }
 
-        return ret;
+        return root;
     }
 
     /** Loads the state of this MoveTree node from a MoveTreeJson object */
@@ -265,7 +299,7 @@ export class MoveTree {
 
         __isobranches_state_hash = {};
 
-        const buildHashes = (node: MoveTree): void => {
+        this.traverse((node) => {
             const hash = node.state.isobranch_hash
                 ? node.state.isobranch_hash
                 : (node.state.isobranch_hash =
@@ -277,17 +311,9 @@ export class MoveTree {
             }
 
             __isobranches_state_hash[hash].push(node);
+        });
 
-            if (node.trunk_next) {
-                buildHashes(node.trunk_next);
-            }
-
-            for (let i = 0; i < node.branches.length; ++i) {
-                buildHashes(node.branches[i]);
-            }
-        };
-
-        const recompute = (node: MoveTree): void => {
+        this.traverse((node) => {
             node.isobranches = [];
 
             if (node.x !== -1) {
@@ -301,18 +327,7 @@ export class MoveTree {
                     }
                 }
             }
-
-            if (node.trunk_next) {
-                recompute(node.trunk_next);
-            }
-
-            for (let i = 0; i < node.branches.length; ++i) {
-                recompute(node.branches[i]);
-            }
-        };
-
-        buildHashes(this);
-        recompute(this);
+        });
     }
 
     lookupMove(x: number, y: number, player: number, edited: boolean): MoveTree | null {
@@ -431,18 +446,54 @@ export class MoveTree {
         return m;
     }
     /*
-     * recursively walks the tree in depth-first manner, pre-order
+     * walks the tree in depth-first manner, pre-order
      * - calls the `fn` function first on body
      * - then on trunk
      * - then branches
+     *
+     * The walk uses an explicit stack instead of recursion, because a long
+     * variation would overflow the call stack.
      */
     traverse(fn: (node: MoveTree) => void): void {
-        fn(this);
-        if (this.trunk_next) {
-            this.trunk_next.traverse(fn);
+        const stack: MoveTree[] = [this];
+        while (stack.length > 0) {
+            const node = stack.pop() as MoveTree;
+            fn(node);
+            for (let i = node.branches.length - 1; i >= 0; --i) {
+                stack.push(node.branches[i]);
+            }
+            if (node.trunk_next) {
+                stack.push(node.trunk_next);
+            }
         }
-        for (let i = 0; i < this.branches.length; ++i) {
-            this.branches[i].traverse(fn);
+    }
+    /*
+     * walks the tree in depth-first manner, post-order
+     * - calls the `fn` function first on the trunk
+     * - then on the branches
+     * - then on body
+     */
+    traversePostOrder(fn: (node: MoveTree) => void): void {
+        const stack: MoveTree[] = [this];
+        const children_pushed: boolean[] = [false];
+        while (stack.length > 0) {
+            const top = stack.length - 1;
+            const node = stack[top];
+            if (children_pushed[top]) {
+                stack.pop();
+                children_pushed.pop();
+                fn(node);
+                continue;
+            }
+            children_pushed[top] = true;
+            for (let i = node.branches.length - 1; i >= 0; --i) {
+                stack.push(node.branches[i]);
+                children_pushed.push(false);
+            }
+            if (node.trunk_next) {
+                stack.push(node.trunk_next);
+                children_pushed.push(false);
+            }
         }
     }
     /*
@@ -459,13 +510,10 @@ export class MoveTree {
      * ((((((z + A) + B) + C) + D) + E) + F)
      */
     fold<T>(acc: T, plus: (acc: T, node: MoveTree) => T): T {
-        let val = plus(acc, this);
-        if (this.trunk_next) {
-            val = this.trunk_next.fold(val, plus);
-        }
-        for (let i = 0; i < this.branches.length; ++i) {
-            val = this.branches[i].fold(val, plus);
-        }
+        let val = acc;
+        this.traverse((node) => {
+            val = plus(val, node);
+        });
         return val;
     }
 
@@ -724,90 +772,35 @@ export class MoveTree {
         return str;
     }
     toSGF(): string {
-        const ret = [];
+        /* Iterative, because a long variation would overflow the call stack.
+         * The stack holds nodes still to be written and the variation
+         * parentheses to write around them. */
+        const ret: string[] = [];
+        const stack: Array<MoveTree | string> = [this];
 
         try {
-            const txt = [];
-            if (this.parent != null) {
-                ret.push(";");
-                if (this.edited) {
-                    ret.push("A");
+            while (stack.length > 0) {
+                const item = stack.pop() as MoveTree | string;
+                if (typeof item === "string") {
+                    ret.push(item);
+                    continue;
                 }
-                ret.push(this.player === 1 ? "B" : this.player === 2 ? "W" : "E");
 
-                ret.push("[");
-                if (this.x === -1) {
-                    ret.push("");
-                } else {
-                    ret.push(encodeCoordinate(this.x));
-                    ret.push(encodeCoordinate(this.y));
-                }
-                ret.push("]");
-                txt.push(this.text);
-            }
+                item.pushSGFNodeProperties(ret);
 
-            if (this.chat_log && this.chat_log.length) {
-                txt.push("\n\n");
-                txt.push("-- chat --");
-                txt.push("\n");
-                for (let i = 0; i < this.chat_log.length; ++i) {
-                    txt.push(MoveTree.fmtUsername(this.chat_log[i].username));
-                    txt.push(
-                        MoveTree.markupSGFChatMessage(
-                            this.chat_log[i].body,
-                            this.engine.width,
-                            this.engine.height,
-                        ),
-                    );
-                    txt.push("\n");
-                }
-            }
-
-            if (this.marks) {
-                for (let y = 0; y < this.marks.length; ++y) {
-                    for (let x = 0; x < this.marks[0].length; ++x) {
-                        const m = this.marks[y][x];
-                        const pos = encodeCoordinate(x) + encodeCoordinate(y);
-                        if (m.triangle) {
-                            ret.push("TR[" + pos + "]");
-                        }
-                        if (m.square) {
-                            ret.push("SQ[" + pos + "]");
-                        }
-                        if (m.cross) {
-                            ret.push("MA[" + pos + "]");
-                        }
-                        if (m.circle) {
-                            ret.push("CR[" + pos + "]");
-                        }
-                        if (m.letter) {
-                            // https://www.red-bean.com/sgf/properties.html
-                            // LB is composed type of simple text (== no newlines, escaped colon)
-                            const body = newlines_to_spaces(escapeSGFText(m.letter, true));
-                            ret.push("LB[" + pos + ":" + body + "]");
-                        }
+                const children = item.trunk_next
+                    ? [item.trunk_next, ...item.branches]
+                    : item.branches;
+                const wrap = children.length > 1;
+                for (let i = children.length - 1; i >= 0; --i) {
+                    if (wrap) {
+                        stack.push(")");
+                    }
+                    stack.push(children[i]);
+                    if (wrap) {
+                        stack.push("(");
                     }
                 }
-            }
-            const comment = txt.join("");
-            if (comment !== "") {
-                ret.push("C[" + escapeSGFText(comment) + "]");
-            }
-            ret.push("\n");
-
-            const branch_ct = (this.trunk_next != null ? 1 : 0) + this.branches.length;
-            const A = branch_ct > 1 ? "(" : "";
-            const B = branch_ct > 1 ? ")" : "";
-
-            if (this.trunk_next) {
-                ret.push(A);
-                ret.push(this.trunk_next.toSGF());
-                ret.push(B);
-            }
-            for (let i = 0; i < this.branches.length; ++i) {
-                ret.push(A);
-                ret.push(this.branches[i].toSGF());
-                ret.push(B);
             }
         } catch (e) {
             console.log(e);
@@ -815,6 +808,76 @@ export class MoveTree {
         }
 
         return ret.join("");
+    }
+    /** Writes the SGF properties of this node, without its children, to `ret` */
+    private pushSGFNodeProperties(ret: string[]): void {
+        const txt = [];
+        if (this.parent != null) {
+            ret.push(";");
+            if (this.edited) {
+                ret.push("A");
+            }
+            ret.push(this.player === 1 ? "B" : this.player === 2 ? "W" : "E");
+
+            ret.push("[");
+            if (this.x === -1) {
+                ret.push("");
+            } else {
+                ret.push(encodeCoordinate(this.x));
+                ret.push(encodeCoordinate(this.y));
+            }
+            ret.push("]");
+            txt.push(this.text);
+        }
+
+        if (this.chat_log && this.chat_log.length) {
+            txt.push("\n\n");
+            txt.push("-- chat --");
+            txt.push("\n");
+            for (let i = 0; i < this.chat_log.length; ++i) {
+                txt.push(MoveTree.fmtUsername(this.chat_log[i].username));
+                txt.push(
+                    MoveTree.markupSGFChatMessage(
+                        this.chat_log[i].body,
+                        this.engine.width,
+                        this.engine.height,
+                    ),
+                );
+                txt.push("\n");
+            }
+        }
+
+        if (this.marks) {
+            for (let y = 0; y < this.marks.length; ++y) {
+                for (let x = 0; x < this.marks[0].length; ++x) {
+                    const m = this.marks[y][x];
+                    const pos = encodeCoordinate(x) + encodeCoordinate(y);
+                    if (m.triangle) {
+                        ret.push("TR[" + pos + "]");
+                    }
+                    if (m.square) {
+                        ret.push("SQ[" + pos + "]");
+                    }
+                    if (m.cross) {
+                        ret.push("MA[" + pos + "]");
+                    }
+                    if (m.circle) {
+                        ret.push("CR[" + pos + "]");
+                    }
+                    if (m.letter) {
+                        // https://www.red-bean.com/sgf/properties.html
+                        // LB is composed type of simple text (== no newlines, escaped colon)
+                        const body = newlines_to_spaces(escapeSGFText(m.letter, true));
+                        ret.push("LB[" + pos + ":" + body + "]");
+                    }
+                }
+            }
+        }
+        const comment = txt.join("");
+        if (comment !== "") {
+            ret.push("C[" + escapeSGFText(comment) + "]");
+        }
+        ret.push("\n");
     }
     get stoneColor(): "black" | "white" | "empty" {
         switch (this.player) {
@@ -964,80 +1027,123 @@ export class MoveTree {
         //"weak": "#0000ff",
     };
 
+    /**
+     * Computes the move tree layout position and line color of this node and
+     * all of its descendants, and returns the layout row of this node.
+     *
+     * This is the depth-first algorithm that recursed into `trunk_next` and
+     * then into each branch. It uses an explicit stack of frames instead of
+     * recursion, because a long variation would overflow the call stack. Each
+     * frame holds the local state of one recursive call, and `stage` tells
+     * where that call continues when the frame is on top of the stack again.
+     */
     layout(
         x: number,
         min_y: number,
         layout_hash: { [coords: string]: MoveTree },
         line_color: number,
     ): number {
-        if (!this.engine.move_tree_layout_vector[x]) {
-            this.engine.move_tree_layout_vector[x] = 0;
-        }
+        const stack: LayoutFrame[] = [newLayoutFrame(this, x, min_y, line_color)];
+        let ret = 0; /* The return value of the frame that finished last */
 
-        if (x === 0 && min_y === 0) {
-            MoveTree.current_line_color = 0;
-        }
+        while (stack.length > 0) {
+            const frame = stack[stack.length - 1];
+            const node = frame.node;
+            const layout_vector = node.engine.move_tree_layout_vector;
 
-        min_y = Math.max(this.engine.move_tree_layout_vector[x] + 1, min_y);
+            if (frame.stage === "enter") {
+                if (!layout_vector[frame.x]) {
+                    layout_vector[frame.x] = 0;
+                }
 
-        if (this.trunk_next) {
-            this.trunk_next.layout(
-                x + 1,
-                0,
-                layout_hash,
-                (this.move_number + 1) % MoveTree.line_colors.length,
-            );
-        }
+                if (frame.x === 0 && frame.min_y === 0) {
+                    MoveTree.current_line_color = 0;
+                }
 
-        if (this.line_color === -1) {
-            this.line_color = line_color;
-        }
+                frame.min_y = Math.max(layout_vector[frame.x] + 1, frame.min_y);
+                frame.stage = "trunk_done";
 
-        let next_line_color = this.line_color + this.move_number;
-        for (let i = 0; i < this.branches.length; ++i) {
-            next_line_color %= MoveTree.line_colors.length;
-            if (i && next_line_color === this.line_color) {
-                next_line_color += 2; /* prevents neighboring line colors from being the same */
-                next_line_color %= MoveTree.line_colors.length;
+                if (node.trunk_next) {
+                    /* The row of the trunk_next is not used */
+                    stack.push(
+                        newLayoutFrame(
+                            node.trunk_next,
+                            frame.x + 1,
+                            0,
+                            (node.move_number + 1) % MoveTree.line_colors.length,
+                        ),
+                    );
+                }
+                continue;
             }
 
-            const by = this.branches[i].layout(
-                x + 1,
-                min_y,
-                layout_hash,
-                i === 0 ? this.line_color : next_line_color++,
-            );
-            if (i === 0) {
-                min_y = Math.max(min_y, by - 1);
+            if (frame.stage === "trunk_done") {
+                if (node.line_color === -1) {
+                    node.line_color = frame.line_color;
+                }
+                frame.next_line_color = node.line_color + node.move_number;
+                frame.branch = 0;
+                frame.stage = "next_branch";
+                continue;
             }
 
-            next_line_color++;
+            if (frame.stage === "branch_done") {
+                if (frame.branch === 0) {
+                    frame.min_y = Math.max(frame.min_y, ret - 1);
+                }
+                frame.next_line_color++;
+                frame.branch++;
+                frame.stage = "next_branch";
+                continue;
+            }
+
+            /* frame.stage === "next_branch" */
+            if (frame.branch < node.branches.length) {
+                const i = frame.branch;
+                frame.next_line_color %= MoveTree.line_colors.length;
+                if (i && frame.next_line_color === node.line_color) {
+                    /* prevents neighboring line colors from being the same */
+                    frame.next_line_color += 2;
+                    frame.next_line_color %= MoveTree.line_colors.length;
+                }
+
+                frame.stage = "branch_done";
+                stack.push(
+                    newLayoutFrame(
+                        node.branches[i],
+                        frame.x + 1,
+                        frame.min_y,
+                        i === 0 ? node.line_color : frame.next_line_color++,
+                    ),
+                );
+                continue;
+            }
+
+            const x = frame.x;
+            let min_y = frame.min_y;
+
+            if (node.trunk) {
+                min_y = 0;
+            }
+
+            node.layout_x = x;
+            node.layout_y = min_y;
+            layout_hash[x + "," + min_y] = node;
+
+            node.layout_cx = Math.floor((node.layout_x + 0.5) * MoveTree.stone_square_size) + 0.5;
+            node.layout_cy = Math.floor((node.layout_y + 0.5) * MoveTree.stone_square_size) + 0.5;
+
+            layout_vector[x] = Math.max(min_y, layout_vector[x]);
+            if (x) {
+                /* allocate space for our branch lines */
+                layout_vector[x - 1] = Math.max(min_y - 1, layout_vector[x - 1]);
+            }
+
+            ret = min_y;
+            stack.pop();
         }
 
-        if (this.trunk) {
-            min_y = 0;
-        }
-
-        this.layout_x = x;
-        this.layout_y = min_y;
-        layout_hash[x + "," + min_y] = this;
-
-        this.layout_cx = Math.floor((this.layout_x + 0.5) * MoveTree.stone_square_size) + 0.5;
-        this.layout_cy = Math.floor((this.layout_y + 0.5) * MoveTree.stone_square_size) + 0.5;
-
-        this.engine.move_tree_layout_vector[x] = Math.max(
-            min_y,
-            this.engine.move_tree_layout_vector[x],
-        );
-        if (x) {
-            /* allocate space for our branch lines */
-            this.engine.move_tree_layout_vector[x - 1] = Math.max(
-                min_y - 1,
-                this.engine.move_tree_layout_vector[x - 1],
-            );
-        }
-
-        return min_y;
+        return ret;
     }
     getNodeAtLayoutPosition(layout_x: number, layout_y: number): MoveTree | null {
         const key = layout_x + "," + layout_y;
@@ -1123,18 +1229,17 @@ export class MoveTree {
     }
 
     public hoistFirstBranchToTrunk(): void {
-        if (this.trunk_next) {
-            this.trunk_next.hoistFirstBranchToTrunk();
-            return;
-        }
-
-        this.trunk = true;
-        if (this.branches.length > 0) {
-            const br = this.branches.shift();
-            if (br) {
-                this.trunk_next = br;
-                this.trunk_next.hoistFirstBranchToTrunk();
+        /* A loop, not recursion, because a long variation would overflow the call stack */
+        let cur: MoveTree | undefined = this;
+        while (cur) {
+            if (cur.trunk_next) {
+                cur = cur.trunk_next;
+                continue;
             }
+
+            cur.trunk = true;
+            cur.trunk_next = cur.branches.shift();
+            cur = cur.trunk_next;
         }
     }
 

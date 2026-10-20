@@ -854,6 +854,22 @@ describe("AI review marks and placement rooting", () => {
         container.remove();
     });
 
+    test("the move tree draws a variation that is deeper than the call stack", () => {
+        const container = document.createElement("div");
+        document.body.appendChild(container);
+
+        const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
+        for (let i = 0; i < 20000; ++i) {
+            goban.engine.place(-1, -1);
+        }
+
+        expect(() => goban.setMoveTreeContainer(container)).not.toThrow();
+        expect(container.children.length).toBe(1);
+
+        goban.destroy();
+        container.remove();
+    });
+
     test("clearing colored circles removes them from the board", () => {
         const goban = new SVGRenderer(basic3x3Config({ mode: "analyze" }));
         const svg = rendererSvg(goban);
