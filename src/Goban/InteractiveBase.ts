@@ -899,6 +899,8 @@ export abstract class GobanInteractive extends GobanBase {
         if (this.config.marks && this.engine) {
             this.setMarks(this.config.marks);
         }
+        this.conditional_path = "";
+        this.currently_my_cmove = false;
         this.setConditionalTree();
 
         if (this.getPuzzlePlacementSetting) {
@@ -1084,6 +1086,12 @@ export abstract class GobanInteractive extends GobanBase {
         }
     }
     public showFirst(dont_update_display?: boolean): void {
+        if (this.mode === "conditional") {
+            /* Conditional paths start at the last official move */
+            this.jumpToLastOfficialMove();
+            return;
+        }
+
         this.engine.jumpTo(this.engine.move_tree);
         if (!dont_update_display) {
             this.updateTitleAndStonePlacement();

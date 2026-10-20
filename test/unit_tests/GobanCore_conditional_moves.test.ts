@@ -81,3 +81,38 @@ test("handle pass() while in 'conditional' mode", () => {
     expect(Object.keys(goban.conditional_tree.children)).toEqual([".."]);
     expect(goban.conditional_tree.children[".."].move).toEqual("..");
 });
+
+test("a reload in 'conditional' mode starts the path again at the official move", () => {
+    const goban = new TestGoban({ width: 9, height: 9, moves: [] });
+    goban.setMode("conditional");
+    goban.followConditionalPath("aaba");
+
+    goban.load({ width: 9, height: 9, moves: [] });
+
+    expect(goban.getCurrentConditionalPath()).toEqual("");
+
+    goban.followConditionalPath("aaca");
+
+    expect(() => goban.showPrevious()).not.toThrow();
+    expect(goban.getCurrentConditionalPath()).toEqual("aa");
+    expect(goban.engine.board[0][0]).toEqual(1);
+    expect(goban.engine.board[0][2]).toEqual(0);
+});
+
+test("showFirst() in 'conditional' mode goes to the official move", () => {
+    const goban = new TestGoban({ width: 9, height: 9, moves: [] });
+    goban.load({ width: 9, height: 9, moves: [[4, 4]] });
+    goban.setMode("conditional");
+    goban.followConditionalPath("aaba");
+
+    goban.showFirst();
+
+    expect(goban.engine.cur_move).toBe(goban.engine.last_official_move);
+    expect(goban.engine.board[4][4]).toEqual(1);
+    expect(goban.getCurrentConditionalPath()).toEqual("");
+
+    goban.followConditionalPath("eaca");
+
+    expect(() => goban.showPrevious()).not.toThrow();
+    expect(goban.getCurrentConditionalPath()).toEqual("ea");
+});
