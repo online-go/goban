@@ -720,10 +720,12 @@ export interface SeekgraphStartedMessage {
     time_control_parameters: JGOFTimeControl;
     /** Rengo game if true */
     rengo?: true;
-    /** Player ids of the players on the Black team */
-    rengo_black_team?: number[];
-    /** Player ids of the players on the White team */
-    rengo_white_team?: number[];
+    /** Player ids of the players on the Black team. The server sends null
+     *  when the game has no stored team list. */
+    rengo_black_team?: number[] | null;
+    /** Player ids of the players on the White team. The server sends null
+     *  when the game has no stored team list. */
+    rengo_white_team?: number[] | null;
     /** Wether it's a Casual mode rengo game */
     rengo_casual_mode?: boolean;
     /** Whether the rengo game with automatically start */
