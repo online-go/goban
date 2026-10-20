@@ -4490,26 +4490,21 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
     move_tree_drawRecursive(
         svg: SVGElement,
-        node: MoveTree,
+        root: MoveTree,
         active_path_number: number,
         viewport: MoveTreeViewPortInterface,
     ): void {
-        if (node.trunk_next) {
-            this.move_tree_drawRecursive(svg, node.trunk_next, active_path_number, viewport);
-        }
-        for (let i = 0; i < node.branches.length; ++i) {
-            this.move_tree_drawRecursive(svg, node.branches[i], active_path_number, viewport);
-        }
-
-        if (
-            !viewport ||
-            (node.layout_cx >= viewport.minx &&
-                node.layout_cx <= viewport.maxx &&
-                node.layout_cy >= viewport.miny &&
-                node.layout_cy <= viewport.maxy)
-        ) {
-            this.move_tree_drawStone(svg, node, active_path_number, viewport);
-        }
+        root.traversePostOrder((node) => {
+            if (
+                !viewport ||
+                (node.layout_cx >= viewport.minx &&
+                    node.layout_cx <= viewport.maxx &&
+                    node.layout_cy >= viewport.miny &&
+                    node.layout_cy <= viewport.maxy)
+            ) {
+                this.move_tree_drawStone(svg, node, active_path_number, viewport);
+            }
+        });
     }
     move_tree_hilightNode(
         svg: SVGElement,
@@ -4620,23 +4615,18 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
     move_tree_recursiveDrawPath(
         svg: SVGElement,
-        node: MoveTree,
+        root: MoveTree,
         viewport: MoveTreeViewPortInterface,
     ): void {
-        if (node.trunk_next) {
-            this.move_tree_recursiveDrawPath(svg, node.trunk_next, viewport);
-        }
-        for (let i = 0; i < node.branches.length; ++i) {
-            this.move_tree_recursiveDrawPath(svg, node.branches[i], viewport);
-        }
-
-        if (node.isobranches) {
-            for (let i = 0; i < node.isobranches.length; ++i) {
-                this.move_tree_drawIsoBranchTo(svg, node, node.isobranches[i], viewport);
+        root.traversePostOrder((node) => {
+            if (node.isobranches) {
+                for (let i = 0; i < node.isobranches.length; ++i) {
+                    this.move_tree_drawIsoBranchTo(svg, node, node.isobranches[i], viewport);
+                }
             }
-        }
 
-        this.move_tree_drawPath(svg, node, viewport);
+            this.move_tree_drawPath(svg, node, viewport);
+        });
     }
 
     //
