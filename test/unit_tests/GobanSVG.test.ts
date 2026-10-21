@@ -1044,3 +1044,38 @@ describe("touch on the board blurs the chat field", () => {
         goban.destroy();
     });
 });
+
+describe("touch on the board blurs the chat field (touchstart)", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    function touchStart(target: HTMLElement) {
+        const touch = { clientX: 15, clientY: 15 };
+        const event = new Event("touchstart", { bubbles: true });
+        Object.defineProperty(event, "touches", { value: [touch] });
+        Object.defineProperty(event, "changedTouches", { value: [touch] });
+        target.dispatchEvent(event);
+    }
+
+    test("a focused textarea is blurred on touchstart", () => {
+        const goban = new SVGRenderer(basic3x3Config());
+        const textarea = document.createElement("textarea");
+        document.body.appendChild(textarea);
+
+        textarea.focus();
+        expect(document.activeElement).toBe(textarea);
+
+        touchStart(goban.parent);
+
+        expect(document.activeElement).not.toBe(textarea);
+
+        textarea.remove();
+        goban.destroy();
+    });
+});

@@ -890,3 +890,63 @@ describe("last move on an empty point", () => {
         goban.destroy();
     });
 });
+
+describe("touch on the board blurs the chat field", () => {
+    beforeEach(() => {
+        board_div = document.createElement("div");
+        document.body.appendChild(board_div);
+    });
+
+    afterEach(() => {
+        board_div.remove();
+    });
+
+    function touch(target: HTMLElement, eventName: "touchstart" | "touchend") {
+        const event = new Event(eventName, { bubbles: true });
+        Object.defineProperty(event, "touches", {
+            value: [{ clientX: 15, clientY: 15 }],
+        });
+        Object.defineProperty(event, "changedTouches", {
+            value: [{ clientX: 15, clientY: 15 }],
+        });
+        target.dispatchEvent(event);
+    }
+
+    test("touchstart on the board blurs a focused textarea and input", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+        const textarea = document.createElement("textarea");
+        const input = document.createElement("input");
+
+        document.body.appendChild(textarea);
+        document.body.appendChild(input);
+
+        textarea.focus();
+        expect(document.activeElement).toBe(textarea);
+        touch(canvas, "touchstart");
+        expect(document.activeElement).not.toBe(textarea);
+
+        input.focus();
+        expect(document.activeElement).toBe(input);
+        touch(canvas, "touchstart");
+        expect(document.activeElement).not.toBe(input);
+
+        textarea.remove();
+        input.remove();
+        goban.destroy();
+    });
+
+    test("touchstart outside the board leaves the textarea focused", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        const textarea = document.createElement("textarea");
+        document.body.appendChild(textarea);
+
+        textarea.focus();
+        expect(document.activeElement).toBe(textarea);
+        touch(document.body, "touchstart");
+        expect(document.activeElement).toBe(textarea);
+
+        textarea.remove();
+        goban.destroy();
+    });
+});
