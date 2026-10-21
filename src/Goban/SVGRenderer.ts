@@ -614,6 +614,23 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         let startX = 0;
         let startY = 0;
 
+        // Android Chrome scrolls a focused chat field into view on touchstart,
+        // before touchend. Blur here as well so that scroll does not start.
+        const blurFocusedTextControl = () => {
+            const currentElement = document.activeElement;
+            if (
+                currentElement instanceof HTMLElement &&
+                (currentElement.tagName.toLowerCase() === "input" ||
+                    currentElement.tagName.toLowerCase() === "textarea")
+            ) {
+                currentElement.blur();
+            }
+        };
+
+        const isBoardTouch = (ev: TouchEvent): boolean =>
+            (typeof ev.composedPath === "function" && ev.composedPath().includes(div)) ||
+            (ev.target instanceof Node && div.contains(ev.target));
+
         const onTouchStart = (ev: TouchEvent) => {
             try {
                 if (mouse_disabled) {
@@ -624,7 +641,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 }, 5000);
                 getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === div) {
+                if (isBoardTouch(ev)) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     startX = ev.touches[0].clientX;
@@ -642,6 +659,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                         }
                         this.activeTouchCompleter = undefined;
                     };
+                    blurFocusedTextControl();
                 } else if (dragging) {
                     pointerOut(ev);
                 }
@@ -653,16 +671,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             try {
                 this.activeTouchCompleter = undefined;
 
-                // Stop a touch screen device always auto scrolling to the chat input box if it is active when you make a move
-                const currentElement = document.activeElement;
-                if (
-                    ev.target === div &&
-                    currentElement &&
-                    currentElement instanceof HTMLElement &&
-                    (currentElement.tagName.toLowerCase() === "input" ||
-                        currentElement.tagName.toLowerCase() === "textarea")
-                ) {
-                    currentElement.blur();
+                if (isBoardTouch(ev)) {
+                    blurFocusedTextControl();
                 }
 
                 if (mouse_disabled) {
@@ -672,7 +682,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                     mouse_disabled = 0;
                 }, 5000);
 
-                if (ev.target === div) {
+                if (isBoardTouch(ev)) {
                     if (
                         Math.sqrt(
                             (startX - lastX) * (startX - lastX) +
@@ -700,7 +710,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                 }, 5000);
                 getRelativeEventPosition(ev, this.parent); // enables tracking of last ev position so on touch end can always tell where we released from
 
-                if (ev.target === div) {
+                if (isBoardTouch(ev)) {
                     lastX = ev.touches[0].clientX;
                     lastY = ev.touches[0].clientY;
                     if (this.mode === "analyze" && this.analyze_tool === "draw") {
