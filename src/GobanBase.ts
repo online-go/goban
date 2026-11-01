@@ -238,6 +238,7 @@ export interface GobanEvents extends StateUpdateEvents {
         player_id: number;
     }) => void;
     "audio-game-ended": (winner: "black" | "white" | "tie") => void;
+    "analysis-move": () => void;
     "audio-pass": () => void;
     "audio-stone": (obj: {
         x: number;

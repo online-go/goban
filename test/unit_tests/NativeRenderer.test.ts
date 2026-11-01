@@ -532,3 +532,22 @@ describe("transport rejections", () => {
         goban.destroy();
     });
 });
+
+describe("analysis placement events", () => {
+    test("emits after placement but not move navigation", async () => {
+        const transport = new RecordingTransport();
+        const goban = new GobanNativeRenderer(config(transport, { mode: "analyze" }));
+        await flush();
+        goban.setAnalyzeTool("stone", "alternate");
+        goban.enableStonePlacement();
+        const placed = jest.fn();
+        goban.on("analysis-move", placed);
+        transport.emitPlace({ id: `goban-${goban.goban_id}`, x: 1, y: 2 });
+        expect(placed).toHaveBeenCalledTimes(1);
+        expect(goban.engine.board[2][1]).not.toBe(0);
+        goban.showPrevious();
+        goban.showNext();
+        expect(placed).toHaveBeenCalledTimes(1);
+        goban.destroy();
+    });
+});

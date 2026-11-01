@@ -2026,6 +2026,7 @@ export abstract class GobanInteractive extends GobanBase {
                         delete this.move_selected;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
+                        this.emit("analysis-move");
                         this.playMovementSound();
                         break;
                     case "conditional":
