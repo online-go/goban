@@ -1239,6 +1239,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
             clock: update,
             review_id: this.review_id,
         });
+        // The review is now on this node, so the next sync compares against it
+        this.last_review_message = { f: diff.from, m: diff.moves };
         this.emit("review.updated");
     }
 

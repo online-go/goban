@@ -2664,10 +2664,7 @@ export class GobanEngine extends BoardState {
                                 if (isNaN(time_left) || time_left < 0) {
                                     return;
                                 }
-                                if (!self.cur_move.black_clock) {
-                                    self.cur_move.black_clock = { main_time: 0 };
-                                }
-                                self.cur_move.black_clock.main_time = time_left;
+                                self.cur_move.black_clock = { main_time: time_left };
                             });
                         }
                         break;
@@ -2679,10 +2676,7 @@ export class GobanEngine extends BoardState {
                                 if (isNaN(time_left) || time_left < 0) {
                                     return;
                                 }
-                                if (!self.cur_move.white_clock) {
-                                    self.cur_move.white_clock = { main_time: 0 };
-                                }
-                                self.cur_move.white_clock.main_time = time_left;
+                                self.cur_move.white_clock = { main_time: time_left };
                             });
                         }
                         break;

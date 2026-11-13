@@ -116,6 +116,17 @@ describe("GobanEngine SGF time parsing", () => {
         });
     });
 
+    test("a clock-only node's zero time replaces the earlier overtime", () => {
+        const goban = loadSGF(
+            "(;GM[1]FF[4]SZ[9]TM[600]OT[5x30 byo-yomi];B[dd]BL[30]OB[3];BL[0]OB[0])",
+        );
+        expect(nth(goban.engine.move_tree, 1).black_clock).toEqual({
+            main_time: 0,
+            period_time_left: 0,
+            periods_left: 0,
+        });
+    });
+
     test("BL without OB in byoyomi is main time", () => {
         const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[600]OT[5x30 byo-yomi];B[pd]BL[540])");
         const move1 = nth(goban.engine.move_tree, 1);

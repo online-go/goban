@@ -169,6 +169,23 @@ describe("setReviewNodeClock", () => {
         goban.destroy();
     });
 
+    test("a sync back on the previously synced node still names that node", () => {
+        const { goban, send } = reviewBoard(true);
+        goban.syncReviewMove();
+        const synced = goban.engine.cur_move;
+        goban.engine.place(5, 5);
+        goban.setReviewNodeClock("black", { main_time: 5000 });
+
+        goban.engine.jumpTo(synced);
+        goban.syncReviewMove(undefined, "Comment on dd");
+
+        expect(send).toHaveBeenLastCalledWith(
+            "review/append",
+            expect.objectContaining({ f: 0, m: "dd", t: "Comment on dd" }),
+        );
+        goban.destroy();
+    });
+
     test("a viewer cannot set clocks", () => {
         const { goban, send } = reviewBoard(false);
         goban.setReviewNodeClock("black", { main_time: 5000 });
