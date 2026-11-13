@@ -97,6 +97,10 @@ export interface JGOFMove extends JGOFIntersection {
     sgf_downloaded_by?: Array<number>; // Array of users who downloaded the
     // game SGF before this move was made
 
+    /** The mover's clock right after this move was applied (Fischer
+     *  increment added, byo-yomi and canadian periods already reset) */
+    clock?: JGOFPlayerClock;
+
     /** Stone removal reasoning, primarily for debugging */
     removal_reason?: string;
 }

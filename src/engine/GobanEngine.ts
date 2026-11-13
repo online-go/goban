@@ -36,6 +36,7 @@ import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
     JGOFMove,
+    JGOFPlayerClock,
     JGOFPlayerSummary,
     JGOFIntersection,
     JGOFSealingIntersection,
@@ -148,6 +149,8 @@ export interface GobanEngineConfig extends BoardConfig {
     is_game_record?: boolean /* Indicates that this game is a game record of a real life game */;
 
     time_control?: JGOFTimeControl;
+    /** Both players' clocks at the moment the game ended */
+    final_clock?: { black: JGOFPlayerClock; white: JGOFPlayerClock };
     moves?: GobanMovesArray;
     move_tree?: MoveTreeJson;
     ranked?: boolean;
@@ -714,10 +717,12 @@ export class GobanEngine extends BoardState {
                 const mv = moves[i];
                 if (mv.edited) {
                     this.editPlace(mv.x, mv.y, mv.color || 0, true);
+                    this.applyMoveClock(mv);
                     //have_edited = true;
                 } else {
                     try {
                         this.place(mv.x, mv.y, false, false, true, true, true);
+                        this.applyMoveClock(mv);
                         if (mv.player_update) {
                             this.cur_move.player_update = mv.player_update;
                             this.updatePlayers(mv.player_update);
@@ -1101,6 +1106,18 @@ export class GobanEngine extends BoardState {
 
         moves.reverse();
         return { from: branch_point.getMoveIndex(), moves: encodeMoves(moves) };
+    }
+    /** Records a move's clock on the current node, under the color of the
+     *  player who made the move. */
+    public applyMoveClock(mv: JGOFMove): void {
+        if (!mv.clock) {
+            return;
+        }
+        if (this.cur_move.player === JGOFNumericPlayerColor.BLACK) {
+            this.cur_move.black_clock = { ...mv.clock };
+        } else if (this.cur_move.player === JGOFNumericPlayerColor.WHITE) {
+            this.cur_move.white_clock = { ...mv.clock };
+        }
     }
     public setAsCurrentReviewMove(): void {
         if (this.dontStoreBoardHistory) {
