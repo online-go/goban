@@ -106,24 +106,30 @@ describe("GobanEngine SGF time parsing", () => {
         expect(move1.white_clock).toMatchObject({ main_time: 3600 * 1000 });
     });
 
-    test("OB in byoyomi populates periods_left", () => {
+    test("OB in byoyomi means overtime: BL is the period time left", () => {
         const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd]BL[30]OB[3])");
         const move1 = nth(goban.engine.move_tree, 1);
-        expect(move1.black_clock).toMatchObject({
-            main_time: 30 * 1000,
+        expect(move1.black_clock).toEqual({
+            main_time: 0,
+            period_time_left: 30 * 1000,
             periods_left: 3,
         });
-        expect(move1.black_clock?.moves_left).toBeUndefined();
     });
 
-    test("OB in Canadian populates moves_left", () => {
-        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[3600]OT[15/300 Canadian];B[pd]BL[300]OB[10])");
+    test("BL without OB in byoyomi is main time", () => {
+        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[600]OT[5x30 byo-yomi];B[pd]BL[540])");
         const move1 = nth(goban.engine.move_tree, 1);
-        expect(move1.black_clock).toMatchObject({
-            main_time: 300 * 1000,
-            moves_left: 10,
+        expect(move1.black_clock).toEqual({ main_time: 540 * 1000 });
+    });
+
+    test("OB in Canadian means overtime: BL is the block time left", () => {
+        const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[3600]OT[15/300 Canadian];B[pd]BL[312.5]OB[7])");
+        const move1 = nth(goban.engine.move_tree, 1);
+        expect(move1.black_clock).toEqual({
+            main_time: 0,
+            block_time_left: 312.5 * 1000,
+            moves_left: 7,
         });
-        expect(move1.black_clock?.periods_left).toBeUndefined();
     });
 
     test("OB in absolute system is ignored", () => {
@@ -189,8 +195,9 @@ describe("GobanEngine SGF time parsing", () => {
         // OB must see the clock BL populates even when OB appears first.
         const goban = loadSGF("(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd]OB[3]BL[30])");
         const move1 = nth(goban.engine.move_tree, 1);
-        expect(move1.black_clock).toMatchObject({
-            main_time: 30 * 1000,
+        expect(move1.black_clock).toEqual({
+            main_time: 0,
+            period_time_left: 30 * 1000,
             periods_left: 3,
         });
     });
@@ -200,9 +207,22 @@ describe("GobanEngine SGF time parsing", () => {
             "(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd];W[dp]OW[2]WL[30])",
         );
         const move2 = nth(goban.engine.move_tree, 2);
-        expect(move2.white_clock).toMatchObject({
-            main_time: 30 * 1000,
+        expect(move2.white_clock).toEqual({
+            main_time: 0,
+            period_time_left: 30 * 1000,
             periods_left: 2,
+        });
+    });
+
+    test("OW without WL takes the parent's white clock in overtime shape", () => {
+        const goban = loadSGF(
+            "(;GM[1]FF[4]SZ[19]TM[1800]OT[5x30 byo-yomi];B[pd]BL[30]OB[3]WL[25]OW[2];W[dp]OW[1])",
+        );
+        const move2 = nth(goban.engine.move_tree, 2);
+        expect(move2.white_clock).toEqual({
+            main_time: 0,
+            period_time_left: 25 * 1000,
+            periods_left: 1,
         });
     });
 
@@ -219,5 +239,40 @@ describe("GobanEngine SGF time parsing", () => {
         const move1 = nth(goban.engine.move_tree, 1);
         expect(move1.black_clock?.main_time).toBe(30 * 1000);
         expect(move1.black_clock?.periods_left).toBeUndefined();
+    });
+});
+
+describe("SGF clock writing", () => {
+    function exportSGF(sgf: string): string {
+        return loadSGF(sgf).engine.move_tree.toSGF();
+    }
+
+    test("main time and byo-yomi overtime round trip", () => {
+        const out = exportSGF(
+            "(;GM[1]FF[4]SZ[19]TM[600]OT[5x30 byo-yomi];B[pd]BL[540];W[dp]WL[30]OW[3])",
+        );
+        expect(out).toContain("B[pd]BL[540]");
+        expect(out).toContain("W[dp]WL[30]OW[3]");
+        expect(out).not.toContain("OB[");
+    });
+
+    test("canadian overtime round trip", () => {
+        const out = exportSGF("(;GM[1]FF[4]SZ[19]TM[3600]OT[15/300 Canadian];B[pd]BL[312.5]OB[7])");
+        expect(out).toContain("B[pd]BL[312.5]OB[7]");
+    });
+
+    test("a node with both BL and WL keeps both", () => {
+        const out = exportSGF("(;GM[1]FF[4]SZ[19]TM[3600];B[pd]BL[3590]WL[3600])");
+        expect(out).toContain("B[pd]BL[3590]WL[3600]");
+    });
+
+    test("setup nodes and the root keep their clocks", () => {
+        const goban = loadSGF(
+            "(;GM[1]FF[4]SZ[19]TM[3600]BL[3600]WL[3600];B[pd]BL[3590];AB[aa]BL[10];W[dp])",
+        );
+        expect(goban.engine.move_tree.black_clock).toEqual({ main_time: 3600 * 1000 });
+        const out = goban.engine.move_tree.toSGF();
+        expect(out.startsWith("BL[3600]WL[3600]")).toBe(true);
+        expect(out).toContain("AB[aa]BL[10]");
     });
 });

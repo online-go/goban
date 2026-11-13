@@ -30,7 +30,7 @@ import {
     JGOFPlayerClock,
     JGOFPlayerSummary,
 } from "./formats/JGOF";
-import { escapeSGFText, newlines_to_spaces } from "./util";
+import { escapeSGFText, formatSGFClock, newlines_to_spaces } from "./util";
 
 /** AI review quality classification of a played move, shown as a colored badge on the stone. */
 export type AIQualityMark = "excellent" | "great" | "good" | "inaccuracy" | "mistake" | "blunder";
@@ -872,6 +872,12 @@ export class MoveTree {
                     }
                 }
             }
+        }
+        if (this.black_clock) {
+            ret.push(formatSGFClock("black", this.black_clock));
+        }
+        if (this.white_clock) {
+            ret.push(formatSGFClock("white", this.white_clock));
         }
         const comment = txt.join("");
         if (comment !== "") {
