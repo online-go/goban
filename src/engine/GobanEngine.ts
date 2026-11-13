@@ -16,7 +16,7 @@
 
 import { BoardState, BoardConfig } from "./BoardState";
 import { GobanMoveError } from "./GobanError";
-import { MoveTree, MoveTreeJson } from "./MoveTree";
+import { MoveTree, MoveTreeJson, ReviewClockUpdate } from "./MoveTree";
 import {
     computeTimeControlSpeed,
     decodeMoves,
@@ -275,7 +275,7 @@ export interface ReviewMessage {
     /** Moves made */
     "m"?: string;
     /** official move [reviewing live game] */
-    "om"?: [number, number, number];
+    "om"?: AdHocPackedMove;
     /** official undo [reviewing live game] */
     "undo"?: boolean;
     /** text note for the current node */
@@ -303,6 +303,8 @@ export interface ReviewMessage {
     "remove-chat"?: string;
     /** Clears the pen drawings on the node */
     "clearpen"?: boolean;
+    /** Sets (or, with null, clears) clocks on the current node */
+    "clock"?: ReviewClockUpdate;
     /** Delete */
     "delete"?: number;
     /** Sets the owner of the review */

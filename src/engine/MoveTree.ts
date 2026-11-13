@@ -65,6 +65,12 @@ export interface MarkInterface {
     [label: string]: string | boolean | undefined;
 }
 
+/** Clock changes for one node, as sent in a review's `clock` message */
+export interface ReviewClockUpdate {
+    black?: JGOFPlayerClock | null;
+    white?: JGOFPlayerClock | null;
+}
+
 export type MoveTreePenMarks = Array<{
     color: string;
     points: Array<number> /* [x1,y1, x2,y2, ...] */;
@@ -624,6 +630,17 @@ export class MoveTree {
         return true;
     }
 
+    /** Sets or clears this node's clocks; colors not named are left alone */
+    applyClockUpdate(update: ReviewClockUpdate): void {
+        for (const color of ["black", "white"] as const) {
+            const clock = update[color];
+            if (clock === null) {
+                delete this[`${color}_clock`];
+            } else if (clock) {
+                this[`${color}_clock`] = { ...clock };
+            }
+        }
+    }
     remove(): MoveTree {
         if (!this.parent) {
             throw new Error(`Cannot remove MoveTree child without a parent`);

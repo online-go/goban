@@ -661,6 +661,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.engine.cur_move.played_by = the_move.played_by;
                     }
 
+                    this.engine.applyMoveClock(the_move);
+
                     this.setLastOfficialMove();
                     delete this.move_selected;
 
@@ -955,6 +957,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.place(mv.x, mv.y, false, false, true, true, true);
+                    this.engine.applyMoveClock(mv);
                     this.engine.setLastOfficialMove();
                     if (
                         (t.x !== mv.x ||
@@ -1012,6 +1015,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         if (this.engine.cur_move.id === t.id) {
                             this.redraw();
                         }
+                    }
+                    if (obj.clock) {
+                        this.engine.cur_review_move.applyClockUpdate(obj.clock);
                     }
                     if ("clearpen" in obj) {
                         this.engine.cur_review_move.pen_marks = [];
@@ -1211,6 +1217,30 @@ export abstract class OGSConnectivity extends GobanInteractive {
             }
         }
     }
+    /** Sets (or, with null, clears) a player's clock on the current review
+     * node, as the review's controller. */
+    public setReviewNodeClock(color: "black" | "white", clock: JGOFPlayerClock | null): void {
+        if (
+            !this.review_id ||
+            !this.isPlayerController() ||
+            !this.done_loading_review ||
+            this.isInPushedAnalysis?.()
+        ) {
+            return;
+        }
+
+        const update = { [color]: clock };
+        this.engine.cur_move.applyClockUpdate(update);
+        const diff = this.engine.getMoveDiff();
+        this.engine.setAsCurrentReviewMove();
+        this.socket.send("review/append", {
+            f: diff.from,
+            m: diff.moves,
+            clock: update,
+            review_id: this.review_id,
+        });
+    }
+
     public syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void {
         if (
             this.review_id &&
