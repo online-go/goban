@@ -953,7 +953,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 if ("om" in obj) {
                     /* Official move [comes from live review of game] */
                     const t = this.engine.cur_review_move || this.engine.cur_move;
-                    const mv = this.engine.decodeMoves([obj.om] as any)[0];
+                    const mv = this.engine.decodeMoves([obj.om!])[0];
                     const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.place(mv.x, mv.y, false, false, true, true, true);

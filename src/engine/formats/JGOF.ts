@@ -98,7 +98,8 @@ export interface JGOFMove extends JGOFIntersection {
     // game SGF before this move was made
 
     /** The mover's clock right after this move was applied (Fischer
-     *  increment added, byo-yomi and canadian periods already reset) */
+     *  increment added, a byo-yomi period shown full, a canadian block after
+     *  the server's bookkeeping) */
     clock?: JGOFPlayerClock;
 
     /** Stone removal reasoning, primarily for debugging */
