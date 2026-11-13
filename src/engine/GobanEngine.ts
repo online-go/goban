@@ -16,7 +16,7 @@
 
 import { BoardState, BoardConfig } from "./BoardState";
 import { GobanMoveError } from "./GobanError";
-import { MoveTree, MoveTreeJson, ReviewClockUpdate } from "./MoveTree";
+import { MoveTree, MoveTreeJson } from "./MoveTree";
 import {
     computeTimeControlSpeed,
     decodeMoves,
@@ -303,8 +303,10 @@ export interface ReviewMessage {
     "remove-chat"?: string;
     /** Clears the pen drawings on the node */
     "clearpen"?: boolean;
-    /** Sets (or, with null, clears) clocks on the current node */
-    "clock"?: ReviewClockUpdate;
+    /** Sets (or, with null, clears) black's clock on the current node */
+    "black_clock"?: JGOFPlayerClock | null;
+    /** Sets (or, with null, clears) white's clock on the current node */
+    "white_clock"?: JGOFPlayerClock | null;
     /** Delete */
     "delete"?: number;
     /** Sets the owner of the review */
@@ -721,12 +723,12 @@ export class GobanEngine extends BoardState {
                 const mv = moves[i];
                 if (mv.edited) {
                     this.editPlace(mv.x, mv.y, mv.color || 0, true);
-                    this.applyMoveClock(mv);
+                    this.cur_move.applyClocks(mv);
                     //have_edited = true;
                 } else {
                     try {
                         this.place(mv.x, mv.y, false, false, true, true, true);
-                        this.applyMoveClock(mv);
+                        this.cur_move.applyClocks(mv);
                         if (mv.player_update) {
                             this.cur_move.player_update = mv.player_update;
                             this.updatePlayers(mv.player_update);
@@ -1110,18 +1112,6 @@ export class GobanEngine extends BoardState {
 
         moves.reverse();
         return { from: branch_point.getMoveIndex(), moves: encodeMoves(moves) };
-    }
-    /** Records a move's clock on the current node, under the color of the
-     *  player who made the move. */
-    public applyMoveClock(mv: JGOFMove): void {
-        if (!mv.clock) {
-            return;
-        }
-        if (this.cur_move.player === JGOFNumericPlayerColor.BLACK) {
-            this.cur_move.black_clock = { ...mv.clock };
-        } else if (this.cur_move.player === JGOFNumericPlayerColor.WHITE) {
-            this.cur_move.white_clock = { ...mv.clock };
-        }
     }
     public setAsCurrentReviewMove(): void {
         if (this.dontStoreBoardHistory) {

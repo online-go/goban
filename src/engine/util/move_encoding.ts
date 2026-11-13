@@ -219,8 +219,11 @@ export function encodeMoveToArray(mv: JGOFMove): AdHocPackedMove {
     if (mv.player_update) {
         extra.player_update = mv.player_update;
     }
-    if (mv.clock) {
-        extra.clock = mv.clock;
+    if (mv.black_clock) {
+        extra.black_clock = mv.black_clock;
+    }
+    if (mv.white_clock) {
+        extra.white_clock = mv.white_clock;
     }
 
     // don't add an extra if there is nothing extra...

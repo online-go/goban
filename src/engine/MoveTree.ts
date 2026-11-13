@@ -65,10 +65,10 @@ export interface MarkInterface {
     [label: string]: string | boolean | undefined;
 }
 
-/** Clock changes for one node, as sent in a review's `clock` message */
-export interface ReviewClockUpdate {
-    black?: JGOFPlayerClock | null;
-    white?: JGOFPlayerClock | null;
+/** Clocks for one node, as carried on a move or a review message; null clears one */
+export interface NodeClocks {
+    black_clock?: JGOFPlayerClock | null;
+    white_clock?: JGOFPlayerClock | null;
 }
 
 export type MoveTreePenMarks = Array<{
@@ -631,13 +631,13 @@ export class MoveTree {
     }
 
     /** Sets or clears this node's clocks; colors not named are left alone */
-    applyClockUpdate(update: ReviewClockUpdate): void {
-        for (const color of ["black", "white"] as const) {
-            const clock = update[color];
+    applyClocks(clocks: NodeClocks): void {
+        for (const field of ["black_clock", "white_clock"] as const) {
+            const clock = clocks[field];
             if (clock === null) {
-                delete this[`${color}_clock`];
+                delete this[field];
             } else if (clock) {
-                this[`${color}_clock`] = { ...clock };
+                this[field] = { ...clock };
             }
         }
     }

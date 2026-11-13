@@ -45,18 +45,18 @@ function reviewLog(...entries: any[]): any[] {
     ];
 }
 
-describe("MoveTree.applyClockUpdate", () => {
+describe("MoveTree.applyClocks", () => {
     test("sets, replaces and clears each color independently", () => {
         const goban = new TestGoban({ width: 9, height: 9 });
         goban.engine.place(2, 2);
         const node = goban.engine.cur_move;
 
-        node.applyClockUpdate({ black: { main_time: 1000 }, white: { main_time: 2000 } });
-        node.applyClockUpdate({ black: { main_time: 500 } });
+        node.applyClocks({ black_clock: { main_time: 1000 }, white_clock: { main_time: 2000 } });
+        node.applyClocks({ black_clock: { main_time: 500 } });
         expect(node.black_clock).toEqual({ main_time: 500 });
         expect(node.white_clock).toEqual({ main_time: 2000 });
 
-        node.applyClockUpdate({ white: null });
+        node.applyClocks({ white_clock: null });
         expect(node.white_clock).toBeUndefined();
         expect(node.black_clock).toEqual({ main_time: 500 });
         goban.destroy();
@@ -73,7 +73,7 @@ describe("clocks arriving from the server", () => {
         )({
             game_id: 321,
             move_number: 1,
-            move: [2, 2, 900, undefined, { clock: { main_time: 1000 } }],
+            move: [2, 2, 900, undefined, { black_clock: { main_time: 1000 } }],
         });
 
         expect(goban.engine.last_official_move.black_clock).toEqual({ main_time: 1000 });
@@ -86,15 +86,15 @@ describe("clocks arriving from the server", () => {
         const [server, client, goban] = await connect({ review_id: 77, width: 9, height: 9 });
         const full_state = handler(goban, "review/77/full_state");
 
-        full_state(reviewLog({ f: 0, m: "dd" }, { clock: { black: { main_time: 42000 } } }));
+        full_state(reviewLog({ f: 0, m: "dd" }, { black_clock: { main_time: 42000 } }));
         const node = goban.engine.cur_review_move!;
         expect(node.black_clock).toEqual({ main_time: 42000 });
 
         full_state(
             reviewLog(
                 { f: 0, m: "dd" },
-                { clock: { black: { main_time: 42000 } } },
-                { clock: { black: null } },
+                { black_clock: { main_time: 42000 } },
+                { black_clock: null },
             ),
         );
         expect(goban.engine.cur_review_move!.black_clock).toBeUndefined();
@@ -109,7 +109,7 @@ describe("clocks arriving from the server", () => {
         handler(
             goban,
             "review/78/full_state",
-        )(reviewLog({ om: [2, 2, 0, undefined, { clock: { main_time: 61000 } }] }));
+        )(reviewLog({ om: [2, 2, 0, undefined, { black_clock: { main_time: 61000 } }] }));
 
         expect(goban.engine.last_official_move.black_clock).toEqual({ main_time: 61000 });
         client.disconnect();
@@ -139,7 +139,7 @@ describe("setReviewNodeClock", () => {
         expect(send).toHaveBeenCalledWith("review/append", {
             f: 0,
             m: "dd",
-            clock: { white: clock },
+            white_clock: clock,
             review_id: 123,
         });
         goban.destroy();
@@ -164,7 +164,7 @@ describe("setReviewNodeClock", () => {
         expect(goban.engine.cur_move.black_clock).toBeUndefined();
         expect(send).toHaveBeenLastCalledWith(
             "review/append",
-            expect.objectContaining({ clock: { black: null } }),
+            expect.objectContaining({ black_clock: null }),
         );
         goban.destroy();
     });

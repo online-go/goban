@@ -661,7 +661,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.engine.cur_move.played_by = the_move.played_by;
                     }
 
-                    this.engine.applyMoveClock(the_move);
+                    this.engine.cur_move.applyClocks(the_move);
 
                     this.setLastOfficialMove();
                     delete this.move_selected;
@@ -957,7 +957,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.place(mv.x, mv.y, false, false, true, true, true);
-                    this.engine.applyMoveClock(mv);
+                    this.engine.cur_move.applyClocks(mv);
                     this.engine.setLastOfficialMove();
                     if (
                         (t.x !== mv.x ||
@@ -1016,9 +1016,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                             this.redraw();
                         }
                     }
-                    if (obj.clock) {
-                        this.engine.cur_review_move.applyClockUpdate(obj.clock);
-                    }
+                    this.engine.cur_review_move.applyClocks(obj);
                     if ("clearpen" in obj) {
                         this.engine.cur_review_move.pen_marks = [];
                         this.scheduleRedrawPenLayer();
@@ -1229,14 +1227,14 @@ export abstract class OGSConnectivity extends GobanInteractive {
             return;
         }
 
-        const update = { [color]: clock };
-        this.engine.cur_move.applyClockUpdate(update);
+        const update = { [`${color}_clock`]: clock };
+        this.engine.cur_move.applyClocks(update);
         const diff = this.engine.getMoveDiff();
         this.engine.setAsCurrentReviewMove();
         this.socket.send("review/append", {
             f: diff.from,
             m: diff.moves,
-            clock: update,
+            ...update,
             review_id: this.review_id,
         });
         // The review is now on this node, so the next sync compares against it
