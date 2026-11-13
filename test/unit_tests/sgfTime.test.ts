@@ -8,7 +8,7 @@
  *  http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { parseSGFOvertime, estimateSpeed, computeTimeControlSpeed } from "engine";
+import { parseSGFOvertime, estimateSpeed, computeTimeControlSpeed, formatSGFClock } from "engine";
 import type { JGOFTimeControl } from "engine/formats/JGOF";
 
 describe("parseSGFOvertime", () => {
@@ -300,5 +300,39 @@ describe("computeTimeControlSpeed", () => {
         // 19x19: 44.2s/move → live (both live, but smaller board pushes toward slower)
         expect(computeTimeControlSpeed(tc, 9, 9)).toBe("live");
         expect(computeTimeControlSpeed(tc, 19, 19)).toBe("live");
+    });
+});
+
+describe("formatSGFClock", () => {
+    test("main time is written as BL/WL in seconds", () => {
+        expect(formatSGFClock("black", { main_time: 1795300 })).toBe("BL[1795.3]");
+        expect(formatSGFClock("white", { main_time: 30000 })).toBe("WL[30]");
+    });
+
+    test("sub-second values keep millisecond precision", () => {
+        expect(formatSGFClock("black", { main_time: 1 })).toBe("BL[0.001]");
+        expect(formatSGFClock("black", { main_time: 1234.6 })).toBe("BL[1.235]");
+    });
+
+    test("byo-yomi overtime writes the period time and periods left", () => {
+        expect(
+            formatSGFClock("white", { main_time: 0, periods_left: 3, period_time_left: 30000 }),
+        ).toBe("WL[30]OW[3]");
+    });
+
+    test("canadian overtime writes the block time and stones left", () => {
+        expect(
+            formatSGFClock("black", { main_time: 0, moves_left: 4, block_time_left: 260000 }),
+        ).toBe("BL[260]OB[4]");
+    });
+
+    test("counts are not written in main time", () => {
+        expect(
+            formatSGFClock("black", {
+                main_time: 600000,
+                periods_left: 5,
+                period_time_left: 30000,
+            }),
+        ).toBe("BL[600]");
     });
 });

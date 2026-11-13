@@ -25,6 +25,7 @@ import {
     encodeMoves,
     makeMatrix,
     parseSGFOvertime,
+    clockTimeLeft,
     positionId,
     prettyCoordinates,
     sortMoves,
@@ -36,6 +37,7 @@ import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
     JGOFMove,
+    JGOFPlayerClock,
     JGOFPlayerSummary,
     JGOFIntersection,
     JGOFSealingIntersection,
@@ -49,16 +51,17 @@ import * as goscorer from "goscorer";
 declare const CLIENT: boolean;
 declare const SERVER: boolean;
 
-// Stable sort key: BL/WL must be processed before OB/OW within a single node,
-// since OB/OW depend on the clock BL/WL populates.
+// Stable sort key for a node's deferred properties. Clock properties run after
+// the rest, so they land on the node a setup property (AB/AW/AE) creates, and
+// BL/WL run before OB/OW, which read the clock BL/WL populates.
 function clockPropRank(ident: string): number {
     if (ident === "BL" || ident === "WL") {
-        return 0;
+        return 1;
     }
     if (ident === "OB" || ident === "OW") {
         return 2;
     }
-    return 1;
+    return 0;
 }
 
 export const AUTOSCORE_TRIALS = 1000;
@@ -148,6 +151,8 @@ export interface GobanEngineConfig extends BoardConfig {
     is_game_record?: boolean /* Indicates that this game is a game record of a real life game */;
 
     time_control?: JGOFTimeControl;
+    /** Both players' clocks at the moment the game ended */
+    final_clock?: { black: JGOFPlayerClock; white: JGOFPlayerClock };
     moves?: GobanMovesArray;
     move_tree?: MoveTreeJson;
     ranked?: boolean;
@@ -270,7 +275,7 @@ export interface ReviewMessage {
     /** Moves made */
     "m"?: string;
     /** official move [reviewing live game] */
-    "om"?: [number, number, number];
+    "om"?: AdHocPackedMove;
     /** official undo [reviewing live game] */
     "undo"?: boolean;
     /** text note for the current node */
@@ -298,6 +303,10 @@ export interface ReviewMessage {
     "remove-chat"?: string;
     /** Clears the pen drawings on the node */
     "clearpen"?: boolean;
+    /** Sets (or, with null, clears) black's clock on the current node */
+    "black_clock"?: JGOFPlayerClock | null;
+    /** Sets (or, with null, clears) white's clock on the current node */
+    "white_clock"?: JGOFPlayerClock | null;
     /** Delete */
     "delete"?: number;
     /** Sets the owner of the review */
@@ -714,10 +723,12 @@ export class GobanEngine extends BoardState {
                 const mv = moves[i];
                 if (mv.edited) {
                     this.editPlace(mv.x, mv.y, mv.color || 0, true);
+                    this.cur_move.applyClocks(mv);
                     //have_edited = true;
                 } else {
                     try {
                         this.place(mv.x, mv.y, false, false, true, true, true);
+                        this.cur_move.applyClocks(mv);
                         if (mv.player_update) {
                             this.cur_move.player_update = mv.player_update;
                             this.updatePlayers(mv.player_update);
@@ -2187,10 +2198,9 @@ export class GobanEngine extends BoardState {
                 }
             }
 
-            // Now process deferred properties (like comments) after moves.
-            // OB/OW read the clock that BL/WL populates, so push BL/WL first
-            // regardless of file order — the SGF spec treats node properties
-            // as an unordered set.
+            // Now process deferred properties (like comments) after moves, in
+            // clockPropRank order regardless of file order — the SGF spec
+            // treats node properties as an unordered set.
             deferredProperties.sort((a, b) => clockPropRank(a[0]) - clockPropRank(b[0]));
             for (const prop of deferredProperties) {
                 processProperty(prop[0], prop);
@@ -2644,10 +2654,7 @@ export class GobanEngine extends BoardState {
                                 if (isNaN(time_left) || time_left < 0) {
                                     return;
                                 }
-                                if (!self.cur_move.black_clock) {
-                                    self.cur_move.black_clock = { main_time: 0 };
-                                }
-                                self.cur_move.black_clock.main_time = time_left;
+                                self.cur_move.black_clock = { main_time: time_left };
                             });
                         }
                         break;
@@ -2659,47 +2666,15 @@ export class GobanEngine extends BoardState {
                                 if (isNaN(time_left) || time_left < 0) {
                                     return;
                                 }
-                                if (!self.cur_move.white_clock) {
-                                    self.cur_move.white_clock = { main_time: 0 };
-                                }
-                                self.cur_move.white_clock.main_time = time_left;
+                                self.cur_move.white_clock = { main_time: time_left };
                             });
                         }
                         break;
 
                     case "OB":
-                        {
-                            instructions.push(() => {
-                                const count = parseInt(val);
-                                if (isNaN(count) || count < 0) {
-                                    return;
-                                }
-                                const system = self.sgf_time_settings?.system;
-                                if (system !== "canadian" && system !== "byoyomi") {
-                                    return;
-                                }
-                                if (!self.cur_move.black_clock) {
-                                    // No BL on this node. Fall back only to the
-                                    // direct parent's clock — don't walk further
-                                    // ancestors. A bare count with no time
-                                    // baseline on self or parent is skipped.
-                                    const parent_clock = self.cur_move.parent?.black_clock;
-                                    if (!parent_clock) {
-                                        return;
-                                    }
-                                    self.cur_move.black_clock = { ...parent_clock };
-                                }
-                                if (system === "canadian") {
-                                    self.cur_move.black_clock.moves_left = count;
-                                } else {
-                                    self.cur_move.black_clock.periods_left = count;
-                                }
-                            });
-                        }
-                        break;
-
                     case "OW":
                         {
+                            const color = ident === "OB" ? "black_clock" : "white_clock";
                             instructions.push(() => {
                                 const count = parseInt(val);
                                 if (isNaN(count) || count < 0) {
@@ -2709,18 +2684,28 @@ export class GobanEngine extends BoardState {
                                 if (system !== "canadian" && system !== "byoyomi") {
                                     return;
                                 }
-                                if (!self.cur_move.white_clock) {
-                                    const parent_clock = self.cur_move.parent?.white_clock;
-                                    if (!parent_clock) {
-                                        return;
-                                    }
-                                    self.cur_move.white_clock = { ...parent_clock };
+                                // Without BL/WL on this node, fall back only to the
+                                // direct parent's clock; a bare count with no time
+                                // baseline is skipped.
+                                const base = self.cur_move[color] ?? self.cur_move.parent?.[color];
+                                if (!base) {
+                                    return;
                                 }
-                                if (system === "canadian") {
-                                    self.cur_move.white_clock.moves_left = count;
-                                } else {
-                                    self.cur_move.white_clock.periods_left = count;
-                                }
+                                // OB/OW only exist in overtime, where BL/WL is the time
+                                // left in the current period (byo-yomi) or block (canadian).
+                                const time_left = clockTimeLeft(base);
+                                self.cur_move[color] =
+                                    system === "canadian"
+                                        ? {
+                                              main_time: 0,
+                                              block_time_left: time_left,
+                                              moves_left: count,
+                                          }
+                                        : {
+                                              main_time: 0,
+                                              period_time_left: time_left,
+                                              periods_left: count,
+                                          };
                             });
                         }
                         break;

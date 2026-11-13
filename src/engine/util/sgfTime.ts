@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { JGOFTimeControl, JGOFTimeControlSpeed } from "../formats/JGOF";
+import { JGOFPlayerClock, JGOFTimeControl, JGOFTimeControlSpeed } from "../formats/JGOF";
 import { computeAverageMoveTime } from "./computeAverageMoveTime";
 
 /**
@@ -149,4 +149,27 @@ export function computeTimeControlSpeed(
         return "correspondence";
     }
     return estimateSpeed(computeAverageMoveTime(tc, width, height));
+}
+
+/** Milliseconds left on a clock: main time, or the period or block time once in overtime */
+export function clockTimeLeft(clock: JGOFPlayerClock): number {
+    return clock.main_time || clock.period_time_left || clock.block_time_left || 0;
+}
+
+/**
+ * SGF time properties for one player's clock after a move, e.g. `BL[540]`,
+ * or `WL[30]OW[3]` in overtime. OB/OW hold byo-yomi periods or canadian
+ * stones left, and are only written once main time has run out.
+ */
+export function formatSGFClock(color: "black" | "white", clock: JGOFPlayerClock): string {
+    const c = color === "black" ? "B" : "W";
+    const seconds = Math.max(0, Math.round(clockTimeLeft(clock))) / 1000;
+    let ret = `${c}L[${seconds}]`;
+    if (!clock.main_time) {
+        const count = clock.periods_left ?? clock.moves_left;
+        if (count !== undefined) {
+            ret += `O${c}[${count}]`;
+        }
+    }
+    return ret;
 }

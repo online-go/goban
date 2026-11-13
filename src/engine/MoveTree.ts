@@ -30,7 +30,7 @@ import {
     JGOFPlayerClock,
     JGOFPlayerSummary,
 } from "./formats/JGOF";
-import { escapeSGFText, newlines_to_spaces } from "./util";
+import { escapeSGFText, formatSGFClock, newlines_to_spaces } from "./util";
 
 /** AI review quality classification of a played move, shown as a colored badge on the stone. */
 export type AIQualityMark = "excellent" | "great" | "good" | "inaccuracy" | "mistake" | "blunder";
@@ -63,6 +63,12 @@ export interface MarkInterface {
     undo?: boolean;
 
     [label: string]: string | boolean | undefined;
+}
+
+/** Clocks for one node, as carried on a move or a review message; null clears one */
+export interface NodeClocks {
+    black_clock?: JGOFPlayerClock | null;
+    white_clock?: JGOFPlayerClock | null;
 }
 
 export type MoveTreePenMarks = Array<{
@@ -624,6 +630,17 @@ export class MoveTree {
         return true;
     }
 
+    /** Sets or clears this node's clocks; colors not named are left alone */
+    applyClocks(clocks: NodeClocks): void {
+        for (const field of ["black_clock", "white_clock"] as const) {
+            const clock = clocks[field];
+            if (clock === null) {
+                delete this[field];
+            } else if (clock) {
+                this[field] = { ...clock };
+            }
+        }
+    }
     remove(): MoveTree {
         if (!this.parent) {
             throw new Error(`Cannot remove MoveTree child without a parent`);
@@ -872,6 +889,12 @@ export class MoveTree {
                     }
                 }
             }
+        }
+        if (this.black_clock) {
+            ret.push(formatSGFClock("black", this.black_clock));
+        }
+        if (this.white_clock) {
+            ret.push(formatSGFClock("white", this.white_clock));
         }
         const comment = txt.join("");
         if (comment !== "") {
