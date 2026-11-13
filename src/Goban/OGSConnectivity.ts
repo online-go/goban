@@ -1239,6 +1239,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
             clock: update,
             review_id: this.review_id,
         });
+        this.emit("review.updated");
     }
 
     public syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void {

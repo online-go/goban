@@ -145,6 +145,17 @@ describe("setReviewNodeClock", () => {
         goban.destroy();
     });
 
+    test("the controller's own view is told the review changed", () => {
+        const { goban } = reviewBoard(true);
+        const updated = jest.fn();
+        goban.on("review.updated", updated);
+
+        goban.setReviewNodeClock("black", { main_time: 5000 });
+
+        expect(updated).toHaveBeenCalledTimes(1);
+        goban.destroy();
+    });
+
     test("clearing sends null", () => {
         const { goban, send } = reviewBoard(true);
         goban.setReviewNodeClock("black", { main_time: 5000 });
