@@ -150,6 +150,7 @@ describe("setReviewNodeClock", () => {
             m: "dd",
             white_clock: clock,
             review_id: 123,
+            clock_request_id: expect.any(String),
         });
         goban.destroy();
     });
@@ -595,7 +596,11 @@ describe("demo board running clock", () => {
         const send = jest.spyOn((goban as any).socket, "send").mockImplementation(() => {});
         (goban as any).isPlayerController = () => true;
         goban.setReviewClockRunning(true);
-        expect(send).toHaveBeenCalledWith("review/append", { review_id, clock_running: true });
+        expect(send).toHaveBeenCalledWith("review/append", {
+            review_id,
+            clock_running: true,
+            clock_request_id: expect.any(String),
+        });
         expect(goban.reviewClockRunning()).toBe(true);
         done();
     });
@@ -731,6 +736,272 @@ describe("Record mode on demo boards", () => {
         tap(4, 4);
         expect(lastOm(send)).toEqual([4, 4, 0, 0, { black_clock: { main_time: 598000 } }]);
         done();
+    });
+
+    test("an older edit echo preserves a newer edit and the recorded move", async () => {
+        const { goban, send, tap, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(61000);
+            goban.setReviewNodeClock("black", { main_time: 300000 });
+            now.mockReturnValue(62000);
+            goban.setReviewNodeClock("black", { main_time: 400000 });
+            const [first, second] = appended(send);
+            now.mockReturnValue(62500);
+            receive({ ...first, ts: 61500 });
+            expect(goban.engine.cur_move.black_clock).toEqual({ main_time: 400000 });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(399500);
+            now.mockReturnValue(63000);
+            tap(2, 2);
+            const move = appended(send)[2];
+            expect(move.om[4].black_clock.main_time).toBe(399000);
+            receive({ ...second, ts: 62500 });
+            receive({ ...move, ts: 63500 });
+            expect(goban.engine.last_official_move.black_clock?.main_time).toBe(399000);
+
+            const replay = await recorder(
+                true,
+                { clock_running: true, ts: 1000 },
+                { ...first, ts: 61500 },
+                { ...second, ts: 62500 },
+                { ...move, ts: 63500 },
+            );
+            try {
+                expect(replay.goban.engine.last_official_move.black_clock).toEqual(
+                    goban.engine.last_official_move.black_clock,
+                );
+            } finally {
+                replay.done();
+            }
+        } finally {
+            done();
+        }
+    });
+
+    test("a Resume echo cannot resume a pending Pause or count the same run twice", async () => {
+        const { goban, send, tap, receive, done } = await recorder(true);
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(1000);
+            goban.setReviewClockRunning(true);
+            now.mockReturnValue(2000);
+            goban.setReviewClockRunning(false);
+            const [resume, pause] = appended(send);
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(599000);
+            now.mockReturnValue(3000);
+            receive({ ...resume, ts: 1500 });
+            expect(goban.reviewClockRunning()).toBe(false);
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(599500);
+            receive({ ...pause, ts: 2500 });
+            now.mockReturnValue(4000);
+            tap(2, 2);
+            expect(lastOm(send)[4].black_clock.main_time).toBe(599000);
+        } finally {
+            done();
+        }
+    });
+
+    test("a Pause echo cannot pause a pending Resume", async () => {
+        const { goban, send, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(2000);
+            goban.setReviewClockRunning(false);
+            now.mockReturnValue(3000);
+            goban.setReviewClockRunning(true);
+            const [pause, resume] = appended(send);
+            now.mockReturnValue(4000);
+            receive({ ...pause, ts: 2500 });
+            expect(goban.reviewClockRunning()).toBe(true);
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(597500);
+            receive({ ...resume, ts: 3500 });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(598000);
+        } finally {
+            done();
+        }
+    });
+
+    test("a move recorded before the Pause acknowledgement keeps the pending Pause", async () => {
+        const { goban, send, tap, receive, done } = await recorder(true);
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(1000);
+            goban.setReviewClockRunning(true);
+            now.mockReturnValue(2000);
+            goban.setReviewClockRunning(false);
+            const [resume, pause] = appended(send);
+            now.mockReturnValue(3000);
+            receive({ ...resume, ts: 1500 });
+            now.mockReturnValue(4000);
+            tap(2, 2);
+            const move = appended(send)[2];
+            // Resume has a confirmed time; Pause still uses its local estimate.
+            expect(move.om[4].black_clock.main_time).toBe(599500);
+            receive({ ...pause, ts: 2500 });
+            receive({ ...move, ts: 4500 });
+            expect(goban.engine.last_official_move.black_clock?.main_time).toBe(599500);
+        } finally {
+            done();
+        }
+    });
+
+    test("pending edits on other nodes do not restart the live turn", async () => {
+        const { goban, send, receive, done } = await recorder(
+            true,
+            { clock_running: true, ts: 1000 },
+            { om: [2, 2, 0, 0], ts: 2000 },
+        );
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(3000);
+            goban.engine.jumpTo(goban.engine.move_tree);
+            goban.setReviewNodeClock("white", { main_time: 400000 });
+            now.mockReturnValue(4000);
+            goban.setReviewNodeClock("white", { main_time: 500000 });
+            const [first, second] = appended(send);
+            now.mockReturnValue(5000);
+            receive({ ...first, ts: 3500 });
+            expect(goban.engine.cur_move).toBe(goban.engine.move_tree);
+            expect(goban.getReviewClock("white")?.clock.main_time).toBe(497000);
+            receive({ ...second, ts: 4500 });
+            expect(goban.getReviewClock("white")?.clock.main_time).toBe(497000);
+        } finally {
+            done();
+        }
+    });
+
+    test("another session's identical edit does not acknowledge a local command", async () => {
+        const { goban, send, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(2000);
+            goban.setReviewNodeClock("black", { main_time: 400000 });
+            const local = appended(send)[0];
+            now.mockReturnValue(3000);
+            receive({ ...local, clock_request_id: "another-session", ts: 1500 });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(399000);
+            receive({ ...local, ts: 2500 });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(399500);
+            receive({
+                ...local,
+                black_clock: { main_time: 500000 },
+                clock_request_id: "another-session-next",
+                ts: 2800,
+            });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(499800);
+        } finally {
+            done();
+        }
+    });
+
+    test("pending clock commands follow confirmed timestamps even with a slow echo", async () => {
+        const { goban, send, receive, done } = await recorder(true);
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(1000);
+            goban.setReviewClockRunning(true);
+            now.mockReturnValue(2000);
+            goban.setReviewClockRunning(false);
+            const [resume, pause] = appended(send);
+            now.mockReturnValue(4000);
+            receive({ ...resume, ts: 3000 });
+            expect(goban.reviewClockRunning()).toBe(false);
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(600000);
+            receive({ ...pause, ts: 3500 });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(599500);
+        } finally {
+            done();
+        }
+    });
+
+    test("clearing an absent live clock resets the turn for the controller and replay", async () => {
+        const { goban, send, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(11000);
+            goban.setReviewNodeClock("black", null);
+            const clear = { ...appended(send)[0], ts: 11500 };
+            now.mockReturnValue(12000);
+            receive(clear);
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(599500);
+            const replay = await recorder(true, { clock_running: true, ts: 1000 }, clear);
+            try {
+                expect(replay.goban.getReviewClock("black")).toEqual(goban.getReviewClock("black"));
+            } finally {
+                replay.done();
+            }
+        } finally {
+            done();
+        }
+    });
+
+    test("a pending clear survives an older edit echo", async () => {
+        const { goban, send, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(2000);
+            goban.setReviewNodeClock("black", { main_time: 400000 });
+            now.mockReturnValue(3000);
+            goban.setReviewNodeClock("black", null);
+            const [edit, clear] = appended(send);
+            now.mockReturnValue(4000);
+            receive({ ...edit, ts: 2500 });
+            expect(goban.engine.cur_move.black_clock).toBeUndefined();
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(599000);
+            receive({ ...clear, ts: 3500 });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(599500);
+        } finally {
+            done();
+        }
+    });
+
+    test("a full-state reload discards pending commands before replaying the log", async () => {
+        const { goban, review_id, send, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(2000);
+            goban.setReviewNodeClock("black", { main_time: 400000 });
+            goban.setReviewClockRunning(false);
+            const [edit, pause] = appended(send);
+            const log = reviewLog({ clock_running: true, ts: 1000 }, { ...edit, ts: 2500 });
+            Object.assign(log[0].gamedata, { time_control: BYOYOMI });
+            handler(goban, `review/${review_id}/full_state`)(log);
+            now.mockReturnValue(4000);
+            expect(goban.reviewClockRunning()).toBe(true);
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(398500);
+            receive({ ...pause, ts: 3500 });
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(399000);
+        } finally {
+            done();
+        }
+    });
+
+    test("losing control drops pending commands that the server can reject", async () => {
+        const { goban, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        try {
+            const now = jest.spyOn(Date, "now").mockReturnValue(2000);
+            goban.setReviewNodeClock("black", { main_time: 400000 });
+            goban.setReviewClockRunning(false);
+            Object.assign(goban, { isPlayerController: () => false });
+            receive({ controller: 99, ts: 1500 });
+            receive({ f: 0, m: "", black_clock: { main_time: 500000 }, ts: 2500 });
+            now.mockReturnValue(3000);
+            expect(goban.reviewClockRunning()).toBe(true);
+            expect(goban.getReviewClock("black")?.clock.main_time).toBe(499500);
+        } finally {
+            done();
+        }
     });
 
     test("Pause just before a move stops its time", async () => {

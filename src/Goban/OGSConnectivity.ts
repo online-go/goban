@@ -154,8 +154,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
         return !!this.review_id && !this.engine.config.game_id;
     }
 
-    /** A demo board's running clock, kept from the review log */
+    /** Confirmed demo board timing, kept from the review log */
     private review_clock = new ReviewClock();
+    private review_clock_updated_at = 0;
+    private pending_review_clocks: { at: number; message: ReviewMessage }[] = [];
 
     /** When the controller sent a game move or undo that has not come back yet */
     private review_official_sent_at?: number;
@@ -168,14 +170,13 @@ export abstract class OGSConnectivity extends GobanInteractive {
     }
 
     /**
-     * Applies one review log message to the demo board clock. `live` and
-     * `live_clock` are the live move and its player on move's clock from
-     * before the message.
+     * Applies one server message to confirmed timing. `live` is the official
+     * move before the message; `clock_node` received its node clock fields.
      */
     private updateReviewClock(
         obj: ReviewMessage,
         live: MoveTree,
-        live_clock: JGOFPlayerClock | undefined,
+        clock_node: MoveTree | undefined,
     ): void {
         if (!this.isDemoBoard()) {
             return;
@@ -193,21 +194,63 @@ export abstract class OGSConnectivity extends GobanInteractive {
         // the turn before, which keeps its start.
         const now_live = this.engine.last_official_move;
         const moved = now_live !== live && "om" in obj;
-        const clock_set =
-            now_live === live && now_live[`${playerOnMove(now_live)}_clock`] !== live_clock;
+        const clock_set = clock_node === now_live && `${playerOnMove(now_live)}_clock` in obj;
         if (moved || clock_set) {
             clock.beginTurn(now_live, at);
+        }
+        if (moved || clock_set || typeof obj.clock_running === "boolean") {
+            this.review_clock_updated_at = at;
+        }
+    }
+
+    /** Applies pending commands over confirmed timing, in their send order. */
+    private effectiveReviewClock(): ReviewClock {
+        if (!this.pending_review_clocks.length) {
+            return this.review_clock;
+        }
+        const clock = this.review_clock.copy();
+        const live = this.engine.last_official_move;
+        let at = this.review_clock_updated_at;
+        for (const pending of this.pending_review_clocks) {
+            const message = pending.message;
+            at = Math.max(at, pending.at);
+            if (message.clock_running === true) {
+                clock.start(at);
+            } else if (message.clock_running === false) {
+                clock.stop(at);
+            }
+            if (
+                typeof message.f === "number" &&
+                typeof message.m === "string" &&
+                `${playerOnMove(live)}_clock` in message &&
+                this.findReviewNode(message.f, message.m) === live
+            ) {
+                clock.beginTurn(live, at);
+            }
+        }
+        return clock;
+    }
+
+    /** Sends an optimistic clock command with an ID preserved by the server. */
+    private sendReviewClockMessage(message: ReviewMessage): void {
+        message.clock_request_id = uuid();
+        message.review_id = this.review_id;
+        this.pending_review_clocks.push({ at: this.serverNow(), message });
+        this.socket.send("review/append", message);
+    }
+
+    /** Keeps newer local node edits visible while earlier messages arrive. */
+    private applyPendingReviewClocks(): void {
+        for (const { message } of this.pending_review_clocks) {
+            if (typeof message.f === "number" && typeof message.m === "string") {
+                this.findReviewNode(message.f, message.m)?.applyClocks(message);
+            }
         }
     }
 
     /** True while a demo board's clock is running */
     public reviewClockRunning(): boolean {
-        return this.review_clock.running;
-    }
-
-    /** How long the player on move has used this turn, in ms */
-    private reviewClockElapsed(): number {
-        return this.review_clock.elapsed(this.engine.last_official_move, this.serverNow());
+        return this.effectiveReviewClock().running;
     }
 
     /**
@@ -218,7 +261,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
         color: "black" | "white",
     ): { clock: JGOFPlayerClock; on_move: boolean; running: boolean } | null {
         const tc = reviewTimeControl(this.engine);
-        if (!this.isDemoBoard() || !this.review_clock.started || !tc) {
+        const clock = this.effectiveReviewClock();
+        if (!this.isDemoBoard() || !clock.started || !tc) {
             return null;
         }
         const live = this.engine.last_official_move;
@@ -228,9 +272,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
         }
         const on_move = playerOnMove(live) === color;
         return {
-            clock: on_move ? runClock(base, this.reviewClockElapsed(), tc) : base,
+            clock: on_move ? runClock(base, clock.elapsed(live, this.serverNow()), tc) : base,
             on_move,
-            running: this.review_clock.running,
+            running: clock.running,
         };
     }
 
@@ -264,8 +308,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
         const mover = placed.player === 1 ? "black" : "white";
         const tc = reviewTimeControl(this.engine);
         const base = tc && (findClock(from, mover) ?? startingClock(tc));
-        const elapsed = this.reviewClockElapsed();
-        const timed = this.review_clock.running || elapsed > 0;
+        const clock = this.effectiveReviewClock();
+        const elapsed = clock.elapsed(from, this.serverNow());
+        const timed = clock.running || elapsed > 0;
         const om: AdHocPackedMove =
             tc && base && timed
                 ? [
@@ -296,13 +341,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
      */
     public setReviewClockRunning(running: boolean): void {
         if (this.isDemoBoard() && this.isPlayerController()) {
-            if (running) {
-                this.review_clock.start(this.serverNow());
-            } else {
-                this.review_clock.stop(this.serverNow());
-            }
-            this.socket.send("review/append", {
-                review_id: this.review_id,
+            this.sendReviewClockMessage({
                 clock_running: running,
             });
             this.emit("review.updated");
@@ -1090,7 +1129,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 return;
             }
             const live = this.engine.last_official_move;
-            const live_clock = live[`${playerOnMove(live)}_clock`];
+            let clock_node: MoveTree | undefined;
+            if (obj.clock_request_id) {
+                this.pending_review_clocks = this.pending_review_clocks.filter(
+                    ({ message }) => message.clock_request_id !== obj.clock_request_id,
+                );
+            }
 
             if (obj.chat) {
                 obj.chat.channel = "discussion";
@@ -1125,6 +1169,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
             if (obj.controller) {
                 this.review_controller_id =
                     typeof obj.controller === "object" ? obj.controller.id : obj.controller;
+                if (!this.isPlayerController()) {
+                    // Commands still in flight can be rejected after control changes.
+                    this.pending_review_clocks = [];
+                }
             }
 
             if (
@@ -1254,7 +1302,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                             this.redraw();
                         }
                     }
-                    this.engine.cur_review_move.applyClocks(obj);
+                    clock_node = this.engine.cur_review_move;
+                    clock_node.applyClocks(obj);
                     if ("clearpen" in obj) {
                         this.engine.cur_review_move.pen_marks = [];
                         this.scheduleRedrawPenLayer();
@@ -1317,11 +1366,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 typeof obj.m === "string" &&
                 ("black_clock" in obj || "white_clock" in obj)
             ) {
-                // The controller skips its own messages coming back, but a clock
-                // can also come from another session on its account, such as a
-                // program recording the game. Setting the same clock again
-                // changes nothing, so apply them all, without moving the board.
-                this.findReviewNode(obj.f || 0, obj.m)?.applyClocks(obj);
+                // Other sessions on the controller's account also send clock
+                // edits. Apply confirmed values without moving this board.
+                clock_node = this.findReviewNode(obj.f || 0, obj.m);
+                clock_node?.applyClocks(obj);
             }
 
             if ("controller" in obj) {
@@ -1346,7 +1394,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.emit("update");
                 }
             }
-            this.updateReviewClock(obj, live, live_clock);
+            this.updateReviewClock(obj, live, clock_node);
+            this.applyPendingReviewClocks();
             if ("om" in obj || "undo" in obj) {
                 delete this.review_official_sent_at;
                 // The review's current move may have moved with the game, so the
@@ -1378,6 +1427,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.done_loading_review = false;
 
                         this.review_clock = new ReviewClock();
+                        this.review_clock_updated_at = 0;
+                        this.pending_review_clocks = [];
                         delete this.review_official_sent_at;
                         this.emit("review.load-start");
                         bulk_processing = true;
@@ -1486,19 +1537,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
         const update = { [`${color}_clock`]: clock };
         this.engine.cur_move.applyClocks(update);
-        const live = this.engine.last_official_move;
-        if (this.isDemoBoard() && this.engine.cur_move === live && playerOnMove(live) === color) {
-            // Restart the turn here at once: Record may send a move before the
-            // server's copy of this comes back
-            this.review_clock.beginTurn(live, this.serverNow());
-        }
         const diff = this.engine.getMoveDiff();
         this.engine.setAsCurrentReviewMove();
-        this.socket.send("review/append", {
+        this.sendReviewClockMessage({
             f: diff.from,
             m: diff.moves,
             ...update,
-            review_id: this.review_id,
         });
         // The review is now on this node, so the next sync compares against it
         this.last_review_message = { f: diff.from, m: diff.moves };

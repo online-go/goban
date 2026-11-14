@@ -43,6 +43,17 @@ export class ReviewClock {
      * not listed began before the clock was first started. */
     private turn_starts = new Map<number, number>();
 
+    /** Copies confirmed timing so pending commands can be applied without changing it. */
+    public copy(): ReviewClock {
+        const clock = new ReviewClock();
+        clock.started = this.started;
+        clock.running = this.running;
+        clock.since = this.since;
+        clock.ran = this.ran;
+        clock.turn_starts = new Map(this.turn_starts);
+        return clock;
+    }
+
     public start(at: number): void {
         if (!this.running) {
             this.running = true;
