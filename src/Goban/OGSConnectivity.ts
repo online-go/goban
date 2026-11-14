@@ -157,7 +157,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
     /** Confirmed demo board timing, kept from the review log */
     private review_clock = new ReviewClock();
     private review_clock_updated_at = 0;
-    private pending_review_clocks: { at: number; message: ReviewMessage }[] = [];
+    /** Clock commands sent and not yet acknowledged, with the node an edit
+     * was made on */
+    private pending_review_clocks: { at: number; message: ReviewMessage; node?: MoveTree }[] = [];
 
     /** A game move or undo the controller sent that has not come back, with
      * the move an undo takes back. A reload or a change of controller ends the
@@ -207,6 +209,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
     /** Applies pending commands over confirmed timing, in their send order. */
     private effectiveReviewClock(): ReviewClock {
+        this.settlePendingReviewClocks();
         if (!this.pending_review_clocks.length) {
             return this.review_clock;
         }
@@ -221,32 +224,46 @@ export abstract class OGSConnectivity extends GobanInteractive {
             } else if (message.clock_running === false) {
                 clock.stop(at);
             }
-            if (
-                typeof message.f === "number" &&
-                typeof message.m === "string" &&
-                `${playerOnMove(live)}_clock` in message &&
-                this.findReviewNode(message.f, message.m) === live
-            ) {
+            if (pending.node === live && `${playerOnMove(live)}_clock` in message) {
                 clock.beginTurn(live, at);
             }
         }
         return clock;
     }
 
-    /** Sends an optimistic clock command with an ID preserved by the server. */
-    private sendReviewClockMessage(message: ReviewMessage): void {
+    /** Sends an optimistic clock command with an ID preserved by the server.
+     * `node` is the node a clock edit was made on. */
+    private sendReviewClockMessage(message: ReviewMessage, node?: MoveTree): void {
         message.clock_request_id = uuid();
         message.review_id = this.review_id;
-        this.pending_review_clocks.push({ at: this.serverNow(), message });
+        this.pending_review_clocks.push({ at: this.serverNow(), message, node });
         this.socket.send("review/append", message);
+    }
+
+    /**
+     * Drops pending clock commands that `obj`, a server message, acknowledges,
+     * and any that have waited too long for theirs. The server keeps
+     * this board's messages in order, so an acknowledgement also settles
+     * every command sent before it: those came back earlier or were dropped.
+     * One with no reply for a while was rejected, or went to an older server
+     * that does not return the ID; a late reply still applies as confirmed.
+     */
+    private settlePendingReviewClocks(obj?: ReviewMessage): void {
+        const pending = this.pending_review_clocks;
+        const acked = pending.findIndex(
+            ({ message }) =>
+                !!obj?.clock_request_id && message.clock_request_id === obj.clock_request_id,
+        );
+        const now = this.serverNow();
+        this.pending_review_clocks = pending
+            .slice(acked + 1)
+            .filter(({ at }) => now - at < PENDING_REVIEW_CLOCK_MS);
     }
 
     /** Keeps newer local node edits visible while earlier messages arrive. */
     private applyPendingReviewClocks(): void {
-        for (const { message } of this.pending_review_clocks) {
-            if (typeof message.f === "number" && typeof message.m === "string") {
-                this.findReviewNode(message.f, message.m)?.applyClocks(message);
-            }
+        for (const { message, node } of this.pending_review_clocks) {
+            node?.applyClocks(message);
         }
     }
 
@@ -1143,11 +1160,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
             }
             const live = this.engine.last_official_move;
             let clock_node: MoveTree | undefined;
-            if (obj.clock_request_id) {
-                this.pending_review_clocks = this.pending_review_clocks.filter(
-                    ({ message }) => message.clock_request_id !== obj.clock_request_id,
-                );
-            }
+            this.settlePendingReviewClocks(obj);
 
             if (obj.chat) {
                 obj.chat.channel = "discussion";
@@ -1554,11 +1567,14 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.engine.cur_move.applyClocks(update);
         const diff = this.engine.getMoveDiff();
         this.engine.setAsCurrentReviewMove();
-        this.sendReviewClockMessage({
-            f: diff.from,
-            m: diff.moves,
-            ...update,
-        });
+        this.sendReviewClockMessage(
+            {
+                f: diff.from,
+                m: diff.moves,
+                ...update,
+            },
+            this.engine.cur_move,
+        );
         // The review is now on this node, so the next sync compares against it
         this.last_review_message = { f: diff.from, m: diff.moves };
         this.emit("review.updated");
@@ -2658,6 +2674,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
         });
     }
 }
+
+/** How long a clock command waits for its acknowledgement before it no
+ * longer applies */
+const PENDING_REVIEW_CLOCK_MS = 10000;
 
 function uuid(): string {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
