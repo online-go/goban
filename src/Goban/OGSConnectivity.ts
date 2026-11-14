@@ -138,6 +138,11 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.socket_event_bindings.push([event, cb]);
     }
 
+    /** A review that is not of an OGS game: its official line is the game being recorded */
+    public isDemoBoard(): boolean {
+        return !!this.review_id && !this.engine.config.game_id;
+    }
+
     protected getClockDrift(): number {
         if (callbacks.getClockDrift) {
             return callbacks.getClockDrift();
@@ -956,10 +961,22 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     const mv = this.engine.decodeMoves([obj.om!])[0];
                     const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
-                    this.engine.place(mv.x, mv.y, false, false, true, true, true);
-                    this.engine.cur_move.applyClocks(mv);
-                    this.engine.setLastOfficialMove();
-                    if (
+                    let placed = true;
+                    try {
+                        this.engine.place(mv.x, mv.y, false, false, true, true, true);
+                    } catch (e) {
+                        // An official move a program sent twice, for instance; skip it
+                        // so the rest of the log still replays
+                        console.warn("Skipping an official move that cannot be placed", e);
+                        placed = false;
+                    }
+                    if (placed) {
+                        this.engine.cur_move.applyClocks(mv);
+                        this.engine.setLastOfficialMove();
+                    }
+                    if (!placed) {
+                        this.engine.jumpTo(t);
+                    } else if (
                         (t.x !== mv.x ||
                             t.y !== mv.y) /* case when a branch has been promoted to trunk */ &&
                         !follow_om
@@ -976,11 +993,16 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 if ("undo" in obj) {
                     /* Official undo move [comes from live review of game] */
                     const t = this.engine.cur_review_move;
-                    const cur_move_undone =
-                        this.engine.cur_review_move?.id === this.engine.last_official_move.id;
+                    const undone = this.engine.last_official_move;
+                    let cur_move_undone = t?.id === undone.id;
                     this.engine.jumpToLastOfficialMove();
                     this.engine.showPrevious();
                     this.engine.setLastOfficialMove();
+                    if (this.isDemoBoard() && undone.parent) {
+                        // A recorder's undo takes the mistaken move out entirely
+                        cur_move_undone ||= !!t && undone.isAncestorOf(t);
+                        undone.remove();
+                    }
                     if (!cur_move_undone) {
                         if (t) {
                             this.engine.jumpTo(t);

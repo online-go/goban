@@ -307,6 +307,8 @@ export interface ReviewMessage {
     "black_clock"?: JGOFPlayerClock | null;
     /** Sets (or, with null, clears) white's clock on the current node */
     "white_clock"?: JGOFPlayerClock | null;
+    /** Starts (true) or stops (false) a demo board's clock, as of the message's ts */
+    "clock_running"?: boolean;
     /** Delete */
     "delete"?: number;
     /** Sets the owner of the review */

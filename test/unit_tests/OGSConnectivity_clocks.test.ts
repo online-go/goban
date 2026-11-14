@@ -195,3 +195,80 @@ describe("setReviewNodeClock", () => {
         goban.destroy();
     });
 });
+
+describe("official moves on demo boards", () => {
+    function demoLog(game_id: number | undefined, ...entries: any[]): any[] {
+        const log = reviewLog(...entries);
+        if (game_id) {
+            log[0].gamedata.game_id = game_id;
+        }
+        return log;
+    }
+
+    function nodesAt(root: any, x: number, y: number): any[] {
+        const found: any[] = [];
+        const walk = (node: any) => {
+            if (node.x === x && node.y === y) {
+                found.push(node);
+            }
+            if (node.trunk_next) {
+                walk(node.trunk_next);
+            }
+            for (const branch of node.branches) {
+                walk(branch);
+            }
+        };
+        walk(root);
+        return found;
+    }
+
+    test("an om on an occupied point is skipped and the replay continues", async () => {
+        const [server, client, goban] = await connect({ review_id: 90, width: 9, height: 9 });
+        jest.spyOn(console, "warn").mockImplementation(() => {});
+
+        handler(
+            goban,
+            "review/90/full_state",
+        )(demoLog(undefined, { om: [2, 2, 0, 0] }, { om: [2, 2, 0, 0] }, { om: [3, 3, 0, 0] }));
+
+        const last = goban.engine.last_official_move;
+        expect([last.x, last.y, last.move_number]).toEqual([3, 3, 2]);
+        expect([last.parent!.x, last.parent!.y]).toEqual([2, 2]);
+        client.disconnect();
+        server.close();
+        goban.destroy();
+    });
+
+    test("undo on a demo board deletes the undone move", async () => {
+        const [server, client, goban] = await connect({ review_id: 91, width: 9, height: 9 });
+
+        handler(
+            goban,
+            "review/91/full_state",
+        )(demoLog(undefined, { om: [2, 2, 0, 0] }, { om: [3, 3, 0, 0] }, { undo: true }));
+
+        const last = goban.engine.last_official_move;
+        expect([last.x, last.y]).toEqual([2, 2]);
+        expect(last.trunk_next).toBeUndefined();
+        expect(nodesAt(goban.engine.move_tree, 3, 3)).toEqual([]);
+        client.disconnect();
+        server.close();
+        goban.destroy();
+    });
+
+    test("undo on a review of a game keeps today's behavior", async () => {
+        const [server, client, goban] = await connect({ review_id: 92, width: 9, height: 9 });
+
+        handler(
+            goban,
+            "review/92/full_state",
+        )(demoLog(5, { om: [2, 2, 0, 0] }, { om: [3, 3, 0, 0] }, { undo: true }));
+
+        const last = goban.engine.last_official_move;
+        expect([last.x, last.y]).toEqual([2, 2]);
+        expect([last.trunk_next?.x, last.trunk_next?.y]).toEqual([3, 3]);
+        client.disconnect();
+        server.close();
+        goban.destroy();
+    });
+});
