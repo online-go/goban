@@ -937,10 +937,12 @@ describe("touch on the board blurs the chat field", () => {
     });
 
     test.each([
-        ["a review blurs a focused input, so a pending edit commits", { review_id: 1 }, false],
-        ["a game leaves a focused input alone", {}, true],
-    ])("mousedown on the board of %s", (_, config, kept) => {
-        const goban = new GobanCanvas(basic3x3Config(config));
+        ["a review's controller blurs a focused input, so an edit commits", 1, true, false],
+        ["a review's viewer leaves a focused input alone", 1, false, true],
+        ["a game leaves a focused input alone", undefined, false, true],
+    ])("mousedown on the board as %s", (_, review_id, controller, kept) => {
+        const goban = new GobanCanvas(basic3x3Config({ review_id }));
+        (goban as any).isPlayerController = () => controller;
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
         const input = document.createElement("input");
         document.body.appendChild(input);

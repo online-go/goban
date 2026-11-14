@@ -1972,8 +1972,7 @@ export abstract class GobanInteractive extends GobanBase {
                                 this.engine.place(-1, -1);
                             }
                         }
-                        recorded =
-                            this.isPlayerController() && this.recordOfficialMove(from, !existed);
+                        recorded = this.recordOfficialMove(from, !existed);
                     } else {
                         if (!this.edit_color) {
                             throw new Error(`Edit place called with invalid edit_color value`);

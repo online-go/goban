@@ -45,6 +45,15 @@ function reviewLog(...entries: any[]): any[] {
     ];
 }
 
+const BYOYOMI = {
+    system: "byoyomi",
+    time_control: "byoyomi",
+    speed: "live",
+    main_time: 600,
+    periods: 5,
+    period_time: 30,
+};
+
 describe("MoveTree.applyClocks", () => {
     test("sets, replaces and clears each color independently", () => {
         const goban = new TestGoban({ width: 9, height: 9 });
@@ -325,14 +334,6 @@ describe("official moves on demo boards", () => {
 });
 
 describe("demo board running clock", () => {
-    const BYOYOMI = {
-        system: "byoyomi",
-        time_control: "byoyomi",
-        speed: "live",
-        main_time: 600,
-        periods: 5,
-        period_time: 30,
-    };
     let next_review_id = 300;
 
     function clockLog(game_id: number | undefined, ...entries: any[]): any[] {
@@ -528,7 +529,6 @@ describe("demo board running clock", () => {
         const { goban, done } = await demo(...started);
         now(10500); // before the move's own ts
         expect(goban.getReviewClock("white")?.clock).toEqual({ main_time: 600000 });
-        expect(goban.reviewClockElapsed()).toBe(0);
         done();
     });
 
@@ -611,14 +611,6 @@ describe("demo board running clock", () => {
 });
 
 describe("Record mode on demo boards", () => {
-    const BYOYOMI = {
-        system: "byoyomi",
-        time_control: "byoyomi",
-        speed: "live",
-        main_time: 600,
-        periods: 5,
-        period_time: 30,
-    };
     let next_review_id = 500;
     afterEach(() => jest.restoreAllMocks());
 
@@ -768,6 +760,42 @@ describe("Record mode on demo boards", () => {
         done();
     });
 
+    test("a second Undo before the first comes back is dropped", async () => {
+        const { goban, review_id, send, done } = await recorder(
+            true,
+            { om: [2, 2, 0, 0], ts: 1000 },
+            { om: [3, 3, 0, 0], ts: 2000 },
+        );
+        goban.undoOfficialMove();
+        goban.undoOfficialMove();
+        expect(appended(send)).toEqual([{ review_id, undo: true }]);
+        done();
+    });
+
+    test("a stone before an Undo comes back is dropped", async () => {
+        const { goban, send, tap, done } = await recorder(true, { om: [2, 2, 0, 0], ts: 1000 });
+        goban.undoOfficialMove();
+        tap(4, 4);
+        expect(appended(send).filter((m) => "om" in m)).toEqual([]);
+        done();
+    });
+
+    test("after a recorded move, going back to the last synced move names it again", async () => {
+        const { goban, send, tap, receive, done } = await recorder(true, {
+            om: [2, 2, 0, 0],
+            ts: 1000,
+        });
+        const synced = goban.engine.last_official_move;
+        goban.syncReviewMove();
+        tap(4, 4);
+        receive({ ...appended(send).slice(-1)[0], ts: 2000 });
+
+        goban.engine.jumpTo(synced);
+        goban.syncReviewMove(undefined, "a comment");
+        expect(appended(send).slice(-1)[0]).toMatchObject({ f: 1, m: "", t: "a comment" });
+        done();
+    });
+
     test("a stone that never comes back stops blocking after a while", async () => {
         const { send, tap, done } = await recorder(true, { om: [2, 2, 0, 0], ts: 1000 });
         const now = jest.spyOn(Date, "now").mockReturnValue(10000);
@@ -801,7 +829,14 @@ describe("Record mode on demo boards", () => {
         const { goban, send, tap, receive, done } = await recorder(
             true,
             { om: [2, 2, 0, 0], ts: 1000 },
-            { f: 1, m: "ee", t: "a likely reply", k: { triangle: "cc" }, ts: 2000 },
+            {
+                f: 1,
+                m: "ee",
+                t: "a likely reply",
+                k: { triangle: "cc" },
+                black_clock: { main_time: 420000 },
+                ts: 2000,
+            },
             { pen: "#ff0000", ts: 2100 },
             { pp: [1, 1, 2, 2], ts: 2200 },
             { f: 1, m: "eeff", ts: 3000 },
@@ -815,6 +850,7 @@ describe("Record mode on demo boards", () => {
         expect(official.text).toBe("a likely reply");
         expect(official.getMarks(2, 2).triangle).toBe(true);
         expect(official.pen_marks.length).toBe(1);
+        expect(official.black_clock).toEqual({ main_time: 420000 });
         expect(official.branches.map((b) => [b.x, b.y])).toEqual([[5, 5]]);
         done();
     });

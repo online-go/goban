@@ -157,8 +157,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
     /** A demo board's running clock, kept from the review log */
     private review_clock = new ReviewClock();
 
-    /** When the controller sent a game move that has not come back yet */
-    private review_move_sent_at?: number;
+    /** When the controller sent a game move or undo that has not come back yet */
+    private review_official_sent_at?: number;
 
     /** When true, a stone the controller plays at a demo board's live move is a game move */
     public review_record_moves = false;
@@ -206,7 +206,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
     }
 
     /** How long the player on move has used this turn, in ms */
-    public reviewClockElapsed(): number {
+    private reviewClockElapsed(): number {
         return this.review_clock.elapsed(this.engine.last_official_move, this.serverNow());
     }
 
@@ -255,11 +255,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
         this.engine.jumpTo(from);
 
         // One game move at a time, since the next is checked against the
-        // position before it. One that never comes back stops blocking.
-        if (
-            this.review_move_sent_at !== undefined &&
-            Date.now() - this.review_move_sent_at < 5000
-        ) {
+        // position before it
+        if (this.officialChangePending()) {
             return true;
         }
 
@@ -279,9 +276,18 @@ export abstract class OGSConnectivity extends GobanInteractive {
                       { [`${mover}_clock`]: clockAfterMove(base, elapsed, tc) },
                   ]
                 : [placed.x, placed.y, 0, 0];
-        this.review_move_sent_at = Date.now();
+        this.review_official_sent_at = Date.now();
         this.socket.send("review/append", { review_id: this.review_id, om });
         return true;
+    }
+
+    /** True while a game move or undo the controller sent has not come back.
+     * One that never comes back stops blocking after a few seconds. */
+    private officialChangePending(): boolean {
+        return (
+            this.review_official_sent_at !== undefined &&
+            Date.now() - this.review_official_sent_at < 5000
+        );
     }
 
     /**
@@ -323,7 +329,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
     /** Takes back a demo board's last official move, as its controller */
     public undoOfficialMove(): void {
-        if (this.isDemoBoard() && this.isPlayerController()) {
+        if (this.isDemoBoard() && this.isPlayerController() && !this.officialChangePending()) {
+            this.review_official_sent_at = Date.now();
             this.socket.send("review/append", { review_id: this.review_id, undo: true });
         }
     }
@@ -1341,7 +1348,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
             }
             this.updateReviewClock(obj, live, live_clock);
             if ("om" in obj || "undo" in obj) {
-                delete this.review_move_sent_at;
+                delete this.review_official_sent_at;
+                // The review's current move may have moved with the game, so the
+                // controller's next sync names its move again
+                this.last_review_message = {};
             }
             if (!bulk_processing) {
                 this.emit("review.updated");
@@ -1368,7 +1378,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.done_loading_review = false;
 
                         this.review_clock = new ReviewClock();
-                        delete this.review_move_sent_at;
+                        delete this.review_official_sent_at;
                         this.emit("review.load-start");
                         bulk_processing = true;
                         for (let i = 0; i < entries.length; ++i) {
@@ -1728,7 +1738,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 move: encodeMove(-1, -1),
             });
         } else {
-            if (!(this.isPlayerController() && this.recordOfficialMove(from, !existed))) {
+            if (!this.recordOfficialMove(from, !existed)) {
                 this.syncReviewMove();
             }
             this.move_tree_redraw();
