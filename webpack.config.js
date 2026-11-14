@@ -125,6 +125,7 @@ module.exports = (env, argv) => {
             output: {
                 path: __dirname + "/build",
                 filename: production ? "[name].min.js" : "[name].js",
+                chunkFilename: production ? "[name].[contenthash:8].min.js" : "[name].js",
                 library: {
                     name: "goban",
                     type: "umd",
@@ -140,6 +141,7 @@ module.exports = (env, argv) => {
                         loader: "ts-loader",
                         options: {
                             configFile: "tsconfig.json",
+                            compilerOptions: { module: "esnext" },
                         },
                     },
                     {

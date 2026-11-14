@@ -28,6 +28,11 @@ and `intentPen` events back. See `src/Goban/NativeTransport.ts` for the
 contract and `test/unit_tests/NativeParity.test.ts` for the guard that keeps
 it in step with the canvas renderer.
 
+### Optional 3D renderer
+
+For WebGL 2, call `enableThreeGoban()` on an existing SVG goban or use the
+async `createThreeGoban()` factory. See [3D renderer configuration](docs/three-renderer.md).
+
 # Documentation
 
 https://docs.online-go.com/goban/

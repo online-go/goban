@@ -24,6 +24,14 @@ import { GobanEngine } from "../engine";
 import { MoveTree } from "../engine/MoveTree";
 import { GobanTheme, THEMES } from "./themes";
 import { MoveTreePenMarks } from "../engine/MoveTree";
+import type { BoardView, BoardViewState } from "./BoardView";
+import {
+    buildGhost,
+    buildLastMove,
+    buildOverlays,
+    penMarksToBoardUnits,
+    type SpecSource,
+} from "./NativeSpec";
 import { getRelativeEventPosition } from "./canvas_utils";
 import { _ } from "../engine/translate";
 import { formatMessage, MessageID } from "../engine/messages";
@@ -123,6 +131,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     //private loaded_pre_rendered_stones: { [radius: number]: boolean } = {};
     private __set_board_height: number = -1;
     private __set_board_width: number = -1;
+    private boardView?: BoardView;
+    private boardViewPenNode?: typeof this.engine.cur_move;
+    private suspendedTheme?: GobanSelectedThemes;
     private ready_to_draw: boolean = false;
     private message_div?: HTMLDivElement;
     private message_td?: HTMLElement;
@@ -253,7 +264,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
                         if (USE_CELL_RENDERER) {
                             this.cellDraw(this.last_hover_square.x, this.last_hover_square.y);
                         } else {
-                            this.__drawSquare(this.last_hover_square.x, this.last_hover_square.y);
+                            if (this.boardView) {
+                                this.boardView.invalidate();
+                            } else {
+                                this.__drawSquare(
+                                    this.last_hover_square.x,
+                                    this.last_hover_square.y,
+                                );
+                            }
                         }
                     }
                 }
@@ -307,7 +325,115 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.cells = [];
     }
 
+    /** Install or remove an alternate board painter without reloading Goban. */
+    public switchBoardView(view?: BoardView): void {
+        if (this.destroyed || this.no_display) {
+            view?.dispose();
+            return;
+        }
+        if (view === this.boardView) {
+            return;
+        }
+        const previous = this.boardView;
+        previous?.element.remove();
+        previous?.dispose();
+        this.boardView = view;
+        delete this.activeTouchCompleter;
+        delete this.last_hover_square;
+        this.__last_pt = { i: -1, j: -1, valid: false };
+        delete this.last_pen_position;
+        delete this.current_pen_mark;
+        this.svg.style.display = view ? "none" : "";
+        if (view) {
+            // The surface must be inside the shadow tree when the SVG uses one.
+            view.element.style.pointerEvents = "none";
+            this.svg.before(view.element);
+            this.parent.style.backgroundImage = "none";
+            this.parent.style.backgroundColor = "transparent";
+            this.invalidateBoardBackgroundSync();
+            view.setTheme(this.themes);
+        } else if (this.suspendedTheme) {
+            const theme = this.suspendedTheme;
+            delete this.suspendedTheme;
+            this.setTheme(theme, false);
+        }
+        this.redraw(true);
+    }
+
+    /** Snapshot uses the same mark and scoring rules as the native renderer. */
+    public getBoardViewState(colors: SpecSource["colors"]): BoardViewState {
+        const source: SpecSource = {
+            engine: this.engine,
+            mode: this.mode,
+            analyze_tool: this.analyze_tool,
+            analyze_subtool: this.analyze_subtool,
+            edit_color: this.edit_color,
+            move_selected: this.move_selected,
+            player_id: this.player_id,
+            stone_placement_enabled: this.stone_placement_enabled,
+            scoring_mode: this.scoring_mode,
+            score_estimator: this.score_estimator,
+            stalling_score_estimate: this.stalling_score_estimate,
+            heatmap: this.heatmap,
+            colored_circles: this.colored_circles,
+            highlight_movetree_moves: this.highlight_movetree_moves,
+            show_variation_move_numbers: this.show_variation_move_numbers,
+            show_undo_request_indicator: this.getShowUndoRequestIndicator(),
+            dont_draw_last_move: this.dont_draw_last_move,
+            last_move_radius: this.last_move_radius,
+            circle_radius: this.circle_radius,
+            last_move_opacity: this.last_move_opacity,
+            submit_move_pending: !!this.submit_move,
+            variation_stone_opacity: this.variation_stone_opacity,
+            byoyomi_label: this.byoyomi_label,
+            label_character: this.label_character,
+            getPuzzlePlacementSetting: this.getPuzzlePlacementSetting,
+            isInPushedAnalysis: this.isInPushedAnalysis,
+            removal_graphic: this.themes["removal-graphic"],
+            colors,
+        };
+        const engine = this.engine;
+        return {
+            width: engine.width,
+            height: engine.height,
+            bounds: { ...this.bounds },
+            labels: {
+                left: this.draw_left_labels,
+                right: this.draw_right_labels,
+                top: this.draw_top_labels,
+                bottom: this.draw_bottom_labels,
+            },
+            labelSystem: this.getCoordinateDisplaySystem(),
+            overlays: buildOverlays(source),
+            lastMove: buildLastMove(source),
+            ghost: buildGhost(source),
+            hover: this.last_hover_square,
+            pen: penMarksToBoardUnits(
+                this.boardViewPenNode === engine.cur_move
+                    ? this.pen_marks
+                    : engine.cur_move.pen_marks,
+            ),
+            stoneAt: ({ x, y }) => {
+                const stone = engine.board[y]?.[x];
+                return stone === 1 || stone === 2 ? stone : 0;
+            },
+            prettyCoordinates: (x, y) => engine.prettyCoordinates(x, y),
+        };
+    }
+
+    protected override xy2ij(x: number, y: number, antiSlip = true) {
+        if (!this.boardView) {
+            return super.xy2ij(x, y, antiSlip);
+        }
+        const point = this.boardView.pick({ x, y }, antiSlip);
+        return point ? { i: point.x, j: point.y, valid: true } : { i: -1, j: -1, valid: false };
+    }
+
     public override destroy(): void {
+        const view = this.boardView;
+        delete this.boardView;
+        view?.element.remove();
+        view?.dispose();
         super.destroy();
 
         this.clearMessage();
@@ -353,6 +479,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
     private attachPenLayer(): void {
+        if (this.boardView) {
+            return;
+        }
         if (!this.pen_layer) {
             this.pen_layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
             this.pen_layer.setAttribute("id", "pen-svg");
@@ -742,6 +871,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
     public clearAnalysisDrawing(): void {
         this.pen_marks = [];
+        this.boardViewPenNode = this.engine.cur_move;
+        this.boardView?.invalidate();
         /*
         if (this.pen_ctx) {
             this.pen_ctx.clearRect(0, 0, this.metrics.width, this.metrics.height);
@@ -751,7 +882,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.pen_layer.innerHTML = "";
         }
     }
-    private xy2pen(x: number, y: number): [number, number] {
+    private xy2pen(x: number, y: number): [number, number] | null {
+        if (this.boardView) {
+            const point = this.boardView.unproject({ x, y });
+            return point
+                ? [Math.round((point.x + 1.5) * 64), Math.round((point.y + 1.5) * 64)]
+                : null;
+        }
         const lx = this.draw_left_labels ? 0.0 : 1.0;
         const ly = this.draw_top_labels ? 0.0 : 1.0;
         return [
@@ -780,15 +917,28 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.attachPenLayer();
 
         const pos = getRelativeEventPosition(ev, this.parent);
-        this.last_pen_position = this.xy2pen(pos.x, pos.y);
-        this.current_pen_mark = { color: this.analyze_subtool, points: this.xy2pen(pos.x, pos.y) };
+        const point = this.xy2pen(pos.x, pos.y);
+        if (!point) {
+            delete this.last_pen_position;
+            delete this.current_pen_mark;
+            return;
+        }
+        if (this.boardView && this.boardViewPenNode !== this.engine.cur_move) {
+            this.pen_marks = this.engine.cur_move.pen_marks;
+            this.boardViewPenNode = this.engine.cur_move;
+        }
+        this.last_pen_position = point;
+        this.current_pen_mark = { color: this.analyze_subtool, points: point };
         this.pen_marks.push(this.current_pen_mark);
         this.setPenStyle(this.analyze_subtool);
 
-        this.syncReviewMove({ pen: this.analyze_subtool, pp: this.xy2pen(pos.x, pos.y) });
+        this.syncReviewMove({ pen: this.analyze_subtool, pp: point });
     }
     private onPenMove(ev: MouseEvent | TouchEvent): void {
         if (!this.last_pen_position || !this.current_pen_mark) {
+            if (this.boardView) {
+                return;
+            }
             throw new Error(`onPenMove called with invalid last pen position or current pen mark`);
         }
 
@@ -796,6 +946,9 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         const start = this.last_pen_position;
         const s = this.pen2xy(start[0], start[1]);
         const end = this.xy2pen(pos.x, pos.y);
+        if (!end) {
+            return;
+        }
         const e = this.pen2xy(end[0], end[1]);
 
         const dx = end[0] - start[0];
@@ -816,6 +969,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.pen_ctx.stroke();
         */
 
+        if (this.boardView) {
+            this.boardView.invalidate();
+            this.syncReviewMove({ pp: [dx, dy] });
+            return;
+        }
         const path = `M ${s[0]} ${s[1]} L ${e[0]} ${e[1]}`;
         const path_element = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path_element.setAttribute("d", path);
@@ -827,6 +985,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         this.syncReviewMove({ pp: [dx, dy] });
     }
     public drawPenMarks(pen_marks: MoveTreePenMarks): void {
+        if (this.boardView && (!this.review_id || this.done_loading_review)) {
+            this.boardViewPenNode = this.engine.cur_move;
+            this.pen_marks = pen_marks;
+            this.boardView.invalidate();
+            return;
+        }
         if (this.review_id && !this.done_loading_review) {
             return;
         }
@@ -835,6 +999,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
         this.attachPenLayer();
         this.clearAnalysisDrawing();
+        this.boardViewPenNode = this.engine.cur_move;
         this.pen_marks = pen_marks;
 
         for (let i = 0; i < pen_marks.length; ++i) {
@@ -929,8 +1094,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
         this.__last_pt = this.xy2ij(-1, -1);
     }
+    public get boardDrawingEnabled(): boolean {
+        return this.drawing_enabled && !this.destroyed;
+    }
+
     protected enableDrawing(): void {
         this.drawing_enabled = true;
+        this.boardView?.invalidate();
     }
     protected disableDrawing(): void {
         this.drawing_enabled = false;
@@ -944,6 +1114,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         }
     }
     public drawSquare(i: number, j: number): void {
+        if (this.boardView) {
+            if (this.drawing_enabled && !this.destroyed) {
+                this.boardView.invalidate();
+            }
+            return;
+        }
         if (this.destroyed) {
             return;
         }
@@ -3752,6 +3928,14 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             return;
         }
 
+        if (this.boardView) {
+            const metrics = (this.metrics = this.computeMetrics());
+            this.parent.style.width = metrics.width + "px";
+            this.parent.style.height = metrics.height + "px";
+            this.boardView.invalidate();
+            this.move_tree_redraw();
+            return;
+        }
         this.activeTouchCompleter?.();
 
         const metrics = (this.metrics = this.computeMetrics());
@@ -3978,6 +4162,12 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
 
     public setTheme(themes: GobanSelectedThemes, dont_redraw: boolean): void {
+        if (this.boardView) {
+            this.themes = themes;
+            this.suspendedTheme = themes;
+            this.boardView.setTheme(themes);
+            return;
+        }
         if (this.no_display) {
             console.log("No display");
             return;

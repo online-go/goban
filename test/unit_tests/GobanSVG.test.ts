@@ -1111,3 +1111,46 @@ describe("touch on the board blurs the chat field (touchstart)", () => {
         goban.destroy();
     });
 });
+
+test("keeps the game and review node when swapping board painters", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const goban = new SVGRenderer({
+        board_div: host,
+        interactive: true,
+        square_size: 20,
+        width: 9,
+        height: 9,
+        mode: "analyze",
+    });
+    const engine = goban.engine;
+    engine.setAsCurrentReviewMove();
+    const review = engine.cur_review_move;
+    const element = document.createElement("canvas");
+    const dispose = jest.fn();
+    const pick = jest.fn(() => ({ x: 2, y: 3 }));
+    goban.switchBoardView({
+        element,
+        invalidate: jest.fn(),
+        setTheme: jest.fn(),
+        pick,
+        unproject: jest.fn(),
+        dispose,
+    });
+
+    const input = goban.event_layer ?? host;
+    simulateMouseClick(input, { x: 0, y: 0 });
+    expect(pick).toHaveBeenCalled();
+    expect(engine.cur_move).toMatchObject({ x: 2, y: 3, move_number: 1 });
+    expect(element.isConnected).toBe(true);
+
+    goban.switchBoardView();
+    expect(dispose).toHaveBeenCalledTimes(1);
+    expect(element.isConnected).toBe(false);
+    expect(goban.engine).toBe(engine);
+    expect(engine.cur_review_move).toBe(review);
+    expect(engine.cur_move.move_number).toBe(1);
+
+    goban.destroy();
+    host.remove();
+});

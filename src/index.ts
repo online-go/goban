@@ -23,6 +23,8 @@ export * from "./Goban/callbacks";
 export * from "./Goban/canvas_utils";
 export * from "./Goban/CanvasRenderer";
 export * from "./Goban/SVGRenderer";
+export * from "./Goban/BoardView";
+export * from "./Goban/ThreeConfig";
 export * from "./Goban/NativeRenderer";
 export * from "./Goban/NativeTransport";
 export * from "./Goban/NativeSpec";
