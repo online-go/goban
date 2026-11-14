@@ -1062,8 +1062,11 @@ describe("touch on the board blurs the chat field", () => {
         }
     });
 
-    test("mousedown on the board blurs a focused input, so a pending edit commits", () => {
-        const goban = new SVGRenderer(basic3x3Config());
+    test.each([
+        ["a review blurs a focused input, so a pending edit commits", { review_id: 1 }, false],
+        ["a game leaves a focused input alone", {}, true],
+    ])("mousedown on the board of %s", (_, config, kept) => {
+        const goban = new SVGRenderer(basic3x3Config(config));
         const input = document.createElement("input");
         document.body.appendChild(input);
 
@@ -1071,7 +1074,7 @@ describe("touch on the board blurs the chat field", () => {
         (goban.event_layer ?? goban.parent).dispatchEvent(
             new MouseEvent("mousedown", { bubbles: true, clientX: 15, clientY: 15 }),
         );
-        expect(document.activeElement).not.toBe(input);
+        expect(document.activeElement === input).toBe(kept);
 
         input.remove();
         goban.destroy();

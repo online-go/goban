@@ -75,6 +75,19 @@ describe("runClock", () => {
         ).toEqual({ main_time: 0, periods_left: 0, period_time_left: 0 });
     });
 
+    test("main time running out exactly starts overtime", () => {
+        expect(runClock({ main_time: 1000 }, 1000, byoyomi(600))).toEqual({
+            main_time: 0,
+            periods_left: 5,
+            period_time_left: 30000,
+        });
+        expect(runClock({ main_time: 1000 }, 1000, canadian(600))).toEqual({
+            main_time: 0,
+            moves_left: 10,
+            block_time_left: 300000,
+        });
+    });
+
     test("canadian overtime runs down the block", () => {
         expect(
             runClock({ main_time: 0, moves_left: 3, block_time_left: 10000 }, 4000, canadian(0)),

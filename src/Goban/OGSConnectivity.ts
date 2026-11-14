@@ -56,7 +56,15 @@ import {
     //GameChatLine,
     //StallingScoreEstimate,
 } from "../engine/protocol";
-import { clockAfterMove, findClock, runClock, startingClock } from "./review_clock";
+import {
+    clockAfterMove,
+    findClock,
+    playerOnMove,
+    ReviewClock,
+    reviewTimeControl,
+    runClock,
+    startingClock,
+} from "./review_clock";
 
 declare let swal: any;
 
@@ -146,12 +154,11 @@ export abstract class OGSConnectivity extends GobanInteractive {
         return !!this.review_id && !this.engine.config.game_id;
     }
 
-    /**
-     * A demo board's running clock, rebuilt from the review log. `charged` is
-     * the time the player on move has used this turn up to `since`; while
-     * running, time after `since` is charged too. All times are server ms.
-     */
-    private review_clock = { started: false, running: false, since: 0, charged: 0 };
+    /** A demo board's running clock, kept from the review log */
+    private review_clock = new ReviewClock();
+
+    /** When the controller sent a game move that has not come back yet */
+    private review_move_sent_at?: number;
 
     /** When true, a stone the controller plays at a demo board's live move is a game move */
     public review_record_moves = false;
@@ -160,30 +167,36 @@ export abstract class OGSConnectivity extends GobanInteractive {
         return Date.now() - this.getClockDrift();
     }
 
-    /** Applies one review log message to the demo board clock */
-    private updateReviewClock(obj: ReviewMessage): void {
+    /**
+     * Applies one review log message to the demo board clock. `live` and
+     * `live_clock` are the live move and its player on move's clock from
+     * before the message.
+     */
+    private updateReviewClock(
+        obj: ReviewMessage,
+        live: MoveTree,
+        live_clock: JGOFPlayerClock | undefined,
+    ): void {
         if (!this.isDemoBoard()) {
             return;
         }
         const clock = this.review_clock;
-        const ts = obj.ts ?? this.serverNow();
-        const live = this.engine.last_official_move;
-        const on_move = live.state.player === 1 ? "black" : "white";
-
-        if ("clock_running" in obj) {
-            if (obj.clock_running && !clock.running) {
-                clock.running = true;
-                clock.started = true;
-                clock.since = ts;
-            } else if (!obj.clock_running && clock.running) {
-                clock.charged += ts - clock.since;
-                clock.running = false;
-            }
+        const at = obj.ts ?? this.serverNow();
+        if (obj.clock_running === true) {
+            clock.start(at);
+        } else if (obj.clock_running === false) {
+            clock.stop(at);
         }
-        const names_live_move = obj.f === live.getMoveIndex() && obj.m === "";
-        if ("om" in obj || "undo" in obj || (`${on_move}_clock` in obj && names_live_move)) {
-            clock.charged = 0;
-            clock.since = ts;
+
+        // A game move starts the next player's turn, and setting the clock of
+        // the player on move starts their turn again. An undo goes back to
+        // the turn before, which keeps its start.
+        const now_live = this.engine.last_official_move;
+        const moved = now_live !== live && "om" in obj;
+        const clock_set =
+            now_live === live && now_live[`${playerOnMove(now_live)}_clock`] !== live_clock;
+        if (moved || clock_set) {
+            clock.beginTurn(now_live, at);
         }
     }
 
@@ -194,8 +207,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
     /** How long the player on move has used this turn, in ms */
     public reviewClockElapsed(): number {
-        const clock = this.review_clock;
-        return clock.charged + (clock.running ? this.serverNow() - clock.since : 0);
+        return this.review_clock.elapsed(this.engine.last_official_move, this.serverNow());
     }
 
     /**
@@ -205,8 +217,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
     public getReviewClock(
         color: "black" | "white",
     ): { clock: JGOFPlayerClock; on_move: boolean; running: boolean } | null {
-        const tc = this.engine.time_control;
-        if (!this.isDemoBoard() || !this.review_clock.started || !tc || tc.system === "none") {
+        const tc = reviewTimeControl(this.engine);
+        if (!this.isDemoBoard() || !this.review_clock.started || !tc) {
             return null;
         }
         const live = this.engine.last_official_move;
@@ -214,7 +226,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         if (!base) {
             return null;
         }
-        const on_move = (live.state.player === 1 ? "black" : "white") === color;
+        const on_move = playerOnMove(live) === color;
         return {
             clock: on_move ? runClock(base, this.reviewClockElapsed(), tc) : base,
             on_move,
@@ -229,43 +241,84 @@ export abstract class OGSConnectivity extends GobanInteractive {
             !this.isDemoBoard() ||
             !this.isPlayerController() ||
             from.id !== this.engine.last_official_move.id ||
-            placed.edited
+            // Nothing was placed, as with a pass during handicap placement
+            placed.parent?.id !== from.id
         ) {
             return false;
         }
 
         // The stone comes back as an official move from the server; until then
         // the board stays at the live move
-        const mover = placed.player === 1 ? "black" : "white";
         if (created) {
             placed.remove();
         }
         this.engine.jumpTo(from);
 
-        const tc = this.engine.time_control;
-        const base = tc ? (findClock(from, mover) ?? startingClock(tc)) : undefined;
+        // One game move at a time, since the next is checked against the
+        // position before it. One that never comes back stops blocking.
+        if (
+            this.review_move_sent_at !== undefined &&
+            Date.now() - this.review_move_sent_at < 5000
+        ) {
+            return true;
+        }
+
+        // The mover's clock is saved if the clock timed any of their turn
+        const mover = placed.player === 1 ? "black" : "white";
+        const tc = reviewTimeControl(this.engine);
+        const base = tc && (findClock(from, mover) ?? startingClock(tc));
+        const elapsed = this.reviewClockElapsed();
+        const timed = this.review_clock.running || elapsed > 0;
         const om: AdHocPackedMove =
-            this.reviewClockRunning() && tc && base
+            tc && base && timed
                 ? [
                       placed.x,
                       placed.y,
                       0,
                       0,
-                      { [`${mover}_clock`]: clockAfterMove(base, this.reviewClockElapsed(), tc) },
+                      { [`${mover}_clock`]: clockAfterMove(base, elapsed, tc) },
                   ]
                 : [placed.x, placed.y, 0, 0];
+        this.review_move_sent_at = Date.now();
         this.socket.send("review/append", { review_id: this.review_id, om });
         return true;
     }
 
-    /** Starts or stops a demo board's clock, as its controller */
+    /**
+     * Starts or stops a demo board's clock, as its controller. It takes effect
+     * here at once, so a move recorded straight after is timed by it.
+     */
     public setReviewClockRunning(running: boolean): void {
         if (this.isDemoBoard() && this.isPlayerController()) {
+            if (running) {
+                this.review_clock.start(this.serverNow());
+            } else {
+                this.review_clock.stop(this.serverNow());
+            }
             this.socket.send("review/append", {
                 review_id: this.review_id,
                 clock_running: running,
             });
+            this.emit("review.updated");
         }
+    }
+
+    /** The node a review message's `f`/`m` path names, if this board has it */
+    private findReviewNode(from_turn: number, moves: string): MoveTree | undefined {
+        let node = this.engine.move_tree.index(from_turn);
+        for (const mv of this.engine.decodeMoves(moves)) {
+            const next = node.lookupMove(
+                mv.x,
+                mv.y,
+                this.engine.playerByColor(mv.color || 0),
+                !!mv.edited,
+            );
+            if (!next) {
+                return undefined;
+            }
+            node = next;
+        }
+        return node;
     }
 
     /** Takes back a demo board's last official move, as its controller */
@@ -1029,6 +1082,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
             if (this.disconnectedFromGame) {
                 return;
             }
+            const live = this.engine.last_official_move;
+            const live_clock = live[`${playerOnMove(live)}_clock`];
 
             if (obj.chat) {
                 obj.chat.channel = "discussion";
@@ -1071,7 +1126,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 "om" in obj /* official moves are always alone in these object broadcasts */ ||
                 "undo" in obj /* official moves are always alone in these object broadcasts */
             ) {
-                const cur_move = this.engine.cur_move;
+                let cur_move = this.engine.cur_move;
                 const follow =
                     this.engine.cur_review_move == null ||
                     this.engine.cur_review_move.id === cur_move.id;
@@ -1093,6 +1148,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     const mv = this.engine.decodeMoves([obj.om!])[0];
                     const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
+                    const variation = this.engine.cur_move.lookupMove(
+                        mv.x,
+                        mv.y,
+                        this.engine.player,
+                        false,
+                    );
                     let placed = true;
                     try {
                         this.engine.place(mv.x, mv.y, false, false, true, true, true);
@@ -1103,7 +1164,19 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         placed = false;
                     }
                     if (placed) {
-                        this.engine.cur_move.applyClocks(mv);
+                        const official = this.engine.cur_move;
+                        if (variation && variation !== official) {
+                            // A variation on this point became the game move. The
+                            // engine moved its continuations over; keep its notes too.
+                            official.text = variation.text;
+                            official.setAllMarks(variation.getAllMarks());
+                            official.pen_marks = variation.pen_marks;
+                            official.applyClocks(variation);
+                            if (cur_move === variation) {
+                                cur_move = official;
+                            }
+                        }
+                        official.applyClocks(mv);
                         this.engine.setLastOfficialMove();
                     }
                     if (!placed) {
@@ -1133,6 +1206,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     if (this.isDemoBoard() && undone.parent) {
                         // A recorder's undo takes the mistaken move out entirely
                         cur_move_undone ||= !!t && undone.isAncestorOf(t);
+                        if (undone.isAncestorOf(cur_move)) {
+                            // A viewer looking past it goes back to the move before it
+                            cur_move = undone.parent;
+                        }
                         undone.remove();
                     }
                     if (!cur_move_undone) {
@@ -1228,6 +1305,16 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         }
                     }
                 }
+            } else if (
+                "f" in obj &&
+                typeof obj.m === "string" &&
+                ("black_clock" in obj || "white_clock" in obj)
+            ) {
+                // The controller skips its own messages coming back, but a clock
+                // can also come from another session on its account, such as a
+                // program recording the game. Setting the same clock again
+                // changes nothing, so apply them all, without moving the board.
+                this.findReviewNode(obj.f || 0, obj.m)?.applyClocks(obj);
             }
 
             if ("controller" in obj) {
@@ -1252,7 +1339,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.emit("update");
                 }
             }
-            this.updateReviewClock(obj);
+            this.updateReviewClock(obj, live, live_clock);
+            if ("om" in obj || "undo" in obj) {
+                delete this.review_move_sent_at;
+            }
             if (!bulk_processing) {
                 this.emit("review.updated");
             }
@@ -1277,12 +1367,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         // the flag set makes the controller skip the moves.
                         this.done_loading_review = false;
 
-                        this.review_clock = {
-                            started: false,
-                            running: false,
-                            since: 0,
-                            charged: 0,
-                        };
+                        this.review_clock = new ReviewClock();
+                        delete this.review_move_sent_at;
                         this.emit("review.load-start");
                         bulk_processing = true;
                         for (let i = 0; i < entries.length; ++i) {
@@ -1390,6 +1476,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
         const update = { [`${color}_clock`]: clock };
         this.engine.cur_move.applyClocks(update);
+        const live = this.engine.last_official_move;
+        if (this.isDemoBoard() && this.engine.cur_move === live && playerOnMove(live) === color) {
+            // Restart the turn here at once: Record may send a move before the
+            // server's copy of this comes back
+            this.review_clock.beginTurn(live, this.serverNow());
+        }
         const diff = this.engine.getMoveDiff();
         this.engine.setAsCurrentReviewMove();
         this.socket.send("review/append", {

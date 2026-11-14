@@ -936,15 +936,18 @@ describe("touch on the board blurs the chat field", () => {
         goban.destroy();
     });
 
-    test("mousedown on the board blurs a focused input, so a pending edit commits", () => {
-        const goban = new GobanCanvas(basic3x3Config());
+    test.each([
+        ["a review blurs a focused input, so a pending edit commits", { review_id: 1 }, false],
+        ["a game leaves a focused input alone", {}, true],
+    ])("mousedown on the board of %s", (_, config, kept) => {
+        const goban = new GobanCanvas(basic3x3Config(config));
         const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
         const input = document.createElement("input");
         document.body.appendChild(input);
 
         input.focus();
         canvas.dispatchEvent(new MouseEvent("mousedown", { clientX: 15, clientY: 15 }));
-        expect(document.activeElement).not.toBe(input);
+        expect(document.activeElement === input).toBe(kept);
 
         input.remove();
         goban.destroy();
