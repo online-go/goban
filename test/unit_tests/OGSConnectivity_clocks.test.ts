@@ -464,3 +464,97 @@ describe("demo board running clock", () => {
         done();
     });
 });
+
+describe("Record mode on demo boards", () => {
+    const BYOYOMI = {
+        system: "byoyomi",
+        time_control: "byoyomi",
+        speed: "live",
+        main_time: 600,
+        periods: 5,
+        period_time: 30,
+    };
+    let next_review_id = 500;
+    afterEach(() => jest.restoreAllMocks());
+
+    async function recorder(record: boolean, ...entries: any[]) {
+        const review_id = ++next_review_id;
+        const [server, client, goban] = await connect({ review_id, width: 9, height: 9 });
+        const log = reviewLog(...entries);
+        log[0].gamedata.time_control = BYOYOMI;
+        handler(goban, `review/${review_id}/full_state`)(log);
+        (goban as any).isPlayerController = () => true;
+        (goban as any).mode = "analyze";
+        goban.enableStonePlacement();
+        goban.review_record_moves = record;
+        const send = jest.spyOn((goban as any).socket, "send").mockImplementation(() => {});
+        const tap = (x: number, y: number) =>
+            (goban as any).tapAtImpl(x, y, false, false, false, 0);
+        const done = () => {
+            client.disconnect();
+            server.close();
+            goban.destroy();
+        };
+        return { goban, review_id, send, tap, done };
+    }
+
+    const appended = (send: jest.SpyInstance) =>
+        send.mock.calls.filter((call) => call[0] === "review/append").map((call) => call[1]);
+
+    test("Record off sends a variation", async () => {
+        const { send, tap, done } = await recorder(false, { om: [2, 2, 0, 0], ts: 1000 });
+        tap(4, 4);
+        const sent = appended(send);
+        expect(sent.length).toBe(1);
+        expect(sent[0]).toMatchObject({ m: "ee" });
+        expect(sent[0]).not.toHaveProperty("om");
+        done();
+    });
+
+    test("Record on at the live move sends only om", async () => {
+        const { goban, review_id, send, tap, done } = await recorder(true, {
+            om: [2, 2, 0, 0],
+            ts: 1000,
+        });
+        tap(4, 4);
+        expect(appended(send)).toEqual([{ review_id, om: [4, 4, 0, 0] }]);
+        expect(goban.engine.last_official_move.branches).toEqual([]);
+        expect(goban.engine.cur_move.id).toBe(goban.engine.last_official_move.id);
+        done();
+    });
+
+    test("Record on with a running clock saves the worked-out clock", async () => {
+        const { send, tap, done } = await recorder(true, { clock_running: true, ts: 1000 });
+        jest.spyOn(Date, "now").mockReturnValue(6000);
+        tap(4, 4);
+        expect(appended(send)[0].om).toEqual([4, 4, 0, 0, { black_clock: { main_time: 595000 } }]);
+        done();
+    });
+
+    test("Record keeps an existing variation", async () => {
+        const { goban, tap, done } = await recorder(
+            true,
+            { om: [2, 2, 0, 0], ts: 1000 },
+            { f: 1, m: "ee", ts: 2000 },
+        );
+        goban.engine.jumpTo(goban.engine.last_official_move);
+        tap(4, 4);
+        const kept = goban.engine.last_official_move.branches.map((b) => [b.x, b.y]);
+        expect(kept).toEqual([[4, 4]]);
+        done();
+    });
+
+    test("Record away from the live move sends a variation", async () => {
+        const { goban, send, tap, done } = await recorder(
+            true,
+            { om: [2, 2, 0, 0], ts: 1000 },
+            { om: [3, 3, 0, 0], ts: 2000 },
+        );
+        goban.engine.jumpTo(goban.engine.last_official_move.parent!);
+        tap(4, 4);
+        const sent = appended(send);
+        expect(sent.length).toBe(1);
+        expect(sent[0]).not.toHaveProperty("om");
+        done();
+    });
+});

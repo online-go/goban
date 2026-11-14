@@ -21,6 +21,7 @@ import { _, interpolate } from "../engine/translate";
 import { focus_tracker } from "./focus_tracker";
 import {
     AdHocClock,
+    AdHocPackedMove,
     AdHocPauseControl,
     AdHocPlayerClock,
     AUTOSCORE_TOLERANCE,
@@ -41,6 +42,7 @@ import {
     JGOFTimeControl,
     MarkInterface,
     MAX_REMOTE_SCORING_BOARD_SIZE,
+    MoveTree,
     niceInterval,
     ReviewMessage,
     ScoreEstimator,
@@ -54,7 +56,7 @@ import {
     //GameChatLine,
     //StallingScoreEstimate,
 } from "../engine/protocol";
-import { findClock, runClock, startingClock } from "./review_clock";
+import { clockAfterMove, findClock, runClock, startingClock } from "./review_clock";
 
 declare let swal: any;
 
@@ -151,6 +153,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
      */
     private review_clock = { started: false, running: false, since: 0, charged: 0 };
 
+    /** When true, a stone the controller plays at a demo board's live move is a game move */
+    public review_record_moves = false;
+
     private serverNow(): number {
         return Date.now() - this.getClockDrift();
     }
@@ -215,6 +220,42 @@ export abstract class OGSConnectivity extends GobanInteractive {
             on_move,
             running: this.review_clock.running,
         };
+    }
+
+    protected recordOfficialMove(from: MoveTree, created: boolean): boolean {
+        const placed = this.engine.cur_move;
+        if (
+            !this.review_record_moves ||
+            !this.isDemoBoard() ||
+            !this.isPlayerController() ||
+            from.id !== this.engine.last_official_move.id ||
+            placed.edited
+        ) {
+            return false;
+        }
+
+        // The stone comes back as an official move from the server; until then
+        // the board stays at the live move
+        const mover = placed.player === 1 ? "black" : "white";
+        if (created) {
+            placed.remove();
+        }
+        this.engine.jumpTo(from);
+
+        const tc = this.engine.time_control;
+        const base = tc ? (findClock(from, mover) ?? startingClock(tc)) : undefined;
+        const om: AdHocPackedMove =
+            this.reviewClockRunning() && tc && base
+                ? [
+                      placed.x,
+                      placed.y,
+                      0,
+                      0,
+                      { [`${mover}_clock`]: clockAfterMove(base, this.reviewClockElapsed(), tc) },
+                  ]
+                : [placed.x, placed.y, 0, 0];
+        this.socket.send("review/append", { review_id: this.review_id, om });
+        return true;
     }
 
     /** Starts or stops a demo board's clock, as its controller */
