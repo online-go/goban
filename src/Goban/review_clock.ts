@@ -16,8 +16,7 @@
 
 /*
  * Clock arithmetic for review and demo board clocks. Clocks are
- * JGOFPlayerClock (ms); time controls are JGOFTimeControl (seconds). This is
- * deliberately separate from the live game clock code.
+ * JGOFPlayerClock (ms); time controls are JGOFTimeControl (seconds).
  */
 
 import type { JGOFPlayerClock, JGOFTimeControl } from "../engine/formats/JGOF";
@@ -34,6 +33,7 @@ import type { MoveTree } from "../engine/MoveTree";
 export class ReviewClock {
     /** True once the clock has been started */
     public started = false;
+    /** True while the clock runs */
     public running = false;
     /** When the current run began */
     private since = 0;
@@ -43,17 +43,7 @@ export class ReviewClock {
      * not listed began before the clock was first started. */
     private turn_starts = new Map<number, number>();
 
-    /** Copies confirmed timing so pending commands can be applied without changing it. */
-    public copy(): ReviewClock {
-        const clock = new ReviewClock();
-        clock.started = this.started;
-        clock.running = this.running;
-        clock.since = this.since;
-        clock.ran = this.ran;
-        clock.turn_starts = new Map(this.turn_starts);
-        return clock;
-    }
-
+    /** Starts the clock at server time `at`, if it is stopped */
     public start(at: number): void {
         if (!this.running) {
             this.running = true;
@@ -62,6 +52,7 @@ export class ReviewClock {
         }
     }
 
+    /** Stops the clock at server time `at`, if it runs */
     public stop(at: number): void {
         if (this.running) {
             this.ran = this.total(at);
@@ -141,21 +132,9 @@ export function startingClock(tc: JGOFTimeControl): JGOFPlayerClock | undefined 
         case "fischer":
             return { main_time: tc.initial_time * 1000 };
         case "byoyomi":
-            return tc.main_time > 0
-                ? { main_time: tc.main_time * 1000 }
-                : {
-                      main_time: 0,
-                      periods_left: tc.periods,
-                      period_time_left: tc.period_time * 1000,
-                  };
         case "canadian":
-            return tc.main_time > 0
-                ? { main_time: tc.main_time * 1000 }
-                : {
-                      main_time: 0,
-                      moves_left: tc.stones_per_period,
-                      block_time_left: tc.period_time * 1000,
-                  };
+            // With no main time, this is the clock at the start of overtime
+            return runClock({ main_time: tc.main_time * 1000 }, 0, tc);
         case "simple":
             return { main_time: tc.per_move * 1000 };
         case "absolute":
@@ -218,30 +197,22 @@ export function clockAfterMove(
         case "simple":
             return { main_time: tc.per_move * 1000 };
         case "byoyomi":
-            if (after.main_time === 0 && (after.periods_left ?? tc.periods) > 0) {
-                return {
-                    main_time: 0,
-                    periods_left: after.periods_left ?? tc.periods,
-                    period_time_left: tc.period_time * 1000,
-                };
-            }
-            return after;
+            // A move in overtime starts the period again, unless the last one ran out
+            return after.main_time === 0 && after.periods_left
+                ? { ...after, period_time_left: tc.period_time * 1000 }
+                : after;
         case "canadian":
-            if (after.main_time === 0) {
-                const moves_left = (after.moves_left ?? tc.stones_per_period) - 1;
-                return moves_left > 0
-                    ? {
-                          main_time: 0,
-                          moves_left,
-                          block_time_left: after.block_time_left ?? tc.period_time * 1000,
-                      }
-                    : {
-                          main_time: 0,
-                          moves_left: tc.stones_per_period,
-                          block_time_left: tc.period_time * 1000,
-                      };
+            if (after.main_time > 0) {
+                return after;
             }
-            return after;
+            // A move in overtime uses one stone of the block. The last stone starts a new block.
+            return after.moves_left && after.moves_left > 1
+                ? { ...after, moves_left: after.moves_left - 1 }
+                : {
+                      main_time: 0,
+                      moves_left: tc.stones_per_period,
+                      block_time_left: tc.period_time * 1000,
+                  };
         default:
             return after;
     }

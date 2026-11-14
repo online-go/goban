@@ -129,8 +129,9 @@ export abstract class GobanInteractive extends GobanBase {
     protected abstract socket: IGobanSocket;
     /** Implemented by OGSConnectivity; declared here so tapAtImpl can use it. */
     protected abstract syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void;
-    /** Sends the stone just played from `from` as a game move instead of a
-     * variation, when the review records game moves; returns true if it did */
+    /** Sends the stone just played from `from` as a game move, when a demo
+     * board records game moves. `created` is true if the play added the node.
+     * Returns true if the stone is not a variation, and so must not be synced. */
     protected abstract recordOfficialMove(from: MoveTree, created: boolean): boolean;
 
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";

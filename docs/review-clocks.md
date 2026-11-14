@@ -1,45 +1,59 @@
 # Review clocks
 
-Demo board clocks use the ordered review log and the server timestamp on each message.
-Ordinary game clocks use their existing path.
+A demo board is a review that is not of an OGS game.
+Its official line is the game that the controller records.
+Only demo boards have a running clock.
+Ordinary game clocks and reviews of OGS games do not change.
 
-The controller applies local clock edits and Pause/Resume commands immediately.
-Each command includes a unique `clock_request_id` string.
-The review server preserves this ID in storage and broadcasts it with the command.
+## Running clock
 
-Goban keeps confirmed timing separate from pending commands.
-A server message acknowledges the command with the same ID.
-The server keeps each connection's messages in order.
-So an acknowledgement also settles every command sent before it: each came back earlier, or the server dropped it.
-Goban applies the remaining commands to a copy of confirmed timing, in send order.
-A pending command cannot take effect before the latest confirmed timing event.
-Server timestamps replace local time estimates as acknowledgements arrive.
+Each browser rebuilds the running clock from the ordered review log.
+It uses the server timestamp `ts` on each message.
+The controller sends `clock_running: true` to start the clock, and `clock_running: false` to stop it.
+The player on move counts down from their clock at the live move, which is the last official move.
 
-Pending node edits stay visible when an earlier echo arrives.
-Each pending edit applies to the node it was made on, not to its path looked up again.
-Recorded moves use these values and the effective timing.
-Commands from another session remain separate, even when their values match a pending command.
+A turn starts at one of these events:
 
-Clock edits from other controller sessions must include the node path, `f` and `m`.
-A clock edit or clear for the player on move restarts the turn at the live node.
-This includes clearing an already absent clock.
-Edits on other nodes do not restart the live turn.
+- A game move (`om`) arrives.
+- The clock of the player on move is set or cleared at the live move.
 
-A full-state reload clears pending commands and rebuilds confirmed timing from the log.
-Losing control also clears pending commands, because the server can reject them after the controller changes.
-A command with no acknowledgement after 10 seconds stops applying.
-This covers a command the server rejected, and an older server that drops the ID.
-A late reply still applies as confirmed timing.
-Only a move recorded during that gap can be timed differently, by at most the reply's delay.
+An undo goes back to the turn before. That turn keeps the time that it used.
 
-Record sends one game move or undo at a time.
-The next one waits until the server sends the change back, the review reloads, or control changes.
-There is no timeout: a late reply does not mean the change failed.
-Until the reply arrives, the server's review position can differ from the controller's board.
-So the controller's next comment, mark, pen mark, clear or delete names its node.
-Edits on the move that a pending undo takes back, or on later moves, are not sent.
-That move is deleted when the undo comes back.
+## The controller
 
-Deploy the server support for `clock_request_id` before the client.
-Older servers remove unknown fields and cannot acknowledge these commands.
-With an older server, each command then applies twice for up to 10 seconds, so the controller's countdown can be wrong.
+The controller does not apply the server's copy of its own node edits.
+This rule is the same for text, marks and clocks.
+So when the controller sets a clock, it starts the turn at its own estimate of the server time.
+
+The controller applies `clock_running` only from the server's copy, as all other browsers do.
+As a result, Pause and Resume show on the controller one round trip after the click.
+A move that the controller records in that round trip has a clock error of up to one round trip.
+
+A mousedown on the board removes the focus from a text field for the controller.
+The clock editor of the frontend commits its value on blur, so the value goes before the move.
+
+## Record
+
+If Record is on (`review_record_moves`), a stone or pass that the controller plays at the live move is a game move.
+Goban sends it as `om`, with the clock of the mover after the move as the fifth element.
+If the running clock did not time any of the turn, Goban sends no clock.
+The clock arithmetic supports byo-yomi, Canadian, Fischer, simple and absolute time.
+The time settings of an uploaded SGF take precedence over the time control of the review.
+
+The server puts each game move after the last game move that it has.
+So Record sends one game move or undo at a time.
+The next one waits until a game move or undo comes back, the review reloads, or control changes.
+After the controller sends a game move or undo, its next sync names its node with `f` and `m`.
+
+## Undo
+
+`undoOfficialMove()` sends `undo`.
+On a demo board, each browser removes the undone move from the tree.
+A board on the undone move, or after it, goes back to the move before it.
+On a review of an OGS game, the undone move stays in the tree.
+
+## Limits
+
+- The controller does not apply clock edits from other sessions on its account until the review reloads.
+- An edit that the controller sends in the round trip after an undo goes to the move before the undone move.
+- Pen marks and deletes do not name a node. In the round trip after a game move, they can go to the new game move.

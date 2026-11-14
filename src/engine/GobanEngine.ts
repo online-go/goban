@@ -309,8 +309,6 @@ export interface ReviewMessage {
     "white_clock"?: JGOFPlayerClock | null;
     /** Starts (true) or stops (false) a demo board's clock, as of the message's ts */
     "clock_running"?: boolean;
-    /** Identifies a clock command in its server acknowledgement. */
-    "clock_request_id"?: string;
     /** Delete */
     "delete"?: number;
     /** Sets the owner of the review */
