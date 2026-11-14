@@ -25,5 +25,13 @@ Edits on other nodes do not restart the live turn.
 A full-state reload clears pending commands and rebuilds confirmed timing from the log.
 Losing control also clears pending commands, because the server can reject them after the controller changes.
 
+Record sends one game move or undo at a time.
+The next one waits until the server sends the change back, the review reloads, or control changes.
+There is no timeout: a late reply does not mean the change failed.
+Until the reply arrives, the server's review position can differ from the controller's board.
+So the controller's next comment, mark, pen mark, clear or delete names its node.
+Edits on the move that a pending undo takes back, or on later moves, are not sent.
+That move is deleted when the undo comes back.
+
 Deploy the server support for `clock_request_id` before the client.
 Older servers remove unknown fields and cannot acknowledge these commands.

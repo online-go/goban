@@ -159,8 +159,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
     private review_clock_updated_at = 0;
     private pending_review_clocks: { at: number; message: ReviewMessage }[] = [];
 
-    /** When the controller sent a game move or undo that has not come back yet */
-    private review_official_sent_at?: number;
+    /** A game move or undo the controller sent that has not come back, with
+     * the move an undo takes back. A reload or a change of controller ends the
+     * wait for one that never comes back. */
+    private review_official_pending?: { undoing?: MoveTree };
 
     /** When true, a stone the controller plays at a demo board's live move is a game move */
     public review_record_moves = false;
@@ -300,7 +302,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
         // One game move at a time, since the next is checked against the
         // position before it
-        if (this.officialChangePending()) {
+        if (this.review_official_pending) {
             return true;
         }
 
@@ -321,18 +323,17 @@ export abstract class OGSConnectivity extends GobanInteractive {
                       { [`${mover}_clock`]: clockAfterMove(base, elapsed, tc) },
                   ]
                 : [placed.x, placed.y, 0, 0];
-        this.review_official_sent_at = Date.now();
-        this.socket.send("review/append", { review_id: this.review_id, om });
+        this.sendOfficialChange({ om });
         return true;
     }
 
-    /** True while a game move or undo the controller sent has not come back.
-     * One that never comes back stops blocking after a few seconds. */
-    private officialChangePending(): boolean {
-        return (
-            this.review_official_sent_at !== undefined &&
-            Date.now() - this.review_official_sent_at < 5000
-        );
+    /** Sends a game move or undo, as a demo board's controller */
+    private sendOfficialChange(message: ReviewMessage, undoing?: MoveTree): void {
+        this.review_official_pending = { undoing };
+        // The server's review follows the game move, so until it comes back the
+        // review may not be on this board's move: the next sync names its move
+        this.last_review_message = {};
+        this.socket.send("review/append", { review_id: this.review_id, ...message });
     }
 
     /**
@@ -368,10 +369,22 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
     /** Takes back a demo board's last official move, as its controller */
     public undoOfficialMove(): void {
-        if (this.isDemoBoard() && this.isPlayerController() && !this.officialChangePending()) {
-            this.review_official_sent_at = Date.now();
-            this.socket.send("review/append", { review_id: this.review_id, undo: true });
+        const last = this.engine.last_official_move;
+        if (
+            this.isDemoBoard() &&
+            this.isPlayerController() &&
+            !this.review_official_pending &&
+            last.parent
+        ) {
+            this.sendOfficialChange({ undo: true }, last);
         }
+    }
+
+    /** True on a move that a pending undo takes back, or one after it. The move
+     * goes when the undo comes back, and the server would put an edit sent
+     * for it on the move before. */
+    private beingUndone(node: MoveTree): boolean {
+        return !!this.review_official_pending?.undoing?.isAncestorOf(node);
     }
 
     protected getClockDrift(): number {
@@ -1172,6 +1185,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 if (!this.isPlayerController()) {
                     // Commands still in flight can be rejected after control changes.
                     this.pending_review_clocks = [];
+                    delete this.review_official_pending;
                 }
             }
 
@@ -1397,7 +1411,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
             this.updateReviewClock(obj, live, clock_node);
             this.applyPendingReviewClocks();
             if ("om" in obj || "undo" in obj) {
-                delete this.review_official_sent_at;
+                delete this.review_official_pending;
                 // The review's current move may have moved with the game, so the
                 // controller's next sync names its move again
                 this.last_review_message = {};
@@ -1429,7 +1443,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         this.review_clock = new ReviewClock();
                         this.review_clock_updated_at = 0;
                         this.pending_review_clocks = [];
-                        delete this.review_official_sent_at;
+                        delete this.review_official_pending;
                         this.emit("review.load-start");
                         bulk_processing = true;
                         for (let i = 0; i < entries.length; ++i) {
@@ -1530,7 +1544,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
             !this.review_id ||
             !this.isPlayerController() ||
             !this.done_loading_review ||
-            this.isInPushedAnalysis?.()
+            this.isInPushedAnalysis?.() ||
+            this.beingUndone(this.engine.cur_move)
         ) {
             return;
         }
@@ -1557,6 +1572,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
             this.done_loading_review
         ) {
             if (this.isInPushedAnalysis?.()) {
+                return;
+            }
+            if (!msg_override?.controller && this.beingUndone(this.engine.cur_move)) {
                 return;
             }
 
@@ -1627,6 +1645,17 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 msg = msg_override;
                 if (msg.clearpen) {
                     this.engine.cur_move.pen_marks = [];
+                }
+                if (
+                    !("controller" in msg) &&
+                    (this.last_review_message.f !== diff.from ||
+                        this.last_review_message.m !== diff.moves)
+                ) {
+                    // Pen marks and deletes apply where the review is, which
+                    // after a game move or undo may not be this move
+                    msg.f = diff.from;
+                    msg.m = diff.moves;
+                    this.last_review_message = { f: diff.from, m: diff.moves };
                 }
             }
 

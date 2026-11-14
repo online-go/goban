@@ -613,6 +613,22 @@ describe("demo board running clock", () => {
         expect(send).toHaveBeenCalledWith("review/append", { review_id, undo: true });
         done();
     });
+
+    test("undoOfficialMove with no game move to take back sends nothing", async () => {
+        const { goban, done } = await demo();
+        const send = jest.spyOn((goban as any).socket, "send").mockImplementation(() => {});
+        (goban as any).isPlayerController = () => true;
+        goban.undoOfficialMove();
+        goban.setReviewNodeClock("black", { main_time: 1000 });
+        expect(send.mock.calls.map((call) => call[1])).not.toContainEqual(
+            expect.objectContaining({ undo: true }),
+        );
+        expect(send).toHaveBeenCalledWith(
+            "review/append",
+            expect.objectContaining({ black_clock: { main_time: 1000 } }),
+        );
+        done();
+    });
 });
 
 describe("Record mode on demo boards", () => {
@@ -1067,13 +1083,125 @@ describe("Record mode on demo boards", () => {
         done();
     });
 
-    test("a stone that never comes back stops blocking after a while", async () => {
-        const { send, tap, done } = await recorder(true, { om: [2, 2, 0, 0], ts: 1000 });
+    /** A plain viewer of the same review, to replay what the controller sent */
+    async function viewer(...entries: any[]) {
+        const board = await recorder(false, ...entries);
+        (board.goban as any).isPlayerController = () => false;
+        return board;
+    }
+    const replay = (send: jest.SpyInstance, to: { receive: (obj: any) => void }) =>
+        appended(send).forEach((msg, i) => to.receive({ ...msg, ts: 5000 + i }));
+
+    test("a comment and pen mark made before a recorded move comes back stay on their move", async () => {
+        const { goban, send, tap, done } = await recorder(true, { om: [2, 2, 0, 0], ts: 1000 });
+        const other = await viewer({ om: [2, 2, 0, 0], ts: 1000 });
+        goban.syncReviewMove();
+        tap(3, 3);
+        goban.syncReviewMove({ pen: "#ff0000", pp: [1, 1] });
+        goban.syncReviewMove({ pp: [2, 2] });
+        goban.syncReviewMove(undefined, "note on cc");
+
+        replay(send, other);
+        const recorded = other.goban.engine.last_official_move;
+        expect([recorded.x, recorded.y]).toEqual([3, 3]);
+        expect(recorded.parent!.text).toBe("note on cc");
+        expect(recorded.parent!.pen_marks).toEqual([{ color: "#ff0000", points: [1, 1, 2, 2] }]);
+        expect(recorded.text).toBe("");
+        expect(recorded.pen_marks).toEqual([]);
+        other.done();
+        done();
+    });
+
+    test("edits on a move being taken back go with it, not onto the move before", async () => {
+        const log = [
+            { om: [2, 2, 0, 0], ts: 1000 },
+            { f: 1, m: "", t: "keep me", ts: 1500 },
+            { om: [3, 3, 0, 0], ts: 2000 },
+        ];
+        const { goban, send, done } = await recorder(true, ...log);
+        const other = await viewer(...log);
+        goban.syncReviewMove();
+        goban.undoOfficialMove();
+        goban.syncReviewMove(undefined, "note on dd");
+        goban.setReviewNodeClock("white", { main_time: 1000 });
+
+        replay(send, other);
+        const before = other.goban.engine.last_official_move;
+        expect([before.x, before.y]).toEqual([2, 2]);
+        expect(before.text).toBe("keep me");
+        expect(before.white_clock).toBeUndefined();
+        expect(before.branches).toEqual([]);
+        other.done();
+        done();
+    });
+
+    test("deleting a variation after another session's game move names it", async () => {
+        const { goban, send, tap, receive, done } = await recorder(false, {
+            om: [2, 2, 0, 0],
+            ts: 1000,
+        });
+        tap(3, 3);
+        receive({ om: [4, 4, 0, 0], ts: 2000 });
+        goban.deleteBranch();
+        expect(appended(send).slice(-1)[0]).toMatchObject({ f: 1, m: "dd", delete: 1 });
+        done();
+    });
+
+    test("a stone whose echo is late still blocks a second stone", async () => {
+        const { goban, send, tap, receive, done } = await recorder(true, {
+            clock_running: true,
+            ts: 1000,
+        });
+        const now = jest.spyOn(Date, "now").mockReturnValue(11000);
+        tap(2, 2);
+        now.mockReturnValue(60000);
+        tap(3, 3);
+        const moves = appended(send).filter((m) => "om" in m);
+        expect(moves.length).toBe(1);
+
+        receive({ ...moves[0], ts: 11000 });
+        expect(goban.engine.last_official_move.black_clock).toEqual({ main_time: 590000 });
+        done();
+    });
+
+    test("an Undo whose echo is late still blocks a second Undo", async () => {
+        const { goban, review_id, send, done } = await recorder(
+            true,
+            { om: [2, 2, 0, 0], ts: 1000 },
+            { om: [3, 3, 0, 0], ts: 2000 },
+        );
         const now = jest.spyOn(Date, "now").mockReturnValue(10000);
+        goban.undoOfficialMove();
+        now.mockReturnValue(60000);
+        goban.undoOfficialMove();
+        expect(appended(send)).toEqual([{ review_id, undo: true }]);
+        done();
+    });
+
+    test("a reload ends the wait for a stone that never came back", async () => {
+        const { goban, review_id, send, tap, done } = await recorder(true);
         tap(4, 4);
-        now.mockReturnValue(20000);
+        const log = reviewLog();
+        Object.assign(log[0].gamedata, { time_control: BYOYOMI });
+        handler(goban, `review/${review_id}/full_state`)(log);
+        goban.enableStonePlacement();
         tap(5, 5);
-        expect(appended(send).length).toBe(2);
+        expect(appended(send).filter((m) => "om" in m).length).toBe(2);
+        done();
+    });
+
+    test("losing control ends the wait for a stone the server turned away", async () => {
+        const { goban, send, tap, receive, done } = await recorder(true, {
+            om: [2, 2, 0, 0],
+            ts: 1000,
+        });
+        tap(4, 4);
+        (goban as any).isPlayerController = () => false;
+        receive({ controller: 99, ts: 2000 });
+        (goban as any).isPlayerController = () => true;
+        receive({ controller: 1, ts: 3000 });
+        tap(5, 5);
+        expect(appended(send).filter((m) => "om" in m).length).toBe(2);
         done();
     });
 
