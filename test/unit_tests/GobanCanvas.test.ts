@@ -936,6 +936,20 @@ describe("touch on the board blurs the chat field", () => {
         goban.destroy();
     });
 
+    test("mousedown on the board blurs a focused input, so a pending edit commits", () => {
+        const goban = new GobanCanvas(basic3x3Config());
+        const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
+        const input = document.createElement("input");
+        document.body.appendChild(input);
+
+        input.focus();
+        canvas.dispatchEvent(new MouseEvent("mousedown", { clientX: 15, clientY: 15 }));
+        expect(document.activeElement).not.toBe(input);
+
+        input.remove();
+        goban.destroy();
+    });
+
     test("touchstart outside the board leaves the textarea focused", () => {
         const goban = new GobanCanvas(basic3x3Config());
         const textarea = document.createElement("textarea");

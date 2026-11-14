@@ -544,6 +544,17 @@ describe("Record mode on demo boards", () => {
         done();
     });
 
+    test("Record on at the live move records a pass as a game move", async () => {
+        const { goban, review_id, send, done } = await recorder(true, {
+            om: [2, 2, 0, 0],
+            ts: 1000,
+        });
+        goban.pass();
+        expect(appended(send)).toEqual([{ review_id, om: [-1, -1, 0, 0] }]);
+        expect(goban.engine.last_official_move.branches).toEqual([]);
+        done();
+    });
+
     test("Record away from the live move sends a variation", async () => {
         const { goban, send, tap, done } = await recorder(
             true,

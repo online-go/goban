@@ -546,6 +546,10 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             if (!mouse_disabled) {
                 pointerDown(ev);
             }
+            // preventDefault below keeps focus where it was, so blur a text field
+            // here; a field that commits on blur (the review clock editor) then
+            // commits before the board changes
+            blurFocusedTextControl();
             ev.preventDefault();
             return false;
         };

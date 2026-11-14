@@ -1062,6 +1062,21 @@ describe("touch on the board blurs the chat field", () => {
         }
     });
 
+    test("mousedown on the board blurs a focused input, so a pending edit commits", () => {
+        const goban = new SVGRenderer(basic3x3Config());
+        const input = document.createElement("input");
+        document.body.appendChild(input);
+
+        input.focus();
+        (goban.event_layer ?? goban.parent).dispatchEvent(
+            new MouseEvent("mousedown", { bubbles: true, clientX: 15, clientY: 15 }),
+        );
+        expect(document.activeElement).not.toBe(input);
+
+        input.remove();
+        goban.destroy();
+    });
+
     test("a touch away from the board leaves the textarea focused", () => {
         const goban = new SVGRenderer(basic3x3Config());
         const textarea = document.createElement("textarea");

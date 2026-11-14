@@ -1627,6 +1627,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
             this.followConditionalSegment(-1, -1);
         }
 
+        const from = this.engine.cur_move;
+        const existed = !!from.lookupMove(-1, -1, this.engine.player, false);
         this.engine.place(-1, -1);
         if (this.mode === "play") {
             this.sendMove({
@@ -1634,7 +1636,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 move: encodeMove(-1, -1),
             });
         } else {
-            this.syncReviewMove();
+            if (!(this.isPlayerController() && this.recordOfficialMove(from, !existed))) {
+                this.syncReviewMove();
+            }
             this.move_tree_redraw();
         }
     }
