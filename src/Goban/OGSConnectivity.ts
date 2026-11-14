@@ -54,6 +54,7 @@ import {
     //GameChatLine,
     //StallingScoreEstimate,
 } from "../engine/protocol";
+import { findClock, runClock, startingClock } from "./review_clock";
 
 declare let swal: any;
 
@@ -141,6 +142,96 @@ export abstract class OGSConnectivity extends GobanInteractive {
     /** A review that is not of an OGS game: its official line is the game being recorded */
     public isDemoBoard(): boolean {
         return !!this.review_id && !this.engine.config.game_id;
+    }
+
+    /**
+     * A demo board's running clock, rebuilt from the review log. `charged` is
+     * the time the player on move has used this turn up to `since`; while
+     * running, time after `since` is charged too. All times are server ms.
+     */
+    private review_clock = { started: false, running: false, since: 0, charged: 0 };
+
+    private serverNow(): number {
+        return Date.now() - this.getClockDrift();
+    }
+
+    /** Applies one review log message to the demo board clock */
+    private updateReviewClock(obj: ReviewMessage): void {
+        if (!this.isDemoBoard()) {
+            return;
+        }
+        const clock = this.review_clock;
+        const ts = obj.ts ?? this.serverNow();
+        const live = this.engine.last_official_move;
+        const on_move = live.state.player === 1 ? "black" : "white";
+
+        if ("clock_running" in obj) {
+            if (obj.clock_running && !clock.running) {
+                clock.running = true;
+                clock.started = true;
+                clock.since = ts;
+            } else if (!obj.clock_running && clock.running) {
+                clock.charged += ts - clock.since;
+                clock.running = false;
+            }
+        }
+        const names_live_move = obj.f === live.getMoveIndex() && obj.m === "";
+        if ("om" in obj || "undo" in obj || (`${on_move}_clock` in obj && names_live_move)) {
+            clock.charged = 0;
+            clock.since = ts;
+        }
+    }
+
+    /** True while a demo board's clock is running */
+    public reviewClockRunning(): boolean {
+        return this.review_clock.running;
+    }
+
+    /** How long the player on move has used this turn, in ms */
+    public reviewClockElapsed(): number {
+        const clock = this.review_clock;
+        return clock.charged + (clock.running ? this.serverNow() - clock.since : 0);
+    }
+
+    /**
+     * A player's clock at the live move of a demo board whose clock has been
+     * started, counting down for the player on move. Null otherwise.
+     */
+    public getReviewClock(
+        color: "black" | "white",
+    ): { clock: JGOFPlayerClock; on_move: boolean; running: boolean } | null {
+        const tc = this.engine.time_control;
+        if (!this.isDemoBoard() || !this.review_clock.started || !tc || tc.system === "none") {
+            return null;
+        }
+        const live = this.engine.last_official_move;
+        const base = findClock(live, color) ?? startingClock(tc);
+        if (!base) {
+            return null;
+        }
+        const on_move = (live.state.player === 1 ? "black" : "white") === color;
+        return {
+            clock: on_move ? runClock(base, this.reviewClockElapsed(), tc) : base,
+            on_move,
+            running: this.review_clock.running,
+        };
+    }
+
+    /** Starts or stops a demo board's clock, as its controller */
+    public setReviewClockRunning(running: boolean): void {
+        if (this.isDemoBoard() && this.isPlayerController()) {
+            this.socket.send("review/append", {
+                review_id: this.review_id,
+                clock_running: running,
+            });
+        }
+    }
+
+    /** Takes back a demo board's last official move, as its controller */
+    public undoOfficialMove(): void {
+        if (this.isDemoBoard() && this.isPlayerController()) {
+            this.socket.send("review/append", { review_id: this.review_id, undo: true });
+        }
     }
 
     protected getClockDrift(): number {
@@ -1120,6 +1211,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.emit("update");
                 }
             }
+            this.updateReviewClock(obj);
             if (!bulk_processing) {
                 this.emit("review.updated");
             }
@@ -1144,6 +1236,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
                         // the flag set makes the controller skip the moves.
                         this.done_loading_review = false;
 
+                        this.review_clock = {
+                            started: false,
+                            running: false,
+                            since: 0,
+                            charged: 0,
+                        };
                         this.emit("review.load-start");
                         bulk_processing = true;
                         for (let i = 0; i < entries.length; ++i) {

@@ -272,3 +272,195 @@ describe("official moves on demo boards", () => {
         goban.destroy();
     });
 });
+
+describe("demo board running clock", () => {
+    const BYOYOMI = {
+        system: "byoyomi",
+        time_control: "byoyomi",
+        speed: "live",
+        main_time: 600,
+        periods: 5,
+        period_time: 30,
+    };
+    let next_review_id = 300;
+
+    function clockLog(game_id: number | undefined, ...entries: any[]): any[] {
+        const log = reviewLog(...entries);
+        log[0].gamedata.time_control = BYOYOMI;
+        if (game_id) {
+            log[0].gamedata.game_id = game_id;
+        }
+        return log;
+    }
+
+    async function demo(...entries: any[]) {
+        const review_id = ++next_review_id;
+        const [server, client, goban] = await connect({ review_id, width: 9, height: 9 });
+        const full_state = handler(goban, `review/${review_id}/full_state`);
+        full_state(clockLog(undefined, ...entries));
+        const done = () => {
+            client.disconnect();
+            server.close();
+            goban.destroy();
+        };
+        return { goban, review_id, full_state, done };
+    }
+
+    const now = (ms: number) => jest.spyOn(Date, "now").mockReturnValue(ms);
+    afterEach(() => jest.restoreAllMocks());
+
+    const started = [
+        { clock_running: true, ts: 1000 },
+        { om: [2, 2, 0, 0, { black_clock: { main_time: 590000 } }], ts: 11000 },
+    ];
+
+    test("no clock before it is started", async () => {
+        const { goban, done } = await demo({ om: [2, 2, 0, 0], ts: 11000 });
+        expect(goban.getReviewClock("black")).toBeNull();
+        expect(goban.getReviewClock("white")).toBeNull();
+        done();
+    });
+
+    test("running counts down the player on move", async () => {
+        const { goban, done } = await demo(...started);
+        now(21000);
+        expect(goban.getReviewClock("white")).toEqual({
+            clock: { main_time: 590000 },
+            on_move: true,
+            running: true,
+        });
+        expect(goban.getReviewClock("black")).toEqual({
+            clock: { main_time: 590000 },
+            on_move: false,
+            running: true,
+        });
+        done();
+    });
+
+    test("pause stops the charge", async () => {
+        const { goban, done } = await demo(...started, { clock_running: false, ts: 16000 });
+        now(99999);
+        expect(goban.getReviewClock("white")).toEqual({
+            clock: { main_time: 595000 },
+            on_move: true,
+            running: false,
+        });
+        done();
+    });
+
+    const edited = [...started, { f: 1, m: "", white_clock: { main_time: 300000 }, ts: 15000 }];
+
+    test("an edit for the player on move restarts the turn", async () => {
+        const { goban, done } = await demo(...edited);
+        now(20000);
+        expect(goban.getReviewClock("white")?.clock).toEqual({ main_time: 295000 });
+        done();
+    });
+
+    test("an edit on an earlier move carries forward", async () => {
+        const { goban, done } = await demo(
+            ...started,
+            { om: [3, 3, 0, 0], ts: 12000 },
+            { f: 1, m: "", black_clock: { main_time: 500000 }, ts: 13000 },
+        );
+        now(14000);
+        expect(goban.getReviewClock("black")).toEqual({
+            clock: { main_time: 498000 },
+            on_move: true,
+            running: true,
+        });
+        done();
+    });
+
+    test("an om with both clocks sets the next player's base", async () => {
+        const { goban, done } = await demo(
+            { clock_running: true, ts: 1000 },
+            {
+                om: [
+                    2,
+                    2,
+                    0,
+                    0,
+                    { black_clock: { main_time: 590000 }, white_clock: { main_time: 400000 } },
+                ],
+                ts: 11000,
+            },
+        );
+        now(12000);
+        expect(goban.getReviewClock("white")?.clock).toEqual({ main_time: 399000 });
+        done();
+    });
+
+    test("clearing on the live move restarts from the earlier clock", async () => {
+        const { goban, done } = await demo(...edited, {
+            f: 1,
+            m: "",
+            white_clock: null,
+            ts: 17000,
+        });
+        now(18000);
+        expect(goban.getReviewClock("white")?.clock).toEqual({ main_time: 599000 });
+        done();
+    });
+
+    test("a reload rebuilds the same elapsed time", async () => {
+        const log = [
+            ...started,
+            { clock_running: false, ts: 16000 },
+            { clock_running: true, ts: 30000 },
+        ];
+        const { goban, full_state, done } = await demo(...log);
+        now(35000);
+        const first = goban.getReviewClock("white");
+        full_state(clockLog(undefined, ...log));
+        expect(goban.getReviewClock("white")).toEqual(first);
+        expect(first?.clock).toEqual({ main_time: 590000 });
+        done();
+    });
+
+    test("a second full_state resets the clock", async () => {
+        const { goban, full_state, done } = await demo(...started);
+        full_state(clockLog(undefined, { om: [2, 2, 0, 0], ts: 11000 }));
+        expect(goban.getReviewClock("white")).toBeNull();
+        expect(goban.reviewClockRunning()).toBe(false);
+        done();
+    });
+
+    test("the controller sees its own clock_running", async () => {
+        const { goban, review_id, done } = await demo({ om: [2, 2, 0, 0], ts: 11000 });
+        (goban as any).isPlayerController = () => true;
+        (goban as any).done_loading_review = true;
+        handler(goban, `review/${review_id}/r`)({ clock_running: true, ts: 12000 });
+        expect(goban.reviewClockRunning()).toBe(true);
+        done();
+    });
+
+    test("reviews of games never run a clock", async () => {
+        const review_id = ++next_review_id;
+        const [server, client, goban] = await connect({ review_id, width: 9, height: 9 });
+        handler(goban, `review/${review_id}/full_state`)(clockLog(5, ...started));
+        expect(goban.getReviewClock("white")).toBeNull();
+        client.disconnect();
+        server.close();
+        goban.destroy();
+    });
+
+    test("setReviewClockRunning sends but does not change state", async () => {
+        const { goban, review_id, done } = await demo({ om: [2, 2, 0, 0], ts: 11000 });
+        const send = jest.spyOn((goban as any).socket, "send").mockImplementation(() => {});
+        (goban as any).isPlayerController = () => true;
+        goban.setReviewClockRunning(true);
+        expect(send).toHaveBeenCalledWith("review/append", { review_id, clock_running: true });
+        expect(goban.reviewClockRunning()).toBe(false);
+        done();
+    });
+
+    test("undoOfficialMove sends an undo", async () => {
+        const { goban, review_id, done } = await demo({ om: [2, 2, 0, 0], ts: 11000 });
+        const send = jest.spyOn((goban as any).socket, "send").mockImplementation(() => {});
+        (goban as any).isPlayerController = () => true;
+        goban.undoOfficialMove();
+        expect(send).toHaveBeenCalledWith("review/append", { review_id, undo: true });
+        done();
+    });
+});
