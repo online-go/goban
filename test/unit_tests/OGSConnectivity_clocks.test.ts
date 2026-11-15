@@ -611,6 +611,36 @@ describe("demo boards", () => {
             expect([live.x, live.y, live.trunk_next]).toEqual([2, 2, undefined]);
         });
 
+        /** The color of the stone on (x, y) at the live move: 0, 1 or 2 */
+        const liveStone = (board: Board, x: number, y: number) =>
+            board.goban.engine.last_official_move.state.board[y][x];
+
+        test("a game move on a point with a stone replaces that stone, and the log replays on", async () => {
+            const board = await demo([
+                ...one_move,
+                { om: [2, 2, 0, 0], ts: 2000 },
+                { om: [4, 4, 0, 0], ts: 3000 },
+                { t: "after", ts: 3100 },
+            ]);
+            const live = board.goban.engine.last_official_move;
+            expect([live.x, live.y, live.text]).toEqual([4, 4, "after"]);
+            expect(liveStone(board, 2, 2)).toBe(2);
+        });
+
+        test("an undo of a replacing game move puts the old stone and its turn back", async () => {
+            const board = await demo([
+                ...started,
+                { om: [2, 2, 0, 0], ts: 21000 },
+                { undo: true, ts: 26000 },
+                { t: "back", ts: 27000 },
+            ]);
+            now(31000);
+            const live = board.goban.engine.last_official_move;
+            expect([live.text, live.trunk_next]).toEqual(["back", undefined]);
+            expect(liveStone(board, 2, 2)).toBe(1);
+            expect(board.goban.getReviewClock("white")?.clock).toEqual({ main_time: 580000 });
+        });
+
         test("an undo on a review of an OGS game keeps the move", async () => {
             const { goban } = await demo([...two_moves, { undo: true }], {
                 gamedata: { game_id: 5 },

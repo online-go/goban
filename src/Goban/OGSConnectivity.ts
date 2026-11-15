@@ -1116,6 +1116,11 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     const mv = this.engine.decodeMoves([obj.om!])[0];
                     const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
+                    if (this.engine.board[mv.y]?.[mv.x]) {
+                        // The newest game move wins: an edit takes away the
+                        // stone on its point first
+                        this.engine.editPlace(mv.x, mv.y, 0, true);
+                    }
                     this.engine.place(mv.x, mv.y, false, false, true, true, true);
                     this.engine.cur_move.applyClocks(mv);
                     this.engine.setLastOfficialMove();
@@ -1142,13 +1147,19 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.engine.showPrevious();
                     this.engine.setLastOfficialMove();
                     if (this.isDemoBoard() && undone.parent) {
-                        // A demo board's undo takes the move out of the tree, so
-                        // a board on it or after it goes back to the move before
-                        cur_move_undone ||= !!t && undone.isAncestorOf(t);
-                        if (undone.isAncestorOf(cur_move)) {
-                            cur_move = undone.parent;
+                        // A demo board's undo takes the move out of the tree, with
+                        // the edit that cleared its point if it replaced a stone.
+                        // A board on it or after it goes back to the move before.
+                        const removed = clearingEdit(undone) ?? undone;
+                        if (removed !== undone) {
+                            this.engine.showPrevious();
+                            this.engine.setLastOfficialMove();
                         }
-                        undone.remove();
+                        cur_move_undone ||= !!t && removed.isAncestorOf(t);
+                        if (removed.isAncestorOf(cur_move)) {
+                            cur_move = this.engine.last_official_move;
+                        }
+                        removed.remove();
                     }
                     if (!cur_move_undone) {
                         if (t) {
@@ -2506,6 +2517,15 @@ export abstract class OGSConnectivity extends GobanInteractive {
             strict_seki_mode: tf,
         });
     }
+}
+
+/** The edit before an official move that took away the stone on its point,
+ * if the move replaced a stone */
+function clearingEdit(move: MoveTree): MoveTree | undefined {
+    const edit = move.parent;
+    return edit?.parent && edit.edited && !edit.player && edit.x === move.x && edit.y === move.y
+        ? edit
+        : undefined;
 }
 
 function uuid(): string {

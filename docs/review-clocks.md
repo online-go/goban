@@ -49,11 +49,19 @@ If the controller syncs before the change comes back, that sync puts the review 
 The change can then move the controller off that node, or delete it.
 So when the change comes back, the controller syncs its node again.
 
+## Game moves on a stone
+
+A game move can arrive for a point that has a stone, for example from a program that sends a move again.
+The newest game move wins.
+Before the move, each browser adds an edit that takes away the old stone (`AE` in the SGF).
+The rest of the log then replays as usual.
+
 ## Undo
 
 `undoOfficialMove()` sends `undo`.
 On a demo board, each browser removes the undone move from the tree.
 A board on the undone move, or after it, goes back to the move before it.
+If the undone move replaced a stone, its edit goes too, so the old stone comes back.
 On a review of an OGS game, the undone move stays in the tree.
 
 ## Limits
