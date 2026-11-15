@@ -340,6 +340,48 @@ describe("demo boards", () => {
             expect(goban.getReviewClock("white")?.clock).toEqual({ main_time: 590000 });
         });
 
+        test.each([
+            ["a demo board's stopped clock is paused", {}, {}, {}],
+            [
+                "a game's pause shows its reason",
+                { game_id: 5 },
+                { pause_state: { weekend: true } },
+                { weekend: true },
+            ],
+            [
+                "a game's clock stopped at the end of the game is not paused",
+                { game_id: 5 },
+                {},
+                undefined,
+            ],
+        ])("%s", async (_, gamedata, stop, pause_state) => {
+            const { goban } = await demo(
+                [...started, { clock_running: false, ts: 16000, ...stop }],
+                {
+                    gamedata,
+                },
+            );
+            now(99999);
+            expect(goban.getReviewClock("white")).toEqual({
+                clock: { main_time: 595000 },
+                on_move: true,
+                running: false,
+                pause_state,
+            });
+        });
+
+        test("a running clock has no pause reason", async () => {
+            const { goban } = await demo(
+                [
+                    ...started,
+                    { clock_running: false, pause_state: { weekend: true }, ts: 16000 },
+                    { clock_running: true, ts: 17000 },
+                ],
+                { gamedata: { game_id: 5 } },
+            );
+            expect(goban.getReviewClock("white")?.pause_state).toBeUndefined();
+        });
+
         test("an uploaded SGF's own time settings take precedence", async () => {
             const { goban } = await demo([{ clock_running: true, ts: 1000 }], {
                 gamedata: {
@@ -376,6 +418,7 @@ describe("demo boards", () => {
                 clock: { main_time: 599500 },
                 on_move: true,
                 running: false,
+                pause_state: {},
             });
         });
 

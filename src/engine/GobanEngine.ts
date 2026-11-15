@@ -37,6 +37,7 @@ import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
     JGOFMove,
+    JGOFPauseState,
     JGOFPlayerClock,
     JGOFPlayerSummary,
     JGOFIntersection,
@@ -307,8 +308,11 @@ export interface ReviewMessage {
     "black_clock"?: JGOFPlayerClock | null;
     /** Sets (or, with null, clears) white's clock on the current node */
     "white_clock"?: JGOFPlayerClock | null;
-    /** Starts (true) or stops (false) a demo board's clock, as of the message's ts */
+    /** Starts (true) or stops (false) a review's clock, as of the message's ts */
     "clock_running"?: boolean;
+    /** With `clock_running: false` on a review of an OGS game, why the game is
+     * paused. Without it, that game's clock stopped for the end of play. */
+    "pause_state"?: JGOFPauseState;
     /** Delete */
     "delete"?: number;
     /** Sets the owner of the review */

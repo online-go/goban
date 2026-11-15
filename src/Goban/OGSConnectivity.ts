@@ -181,7 +181,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         if (obj.clock_running === true) {
             this.review_clock.start(at);
         } else if (obj.clock_running === false) {
-            this.review_clock.stop(at);
+            this.review_clock.stop(at, obj.pause_state);
         }
         const live = this.engine.last_official_move;
         if ("om" in obj || (clock_node === live && `${playerOnMove(live)}_clock` in obj)) {
@@ -196,11 +196,16 @@ export abstract class OGSConnectivity extends GobanInteractive {
 
     /**
      * A player's clock at the live move of a review whose clock has been
-     * started, counting down for the player on move. Null otherwise.
+     * started, counting down for the player on move. Null otherwise. A
+     * stopped clock has a `pause_state` when it is paused: always on a demo
+     * board, and on a review of an OGS game when the game server said why.
      */
-    public getReviewClock(
-        color: "black" | "white",
-    ): { clock: JGOFPlayerClock; on_move: boolean; running: boolean } | null {
+    public getReviewClock(color: "black" | "white"): {
+        clock: JGOFPlayerClock;
+        on_move: boolean;
+        running: boolean;
+        pause_state?: JGOFPauseState;
+    } | null {
         const tc = reviewTimeControl(this.engine);
         if (!this.review_id || !this.review_clock.started || !tc) {
             return null;
@@ -216,6 +221,9 @@ export abstract class OGSConnectivity extends GobanInteractive {
             clock: on_move ? runClock(base, elapsed, tc) : base,
             on_move,
             running: this.review_clock.running,
+            pause_state: this.review_clock.running
+                ? undefined
+                : (this.review_clock.pause_state ?? (this.isDemoBoard() ? {} : undefined)),
         };
     }
 

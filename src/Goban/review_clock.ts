@@ -19,7 +19,7 @@
  * JGOFPlayerClock (ms); time controls are JGOFTimeControl (seconds).
  */
 
-import type { JGOFPlayerClock, JGOFTimeControl } from "../engine/formats/JGOF";
+import type { JGOFPauseState, JGOFPlayerClock, JGOFTimeControl } from "../engine/formats/JGOF";
 import type { GobanEngine } from "../engine/GobanEngine";
 import type { MoveTree } from "../engine/MoveTree";
 
@@ -35,6 +35,8 @@ export class ReviewClock {
     public started = false;
     /** True while the clock runs */
     public running = false;
+    /** While stopped, why the game server said the game is paused */
+    public pause_state?: JGOFPauseState;
     /** When the current run began */
     private since = 0;
     /** The time the clock ran before `since` */
@@ -45,6 +47,7 @@ export class ReviewClock {
 
     /** Starts the clock at server time `at`, if it is stopped */
     public start(at: number): void {
+        this.pause_state = undefined;
         if (!this.running) {
             this.running = true;
             this.started = true;
@@ -52,8 +55,9 @@ export class ReviewClock {
         }
     }
 
-    /** Stops the clock at server time `at`, if it runs */
-    public stop(at: number): void {
+    /** Stops the clock at server time `at`, if it runs, and notes why */
+    public stop(at: number, pause_state?: JGOFPauseState): void {
+        this.pause_state = pause_state;
         if (this.running) {
             this.ran = this.total(at);
             this.running = false;
