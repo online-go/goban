@@ -154,7 +154,8 @@ export abstract class OGSConnectivity extends GobanInteractive {
         return !!this.review_id && !this.engine.config.game_id;
     }
 
-    /** A demo board's running clock, rebuilt from the review log */
+    /** A review's running clock, rebuilt from the review log. On a review of
+     * an OGS game the game server starts and stops it with the game clock. */
     private review_clock = new ReviewClock();
 
     /** True from when the controller sends a game move or undo until the
@@ -169,16 +170,13 @@ export abstract class OGSConnectivity extends GobanInteractive {
     }
 
     /**
-     * Applies a review message to the demo board clock. `clock_node` is the
+     * Applies a review message to the running clock. `clock_node` is the
      * node that received the message's clock fields, if any. A game move
      * starts the next player's turn, and setting the clock of the player on
      * move at the live move starts their turn again. An undo goes back to the
      * turn before, which keeps its start.
      */
     private updateReviewClock(obj: ReviewMessage, clock_node?: MoveTree): void {
-        if (!this.isDemoBoard()) {
-            return;
-        }
         const at = obj.ts ?? this.serverNow();
         if (obj.clock_running === true) {
             this.review_clock.start(at);
@@ -191,20 +189,20 @@ export abstract class OGSConnectivity extends GobanInteractive {
         }
     }
 
-    /** True while a demo board's clock is running */
+    /** True while a review's clock is running */
     public reviewClockRunning(): boolean {
         return this.review_clock.running;
     }
 
     /**
-     * A player's clock at the live move of a demo board whose clock has been
+     * A player's clock at the live move of a review whose clock has been
      * started, counting down for the player on move. Null otherwise.
      */
     public getReviewClock(
         color: "black" | "white",
     ): { clock: JGOFPlayerClock; on_move: boolean; running: boolean } | null {
         const tc = reviewTimeControl(this.engine);
-        if (!this.isDemoBoard() || !this.review_clock.started || !tc) {
+        if (!this.review_id || !this.review_clock.started || !tc) {
             return null;
         }
         const live = this.engine.last_official_move;

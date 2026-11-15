@@ -24,7 +24,7 @@ import type { GobanEngine } from "../engine/GobanEngine";
 import type { MoveTree } from "../engine/MoveTree";
 
 /**
- * A demo board's running clock, kept from the review log. It totals the time
+ * A review's running clock, kept from the review log. It totals the time
  * the clock has run, and notes the total when each game move's turn began.
  * The player on move has used the running time since their turn began, so an
  * undo goes back to the turn before with the time it had already used.

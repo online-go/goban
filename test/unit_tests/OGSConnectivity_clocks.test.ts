@@ -329,12 +329,15 @@ describe("demo boards", () => {
             expect(goban.getReviewClock(color as "black" | "white")?.clock).toEqual({ main_time });
         });
 
-        test.each([
-            ["before the clock first starts", one_move, {}],
-            ["on a review of an OGS game", started, { game_id: 5 }],
-        ])("there is no running clock %s", async (_, entries, gamedata) => {
-            const { goban } = await demo(entries, { gamedata });
+        test("there is no running clock before the clock first starts", async () => {
+            const { goban } = await demo(one_move);
             expect(goban.getReviewClock("white")).toBeNull();
+        });
+
+        test("a review of an OGS game runs the clock the game server sends", async () => {
+            const { goban } = await demo(started, { gamedata: { game_id: 5 } });
+            now(21000);
+            expect(goban.getReviewClock("white")?.clock).toEqual({ main_time: 590000 });
         });
 
         test("an uploaded SGF's own time settings take precedence", async () => {
