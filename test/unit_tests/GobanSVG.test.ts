@@ -1143,10 +1143,12 @@ test("keeps the game and review node when swapping board painters", () => {
     expect(pick).toHaveBeenCalled();
     expect(engine.cur_move).toMatchObject({ x: 2, y: 3, move_number: 1 });
     expect(element.isConnected).toBe(true);
+    expect(host.hasAttribute("data-goban-board-view")).toBe(true);
 
     goban.switchBoardView();
     expect(dispose).toHaveBeenCalledTimes(1);
     expect(element.isConnected).toBe(false);
+    expect(host.hasAttribute("data-goban-board-view")).toBe(false);
     expect(goban.engine).toBe(engine);
     expect(engine.cur_review_move).toBe(review);
     expect(engine.cur_move.move_number).toBe(1);

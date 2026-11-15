@@ -338,6 +338,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
         previous?.element.remove();
         previous?.dispose();
         this.boardView = view;
+        this.parent.toggleAttribute("data-goban-board-view", !!view);
         delete this.activeTouchCompleter;
         delete this.last_hover_square;
         this.__last_pt = { i: -1, j: -1, valid: false };
@@ -432,6 +433,7 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     public override destroy(): void {
         const view = this.boardView;
         delete this.boardView;
+        this.parent.removeAttribute("data-goban-board-view");
         view?.element.remove();
         view?.dispose();
         super.destroy();
