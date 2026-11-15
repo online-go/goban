@@ -1062,6 +1062,33 @@ describe("touch on the board blurs the chat field", () => {
         }
     });
 
+    test.each([
+        [
+            "a review's controller blurs a focused input, so an edit commits",
+            "input",
+            1,
+            true,
+            false,
+        ],
+        ["a review's controller leaves a comment being typed alone", "textarea", 1, true, true],
+        ["a review's viewer leaves a focused input alone", "input", 1, false, true],
+        ["a game leaves a focused input alone", "input", undefined, false, true],
+    ])("mousedown on the board as %s", (_, tag, review_id, controller, kept) => {
+        const goban = new SVGRenderer(basic3x3Config({ review_id }));
+        (goban as any).isPlayerController = () => controller;
+        const input = document.createElement(tag);
+        document.body.appendChild(input);
+
+        input.focus();
+        (goban.event_layer ?? goban.parent).dispatchEvent(
+            new MouseEvent("mousedown", { bubbles: true, clientX: 15, clientY: 15 }),
+        );
+        expect(document.activeElement === input).toBe(kept);
+
+        input.remove();
+        goban.destroy();
+    });
+
     test("a touch away from the board leaves the textarea focused", () => {
         const goban = new SVGRenderer(basic3x3Config());
         const textarea = document.createElement("textarea");

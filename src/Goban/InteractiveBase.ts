@@ -129,6 +129,10 @@ export abstract class GobanInteractive extends GobanBase {
     protected abstract socket: IGobanSocket;
     /** Implemented by OGSConnectivity; declared here so tapAtImpl can use it. */
     protected abstract syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void;
+    /** Sends the stone just played from `from` as a game move, when a demo
+     * board records game moves. `created` is true if the play added the node.
+     * Returns true if the stone is not a variation, and so must not be synced. */
+    protected abstract recordOfficialMove(from: MoveTree, created: boolean): boolean;
 
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: ConditionalMoveTree = new ConditionalMoveTree(null);
@@ -937,7 +941,14 @@ export abstract class GobanInteractive extends GobanBase {
             }
         }
         if (!keep_old_engine) {
-            this.setLastOfficialMove();
+            if (config.original_sgf) {
+                // An uploaded SGF opens on its farthest move, which can be in
+                // a variation. Its game line is the main line.
+                this.engine.last_official_move = this.engine.move_tree.getTrunkTail();
+                this.updateTitleAndStonePlacement();
+            } else {
+                this.setLastOfficialMove();
+            }
         }
 
         this.emit("update");
@@ -1942,6 +1953,7 @@ export abstract class GobanInteractive extends GobanBase {
                 this.move_selected = { x: x, y: y };
 
                 /* Place our stone */
+                let recorded = false;
                 try {
                     if (
                         !(
@@ -1950,6 +1962,8 @@ export abstract class GobanInteractive extends GobanBase {
                             this.analyze_subtool !== "alternate"
                         )
                     ) {
+                        const from = this.engine.cur_move;
+                        const existed = !!from.lookupMove(x, y, this.engine.player, false);
                         removed_count = this.engine.place(
                             x,
                             y,
@@ -1966,6 +1980,7 @@ export abstract class GobanInteractive extends GobanBase {
                                 this.engine.place(-1, -1);
                             }
                         }
+                        recorded = this.recordOfficialMove(from, !existed);
                     } else {
                         if (!this.edit_color) {
                             throw new Error(`Edit place called with invalid edit_color value`);
@@ -1986,7 +2001,7 @@ export abstract class GobanInteractive extends GobanBase {
                         }
                     }
 
-                    if (this.mode === "analyze" && this.analyze_tool === "stone") {
+                    if (!recorded && this.mode === "analyze" && this.analyze_tool === "stone") {
                         let c: MoveTree | null = this.engine.cur_move;
                         while (c && !c.trunk) {
                             let mark: any = c.getMoveNumberDifferenceFromTrunk();
@@ -2004,7 +2019,9 @@ export abstract class GobanInteractive extends GobanBase {
                     }
 
                     if (this.isPlayerController()) {
-                        this.syncReviewMove();
+                        if (!recorded) {
+                            this.syncReviewMove();
+                        }
                         force_redraw = true;
                     }
                 } catch (e) {

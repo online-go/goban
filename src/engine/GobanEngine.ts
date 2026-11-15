@@ -37,6 +37,7 @@ import {
     JGOFTimeControl,
     JGOFNumericPlayerColor,
     JGOFMove,
+    JGOFPauseState,
     JGOFPlayerClock,
     JGOFPlayerSummary,
     JGOFIntersection,
@@ -274,9 +275,9 @@ export interface ReviewMessage {
     "f"?: number;
     /** Moves made */
     "m"?: string;
-    /** official move [reviewing live game] */
+    /** Game move: relayed from a live game, or recorded on a demo board */
     "om"?: AdHocPackedMove;
-    /** official undo [reviewing live game] */
+    /** Game undo: relayed from a live game, or recorded on a demo board */
     "undo"?: boolean;
     /** text note for the current node */
     "t"?: string;
@@ -307,6 +308,12 @@ export interface ReviewMessage {
     "black_clock"?: JGOFPlayerClock | null;
     /** Sets (or, with null, clears) white's clock on the current node */
     "white_clock"?: JGOFPlayerClock | null;
+    /** Starts (true) or stops (false) a review's clock, as of the message's ts */
+    "clock_running"?: boolean;
+    /** With `clock_running: false`, why the clock is paused. The game server
+     * sends it for a review of an OGS game, where a stop without it is the end
+     * of play. A demo board's stopped clock is always paused. */
+    "pause_state"?: JGOFPauseState;
     /** Delete */
     "delete"?: number;
     /** Sets the owner of the review */
