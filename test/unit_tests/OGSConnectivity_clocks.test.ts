@@ -465,6 +465,25 @@ describe("demo boards", () => {
             expect(board.sent()[0].om).toEqual([4, 4, 0, 0, ...clock]);
         });
 
+        test("saves the Fischer increment for a move made the moment the clock starts", async () => {
+            const board = await demo([{ clock_running: true, ts: 1000 }], {
+                controller: true,
+                record: true,
+                gamedata: {
+                    time_control: {
+                        system: "fischer",
+                        speed: "live",
+                        initial_time: 600,
+                        time_increment: 10,
+                        max_time: 900,
+                    },
+                },
+            });
+            now(1000);
+            board.tap(4, 4);
+            expect(board.sent()[0].om[4]).toEqual({ black_clock: { main_time: 610000 } });
+        });
+
         test.each([
             [
                 "a second stone",
@@ -523,6 +542,47 @@ describe("demo boards", () => {
             expect(board.sent().slice(-1)[0]).toMatchObject({ f: 1, m: "", t: "a comment" });
         });
 
+        /** Relays, in order, what the controller sent since the last relay,
+         * including anything it sends while receiving */
+        function relayer(board: Board, viewer: Board) {
+            let relayed = board.sent().length;
+            return (ts: number) => {
+                while (relayed < board.sent().length) {
+                    const msg = { ...board.sent()[relayed++], ts };
+                    board.receive(msg);
+                    viewer.receive(msg);
+                }
+            };
+        }
+
+        test("a sync while a game move is in flight leaves viewers following the game", async () => {
+            const board = await demo(one_move, { controller: true, record: true });
+            const viewer = await demo(one_move);
+            const relay = relayer(board, viewer);
+            board.tap(4, 4);
+            board.goban.syncReviewMove(undefined, "a comment on move 1");
+            relay(2000);
+            board.tap(5, 5);
+            relay(3000);
+            expect(viewer.goban.engine.cur_move.move_number).toBe(3);
+        });
+
+        test("a comment typed on a move being undone does not replace the move before's", async () => {
+            const log = [
+                ...one_move,
+                { f: 1, m: "", t: "move 1", ts: 1100 },
+                { om: [3, 3, 0, 0], ts: 2000 },
+                { f: 2, m: "", t: "move 2", ts: 2100 },
+            ];
+            const board = await demo(log, { controller: true, record: true });
+            const viewer = await demo(log);
+            const relay = relayer(board, viewer);
+            board.goban.undoOfficialMove();
+            board.goban.syncReviewMove(undefined, "move 2!");
+            relay(3000);
+            expect(viewer.goban.engine.last_official_move.text).toBe("move 1");
+        });
+
         test.each([0, 1])(
             "records nothing for a pass during handicap placement (%i stones placed)",
             async (placed) => {
@@ -572,6 +632,12 @@ describe("demo boards", () => {
             receive({ undo: true, ts: 3000 });
             const expected = elsewhere ? variation : goban.engine.last_official_move;
             expect(goban.engine.cur_move.id).toBe(expected.id);
+        });
+
+        test("a viewer following the review onto a variation after the undone move goes back to the move before it", async () => {
+            const { goban, receive } = await demo([...two_moves, { f: 2, m: "ff", ts: 2500 }]);
+            receive({ undo: true, ts: 3000 });
+            expect(goban.engine.cur_move.id).toBe(goban.engine.last_official_move.id);
         });
     });
 });

@@ -1270,6 +1270,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
             }
             this.updateReviewClock(obj, clock_node);
             if ("om" in obj || "undo" in obj) {
+                // A sync sent while the change was in flight put the review on
+                // the node it named, which may have moved or gone since
+                if (this.review_official_pending && "f" in this.last_review_message) {
+                    this.last_review_message = {};
+                    this.syncReviewMove();
+                }
                 this.review_official_pending = false;
             }
             if (!bulk_processing) {

@@ -29,8 +29,9 @@ The controller applies `clock_running` only from the server's copy, as all other
 As a result, Pause and Resume show on the controller one round trip after the click.
 A move that the controller records in that round trip has a clock error of up to one round trip.
 
-A mousedown on the board removes the focus from a text field for the controller.
+For the controller of any review, a mousedown on the board removes the focus from an input field.
 The clock editor of the frontend commits its value on blur, so the value goes before the move.
+A text area, such as the comment box, keeps the focus.
 
 ## Record
 
@@ -42,8 +43,11 @@ The time settings of an uploaded SGF take precedence over the time control of th
 
 The server puts each game move after the last game move that it has.
 So Record sends one game move or undo at a time.
-The next one waits until a game move or undo comes back, the review reloads, or control changes.
+Until a game move or undo comes back, the review reloads, or control changes, Record drops the next stone or undo.
 After the controller sends a game move or undo, its next sync names its node with `f` and `m`.
+If the controller syncs before the change comes back, that sync puts the review on the node it names.
+The change can then move the controller off that node, or delete it.
+So when the change comes back, the controller syncs its node again.
 
 ## Undo
 
@@ -55,5 +59,8 @@ On a review of an OGS game, the undone move stays in the tree.
 ## Limits
 
 - The controller does not apply clock edits from other sessions on its account until the review reloads.
-- An edit that the controller sends in the round trip after an undo goes to the move before the undone move.
+  A game move recorded from that session saves the mover's clock without the edit, and the saved clock replaces it from then on.
+- A clock edit on the undone move, sent in the round trip after an undo, goes to the move before it.
+  On other browsers, it can also start the turn again.
+  A comment or marks sent there go to the move before it too, until the controller syncs again when the undo comes back.
 - Pen marks and deletes do not name a node. In the round trip after a game move, they can go to the new game move.
