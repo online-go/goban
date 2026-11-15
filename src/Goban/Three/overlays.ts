@@ -29,6 +29,7 @@ type Attributes = Record<string, string | number>;
 const unit = 96;
 const boardInk = 0.013;
 const stoneInk = crownHeight + 0.002;
+const axisInset = 0.7;
 const rankDigits = "〇一二三四五六七八九";
 
 function numericRank(rank: number): string {
@@ -195,20 +196,20 @@ export class BoardOverlays {
                     ? String(x + 1)
                     : fixture.prettyCoordinates(x, 0).replace(/\d+$/, "");
             if (fixture.labels.top) {
-                label({ x, y: bounds.top - 0.99 }, file);
+                label({ x, y: bounds.top - axisInset }, file);
             }
             if (fixture.labels.bottom) {
-                label({ x, y: bounds.bottom + 0.99 }, file);
+                label({ x, y: bounds.bottom + axisInset }, file);
             }
         }
         for (let y = bounds.top; y <= bounds.bottom; y++) {
             const rank =
                 fixture.labelSystem === "1-1" ? numericRank(y + 1) : String(fixture.height - y);
             if (fixture.labels.left) {
-                label({ x: bounds.left - 0.99, y }, rank);
+                label({ x: bounds.left - axisInset, y }, rank);
             }
             if (fixture.labels.right) {
-                label({ x: bounds.right + 0.99, y }, rank);
+                label({ x: bounds.right + axisInset, y }, rank);
             }
         }
 

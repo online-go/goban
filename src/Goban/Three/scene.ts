@@ -323,9 +323,11 @@ export class BoardScene {
             custom: 1,
             anime: 0.78,
         }[style];
-        this.shadowMaterial.opacity = Math.min(1, strength * this.shadowStrength);
+        // Preserve the original Studio default even when the key light grows stronger.
+        const opacityLimit = style === "default" ? 1.15 * lightingPresets.studio.shadow : 1;
+        this.shadowMaterial.opacity = Math.min(opacityLimit, strength * this.shadowStrength);
         this.shadows.visible = strength > 0;
-        const spread = style === "high" ? 1.18 : 1;
+        const spread = style === "high" ? 1.3 : 1;
         this.canvas.dataset.shadowOpacity = String(this.shadowMaterial.opacity);
         this.canvas.dataset.shadowSpread = String(spread);
         this.shadowPoints.forEach((point, index) => {
