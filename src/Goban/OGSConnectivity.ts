@@ -1117,7 +1117,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 }
 
                 if ("om" in obj) {
-                    /* Official move [comes from live review of game] */
+                    /* A game move, relayed from a live game or recorded on a demo board */
                     const t = this.engine.cur_review_move || this.engine.cur_move;
                     const mv = this.engine.decodeMoves([obj.om!])[0];
                     const follow_om = t.id === this.engine.last_official_move.id;
@@ -1145,7 +1145,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
                 }
 
                 if ("undo" in obj) {
-                    /* Official undo move [comes from live review of game] */
+                    /* A game undo, relayed from a live game or recorded on a demo board */
                     const t = this.engine.cur_review_move;
                     const undone = this.engine.last_official_move;
                     let cur_move_undone = t?.id === undone.id;
