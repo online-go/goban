@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 import assert from "node:assert/strict";
-import { angles, BoardProjection, crownHeight } from "../../src/Goban/Three/projection";
+import {
+    angles,
+    BoardProjection,
+    boardDimensions,
+    crownHeight,
+} from "../../src/Goban/Three/projection";
 
 const crops = [
     { left: 0, top: 0, right: 18, bottom: 18 },
@@ -106,4 +111,35 @@ test("a visible raised edge remains selectable when it projects into the empty-c
         projection.pick(edge, (p) => p.x === stone.x && p.y === stone.y),
         stone,
     );
+});
+
+test("frames the floor goban's block and feet while picking on the unchanged playing surface", () => {
+    for (const bounds of crops) {
+        const projection = new BoardProjection(bounds, { boardStyle: "floor" });
+        const { width, depth, thickness, legHeight } = boardDimensions(bounds, "floor");
+        const centerX = (bounds.left + bounds.right) / 2;
+        const centerY = (bounds.top + bounds.bottom) / 2;
+        for (const size of sizes) {
+            for (const angle of angles) {
+                projection.fit(size.x, size.y, angle);
+                for (const dx of [-1, 1]) {
+                    for (const dy of [-1, 1]) {
+                        const corner = {
+                            x: centerX + (dx * width) / 2,
+                            y: centerY + (dy * depth) / 2,
+                        };
+                        for (const elevation of [0, -thickness - legHeight - 0.003]) {
+                            const point = projection.project(corner, elevation);
+                            expect(point.x).toBeGreaterThan(size.x * 0.03);
+                            expect(point.x).toBeLessThan(size.x * 0.97);
+                            expect(point.y).toBeGreaterThan(size.y * 0.03);
+                            expect(point.y).toBeLessThan(size.y * 0.97);
+                        }
+                    }
+                }
+                const edge = { x: bounds.right, y: bounds.bottom };
+                expect(projection.pick(projection.project(edge))).toEqual(edge);
+            }
+        }
+    }
 });

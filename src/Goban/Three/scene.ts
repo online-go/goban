@@ -37,9 +37,9 @@ import {
 } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { NativeOverlay } from "../NativeTransport";
+import type { ThreeBoardStyle } from "../ThreeConfig";
 import {
-    boardMargin,
-    boardThickness,
+    boardDimensions,
     contains,
     crownHeight,
     stoneBase,
@@ -357,28 +357,55 @@ export class BoardScene {
         this.renderer.setDrawingBufferSize(width, height, dpr);
     }
 
-    public rebuild(bounds: Bounds): void {
+    public rebuild(bounds: Bounds, style: ThreeBoardStyle): void {
         for (const old of [...this.board.children]) {
             if (old instanceof Mesh) {
                 old.geometry.dispose();
             }
             this.board.remove(old);
         }
-        const width = bounds.right - bounds.left + 2 * boardMargin;
-        const height = bounds.bottom - bounds.top + 2 * boardMargin;
+        const { width, depth, thickness, legHeight } = boardDimensions(bounds, style);
         const slab = new Mesh(
-            new RoundedBoxGeometry(width, boardThickness, height, 2, 0.055),
+            new RoundedBoxGeometry(width, thickness, depth, 2, 0.055),
             this.edgeMaterial,
         );
         const surface = new Mesh(
-            new PlaneGeometry(width - 0.108, height - 0.108).rotateX(-Math.PI / 2),
+            new PlaneGeometry(width - 0.108, depth - 0.108).rotateX(-Math.PI / 2),
             this.surfaceMaterial,
         );
         const x = (bounds.left + bounds.right) / 2;
         const y = (bounds.top + bounds.bottom) / 2;
-        slab.position.set(x, -boardThickness / 2 - 0.003, y);
+        slab.position.set(x, -thickness / 2 - 0.003, y);
         surface.position.set(x, 0, y);
         this.board.add(slab, surface);
+        if (!legHeight) {
+            return;
+        }
+        const radius = Math.min(width, depth) * 0.054;
+        const profile = [
+            [0, 0],
+            [0.56, 0],
+            [0.77, 0.06],
+            [0.89, 0.19],
+            [0.85, 0.38],
+            [0.67, 0.55],
+            [0.68, 0.68],
+            [0.83, 0.83],
+            [1, 0.94],
+            [1, 1],
+            [0, 1],
+        ].map(([r, h]) => new Vector2(r * radius, h * legHeight));
+        for (const dx of [-1, 1]) {
+            for (const dz of [-1, 1]) {
+                const foot = new Mesh(new LatheGeometry(profile, 24), this.edgeMaterial);
+                foot.position.set(
+                    x + dx * (width / 2 - radius * 1.22),
+                    -thickness - legHeight - 0.003,
+                    y + dz * (depth / 2 - radius * 1.22),
+                );
+                this.board.add(foot);
+            }
+        }
     }
 
     public update(

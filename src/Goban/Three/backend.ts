@@ -138,18 +138,19 @@ class ThreeBoardView implements BoardView {
             white_text: white.text,
             blank_text: appearance.board.text,
         });
-        const bounds = JSON.stringify(state.bounds);
+        const style = this.owner.options.boardStyle ?? "tabletop";
+        const bounds = JSON.stringify([state.bounds, style]);
         const geometry = [bounds, width, height, devicePixelRatio].join("/");
         if (!this.projection || this.geometry !== geometry) {
             this.projection = new BoardProjection(state.bounds, this.owner.options);
-            this.projection.fit(width, height, this.owner.options.tilt ?? 15);
+            const tilt = this.owner.options.tilt ?? (style === "floor" ? 35 : 15);
+            this.projection.fit(width, height, tilt);
             this.geometry = geometry;
             this.scene.resize(
                 width,
                 height,
                 Math.min(devicePixelRatio, Math.max(1, this.owner.options.maxPixelRatio ?? 1.75)),
             );
-            const tilt = this.owner.options.tilt ?? 15;
             const camera = this.projection.camera;
             this.element.dataset.tilt = String(tilt);
             this.element.dataset.viewport = `${width}x${height}`;
@@ -163,7 +164,8 @@ class ThreeBoardView implements BoardView {
         this.projection.stoneScale = appearance.scale;
         if (bounds !== this.boundsKey) {
             this.boundsKey = bounds;
-            this.scene.rebuild(state.bounds);
+            this.scene.rebuild(state.bounds, style);
+            this.element.dataset.boardStyle = style;
             this.inkKey = "";
         }
         const key = JSON.stringify([

@@ -18,7 +18,10 @@ import type { GobanConfig } from "../GobanBase";
 import type { AdHocFormat, JGOF } from "../engine";
 import { SVGRenderer } from "./SVGRenderer";
 
+export type ThreeBoardStyle = "tabletop" | "floor";
+
 export interface ThreeRendererOptions {
+    boardStyle?: ThreeBoardStyle;
     tilt?: 0 | 15 | 25 | 35;
     fieldOfView?: number;
     distanceScale?: number;

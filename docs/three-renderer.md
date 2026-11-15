@@ -27,7 +27,8 @@ Use `createThreeGoban({ ...config, three: options }, data?)` to create a new SVG
 
 | Field | Behavior |
 | --- | --- |
-| `tilt` | North-up presets of 0°, 15°, 25°, or 35°. Defaults to 15°. |
+| `boardStyle` | `tabletop` or `floor`. Defaults to `tabletop`. |
+| `tilt` | North-up presets of 0°, 15°, 25°, or 35°. Defaults to 15° for tabletop and 35° for floor. |
 | `fieldOfView` | Perspective field of view in degrees. Defaults to 34°. |
 | `distanceScale` | Minimum camera distance relative to the visible board span. Defaults to 1.65. |
 | `lighting` | Independent studio, daylight, directional, or analysis preset. Optional azimuth in degrees and intensity from 0 to 2. |

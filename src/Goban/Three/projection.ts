@@ -15,6 +15,7 @@
  */
 
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from "three";
+import type { ThreeBoardStyle } from "../ThreeConfig";
 
 export interface Point {
     x: number;
@@ -29,6 +30,7 @@ export interface Bounds {
 }
 
 export interface CameraOptions {
+    boardStyle?: ThreeBoardStyle;
     /** Field of view along the shorter viewport dimension, before fitting. */
     fieldOfView?: number;
     /** Minimum orbit distance in multiples of the longer visible grid span. */
@@ -39,10 +41,22 @@ export const angles = [0, 15, 25, 35] as const;
 export const crownHeight = 0.25;
 export const stoneBase = 0.012;
 export const stoneRadius = 0.47;
-export const boardThickness = 0.36;
+const tabletopThickness = 0.36;
 export const boardMargin = 1.17;
 const frameLimit = 0.92;
 const frameMargin = 1.27;
+
+export function boardDimensions(bounds: Bounds, style: ThreeBoardStyle = "tabletop") {
+    const width = bounds.right - bounds.left + 2 * boardMargin;
+    const depth = bounds.bottom - bounds.top + 2 * boardMargin;
+    const shortest = Math.min(width, depth);
+    return {
+        width,
+        depth,
+        thickness: style === "floor" ? shortest * 0.22 : tabletopThickness,
+        legHeight: style === "floor" ? shortest * 0.15 : 0,
+    };
+}
 
 export function contains(bounds: Bounds, { x, y }: Point): boolean {
     return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
@@ -66,11 +80,14 @@ export class BoardProjection {
     public readonly bounds: Bounds;
     private readonly fieldOfView: number;
     private readonly distanceScale: number;
+    private readonly bottomElevation: number;
 
     public constructor(bounds: Bounds, options: CameraOptions = {}) {
         this.bounds = bounds;
         this.fieldOfView = options.fieldOfView ?? 34;
         this.distanceScale = options.distanceScale ?? 1.65;
+        const { thickness, legHeight } = boardDimensions(bounds, options.boardStyle);
+        this.bottomElevation = -thickness - legHeight - 0.003;
     }
 
     public fit(width: number, height: number, tilt: (typeof angles)[number]): void {
@@ -94,7 +111,7 @@ export class BoardProjection {
         let distance = Math.max(halfX, halfY) * 2 * this.distanceScale;
         // Fit the slab, crown and coordinate gutters. Camera depth varies by row.
         for (const row of [-halfY, halfY]) {
-            for (const elevation of [-boardThickness - 0.003, crownHeight]) {
+            for (const elevation of [this.bottomElevation, crownHeight]) {
                 const forward = row * sin + elevation * cos;
                 const vertical = elevation * sin - row * cos;
                 distance = Math.max(
