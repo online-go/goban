@@ -758,6 +758,14 @@ export class MoveTree {
             }
         }
     }
+    /** The last move of the main line through this node */
+    getTrunkTail(): MoveTree {
+        let tail: MoveTree = this;
+        while (tail.trunk_next) {
+            tail = tail.trunk_next;
+        }
+        return tail;
+    }
     isAncestorOf(other: MoveTree | null): boolean {
         if (!other) {
             return false;

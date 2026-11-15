@@ -647,6 +647,62 @@ describe("demo boards", () => {
         );
     });
 
+    describe("an uploaded SGF whose variation is longer than its main line", () => {
+        // Main line cc gg cg; the variation dd ee ff after gg is longer
+        const sgf = "(;SZ[9];B[cc];W[gg](;B[cg])(;B[dd];W[ee];B[ff]))";
+        const trunk = (goban: TestGoban) => {
+            const moves: string[] = [];
+            for (let node = goban.engine.move_tree.trunk_next; node; node = node.trunk_next) {
+                moves.push(`${node.x},${node.y}`);
+            }
+            return moves.join(" ");
+        };
+
+        test("game moves follow the main line, and notes on the variation stay", async () => {
+            const { goban } = await demo(
+                [
+                    { f: 2, m: "dd", t: "a longer line" },
+                    { om: [8, 8, 0, 0], ts: 1000 },
+                    { om: [7, 7, 0, 0], ts: 2000 },
+                    { undo: true, ts: 3000 },
+                ],
+                { gamedata: { original_sgf: sgf } },
+            );
+            expect(trunk(goban)).toBe("2,2 6,6 2,6 8,8");
+            expect(goban.engine.last_official_move.trunk).toBe(true);
+            expect((goban as any).done_loading_review).toBe(true);
+            goban.engine.followPath(2, "dd");
+            expect(goban.engine.cur_move.text).toBe("a longer line");
+        });
+
+        test("Record sends a stone at the end of the main line, not at the end of the variation", async () => {
+            const board = await demo([], {
+                controller: true,
+                record: true,
+                gamedata: { original_sgf: sgf },
+            });
+            board.tap(8, 8);
+            expect(board.sent().some((message) => "om" in message)).toBe(false);
+
+            board.goban.engine.jumpTo(board.goban.engine.last_official_move);
+            board.tap(8, 8);
+            expect(board.sent()).toContainEqual({ review_id: board.review_id, om: [8, 8, 0, 0] });
+        });
+    });
+
+    test.each([
+        ["not a move", "zz"],
+        ["empty", []],
+        ["null", null],
+        ["off the board", [9, 0, 0, 0]],
+        ["not whole numbers", [1.5, 2, 0, 0]],
+    ])("a game move that is %s is skipped, and the log replays on", async (_, om) => {
+        const { goban } = await demo([{ om, ts: 1000 }, ...one_move]);
+        expect((goban as any).done_loading_review).toBe(true);
+        expect(goban.engine.last_official_move.x).toBe(2);
+        expect(goban.engine.last_official_move.move_number).toBe(1);
+    });
+
     describe("undo", () => {
         test("the controller's undo removes the game move on a demo board", async () => {
             const board = await demo(two_moves, { controller: true, record: true });

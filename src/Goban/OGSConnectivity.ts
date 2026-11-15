@@ -247,6 +247,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
             !this.isDemoBoard() ||
             !this.isPlayerController() ||
             from.id !== this.engine.last_official_move.id ||
+            !from.trunk ||
             // Nothing was placed, as with a pass during handicap placement
             placed.parent?.id !== from.id
         ) {
@@ -1116,10 +1117,10 @@ export abstract class OGSConnectivity extends GobanInteractive {
                     this.scheduleRedrawPenLayer();
                 }
 
-                if ("om" in obj) {
+                const mv = "om" in obj ? officialMove(this.engine, obj.om) : undefined;
+                if (mv) {
                     /* A game move, relayed from a live game or recorded on a demo board */
                     const t = this.engine.cur_review_move || this.engine.cur_move;
-                    const mv = this.engine.decodeMoves([obj.om!])[0];
                     const follow_om = t.id === this.engine.last_official_move.id;
                     this.engine.jumpToLastOfficialMove();
                     if (this.engine.board[mv.y]?.[mv.x]) {
@@ -2523,6 +2524,30 @@ export abstract class OGSConnectivity extends GobanInteractive {
             strict_seki_mode: tf,
         });
     }
+}
+
+/**
+ * The move of a review's `om`, or undefined if it cannot be placed: it must
+ * be a point on the board or a pass, after a live move on the main line. The
+ * review log is kept forever, so a game move that cannot be placed is skipped
+ * rather than stopping the replay. ogs's review replay uses the same rule.
+ */
+function officialMove(engine: GobanEngine, om: unknown): JGOFMove | undefined {
+    let mv: JGOFMove | undefined;
+    try {
+        mv = engine.decodeMoves([om as AdHocPackedMove])[0];
+    } catch {
+        return undefined;
+    }
+    const pass = mv?.x === -1 && mv.y === -1;
+    const on_board =
+        Number.isInteger(mv?.x) &&
+        Number.isInteger(mv?.y) &&
+        mv.x >= 0 &&
+        mv.y >= 0 &&
+        mv.x < engine.width &&
+        mv.y < engine.height;
+    return (pass || on_board) && engine.last_official_move.trunk ? mv : undefined;
 }
 
 /** The edit before an official move that took away the stone on its point,

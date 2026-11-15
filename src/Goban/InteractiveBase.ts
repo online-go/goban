@@ -941,7 +941,14 @@ export abstract class GobanInteractive extends GobanBase {
             }
         }
         if (!keep_old_engine) {
-            this.setLastOfficialMove();
+            if (config.original_sgf) {
+                // An uploaded SGF opens on its farthest move, which can be in
+                // a variation. Its game line is the main line.
+                this.engine.last_official_move = this.engine.move_tree.getTrunkTail();
+                this.updateTitleAndStonePlacement();
+            } else {
+                this.setLastOfficialMove();
+            }
         }
 
         this.emit("update");
