@@ -31,6 +31,7 @@ export interface Bounds {
 
 export interface CameraOptions {
     boardStyle?: ThreeBoardStyle;
+    room?: boolean;
     /** Field of view along the shorter viewport dimension, before fitting. */
     fieldOfView?: number;
     /** Minimum orbit distance in multiples of the longer visible grid span. */
@@ -58,6 +59,35 @@ export function boardDimensions(bounds: Bounds, style: ThreeBoardStyle = "tablet
     };
 }
 
+export function floorBoardFeet(width: number, depth: number) {
+    const radius = Math.min(width, depth) * 0.054;
+    return { radius, x: width / 2 - radius * 1.22, z: depth / 2 - radius * 1.22 };
+}
+
+export const bowlHeightRatio = 1.08;
+
+export function roomLayout(bounds: Bounds, style: ThreeBoardStyle = "tabletop") {
+    const { width, depth, thickness, legHeight } = boardDimensions(bounds, style);
+    // Room props use the same physical scale at every board size.
+    const radius = 3.45;
+    const tabletop = style === "tabletop";
+    const side = width / 2 + radius + 0.34 + (thickness + legHeight) * 0.27;
+    const separation = radius * (tabletop ? 1.66 : 1.24);
+    return {
+        tabletop,
+        furnitureWidth: Math.max(width, 2 * (side + radius)) + (tabletop ? 7.4 : 1.4),
+        furnitureDepth: Math.max(depth, 2 * (separation + radius)) + (tabletop ? 9.4 : 1.4),
+        width,
+        depth,
+        radius,
+        x: (bounds.left + bounds.right) / 2,
+        z: (bounds.top + bounds.bottom) / 2,
+        side,
+        separation,
+        surface: -thickness - legHeight - 0.003,
+    };
+}
+
 export function contains(bounds: Bounds, { x, y }: Point): boolean {
     return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
 }
@@ -81,9 +111,11 @@ export class BoardProjection {
     private readonly fieldOfView: number;
     private readonly distanceScale: number;
     private readonly bottomElevation: number;
+    private readonly room?: ReturnType<typeof roomLayout>;
 
     public constructor(bounds: Bounds, options: CameraOptions = {}) {
         this.bounds = bounds;
+        this.room = options.room ? roomLayout(bounds, options.boardStyle) : undefined;
         this.fieldOfView = options.fieldOfView ?? 34;
         this.distanceScale = options.distanceScale ?? 1.65;
         const { thickness, legHeight } = boardDimensions(bounds, options.boardStyle);
@@ -99,6 +131,7 @@ export class BoardProjection {
         const { left, top, right, bottom } = this.bounds;
         const centerX = (left + right) / 2;
         const centerY = (top + bottom) / 2;
+        const room = this.room;
         const halfX = (right - left) / 2 + frameMargin;
         const halfY = (bottom - top) / 2 + frameMargin;
         const camera = this.camera;
@@ -109,19 +142,38 @@ export class BoardProjection {
         const tanX = tanY * camera.aspect;
 
         let distance = Math.max(halfX, halfY) * 2 * this.distanceScale;
-        // Fit the slab, crown and coordinate gutters. Camera depth varies by row.
-        for (const row of [-halfY, halfY]) {
-            for (const elevation of [this.bottomElevation, crownHeight]) {
-                const forward = row * sin + elevation * cos;
-                const vertical = elevation * sin - row * cos;
-                distance = Math.max(
-                    distance,
-                    forward + Math.max(halfX / tanX, Math.abs(vertical) / tanY) / frameLimit,
+        const fitCorners = (x: number, y: number, base: number, top: number) => {
+            for (const row of [-y, y]) {
+                for (const elevation of [base, top]) {
+                    const forward = row * sin + elevation * cos;
+                    const vertical = elevation * sin - row * cos;
+                    distance = Math.max(
+                        distance,
+                        forward + Math.max(x / tanX, Math.abs(vertical) / tanY) / frameLimit,
+                    );
+                }
+            }
+        };
+        fitCorners(halfX, halfY, this.bottomElevation, crownHeight);
+        if (room) {
+            fitCorners(
+                room.side + room.radius,
+                room.separation + room.radius,
+                room.surface,
+                room.surface + room.radius * bowlHeightRatio,
+            );
+            if (room.tabletop) {
+                fitCorners(
+                    room.furnitureWidth / 2,
+                    room.furnitureDepth / 2,
+                    room.surface,
+                    room.surface,
                 );
             }
         }
-        camera.near = 0.1;
-        camera.far = distance + Math.hypot(halfX, halfY) * 2 + 10;
+        // Keep depth precision for the closely spaced board face and slab.
+        camera.near = 1;
+        camera.far = distance + Math.hypot(halfX, halfY) * (room ? 5 : 2) + 10;
         camera.position.set(centerX, distance * cos, centerY + distance * sin);
         camera.up.set(0, sin, -cos);
         camera.lookAt(centerX, 0, centerY);

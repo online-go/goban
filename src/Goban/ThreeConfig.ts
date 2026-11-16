@@ -22,6 +22,8 @@ export type ThreeBoardStyle = "tabletop" | "floor";
 
 export interface ThreeRendererOptions {
     boardStyle?: ThreeBoardStyle;
+    /** Include the table, bowls and capture lids in the 3D view. */
+    room?: boolean;
     tilt?: 0 | 15 | 25 | 35;
     fieldOfView?: number;
     distanceScale?: number;

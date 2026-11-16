@@ -16,6 +16,8 @@
 
 import {
     AmbientLight,
+    BufferAttribute,
+    type BufferGeometry,
     CanvasTexture,
     CircleGeometry,
     Color,
@@ -33,15 +35,18 @@ import {
     TextureLoader,
     type Texture,
     Vector2,
+    Vector3,
     WebGLRenderer,
 } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import type { JGOFClock } from "../../engine";
 import type { NativeOverlay } from "../NativeTransport";
 import type { ThreeBoardStyle } from "../ThreeConfig";
 import {
     boardDimensions,
     contains,
     crownHeight,
+    floorBoardFeet,
     stoneBase,
     stoneRadius,
     type Bounds,
@@ -51,6 +56,7 @@ import type { BoardProjection } from "./projection";
 
 import { lightingPresets, type LightingPreferences } from "./lighting";
 import type { Appearance } from "./appearance";
+import { RoomScene } from "./room";
 
 const initialCapacity = 25 * 25;
 
@@ -108,10 +114,26 @@ function shadowTexture(): CanvasTexture {
     return texture;
 }
 
-function stoneGeometry(): LatheGeometry {
+/** Bakes floor contact occlusion into vertex colours; `floorOffset` lifts local y to height above the floor. */
+function occludeNearFloor(
+    geometry: BufferGeometry,
+    floorOffset: number,
+    strength: number,
+    falloff: number,
+): void {
+    const positions = geometry.getAttribute("position");
+    const colors = new Float32Array(positions.count * 3);
+    for (let i = 0; i < positions.count; i++) {
+        const height = Math.max(0, positions.getY(i) + floorOffset);
+        colors.fill(1 - strength * Math.exp(-height / falloff), i * 3, i * 3 + 3);
+    }
+    geometry.setAttribute("color", new BufferAttribute(colors, 3));
+}
+
+function stoneGeometry(sides = 32, steps = 20): LatheGeometry {
     const profile: Vector2[] = [];
-    for (let n = 0; n <= 20; n++) {
-        const theta = (n * Math.PI) / 20;
+    for (let n = 0; n <= steps; n++) {
+        const theta = (n * Math.PI) / steps;
         profile.push(
             new Vector2(
                 stoneRadius * Math.sin(theta),
@@ -119,7 +141,7 @@ function stoneGeometry(): LatheGeometry {
             ),
         );
     }
-    return new LatheGeometry(profile, 32);
+    return new LatheGeometry(profile, sides);
 }
 
 interface Stone {
@@ -131,11 +153,13 @@ interface Stone {
 export class BoardScene {
     public readonly renderer: WebGLRenderer;
     private readonly scene = new Scene();
+    private room?: RoomScene;
     public readonly annotations = new Group();
     private readonly geometry = stoneGeometry();
     private readonly wood = woodTexture();
     private readonly ambient = new AmbientLight();
     private readonly key = new DirectionalLight();
+    private readonly keyOffset = new Vector3();
     private readonly fillLight = new DirectionalLight();
     private readonly surfaceMaterial = new MeshStandardMaterial({
         map: this.wood,
@@ -145,6 +169,7 @@ export class BoardScene {
         map: this.wood,
         color: "#9b785e",
         roughness: 0.76,
+        vertexColors: true,
     });
     private boardTexture?: Texture;
     private textureUrl = "";
@@ -195,9 +220,15 @@ export class BoardScene {
         this.renderer = new WebGLRenderer({ canvas, context, antialias: true, alpha: true });
         this.renderer.outputColorSpace = SRGBColorSpace;
         this.renderer.setClearColor(0x000000, 0);
+        this.renderer.shadowMap.autoUpdate = false;
+        this.key.shadow.mapSize.setScalar(1024);
+        this.key.shadow.radius = 3;
+        this.key.shadow.bias = -0.00015;
+        this.key.shadow.normalBias = 0.025;
         this.scene.add(
             this.ambient,
             this.key,
+            this.key.target,
             this.fillLight,
             this.board,
             this.grid,
@@ -224,14 +255,24 @@ export class BoardScene {
         this.ambient.intensity = preset.ambient * settings.intensity;
         this.key.color.set(preset.tint);
         this.key.intensity = preset.key * settings.intensity;
-        this.key.position.set(radius * Math.cos(azimuth), 12, radius * Math.sin(azimuth));
+        this.keyOffset.set(radius * Math.cos(azimuth), 12, radius * Math.sin(azimuth));
+        this.key.shadow.intensity = Math.min(1, preset.shadow * 1.32);
+        this.positionKeyLight();
         this.fillLight.color.set("#e3ecff");
         this.fillLight.intensity = preset.fill * settings.intensity;
-        this.fillLight.position.set(-this.key.position.x, 7, -this.key.position.z);
+        this.fillLight.position.set(-this.keyOffset.x, 7, -this.keyOffset.z);
         const shift = settings.preset === "directional" ? 0.15 : 0.095;
         this.shadowOffset = { x: -Math.cos(azimuth) * shift, y: -Math.sin(azimuth) * shift };
         this.shadowStrength = preset.shadow * Math.min(1, settings.intensity);
         this.updateShadows();
+    }
+
+    private positionKeyLight(): void {
+        const room = this.room;
+        this.key.target.position.copy(room?.position ?? this.scene.position);
+        this.key.position.copy(this.keyOffset).multiplyScalar(room ? 2.5 : 1);
+        this.key.position.add(this.key.target.position);
+        this.renderer.shadowMap.needsUpdate = !!room;
     }
 
     public applyTheme(appearance: Appearance, ready: () => void): void {
@@ -357,7 +398,34 @@ export class BoardScene {
         this.renderer.setDrawingBufferSize(width, height, dpr);
     }
 
-    public rebuild(bounds: Bounds, style: ThreeBoardStyle): void {
+    public rebuild(bounds: Bounds, style: ThreeBoardStyle, showRoom: boolean): void {
+        this.room?.dispose();
+        delete this.canvas.dataset.lidStones;
+        delete this.canvas.dataset.roomClock;
+        this.room = showRoom
+            ? new RoomScene(
+                  bounds,
+                  style,
+                  this.wood,
+                  this.geometry,
+                  stoneGeometry(20, 9),
+                  this.materials,
+              )
+            : undefined;
+        if (this.room) {
+            this.scene.add(this.room);
+            const camera = this.key.shadow.camera;
+            const extent = this.room.shadowExtent;
+            camera.left = camera.bottom = -extent;
+            camera.right = camera.top = extent;
+            camera.far = this.room.shadowDepth;
+            camera.updateProjectionMatrix();
+        } else if (this.key.shadow.map) {
+            this.key.shadow.dispose();
+            this.key.shadow.map = null;
+        }
+        this.key.castShadow = this.renderer.shadowMap.enabled = showRoom;
+        this.positionKeyLight();
         for (const old of [...this.board.children]) {
             if (old instanceof Mesh) {
                 old.geometry.dispose();
@@ -377,11 +445,14 @@ export class BoardScene {
         const y = (bounds.top + bounds.bottom) / 2;
         slab.position.set(x, -thickness / 2 - 0.003, y);
         surface.position.set(x, 0, y);
+        slab.castShadow = slab.receiveShadow = showRoom;
         this.board.add(slab, surface);
+        // Ambient occlusion: a floor goban's sides darken towards the shadowed gap above the floor.
+        occludeNearFloor(slab.geometry, thickness / 2, legHeight ? 0.5 : 0, thickness * 0.4);
         if (!legHeight) {
             return;
         }
-        const radius = Math.min(width, depth) * 0.054;
+        const feet = floorBoardFeet(width, depth);
         const profile = [
             [0, 0],
             [0.56, 0],
@@ -394,15 +465,14 @@ export class BoardScene {
             [1, 0.94],
             [1, 1],
             [0, 1],
-        ].map(([r, h]) => new Vector2(r * radius, h * legHeight));
+        ].map(([r, h]) => new Vector2(r * feet.radius, h * legHeight));
         for (const dx of [-1, 1]) {
             for (const dz of [-1, 1]) {
-                const foot = new Mesh(new LatheGeometry(profile, 24), this.edgeMaterial);
-                foot.position.set(
-                    x + dx * (width / 2 - radius * 1.22),
-                    -thickness - legHeight - 0.003,
-                    y + dz * (depth / 2 - radius * 1.22),
-                );
+                const footGeometry = new LatheGeometry(profile, 24);
+                occludeNearFloor(footGeometry, 0, 0.62, 1.6);
+                const foot = new Mesh(footGeometry, this.edgeMaterial);
+                foot.position.set(x + dx * feet.x, -thickness - legHeight - 0.003, y + dz * feet.z);
+                foot.castShadow = foot.receiveShadow = showRoom;
                 this.board.add(foot);
             }
         }
@@ -539,11 +609,31 @@ export class BoardScene {
         }
     }
 
+    public updateClock(clock: JGOFClock | null): boolean {
+        const display = this.room?.updateClock(clock);
+        if (display === undefined) {
+            return false;
+        }
+        this.canvas.dataset.roomClock = display;
+        return true;
+    }
+
+    public updateCaptures(black: number, white: number): void {
+        if (this.room) {
+            const counts = this.room.updateCaptures(black, white);
+            if (counts !== this.canvas.dataset.lidStones) {
+                this.canvas.dataset.lidStones = counts;
+                this.renderer.shadowMap.needsUpdate = true;
+            }
+        }
+    }
+
     public draw(projection: BoardProjection): void {
         this.renderer.render(this.scene, projection.camera);
     }
 
     public dispose(): void {
+        this.room?.dispose();
         this.clear(this.grid);
         this.clear(this.effects);
         this.clear(this.translucent);
@@ -567,6 +657,7 @@ export class BoardScene {
         this.surfaceMaterial.dispose();
         this.wood.dispose();
         this.shadowMap.dispose();
+        this.key.shadow.dispose();
         this.renderer.dispose();
     }
 

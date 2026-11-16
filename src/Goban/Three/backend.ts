@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { JGOFClock } from "../../engine";
 import type { BoardPoint, BoardView } from "../BoardView";
 import type { GobanSelectedThemes } from "../Goban";
 import type { SVGRenderer } from "../SVGRenderer";
@@ -43,6 +44,7 @@ class ThreeBoardView implements BoardView {
     private inkKey = "";
     private appearance?: Appearance;
     private frames = 0;
+    private clock: JGOFClock | null;
 
     public constructor(
         private readonly goban: SVGRenderer,
@@ -54,6 +56,7 @@ class ThreeBoardView implements BoardView {
             "position:absolute;inset:0;width:100%;height:100%;touch-action:none";
         this.element.setAttribute("aria-hidden", "true");
         this.scene = new BoardScene(this.element);
+        this.clock = goban.last_emitted_clock ?? null;
         this.ink = new BoardOverlays(owner.options.annotationInspection, this.scene.annotations);
         this.element.dataset.context = "ready";
         this.resize = new ResizeObserver(() => this.invalidate());
@@ -73,6 +76,7 @@ class ThreeBoardView implements BoardView {
         this.element.addEventListener("webglcontextlost", this.onContextLost, { signal });
         this.watchPixelRatio();
         this.configure();
+        this.goban.on("clock", this.onClock);
     }
 
     public configure(): void {
@@ -139,7 +143,8 @@ class ThreeBoardView implements BoardView {
             blank_text: appearance.board.text,
         });
         const style = this.owner.options.boardStyle ?? "tabletop";
-        const bounds = JSON.stringify([state.bounds, style]);
+        const room = this.owner.options.room ?? false;
+        const bounds = JSON.stringify([state.bounds, style, room]);
         const geometry = [bounds, width, height, devicePixelRatio].join("/");
         if (!this.projection || this.geometry !== geometry) {
             this.projection = new BoardProjection(state.bounds, this.owner.options);
@@ -164,7 +169,7 @@ class ThreeBoardView implements BoardView {
         this.projection.stoneScale = appearance.scale;
         if (bounds !== this.boundsKey) {
             this.boundsKey = bounds;
-            this.scene.rebuild(state.bounds, style);
+            this.scene.rebuild(state.bounds, style, room);
             this.element.dataset.boardStyle = style;
             this.inkKey = "";
         }
@@ -220,6 +225,11 @@ class ThreeBoardView implements BoardView {
         this.scene.preview(eligible && !occupied ? hover : null, ghost?.stone);
         this.ink.preview(eligible ? hover : null, ghost, occupied, this.invalidate);
         this.element.dataset.hover = hover ? `${hover.x},${hover.y}` : "";
+        this.scene.updateCaptures(
+            this.goban.engine.getBlackPrisoners(),
+            this.goban.engine.getWhitePrisoners(),
+        );
+        this.scene.updateClock(this.clock);
         this.scene.draw(this.projection);
         if (this.element.dataset.ink === "uploaded") {
             this.element.dataset.ink = "drawn";
@@ -262,6 +272,13 @@ class ThreeBoardView implements BoardView {
         this.invalidate();
     };
 
+    private onClock = (clock: JGOFClock | null): void => {
+        this.clock = clock;
+        if (this.scene.updateClock(clock)) {
+            this.invalidate();
+        }
+    };
+
     private onVisibility = (): void => {
         if (document.hidden) {
             cancelAnimationFrame(this.frame);
@@ -282,6 +299,7 @@ class ThreeBoardView implements BoardView {
         }
         this.disposed = true;
         this.listeners.abort();
+        this.goban.off("clock", this.onClock);
         cancelAnimationFrame(this.frame);
         this.media?.removeEventListener("change", this.watchPixelRatio);
         this.resize.disconnect();
