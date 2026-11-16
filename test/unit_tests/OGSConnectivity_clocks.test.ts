@@ -215,10 +215,15 @@ describe("demo boards", () => {
 
     const now = (ms: number) => jest.spyOn(Date, "now").mockReturnValue(ms);
 
-    /** A board loaded from a review log with a byo-yomi time control */
+    /** A board loaded from a review log with a byo-yomi time control. With
+     * `record: null`, Record stays as the board set it when it loaded. */
     async function demo(
         entries: any[],
-        { controller = false, record = false, gamedata = {} } = {},
+        {
+            controller = false,
+            record = false as boolean | null,
+            gamedata = {},
+        }: { controller?: boolean; record?: boolean | null; gamedata?: object } = {},
     ) {
         const review_id = ++next_review_id;
         const [server, client, goban] = await connect({ review_id, width: 9, height: 9 });
@@ -238,7 +243,9 @@ describe("demo boards", () => {
         const setController = (on: boolean) => ((goban as any).isPlayerController = () => on);
         setController(controller);
         (goban as any).mode = "analyze";
-        goban.review_record_moves = record;
+        if (record !== null) {
+            goban.review_record_moves = record;
+        }
         const send = jest.spyOn((goban as any).socket, "send").mockImplementation(() => {});
         return {
             goban,
@@ -329,8 +336,27 @@ describe("demo boards", () => {
             expect(goban.getReviewClock(color as "black" | "white")?.clock).toEqual({ main_time });
         });
 
-        test("there is no running clock before the clock first starts", async () => {
+        test("a demo board shows its starting clocks, paused, before the clock first starts", async () => {
             const { goban } = await demo(one_move);
+            now(50000);
+            expect(goban.getReviewClock("white")).toEqual({
+                clock: { main_time: 600000 },
+                on_move: true,
+                running: false,
+                pause_state: {},
+            });
+            expect(goban.getReviewClock("black")?.clock).toEqual(
+                goban.getReviewClock("white")?.clock,
+            );
+        });
+
+        test("a review of an OGS game has no clock before the game server starts it", async () => {
+            const { goban } = await demo(one_move, { gamedata: { game_id: 5 } });
+            expect(goban.getReviewClock("white")).toBeNull();
+        });
+
+        test("a demo board without a time control has no clock", async () => {
+            const { goban } = await demo(one_move, { gamedata: { time_control: undefined } });
             expect(goban.getReviewClock("white")).toBeNull();
         });
 
@@ -397,7 +423,7 @@ describe("demo boards", () => {
             const { goban, load } = await demo(started);
             load(one_move);
             expect(goban.reviewClockRunning()).toBe(false);
-            expect(goban.getReviewClock("white")).toBeNull();
+            expect(goban.getReviewClock("black")?.clock).toEqual({ main_time: 600000 });
         });
 
         test("the controller's Resume and Pause apply when the server sends them back", async () => {
@@ -452,7 +478,7 @@ describe("demo boards", () => {
             const board = await demo(one_move, { controller: true, record: true });
             const live = board.goban.engine.last_official_move;
             play(board);
-            expect(board.sent()).toEqual([{ review_id: board.review_id, om }]);
+            expect(board.sent()).toEqual([{ review_id: board.review_id, om, clock_running: true }]);
             expect(board.goban.engine.cur_move.id).toBe(live.id);
             expect(live.branches).toEqual([]);
         });
@@ -470,6 +496,20 @@ describe("demo boards", () => {
             expect(board.sent()[0]).not.toHaveProperty("om");
         });
 
+        test.each([
+            ["the first stone", [], [4, 4, "black"]],
+            ["a stone after a game move", one_move, [4, 4, "white"]],
+        ])("plays the stone sound for %s", async (_, entries, [x, y, color]) => {
+            const board = await demo(entries, { controller: true, record: true });
+            const pass = jest.fn();
+            const stone = jest.fn();
+            board.goban.on("audio-pass", pass);
+            board.goban.on("audio-stone", stone);
+            board.tap(x as number, y as number);
+            expect(pass).not.toHaveBeenCalled();
+            expect(stone).toHaveBeenCalledWith({ x, y, width: 9, height: 9, color });
+        });
+
         test("keeps a variation that a stone at the live move follows", async () => {
             const board = await demo([...one_move, { f: 1, m: "ee", ts: 2000 }], {
                 controller: true,
@@ -478,7 +518,9 @@ describe("demo boards", () => {
             const live = board.goban.engine.last_official_move;
             board.goban.engine.jumpTo(live);
             board.tap(4, 4);
-            expect(board.sent()).toEqual([{ review_id: board.review_id, om: [4, 4, 0, 0] }]);
+            expect(board.sent()).toEqual([
+                { review_id: board.review_id, om: [4, 4, 0, 0], clock_running: true },
+            ]);
             expect(live.branches.map((branch) => [branch.x, branch.y])).toEqual([[4, 4]]);
         });
 
@@ -528,6 +570,68 @@ describe("demo boards", () => {
             now(1000);
             board.tap(4, 4);
             expect(board.sent()[0].om[4]).toEqual({ black_clock: { main_time: 610000 } });
+        });
+
+        test("the first game move starts the clock, and is not timed", async () => {
+            const board = await demo([], { controller: true, record: true });
+            now(20000);
+            board.tap(4, 4);
+            expect(board.sent()).toEqual([
+                { review_id: board.review_id, om: [4, 4, 0, 0], clock_running: true },
+            ]);
+
+            board.receive({ ...board.sent()[0], ts: 20000 });
+            now(25000);
+            expect(board.goban.getReviewClock("white")).toEqual({
+                clock: { main_time: 595000 },
+                on_move: true,
+                running: true,
+                pause_state: undefined,
+            });
+            expect(board.goban.getReviewClock("black")?.clock).toEqual({ main_time: 600000 });
+        });
+
+        test.each([
+            [
+                "a clock that has run",
+                [
+                    { clock_running: true, ts: 1000 },
+                    { clock_running: false, ts: 2000 },
+                ],
+                {},
+            ],
+            ["a board without a time control", [], { time_control: undefined }],
+        ])("a game move does not start %s", async (_, entries, gamedata) => {
+            const board = await demo(entries, { controller: true, record: true, gamedata });
+            board.tap(4, 4);
+            expect(board.sent()[0]).toHaveProperty("om");
+            expect(board.sent()[0]).not.toHaveProperty("clock_running");
+        });
+
+        test.each([
+            ["is on for a timed demo board whose clock has yet to start", [], {}, true],
+            ["is on while the clock runs", [{ clock_running: true, ts: 1000 }], {}, true],
+            [
+                "is off while the clock is paused",
+                [
+                    { clock_running: true, ts: 1000 },
+                    { clock_running: false, ts: 2000 },
+                ],
+                {},
+                false,
+            ],
+            ["is off without a time control", [], { time_control: undefined }, false],
+            ["is off on a review of an OGS game", [], { game_id: 5 }, false],
+        ])("on load, Record %s", async (_, entries, gamedata, on) => {
+            const { goban } = await demo(entries, { record: null, gamedata });
+            expect(goban.review_record_moves).toBe(on);
+        });
+
+        test("a reload keeps the controller's choice of Record", async () => {
+            const { goban, load } = await demo([], { controller: true, record: null });
+            goban.review_record_moves = false;
+            load([]);
+            expect(goban.review_record_moves).toBe(false);
         });
 
         test.each([
@@ -686,7 +790,11 @@ describe("demo boards", () => {
 
             board.goban.engine.jumpTo(board.goban.engine.last_official_move);
             board.tap(8, 8);
-            expect(board.sent()).toContainEqual({ review_id: board.review_id, om: [8, 8, 0, 0] });
+            expect(board.sent()).toContainEqual({
+                review_id: board.review_id,
+                om: [8, 8, 0, 0],
+                clock_running: true,
+            });
         });
     });
 
