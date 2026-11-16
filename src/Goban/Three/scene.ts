@@ -222,7 +222,7 @@ export class BoardScene {
         this.renderer.setClearColor(0x000000, 0);
         this.renderer.shadowMap.autoUpdate = false;
         this.key.shadow.mapSize.setScalar(1024);
-        this.key.shadow.radius = 3;
+        this.key.shadow.radius = 8;
         this.key.shadow.bias = -0.00015;
         this.key.shadow.normalBias = 0.025;
         this.scene.add(
