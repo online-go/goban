@@ -42,6 +42,9 @@ class ThreeBoardView implements BoardView {
     private geometry = "";
     private boundsKey = "";
     private inkKey = "";
+    private viewKey = "";
+    /** Hold the previous frame after a rotation or mirror until the relabelled ink is ready. */
+    private holdView = false;
     private appearance?: Appearance;
     private frames = 0;
     private clock: JGOFClock | null;
@@ -152,9 +155,20 @@ class ThreeBoardView implements BoardView {
             const tilt = this.owner.options.tilt ?? (style === "floor" ? 35 : 15);
             this.projection.fit(width, height, tilt);
             this.geometry = geometry;
+            const viewKey = view.join("/");
+            this.holdView = !!this.viewKey && viewKey !== this.viewKey;
+            this.viewKey = viewKey;
             this.scene.setMirror(this.projection.mirror, this.projection.mirrorX);
-            if (this.ink.mirror !== this.projection.mirror) {
+            const fixed = !!this.owner.options.fixedCoordinates;
+            const textRotation = fixed ? this.projection.rotation : 0;
+            if (
+                this.ink.mirror !== this.projection.mirror ||
+                this.ink.textRotation !== textRotation ||
+                this.ink.fixedCoordinates !== fixed
+            ) {
                 this.ink.mirror = this.projection.mirror;
+                this.ink.textRotation = textRotation;
+                this.ink.fixedCoordinates = fixed;
                 this.inkKey = "";
             }
             this.element.dataset.rotation = String(this.projection.rotation);
@@ -238,6 +252,10 @@ class ThreeBoardView implements BoardView {
             this.goban.engine.getWhitePrisoners(),
         );
         this.scene.updateClock(this.clock);
+        if (this.holdView && this.element.dataset.ink === "pending") {
+            return;
+        }
+        this.holdView = false;
         this.scene.draw(this.projection);
         if (this.element.dataset.ink === "uploaded") {
             this.element.dataset.ink = "drawn";

@@ -98,6 +98,10 @@ export class BoardOverlays {
     private hoverReady = false;
     /** Set when the board group is mirrored, so text is flipped back to read normally. */
     public mirror = false;
+    /** Camera rotation (degrees) that text and coordinates are held fixed against. */
+    public textRotation = 0;
+    /** Name coordinates by where they appear on screen rather than by board side. */
+    public fixedCoordinates = false;
 
     public constructor(
         private readonly inspection: HTMLDivElement | undefined,
@@ -117,10 +121,16 @@ export class BoardOverlays {
     private async raster(artwork: SVGElement): Promise<HTMLImageElement> {
         artwork.setAttribute("font-family", "Verdana, Arial, sans-serif");
         artwork.setAttribute("font-weight", "700");
-        if (this.mirror) {
+        if (this.mirror || this.textRotation) {
             for (const text of artwork.querySelectorAll("text")) {
                 const x = Number(text.getAttribute("x") ?? 0);
-                text.setAttribute("transform", `translate(${2 * x} 0) scale(-1 1)`);
+                const y = Number(text.getAttribute("y") ?? 0);
+                const flip = this.mirror ? " scale(-1 1)" : "";
+                const turn = this.textRotation ? ` rotate(${-this.textRotation})` : "";
+                text.setAttribute(
+                    "transform",
+                    `translate(${x} ${y})${flip}${turn} translate(${-x} ${-y})`,
+                );
             }
         }
         const data = new XMLSerializer().serializeToString(artwork);
@@ -198,26 +208,51 @@ export class BoardOverlays {
                 ),
             );
         };
+        const fileText = (x: number) =>
+            fixture.labelSystem === "1-1"
+                ? String(x + 1)
+                : fixture.prettyCoordinates(x, 0).replace(/\d+$/, "");
+        const rankText = (y: number) =>
+            fixture.labelSystem === "1-1" ? numericRank(y + 1) : String(fixture.height - y);
+        // With fixed coordinates, name each label by where it lands on screen after
+        // the mirror and camera rotation, so letters always run along the bottom.
+        const centerX = (bounds.left + bounds.right) / 2;
+        const centerY = (bounds.top + bounds.bottom) / 2;
+        const yaw = (this.textRotation * Math.PI) / 180;
+        const axisLabel = (point: Point, onFileSide: boolean) => {
+            if (!this.fixedCoordinates) {
+                label(point, onFileSide ? fileText(point.x) : rankText(point.y));
+                return;
+            }
+            const dx = (this.mirror ? -1 : 1) * (point.x - centerX);
+            const dy = point.y - centerY;
+            const sx = centerX + dx * Math.cos(yaw) - dy * Math.sin(yaw);
+            const sy = centerY + dx * Math.sin(yaw) + dy * Math.cos(yaw);
+            const clamp = (v: number, lo: number, hi: number) =>
+                Math.min(hi, Math.max(lo, Math.round(v)));
+            // A quarter turn swaps the board's lettered and numbered sides on screen.
+            const fileSide = onFileSide !== (this.textRotation % 180 !== 0);
+            label(
+                point,
+                fileSide
+                    ? fileText(clamp(sx, bounds.left, bounds.right))
+                    : rankText(clamp(sy, bounds.top, bounds.bottom)),
+            );
+        };
         for (let x = bounds.left; x <= bounds.right; x++) {
-            const file =
-                fixture.labelSystem === "1-1"
-                    ? String(x + 1)
-                    : fixture.prettyCoordinates(x, 0).replace(/\d+$/, "");
             if (fixture.labels.top) {
-                label({ x, y: bounds.top - axisInset }, file);
+                axisLabel({ x, y: bounds.top - axisInset }, true);
             }
             if (fixture.labels.bottom) {
-                label({ x, y: bounds.bottom + axisInset }, file);
+                axisLabel({ x, y: bounds.bottom + axisInset }, true);
             }
         }
         for (let y = bounds.top; y <= bounds.bottom; y++) {
-            const rank =
-                fixture.labelSystem === "1-1" ? numericRank(y + 1) : String(fixture.height - y);
             if (fixture.labels.left) {
-                label({ x: bounds.left - axisInset, y }, rank);
+                axisLabel({ x: bounds.left - axisInset, y }, false);
             }
             if (fixture.labels.right) {
-                label({ x: bounds.right + axisInset, y }, rank);
+                axisLabel({ x: bounds.right + axisInset, y }, false);
             }
         }
 

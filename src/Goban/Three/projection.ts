@@ -40,6 +40,8 @@ export interface CameraOptions {
     rotation?: number;
     /** Mirror the board left to right; ignored with a room. */
     mirror?: boolean;
+    /** Share of the viewport the fitted board may fill (default 0.92). */
+    frameLimit?: number;
 }
 
 export const angles = [0, 15, 25, 35] as const;
@@ -48,7 +50,7 @@ export const stoneBase = 0.012;
 export const stoneRadius = 0.47;
 const tabletopThickness = 0.36;
 export const boardMargin = 1.17;
-const frameLimit = 0.92;
+const defaultFrameLimit = 0.92;
 const frameMargin = 1.27;
 
 export function boardDimensions(bounds: Bounds, style: ThreeBoardStyle = "tabletop") {
@@ -114,6 +116,7 @@ export class BoardProjection {
     public readonly bounds: Bounds;
     private readonly fieldOfView: number;
     private readonly distanceScale: number;
+    private readonly frameLimit: number;
     private readonly bottomElevation: number;
     private readonly room?: ReturnType<typeof roomLayout>;
     public readonly rotation: number;
@@ -128,6 +131,7 @@ export class BoardProjection {
         this.mirrorX = bounds.left + bounds.right;
         this.fieldOfView = options.fieldOfView ?? 34;
         this.distanceScale = options.distanceScale ?? 1.65;
+        this.frameLimit = options.frameLimit ?? defaultFrameLimit;
         const { thickness, legHeight } = boardDimensions(bounds, options.boardStyle);
         this.bottomElevation = -thickness - legHeight - 0.003;
     }
@@ -163,7 +167,7 @@ export class BoardProjection {
                     const vertical = elevation * sin - row * cos;
                     distance = Math.max(
                         distance,
-                        forward + Math.max(x / tanX, Math.abs(vertical) / tanY) / frameLimit,
+                        forward + Math.max(x / tanX, Math.abs(vertical) / tanY) / this.frameLimit,
                     );
                 }
             }

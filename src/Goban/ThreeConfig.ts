@@ -29,8 +29,13 @@ export interface ThreeRendererOptions {
     rotation?: 0 | 90 | 180 | 270;
     /** Show the board mirrored left to right; text stays readable (ignored with a room). */
     mirror?: boolean;
+    /** Label coordinates by screen position (letters along the bottom, numbers up the
+     *  side) and keep all text upright, whatever the camera rotation or mirror. */
+    fixedCoordinates?: boolean;
     fieldOfView?: number;
     distanceScale?: number;
+    /** Share of the viewport the fitted board may fill (default 0.92). */
+    frameLimit?: number;
     lighting?: {
         preset: "studio" | "daylight" | "directional" | "analysis";
         azimuth?: number;
