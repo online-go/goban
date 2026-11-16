@@ -162,8 +162,16 @@ export abstract class OGSConnectivity extends GobanInteractive {
      * server sends one back, the review reloads, or control changes */
     private review_official_pending = false;
 
-    /** When true, a stone the controller plays at a demo board's live move is a game move */
+    /**
+     * When true, a stone the controller plays at a demo board's live move is
+     * a game move. It turns on the first time the board loads with a time
+     * control while its clock runs or has yet to start, so the first stone
+     * starts the clock.
+     */
     public review_record_moves = false;
+
+    /** True once the board has loaded with a time control */
+    private review_record_default_set = false;
 
     private serverNow(): number {
         return Date.now() - this.getClockDrift();
@@ -278,7 +286,11 @@ export abstract class OGSConnectivity extends GobanInteractive {
         if (tc && base && (this.review_clock.running || elapsed > 0)) {
             om[4] = { [`${mover}_clock`]: clockAfterMove(base, elapsed, tc) };
         }
-        this.sendOfficialChange({ om });
+        // The first game move starts a clock that has never run, as the
+        // first move of a game does. That move is not timed.
+        this.sendOfficialChange(
+            tc && !this.review_clock.started ? { om, clock_running: true } : { om },
+        );
         return true;
     }
 
@@ -1330,6 +1342,16 @@ export abstract class OGSConnectivity extends GobanInteractive {
                             process_r(entries[i]);
                         }
                         bulk_processing = false;
+
+                        if (
+                            !this.review_record_default_set &&
+                            this.isDemoBoard() &&
+                            reviewTimeControl(this.engine)
+                        ) {
+                            this.review_record_default_set = true;
+                            this.review_record_moves ||=
+                                this.review_clock.running || !this.review_clock.started;
+                        }
 
                         this.enableDrawing();
                         /*
