@@ -1436,15 +1436,22 @@ export abstract class GobanInteractive extends GobanBase {
         this.edit_color = color;
         this.updateTitleAndStonePlacement();
     }
-    protected playMovementSound(): void {
-        if (
-            this.last_sound_played_for_a_stone_placement ===
-            this.engine.cur_move.x + "," + this.engine.cur_move.y
-        ) {
+    /**
+     * Plays the sound for a move, by default the current move. A demo board
+     * that records a stone as a game move stays at the live move until the
+     * server sends the stone back, so the caller names the stone instead.
+     */
+    protected playMovementSound(
+        move: { x: number; y: number; color: "black" | "white" } = {
+            x: this.engine.cur_move.x,
+            y: this.engine.cur_move.y,
+            color: this.engine.colorNotToMove(),
+        },
+    ): void {
+        if (this.last_sound_played_for_a_stone_placement === move.x + "," + move.y) {
             return;
         }
-        this.last_sound_played_for_a_stone_placement =
-            this.engine.cur_move.x + "," + this.engine.cur_move.y;
+        this.last_sound_played_for_a_stone_placement = move.x + "," + move.y;
 
         let idx;
         do {
@@ -1456,11 +1463,11 @@ export abstract class GobanInteractive extends GobanBase {
             this.emit("audio-pass");
         } else {
             this.emit("audio-stone", {
-                x: this.engine.cur_move.x,
-                y: this.engine.cur_move.y,
+                x: move.x,
+                y: move.y,
                 width: this.engine.width,
                 height: this.engine.height,
-                color: this.engine.colorNotToMove(),
+                color: move.color,
             });
         }
     }
@@ -1954,6 +1961,7 @@ export abstract class GobanInteractive extends GobanBase {
 
                 /* Place our stone */
                 let recorded = false;
+                let recorded_stone: { x: number; y: number; color: "black" | "white" } | undefined;
                 try {
                     if (
                         !(
@@ -1974,6 +1982,7 @@ export abstract class GobanInteractive extends GobanBase {
                             undefined,
                             removed_stones,
                         );
+                        const color = this.engine.colorNotToMove();
 
                         if (this.mode === "analyze") {
                             if (this.engine.handicapMovesLeft() > 0) {
@@ -1981,6 +1990,9 @@ export abstract class GobanInteractive extends GobanBase {
                             }
                         }
                         recorded = this.recordOfficialMove(from, !existed);
+                        if (recorded) {
+                            recorded_stone = { x, y, color };
+                        }
                     } else {
                         if (!this.edit_color) {
                             throw new Error(`Edit place called with invalid edit_color value`);
@@ -2043,7 +2055,7 @@ export abstract class GobanInteractive extends GobanBase {
                         delete this.move_selected;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
-                        this.playMovementSound();
+                        this.playMovementSound(recorded_stone);
                         break;
                     case "conditional":
                         this.followConditionalSegment(x, y);

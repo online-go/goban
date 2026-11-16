@@ -329,8 +329,27 @@ describe("demo boards", () => {
             expect(goban.getReviewClock(color as "black" | "white")?.clock).toEqual({ main_time });
         });
 
-        test("there is no running clock before the clock first starts", async () => {
+        test("a demo board shows its starting clocks, paused, before the clock first starts", async () => {
             const { goban } = await demo(one_move);
+            now(50000);
+            expect(goban.getReviewClock("white")).toEqual({
+                clock: { main_time: 600000 },
+                on_move: true,
+                running: false,
+                pause_state: {},
+            });
+            expect(goban.getReviewClock("black")?.clock).toEqual(
+                goban.getReviewClock("white")?.clock,
+            );
+        });
+
+        test("a review of an OGS game has no clock before the game server starts it", async () => {
+            const { goban } = await demo(one_move, { gamedata: { game_id: 5 } });
+            expect(goban.getReviewClock("white")).toBeNull();
+        });
+
+        test("a demo board without a time control has no clock", async () => {
+            const { goban } = await demo(one_move, { gamedata: { time_control: undefined } });
             expect(goban.getReviewClock("white")).toBeNull();
         });
 
@@ -397,7 +416,7 @@ describe("demo boards", () => {
             const { goban, load } = await demo(started);
             load(one_move);
             expect(goban.reviewClockRunning()).toBe(false);
-            expect(goban.getReviewClock("white")).toBeNull();
+            expect(goban.getReviewClock("black")?.clock).toEqual({ main_time: 600000 });
         });
 
         test("the controller's Resume and Pause apply when the server sends them back", async () => {
@@ -468,6 +487,20 @@ describe("demo boards", () => {
             board.tap(4, 4);
             expect(board.sent()).toEqual([expect.objectContaining({ m: "ee" })]);
             expect(board.sent()[0]).not.toHaveProperty("om");
+        });
+
+        test.each([
+            ["the first stone", [], [4, 4, "black"]],
+            ["a stone after a game move", one_move, [4, 4, "white"]],
+        ])("plays the stone sound for %s", async (_, entries, [x, y, color]) => {
+            const board = await demo(entries, { controller: true, record: true });
+            const pass = jest.fn();
+            const stone = jest.fn();
+            board.goban.on("audio-pass", pass);
+            board.goban.on("audio-stone", stone);
+            board.tap(x as number, y as number);
+            expect(pass).not.toHaveBeenCalled();
+            expect(stone).toHaveBeenCalledWith({ x, y, width: 9, height: 9, color });
         });
 
         test("keeps a variation that a stone at the live move follows", async () => {
