@@ -195,10 +195,12 @@ export abstract class OGSConnectivity extends GobanInteractive {
     }
 
     /**
-     * A player's clock at the live move of a review whose clock has been
-     * started, counting down for the player on move. Null otherwise. A
-     * stopped clock has a `pause_state` when it is paused: always on a demo
-     * board, and on a review of an OGS game when the game server said why.
+     * A player's clock at the live move of a review with a time control,
+     * counting down for the player on move. A demo board has its clock from
+     * the start, paused until it first starts; a review of an OGS game has
+     * one once the game server starts it. Null otherwise. A stopped clock has
+     * a `pause_state` when it is paused: always on a demo board, and on a
+     * review of an OGS game when the game server said why.
      */
     public getReviewClock(color: "black" | "white"): {
         clock: JGOFPlayerClock;
@@ -207,7 +209,7 @@ export abstract class OGSConnectivity extends GobanInteractive {
         pause_state?: JGOFPauseState;
     } | null {
         const tc = reviewTimeControl(this.engine);
-        if (!this.review_id || !this.review_clock.started || !tc) {
+        if (!this.review_id || !tc || (!this.review_clock.started && !this.isDemoBoard())) {
             return null;
         }
         const live = this.engine.last_official_move;
