@@ -96,6 +96,8 @@ export class BoardOverlays {
     private hoverRevision = 0;
     private hoverKey = "";
     private hoverReady = false;
+    /** Set when the board group is mirrored, so text is flipped back to read normally. */
+    public mirror = false;
 
     public constructor(
         private readonly inspection: HTMLDivElement | undefined,
@@ -115,6 +117,12 @@ export class BoardOverlays {
     private async raster(artwork: SVGElement): Promise<HTMLImageElement> {
         artwork.setAttribute("font-family", "Verdana, Arial, sans-serif");
         artwork.setAttribute("font-weight", "700");
+        if (this.mirror) {
+            for (const text of artwork.querySelectorAll("text")) {
+                const x = Number(text.getAttribute("x") ?? 0);
+                text.setAttribute("transform", `translate(${2 * x} 0) scale(-1 1)`);
+            }
+        }
         const data = new XMLSerializer().serializeToString(artwork);
         const url = URL.createObjectURL(new Blob([data], { type: "image/svg+xml" }));
         const image = new Image();

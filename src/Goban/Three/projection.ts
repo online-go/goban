@@ -36,6 +36,10 @@ export interface CameraOptions {
     fieldOfView?: number;
     /** Minimum orbit distance in multiples of the longer visible grid span. */
     distanceScale?: number;
+    /** Camera orbit around the board in degrees; ignored with a room. */
+    rotation?: number;
+    /** Mirror the board left to right; ignored with a room. */
+    mirror?: boolean;
 }
 
 export const angles = [0, 15, 25, 35] as const;
@@ -112,10 +116,16 @@ export class BoardProjection {
     private readonly distanceScale: number;
     private readonly bottomElevation: number;
     private readonly room?: ReturnType<typeof roomLayout>;
+    public readonly rotation: number;
+    public readonly mirror: boolean;
+    public readonly mirrorX: number;
 
     public constructor(bounds: Bounds, options: CameraOptions = {}) {
         this.bounds = bounds;
         this.room = options.room ? roomLayout(bounds, options.boardStyle) : undefined;
+        this.rotation = this.room ? 0 : (options.rotation ?? 0);
+        this.mirror = !this.room && !!options.mirror;
+        this.mirrorX = bounds.left + bounds.right;
         this.fieldOfView = options.fieldOfView ?? 34;
         this.distanceScale = options.distanceScale ?? 1.65;
         const { thickness, legHeight } = boardDimensions(bounds, options.boardStyle);
@@ -132,8 +142,12 @@ export class BoardProjection {
         const centerX = (left + right) / 2;
         const centerY = (top + bottom) / 2;
         const room = this.room;
-        const halfX = (right - left) / 2 + frameMargin;
-        const halfY = (bottom - top) / 2 + frameMargin;
+        const quarter = this.rotation === 90 || this.rotation === 270;
+        const spanX = (right - left) / 2 + frameMargin;
+        const spanY = (bottom - top) / 2 + frameMargin;
+        // Seen from the side, the board's depth runs across the screen.
+        const halfX = quarter ? spanY : spanX;
+        const halfY = quarter ? spanX : spanY;
         const camera = this.camera;
         camera.fov = this.fieldOfView;
         camera.aspect = width / height;
@@ -166,15 +180,25 @@ export class BoardProjection {
         // Keep depth precision for the closely spaced board face and slab.
         camera.near = 1;
         camera.far = distance + Math.hypot(halfX, halfY) * (room ? 5 : 2) + 10;
-        camera.position.set(centerX, distance * cos, centerY + distance * sin);
-        camera.up.set(0, sin, -cos);
+        const yaw = (this.rotation * Math.PI) / 180;
+        camera.position.set(
+            centerX + distance * sin * Math.sin(yaw),
+            distance * cos,
+            centerY + distance * sin * Math.cos(yaw),
+        );
+        camera.up.set(-cos * Math.sin(yaw), sin, -cos * Math.cos(yaw));
         camera.lookAt(centerX, 0, centerY);
         camera.updateProjectionMatrix();
         camera.updateMatrixWorld();
     }
 
+    /** Board point to world position, after the optional left-right mirror. */
+    public toWorld(point: Point, height = 0): Vector3 {
+        return world(this.mirror ? { x: this.mirrorX - point.x, y: point.y } : point, height);
+    }
+
     public project(point: Point, elevation = 0): Point {
-        const projected = world(point, elevation).project(this.camera);
+        const projected = this.toWorld(point, elevation).project(this.camera);
         return {
             x: ((projected.x + 1) * this.width) / 2,
             y: ((1 - projected.y) * this.height) / 2,
@@ -184,14 +208,15 @@ export class BoardProjection {
     public cellSize(point: Point, elevation = 0): number {
         const left = this.project({ x: point.x - 0.5, y: point.y }, elevation);
         const right = this.project({ x: point.x + 0.5, y: point.y }, elevation);
-        return right.x - left.x;
+        // On-screen length, so a mirrored or rotated camera still gets a positive size.
+        return Math.hypot(right.x - left.x, right.y - left.y);
     }
 
     public unproject(point: Point): Point | null {
         this.pointer.set((2 * point.x) / this.width - 1, 1 - (2 * point.y) / this.height);
         this.ray.setFromCamera(this.pointer, this.camera);
         const hit = this.ray.ray.intersectPlane(this.plane, this.planeHit);
-        return hit ? { x: hit.x, y: hit.z } : null;
+        return hit ? { x: this.mirror ? this.mirrorX - hit.x : hit.x, y: hit.z } : null;
     }
 
     public pick(point: Point, occupied?: (point: Point) => boolean, antiSlip = true): Point | null {
@@ -244,7 +269,7 @@ export class BoardProjection {
         );
         const origin = this.ray.ray.origin
             .clone()
-            .sub(world(point, stoneBase + halfHeight))
+            .sub(this.toWorld(point, stoneBase + halfHeight))
             .multiply(inverseAxes);
         const direction = this.ray.ray.direction.clone().multiply(inverseAxes);
         const a = direction.lengthSq();

@@ -145,12 +145,20 @@ class ThreeBoardView implements BoardView {
         const style = this.owner.options.boardStyle ?? "tabletop";
         const room = this.owner.options.room ?? false;
         const bounds = JSON.stringify([state.bounds, style, room]);
-        const geometry = [bounds, width, height, devicePixelRatio].join("/");
+        const view = [this.owner.options.rotation ?? 0, !!this.owner.options.mirror];
+        const geometry = [bounds, width, height, devicePixelRatio, ...view].join("/");
         if (!this.projection || this.geometry !== geometry) {
             this.projection = new BoardProjection(state.bounds, this.owner.options);
             const tilt = this.owner.options.tilt ?? (style === "floor" ? 35 : 15);
             this.projection.fit(width, height, tilt);
             this.geometry = geometry;
+            this.scene.setMirror(this.projection.mirror, this.projection.mirrorX);
+            if (this.ink.mirror !== this.projection.mirror) {
+                this.ink.mirror = this.projection.mirror;
+                this.inkKey = "";
+            }
+            this.element.dataset.rotation = String(this.projection.rotation);
+            this.element.dataset.mirror = String(this.projection.mirror);
             this.scene.resize(
                 width,
                 height,

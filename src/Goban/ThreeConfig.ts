@@ -25,6 +25,10 @@ export interface ThreeRendererOptions {
     /** Include the table, bowls and capture lids in the 3D view. */
     room?: boolean;
     tilt?: 0 | 15 | 25 | 35;
+    /** Orbit the camera around the board in quarter turns (ignored with a room). */
+    rotation?: 0 | 90 | 180 | 270;
+    /** Show the board mirrored left to right; text stays readable (ignored with a room). */
+    mirror?: boolean;
     fieldOfView?: number;
     distanceScale?: number;
     lighting?: {

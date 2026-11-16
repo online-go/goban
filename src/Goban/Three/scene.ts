@@ -185,6 +185,8 @@ export class BoardScene {
     private readonly disk = new CircleGeometry(1, 32).rotateX(-Math.PI / 2);
     private readonly transform = new Object3D();
     private readonly renderSize = new Vector2();
+    /** Everything placed in board coordinates; mirrored as a whole for a left-right flip. */
+    private readonly boardSpace = new Group();
     private readonly board = new Group();
     private readonly grid = new Group();
     private readonly effects = new Group();
@@ -225,11 +227,8 @@ export class BoardScene {
         this.key.shadow.radius = 8;
         this.key.shadow.bias = -0.00015;
         this.key.shadow.normalBias = 0.025;
-        this.scene.add(
-            this.ambient,
-            this.key,
-            this.key.target,
-            this.fillLight,
+        this.scene.add(this.ambient, this.key, this.key.target, this.fillLight, this.boardSpace);
+        this.boardSpace.add(
             this.board,
             this.grid,
             this.effects,
@@ -476,6 +475,13 @@ export class BoardScene {
                 this.board.add(foot);
             }
         }
+    }
+
+    /** Reflect the board group across x = mirrorX / 2 (the board's vertical centre line). */
+    public setMirror(mirror: boolean, mirrorX: number): void {
+        this.boardSpace.scale.x = mirror ? -1 : 1;
+        this.boardSpace.position.x = mirror ? mirrorX : 0;
+        this.renderer.shadowMap.needsUpdate = true;
     }
 
     public update(
