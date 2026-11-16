@@ -162,14 +162,6 @@ export class BoardProjection {
                 room.surface,
                 room.surface + room.radius * bowlHeightRatio,
             );
-            if (room.tabletop) {
-                fitCorners(
-                    room.furnitureWidth / 2,
-                    room.furnitureDepth / 2,
-                    room.surface,
-                    room.surface,
-                );
-            }
         }
         // Keep depth precision for the closely spaced board face and slab.
         camera.near = 1;
