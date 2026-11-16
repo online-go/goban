@@ -2001,23 +2001,6 @@ export abstract class GobanInteractive extends GobanBase {
                         }
                     }
 
-                    if (!recorded && this.mode === "analyze" && this.analyze_tool === "stone") {
-                        let c: MoveTree | null = this.engine.cur_move;
-                        while (c && !c.trunk) {
-                            let mark: any = c.getMoveNumberDifferenceFromTrunk();
-                            if (c.edited) {
-                                mark = "triangle";
-                            }
-
-                            if (c.x >= 0 && c.y >= 0 && !this.engine.board[c.y][c.x]) {
-                                this.clearTransientMark(c.x, c.y, mark);
-                            } else {
-                                this.setTransientMark(c.x, c.y, mark, true);
-                            }
-                            c = c.parent;
-                        }
-                    }
-
                     if (this.isPlayerController()) {
                         if (!recorded) {
                             this.syncReviewMove();
@@ -2108,32 +2091,6 @@ export abstract class GobanInteractive extends GobanBase {
                     this.setLetterMark(x, y, mark, !dont_draw);
                 } else {
                     this.setCustomMark(x, y, mark, !dont_draw);
-                }
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    protected setTransientMark(
-        x: number,
-        y: number,
-        mark: number | string,
-        dont_draw?: boolean,
-    ): void {
-        try {
-            if (x >= 0 && y >= 0) {
-                if (typeof mark === "number") {
-                    mark = "" + mark;
-                }
-
-                if (mark.length <= 3) {
-                    this.engine.cur_move.getMarks(x, y).transient_letter = mark;
-                } else {
-                    this.engine.cur_move.getMarks(x, y)["transient_" + mark] = true;
-                }
-
-                if (!dont_draw) {
-                    this.drawSquare(x, y);
                 }
             }
         } catch (e) {
@@ -2240,22 +2197,6 @@ export abstract class GobanInteractive extends GobanBase {
                 this.getMarks(x, y).letter = "";
             } else {
                 this.getMarks(x, y)[mark] = false;
-            }
-            this.drawSquare(x, y);
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    protected clearTransientMark(x: number, y: number, mark: string | number): void {
-        try {
-            if (typeof mark === "number") {
-                mark = "" + mark;
-            }
-
-            if (/^[a-zA-Z0-9]{1,2}$/.test(mark)) {
-                this.getMarks(x, y).transient_letter = "";
-            } else {
-                this.getMarks(x, y)["transient_" + mark] = false;
             }
             this.drawSquare(x, y);
         } catch (e) {
