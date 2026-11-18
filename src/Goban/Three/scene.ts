@@ -219,30 +219,51 @@ export class BoardScene {
         if (!context) {
             throw new Error("WebGL 2 unavailable");
         }
-        this.renderer = new WebGLRenderer({ canvas, context, antialias: true, alpha: true });
-        this.renderer.outputColorSpace = SRGBColorSpace;
-        this.renderer.setClearColor(0x000000, 0);
-        this.renderer.shadowMap.autoUpdate = false;
-        this.key.shadow.mapSize.setScalar(1024);
-        this.key.shadow.radius = 8;
-        this.key.shadow.bias = -0.00015;
-        this.key.shadow.normalBias = 0.025;
-        this.scene.add(this.ambient, this.key, this.key.target, this.fillLight, this.boardSpace);
-        this.boardSpace.add(
-            this.board,
-            this.grid,
-            this.effects,
-            this.annotations,
-            this.shadows,
-            ...this.stones,
-            this.translucent,
-            this.hover,
-        );
-        this.hover.visible = false;
-        this.hover.renderOrder = 5;
-        for (const batch of [...this.stones, this.shadows]) {
-            batch.count = 0;
-            batch.frustumCulled = false;
+        let renderer: WebGLRenderer | undefined;
+        try {
+            this.renderer = renderer = new WebGLRenderer({
+                canvas,
+                context,
+                antialias: true,
+                alpha: true,
+            });
+            this.renderer.outputColorSpace = SRGBColorSpace;
+            this.renderer.setClearColor(0x000000, 0);
+            this.renderer.shadowMap.autoUpdate = false;
+            this.key.shadow.mapSize.setScalar(1024);
+            this.key.shadow.radius = 8;
+            this.key.shadow.bias = -0.00015;
+            this.key.shadow.normalBias = 0.025;
+            this.scene.add(
+                this.ambient,
+                this.key,
+                this.key.target,
+                this.fillLight,
+                this.boardSpace,
+            );
+            this.boardSpace.add(
+                this.board,
+                this.grid,
+                this.effects,
+                this.annotations,
+                this.shadows,
+                ...this.stones,
+                this.translucent,
+                this.hover,
+            );
+            this.hover.visible = false;
+            this.hover.renderOrder = 5;
+            for (const batch of [...this.stones, this.shadows]) {
+                batch.count = 0;
+                batch.frustumCulled = false;
+            }
+        } catch (error) {
+            try {
+                renderer?.dispose();
+            } finally {
+                context.getExtension("WEBGL_lose_context")?.loseContext();
+            }
+            throw error;
         }
     }
 

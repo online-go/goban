@@ -326,13 +326,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
     }
 
     /** Install or remove an alternate board painter without reloading Goban. */
-    public switchBoardView(view?: BoardView): void {
+    public switchBoardView(view?: BoardView): boolean {
         if (this.destroyed || this.no_display) {
             view?.dispose();
-            return;
+            return false;
         }
         if (view === this.boardView) {
-            return;
+            return true;
         }
         const previous = this.boardView;
         previous?.element.remove();
@@ -359,11 +359,19 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.setTheme(theme, false);
         }
         this.redraw(true);
+        return true;
     }
 
-    /** Snapshot uses the same mark and scoring rules as the native renderer. */
-    public getBoardViewState(colors: SpecSource["colors"]): BoardViewState {
-        const source: SpecSource = {
+    public get boardViewHover() {
+        return this.last_hover_square;
+    }
+
+    public getBoardViewGhost(colors: SpecSource["colors"]) {
+        return buildGhost(this.getBoardViewSource(colors));
+    }
+
+    private getBoardViewSource(colors: SpecSource["colors"]): SpecSource {
+        return {
             engine: this.engine,
             mode: this.mode,
             analyze_tool: this.analyze_tool,
@@ -393,6 +401,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             removal_graphic: this.themes["removal-graphic"],
             colors,
         };
+    }
+
+    /** Snapshot uses the same mark and scoring rules as the native renderer. */
+    public getBoardViewState(colors: SpecSource["colors"]): BoardViewState {
+        const source = this.getBoardViewSource(colors);
         const engine = this.engine;
         return {
             width: engine.width,
@@ -1071,6 +1084,13 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             return;
         }
 
+        if (this.boardView) {
+            this.__last_pt = pt;
+            this.last_hover_square = pt.valid ? { x: pt.i, y: pt.j } : undefined;
+            this.boardView.invalidateHover();
+            return;
+        }
+
         if (this.__last_pt.valid) {
             const last_hover = this.last_hover_square;
             delete this.last_hover_square;
@@ -1091,7 +1111,11 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             const last_hover = this.last_hover_square;
             delete this.last_hover_square;
             if (last_hover) {
-                this.drawSquare(last_hover.x, last_hover.y);
+                if (this.boardView) {
+                    this.boardView.invalidateHover();
+                } else {
+                    this.drawSquare(last_hover.x, last_hover.y);
+                }
             }
         }
         this.__last_pt = this.xy2ij(-1, -1);

@@ -49,6 +49,7 @@ export interface BoardViewState {
 export interface BoardView {
     element: HTMLElement;
     invalidate(): void;
+    invalidateHover(): void;
     setTheme(themes: GobanSelectedThemes): void;
     pick(point: BoardPoint, antiSlip: boolean): BoardPoint | null;
     unproject(point: BoardPoint): BoardPoint | null;

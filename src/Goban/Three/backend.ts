@@ -15,7 +15,7 @@
  */
 
 import type { JGOFClock } from "../../engine";
-import type { BoardPoint, BoardView } from "../BoardView";
+import type { BoardPoint, BoardView, BoardViewState } from "../BoardView";
 import type { GobanSelectedThemes } from "../Goban";
 import type { SVGRenderer } from "../SVGRenderer";
 import type { ThreeRenderer, ThreeRendererOptions } from "../ThreeConfig";
@@ -36,6 +36,8 @@ class ThreeBoardView implements BoardView {
     private readonly restorePosition?: () => void;
     private media?: MediaQueryList;
     private frame = 0;
+    private boardDirty = true;
+    private state?: BoardViewState;
     private revision = 0;
     private disposed = false;
     private projection?: BoardProjection;
@@ -59,27 +61,35 @@ class ThreeBoardView implements BoardView {
             "position:absolute;inset:0;width:100%;height:100%;touch-action:none";
         this.element.setAttribute("aria-hidden", "true");
         this.scene = new BoardScene(this.element);
-        this.clock = goban.last_emitted_clock ?? null;
-        this.ink = new BoardOverlays(owner.options.annotationInspection, this.scene.annotations);
-        this.element.dataset.context = "ready";
-        this.resize = new ResizeObserver(() => this.invalidate());
-        const host = goban.config.board_div!;
-        if (getComputedStyle(host).position === "static") {
-            const previous = host.style.position;
-            host.style.position = "relative";
-            this.restorePosition = () => {
-                if (host.style.position === "relative") {
-                    host.style.position = previous;
-                }
-            };
+        try {
+            this.clock = goban.last_emitted_clock ?? null;
+            this.ink = new BoardOverlays(
+                owner.options.annotationInspection,
+                this.scene.annotations,
+            );
+            this.element.dataset.context = "ready";
+            this.resize = new ResizeObserver(() => this.invalidate());
+            const host = goban.config.board_div!;
+            if (getComputedStyle(host).position === "static") {
+                const previous = host.style.position;
+                host.style.position = "relative";
+                this.restorePosition = () => {
+                    if (host.style.position === "relative") {
+                        host.style.position = previous;
+                    }
+                };
+            }
+            this.resize.observe(host);
+            const { signal } = this.listeners;
+            document.addEventListener("visibilitychange", this.onVisibility, { signal });
+            this.element.addEventListener("webglcontextlost", this.onContextLost, { signal });
+            this.watchPixelRatio();
+            this.configure();
+            this.goban.on("clock", this.onClock);
+        } catch (error) {
+            this.dispose();
+            throw error;
         }
-        this.resize.observe(host);
-        const { signal } = this.listeners;
-        document.addEventListener("visibilitychange", this.onVisibility, { signal });
-        this.element.addEventListener("webglcontextlost", this.onContextLost, { signal });
-        this.watchPixelRatio();
-        this.configure();
-        this.goban.on("clock", this.onClock);
     }
 
     public configure(): void {
@@ -105,6 +115,11 @@ class ThreeBoardView implements BoardView {
     }
 
     public invalidate = (): void => {
+        this.boardDirty = true;
+        this.invalidateHover();
+    };
+
+    public invalidateHover = (): void => {
         if (!this.disposed && !this.frame && !document.hidden && this.goban.boardDrawingEnabled) {
             this.frame = requestAnimationFrame(this.draw);
         }
@@ -138,13 +153,19 @@ class ThreeBoardView implements BoardView {
         }
         const appearance = this.appearance!;
         const [black, white] = appearance.stones;
-        const state = this.goban.getBoardViewState({
+        const colors = {
             black_stone: black.color,
             white_stone: white.color,
             black_text: black.text,
             white_text: white.text,
             blank_text: appearance.board.text,
-        });
+        };
+        const updateBoard = this.boardDirty || !this.state;
+        if (updateBoard) {
+            this.state = this.goban.getBoardViewState(colors);
+            this.boardDirty = false;
+        }
+        const state = this.state!;
         const style = this.owner.options.boardStyle ?? "tabletop";
         const room = this.owner.options.room ?? false;
         const bounds = JSON.stringify([state.bounds, style, room]);
@@ -195,57 +216,63 @@ class ThreeBoardView implements BoardView {
             this.element.dataset.boardStyle = style;
             this.inkKey = "";
         }
-        const key = JSON.stringify([
-            this.goban.engine.board,
-            state.overlays,
-            state.lastMove,
-            state.pen,
-            state.labels,
-            state.labelSystem,
-            appearance.scale,
-            appearance.board.text,
-        ]);
-        if (key !== this.inkKey) {
-            this.inkKey = key;
-            this.scene.update(
-                state.bounds,
-                state.width,
+        if (updateBoard || !this.inkKey) {
+            const key = JSON.stringify([
+                this.goban.engine.board,
                 state.overlays,
-                state.stoneAt,
-                state.height,
-            );
-            this.element.dataset.ink = "pending";
-            const revision = ++this.revision;
-            void this.ink
-                .redraw(
-                    this.projection,
-                    state,
-                    appearance.board.text,
+                state.lastMove,
+                state.pen,
+                state.labels,
+                state.labelSystem,
+                appearance.scale,
+                appearance.board.text,
+            ]);
+            if (key !== this.inkKey) {
+                this.inkKey = key;
+                this.scene.update(
+                    state.bounds,
+                    state.width,
                     state.overlays,
-                    state.lastMove,
-                    state.pen,
-                )
-                .then(() => {
-                    if (!this.disposed && revision === this.revision) {
-                        this.element.dataset.ink = "uploaded";
-                        this.invalidate();
-                    }
-                })
-                .catch((error: unknown) => {
-                    if (!this.disposed && revision === this.revision) {
-                        this.owner.fallback(error);
-                    }
-                });
+                    state.stoneAt,
+                    state.height,
+                );
+                this.element.dataset.ink = "pending";
+                const revision = ++this.revision;
+                void this.ink
+                    .redraw(
+                        this.projection,
+                        state,
+                        appearance.board.text,
+                        state.overlays,
+                        state.lastMove,
+                        state.pen,
+                    )
+                    .then(() => {
+                        if (!this.disposed && revision === this.revision) {
+                            this.element.dataset.ink = "uploaded";
+                            this.invalidateHover();
+                        }
+                    })
+                    .catch((error: unknown) => {
+                        if (!this.disposed && revision === this.revision) {
+                            this.owner.fallback(error);
+                        }
+                    });
+            }
         }
-        const hover = state.hover;
-        const ghost = state.ghost;
+        const hover = this.goban.boardViewHover;
+        const ghost = hover
+            ? updateBoard
+                ? state.ghost
+                : this.goban.getBoardViewGhost(colors)
+            : null;
         const occupied = !!(hover && state.stoneAt(hover));
         const eligible =
             hover &&
             (!ghost?.only ||
                 ghost.only.some((point) => point.x === hover.x && point.y === hover.y));
         this.scene.preview(eligible && !occupied ? hover : null, ghost?.stone);
-        this.ink.preview(eligible ? hover : null, ghost, occupied, this.invalidate);
+        this.ink.preview(eligible ? hover : null, ghost, occupied, this.invalidateHover);
         this.element.dataset.hover = hover ? `${hover.x},${hover.y}` : "";
         this.scene.updateCaptures(
             this.goban.engine.getBlackPrisoners(),
@@ -301,7 +328,7 @@ class ThreeBoardView implements BoardView {
     private onClock = (clock: JGOFClock | null): void => {
         this.clock = clock;
         if (this.scene.updateClock(clock)) {
-            this.invalidate();
+            this.invalidateHover();
         }
     };
 
@@ -328,11 +355,14 @@ class ThreeBoardView implements BoardView {
         this.goban.off("clock", this.onClock);
         cancelAnimationFrame(this.frame);
         this.media?.removeEventListener("change", this.watchPixelRatio);
-        this.resize.disconnect();
-        this.restorePosition?.();
-        this.ink.dispose();
-        this.scene.dispose();
-        this.scene.renderer.forceContextLoss();
+        try {
+            this.resize?.disconnect();
+            this.restorePosition?.();
+            this.ink?.dispose();
+            this.scene.dispose();
+        } finally {
+            this.scene.renderer.forceContextLoss();
+        }
     }
 }
 
@@ -362,8 +392,11 @@ class ThreeController implements ThreeRenderer {
                 throw new Error("3D supports boards up to 25 intersections per side");
             }
             this.view = new ThreeBoardView(this.goban, this);
-            this.goban.switchBoardView(this.view);
-            return true;
+            if (this.goban.switchBoardView(this.view)) {
+                return true;
+            }
+            this.view = undefined;
+            return false;
         } catch (error) {
             this.fallback(error);
             return false;

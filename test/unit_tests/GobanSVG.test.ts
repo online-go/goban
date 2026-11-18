@@ -1129,16 +1129,28 @@ test("keeps the game and review node when swapping board painters", () => {
     const element = document.createElement("canvas");
     const dispose = jest.fn();
     const pick = jest.fn(() => ({ x: 2, y: 3 }));
-    goban.switchBoardView({
+    const invalidate = jest.fn();
+    const invalidateHover = jest.fn();
+    const attached = goban.switchBoardView({
         element,
-        invalidate: jest.fn(),
+        invalidate,
+        invalidateHover,
         setTheme: jest.fn(),
         pick,
         unproject: jest.fn(),
         dispose,
     });
 
+    expect(attached).toBe(true);
+    invalidate.mockClear();
     const input = goban.event_layer ?? host;
+    input.dispatchEvent(new MouseEvent("mousemove", { clientX: 20, clientY: 20 }));
+    expect(goban.boardViewHover).toEqual({ x: 2, y: 3 });
+    input.dispatchEvent(new MouseEvent("mouseout"));
+    expect(goban.boardViewHover).toBeUndefined();
+    expect(invalidateHover).toHaveBeenCalledTimes(2);
+    expect(invalidate).not.toHaveBeenCalled();
+
     simulateMouseClick(input, { x: 0, y: 0 });
     expect(pick).toHaveBeenCalled();
     expect(engine.cur_move).toMatchObject({ x: 2, y: 3, move_number: 1 });
