@@ -143,3 +143,17 @@ test("frames the floor goban's block and feet while picking on the unchanged pla
         }
     }
 });
+
+test("picks the same intersection at any camera orientation with the room enabled", () => {
+    const bounds = { left: 0, top: 0, right: 18, bottom: 12 };
+    const point = { x: 3, y: 9 };
+
+    for (const rotation of [0, 41.5, 90, 127, 180, 229.5, 270, 310]) {
+        const projection = new BoardProjection(bounds, { room: true, rotation });
+        assert.equal(projection.rotation, rotation);
+        for (const angle of [0, 15, 23.5, 35]) {
+            projection.fit(390, 330, angle);
+            assert.deepEqual(projection.pick(projection.project(point)), point);
+        }
+    }
+});

@@ -36,7 +36,7 @@ export interface CameraOptions {
     fieldOfView?: number;
     /** Minimum orbit distance in multiples of the longer visible grid span. */
     distanceScale?: number;
-    /** Camera orbit around the board in degrees; ignored with a room. */
+    /** Camera orbit around the board in degrees. */
     rotation?: number;
     /** Mirror the board left to right; ignored with a room. */
     mirror?: boolean;
@@ -126,7 +126,7 @@ export class BoardProjection {
     public constructor(bounds: Bounds, options: CameraOptions = {}) {
         this.bounds = bounds;
         this.room = options.room ? roomLayout(bounds, options.boardStyle) : undefined;
-        this.rotation = this.room ? 0 : (options.rotation ?? 0);
+        this.rotation = options.rotation ?? 0;
         this.mirror = !this.room && !!options.mirror;
         this.mirrorX = bounds.left + bounds.right;
         this.fieldOfView = options.fieldOfView ?? 34;
@@ -136,7 +136,7 @@ export class BoardProjection {
         this.bottomElevation = -thickness - legHeight - 0.003;
     }
 
-    public fit(width: number, height: number, tilt: (typeof angles)[number]): void {
+    public fit(width: number, height: number, tilt: number): void {
         this.width = width;
         this.height = height;
         const radians = (tilt * Math.PI) / 180;
@@ -146,12 +146,14 @@ export class BoardProjection {
         const centerX = (left + right) / 2;
         const centerY = (top + bottom) / 2;
         const room = this.room;
-        const quarter = this.rotation === 90 || this.rotation === 270;
+        const yaw = (this.rotation * Math.PI) / 180;
+        const absCosYaw = Math.abs(Math.cos(yaw));
+        const absSinYaw = Math.abs(Math.sin(yaw));
         const spanX = (right - left) / 2 + frameMargin;
         const spanY = (bottom - top) / 2 + frameMargin;
         // Seen from the side, the board's depth runs across the screen.
-        const halfX = quarter ? spanY : spanX;
-        const halfY = quarter ? spanX : spanY;
+        const halfX = spanX * absCosYaw + spanY * absSinYaw;
+        const halfY = spanX * absSinYaw + spanY * absCosYaw;
         const camera = this.camera;
         camera.fov = this.fieldOfView;
         camera.aspect = width / height;
@@ -174,9 +176,11 @@ export class BoardProjection {
         };
         fitCorners(halfX, halfY, this.bottomElevation, crownHeight);
         if (room) {
+            const roomHalfX = room.side + room.radius;
+            const roomHalfY = room.separation + room.radius;
             fitCorners(
-                room.side + room.radius,
-                room.separation + room.radius,
+                roomHalfX * absCosYaw + roomHalfY * absSinYaw,
+                roomHalfX * absSinYaw + roomHalfY * absCosYaw,
                 room.surface,
                 room.surface + room.radius * bowlHeightRatio,
             );
@@ -184,7 +188,6 @@ export class BoardProjection {
         // Keep depth precision for the closely spaced board face and slab.
         camera.near = 1;
         camera.far = distance + Math.hypot(halfX, halfY) * (room ? 5 : 2) + 10;
-        const yaw = (this.rotation * Math.PI) / 180;
         camera.position.set(
             centerX + distance * sin * Math.sin(yaw),
             distance * cos,
