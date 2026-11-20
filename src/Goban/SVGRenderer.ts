@@ -352,6 +352,8 @@ export class SVGRenderer extends Goban implements GobanSVGInterface {
             this.parent.style.backgroundImage = "none";
             this.parent.style.backgroundColor = "transparent";
             this.invalidateBoardBackgroundSync();
+            // Restored on exit so the SVG board gets its background back.
+            this.suspendedTheme ??= this.themes;
             view.setTheme(this.themes);
         } else if (this.suspendedTheme) {
             const theme = this.suspendedTheme;

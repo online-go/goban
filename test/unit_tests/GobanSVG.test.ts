@@ -1220,3 +1220,33 @@ test("keeps the game and review node when swapping board painters", () => {
     goban.destroy();
     host.remove();
 });
+
+test("restores the SVG theme after leaving a board view", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const goban = new SVGRenderer({
+        board_div: host,
+        interactive: true,
+        square_size: 20,
+        width: 9,
+        height: 9,
+    });
+    const themes = goban.themes;
+    const setTheme = jest.spyOn(goban, "setTheme");
+    goban.switchBoardView({
+        element: document.createElement("canvas"),
+        invalidate: jest.fn(),
+        invalidateHover: jest.fn(),
+        setTheme: jest.fn(),
+        pick: jest.fn(),
+        unproject: jest.fn(),
+        dispose: jest.fn(),
+    });
+    expect(setTheme).not.toHaveBeenCalled();
+
+    goban.switchBoardView();
+    expect(setTheme).toHaveBeenCalledWith(themes, false);
+
+    goban.destroy();
+    host.remove();
+});
