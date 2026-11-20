@@ -240,10 +240,25 @@ export class RoomScene extends Group {
             [0.61, 0.16],
             [0, 0.16],
         ]);
-        shadeSurface(
-            bowl,
-            (_x, y) => 0.5 + 0.5 * MathUtils.smoothstep(y, radius * 0.12, radius * 0.94),
-        );
+        // Outside, light grows towards the rim. Inside, a static occlusion gradient darkens the
+        // wall with depth below the rim, so the bowl reads as a deep cavity.
+        const bowlProfileLength = 14;
+        const bowlInnerStart = 8;
+        const rimHeight = 0.78 * radius * (bowlHeightRatio / 0.78);
+        const innerFloor = 0.25 * radius * (bowlHeightRatio / 0.78);
+        const bowlPositions = bowl.getAttribute("position");
+        const bowlColors: number[] = [];
+        for (let i = 0; i < bowlPositions.count; i++) {
+            const y = bowlPositions.getY(i);
+            const outer = 0.5 + 0.5 * MathUtils.smoothstep(y, radius * 0.12, radius * 0.94);
+            const depth = (rimHeight - y) / (rimHeight - innerFloor);
+            const light =
+                i % bowlProfileLength >= bowlInnerStart
+                    ? 0.95 - 0.9 * MathUtils.smoothstep(depth, 0.02, 0.85)
+                    : outer;
+            bowlColors.push(light, light, light);
+        }
+        bowl.setAttribute("color", new Float32BufferAttribute(bowlColors, 3));
         shadeSurface(
             lid,
             (_x, y) => 0.61 + 0.39 * MathUtils.smoothstep(y, radius * 0.07, radius * 0.29),
@@ -329,6 +344,55 @@ export class RoomScene extends Group {
             return 0.85 * falloff * (1 - 0.64 * Math.exp(-distanceFromFloor / 2.4));
         });
         this.place(wallGeometry, wall, 0, wallHeight / 2, -wallDistance).castShadow = false;
+        this.encloseRoom(0, floorWidth, floorDepth, floorCenter, wallHeight, (span) => {
+            const panels = shojiTexture(span / 39);
+            this.textures.push(panels);
+            const material = new MeshStandardMaterial({
+                map: panels,
+                roughness: 1,
+                vertexColors: true,
+            });
+            this.materials.push(material);
+            return material;
+        });
+    }
+
+    /**
+     * Close the room with front and side walls around the floor so an orbiting camera never
+     * looks out into empty space. The walls face inwards: if the camera ends up outside one,
+     * that wall is back-face culled and acts as a cutaway instead of hiding the board.
+     */
+    private encloseRoom(
+        floorY: number,
+        floorWidth: number,
+        floorDepth: number,
+        floorCenter: number,
+        wallHeight: number,
+        material: (span: number) => MeshStandardMaterial,
+    ): void {
+        const shade = (_x: number, y: number) =>
+            0.62 * (1 - 0.55 * Math.exp(-(y + wallHeight / 2) / 2.4));
+        const wall = (span: number) => {
+            const geometry = this.keep(new PlaneGeometry(span, wallHeight, 8, 48));
+            shadeSurface(geometry, shade);
+            return geometry;
+        };
+        const y = floorY + wallHeight / 2;
+        const front = wall(floorWidth).rotateY(Math.PI);
+        this.place(front, material(floorWidth), 0, y, floorCenter + floorDepth / 2).castShadow =
+            false;
+        const sideMaterial = material(floorDepth);
+        for (const direction of [-1, 1]) {
+            // Plane normals start at +z; turn each side wall to face the room centre.
+            const side = wall(floorDepth).rotateY((-direction * Math.PI) / 2);
+            this.place(
+                side,
+                sideMaterial,
+                (direction * floorWidth) / 2,
+                y,
+                floorCenter,
+            ).castShadow = false;
+        }
     }
 
     private addScholarRoom(width: number, depth: number, wood: Texture): void {
@@ -387,6 +451,14 @@ export class RoomScene extends Group {
         });
         this.place(wall, plaster, 0, floorHeight + wallHeight / 2, -wallDistance).castShadow =
             false;
+        this.encloseRoom(
+            floorHeight,
+            floorWidth,
+            floorDepth,
+            floorCenter,
+            wallHeight,
+            () => plaster,
+        );
         this.place(
             this.keep(new BoxGeometry(floorWidth, 1.15, 0.28)),
             trim,

@@ -116,6 +116,29 @@ function shadowTexture(): CanvasTexture {
     return texture;
 }
 
+/**
+ * Bakes occlusion into a floor goban's foot. Feet stand in the gap under the board, so they
+ * see less sky than the board's sides: darker overall, darkest where they meet the board and
+ * the floor, and darkest on the side facing in under the board. `dx`/`dz` give the corner.
+ */
+function shadeFoot(geometry: BufferGeometry, legHeight: number, dx: number, dz: number): void {
+    const positions = geometry.getAttribute("position");
+    const colors = new Float32Array(positions.count * 3);
+    for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const y = positions.getY(i);
+        const z = positions.getZ(i);
+        const radial = Math.hypot(x, z);
+        // 1 on the side facing out from under the board, 0 facing its centre.
+        const outward = radial > 1e-6 ? 0.5 + (0.5 * (x * dx + z * dz)) / (radial * Math.SQRT2) : 0;
+        const underBoard = 1 - 0.45 * Math.exp(-(legHeight - y) / (0.18 * legHeight));
+        const onFloor = 1 - 0.5 * Math.exp(-y / (0.22 * legHeight));
+        const light = (0.3 + 0.18 * outward) * underBoard * onFloor;
+        colors.fill(light, i * 3, i * 3 + 3);
+    }
+    geometry.setAttribute("color", new BufferAttribute(colors, 3));
+}
+
 /** Bakes floor contact occlusion into vertex colours; `floorOffset` lifts local y to height above the floor. */
 function occludeNearFloor(
     geometry: BufferGeometry,
@@ -491,7 +514,7 @@ export class BoardScene {
         for (const dx of [-1, 1]) {
             for (const dz of [-1, 1]) {
                 const footGeometry = new LatheGeometry(profile, 24);
-                occludeNearFloor(footGeometry, 0, 0.62, 1.6);
+                shadeFoot(footGeometry, legHeight, dx, dz);
                 const foot = new Mesh(footGeometry, this.edgeMaterial);
                 foot.position.set(x + dx * feet.x, -thickness - legHeight - 0.003, y + dz * feet.z);
                 foot.castShadow = foot.receiveShadow = showRoom;
