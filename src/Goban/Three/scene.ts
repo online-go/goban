@@ -681,6 +681,7 @@ export class BoardScene {
     }
 
     public draw(projection: BoardProjection): void {
+        this.room?.updateCamera(projection.camera.position);
         this.renderer.render(this.scene, projection.camera);
     }
 
