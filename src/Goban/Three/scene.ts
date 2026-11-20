@@ -103,7 +103,9 @@ function shadowTexture(): CanvasTexture {
         throw new Error("Canvas 2D unavailable");
     }
     const gradient = context.createRadialGradient(32, 32, 4, 32, 32, 32);
-    gradient.addColorStop(0, "rgba(255,255,255,0.64)");
+    // A dense core where the stone meets the wood keeps it from looking like it floats.
+    gradient.addColorStop(0, "rgba(255,255,255,0.86)");
+    gradient.addColorStop(0.4, "rgba(255,255,255,0.7)");
     gradient.addColorStop(0.66, "rgba(255,255,255,0.47)");
     gradient.addColorStop(0.84, "rgba(255,255,255,0.16)");
     gradient.addColorStop(1, "rgba(255,255,255,0)");

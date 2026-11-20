@@ -45,8 +45,9 @@ export interface CameraOptions {
 }
 
 export const angles = [0, 15, 25, 35] as const;
-export const crownHeight = 0.25;
-export const stoneBase = 0.012;
+/** Stone top above the board: about 42% of the diameter, like a size 32-34 stone. */
+export const crownHeight = 0.395;
+export const stoneBase = 0.003;
 export const stoneRadius = 0.47;
 const tabletopThickness = 0.36;
 export const boardMargin = 1.17;
