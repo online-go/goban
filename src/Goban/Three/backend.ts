@@ -27,6 +27,10 @@ import { BoardProjection } from "./projection";
 import { BoardScene } from "./scene";
 
 const installed = new WeakMap<SVGRenderer, ThreeController>();
+/** Free orbit may drop well below the preset angles, but stops short of edge-on. */
+const maxOrbitTilt = 75;
+/** How long the camera takes to settle on the fitted distance after an orbit drag. */
+const settleMs = 320;
 
 class ThreeBoardView implements BoardView {
     public readonly element: HTMLCanvasElement;
@@ -47,6 +51,10 @@ class ThreeBoardView implements BoardView {
     private previousOrbitPress = false;
     private orbitRotation?: number;
     private orbitTilt?: number;
+    /** Camera distance held while an orbit drag is in progress. */
+    private orbitDistance?: number;
+    /** Easing back to the fitted distance after an orbit drag. */
+    private orbitSettle?: { from: number; start: number };
     private boardDirty = true;
     private state?: BoardViewState;
     private revision = 0;
@@ -263,6 +271,9 @@ class ThreeBoardView implements BoardView {
         event.stopImmediatePropagation();
         this.orbitHost?.setPointerCapture(event.pointerId);
         this.orbitPointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        // Hold the current distance (mid-settle included) so the board doesn't zoom while turning.
+        this.orbitDistance = this.projection.distance;
+        this.orbitSettle = undefined;
         this.suppressOrbitClick = true;
         this.invalidateHover();
     };
@@ -275,8 +286,13 @@ class ThreeBoardView implements BoardView {
         event.stopImmediatePropagation();
         const rotation = this.orbitRotation ?? this.owner.options.rotation ?? 0;
         const tilt = this.orbitTilt ?? this.defaultTilt;
-        this.orbitRotation = (((rotation + (event.clientX - pointer.x) * 0.6) % 360) + 360) % 360;
-        this.orbitTilt = Math.max(0, Math.min(35, tilt + (event.clientY - pointer.y) * 0.25));
+        // Drag as if grabbing the board, like Blender's turntable orbit: dragging right turns
+        // the near edge right, and dragging down tips the top towards the viewer. Mouse and
+        // touch behave the same.
+        const dx = event.clientX - pointer.x;
+        const dy = event.clientY - pointer.y;
+        this.orbitRotation = (((rotation - dx * 0.4) % 360) + 360) % 360;
+        this.orbitTilt = Math.max(0, Math.min(maxOrbitTilt, tilt - dy * 0.3));
         pointer.x = event.clientX;
         pointer.y = event.clientY;
         this.invalidateHover();
@@ -285,9 +301,36 @@ class ThreeBoardView implements BoardView {
     private onOrbitEnd = (event: PointerEvent): void => {
         if (this.orbitPointer?.id === event.pointerId) {
             this.orbitPointer = undefined;
+            this.releaseOrbitDistance();
             this.invalidateHover();
         }
     };
+
+    /** Ease from the held orbit distance to the fitted one. */
+    private releaseOrbitDistance(): void {
+        if (this.orbitDistance !== undefined) {
+            this.orbitSettle = { from: this.orbitDistance, start: performance.now() };
+            this.orbitDistance = undefined;
+        }
+    }
+
+    /** Distance override for this frame, or undefined to use the fitted distance. */
+    private chooseOrbitDistance(fitted: number): number {
+        if (this.orbitDistance !== undefined) {
+            return this.orbitDistance;
+        }
+        const settle = this.orbitSettle;
+        if (!settle) {
+            return fitted;
+        }
+        const t = Math.min(1, (performance.now() - settle.start) / settleMs);
+        if (t >= 1) {
+            this.orbitSettle = undefined;
+            return fitted;
+        }
+        const eased = 1 - (1 - t) ** 3;
+        return settle.from + (fitted - settle.from) * eased;
+    }
 
     private onOrbitMouseMove = (event: MouseEvent): void => {
         if (this.orbitPointer) {
@@ -310,6 +353,7 @@ class ThreeBoardView implements BoardView {
         this.orbitKeyHeld = false;
         const id = this.orbitPointer?.id;
         this.orbitPointer = undefined;
+        this.releaseOrbitDistance();
         if (id !== undefined && this.orbitHost?.hasPointerCapture(id)) {
             this.orbitHost.releasePointerCapture(id);
         }
@@ -411,13 +455,20 @@ class ThreeBoardView implements BoardView {
         const rotation = this.orbitRotation ?? this.owner.options.rotation ?? 0;
         const view = [rotation, !!this.owner.options.mirror];
         const tilt = this.orbitTilt ?? this.defaultTilt;
-        const geometry = [bounds, width, height, devicePixelRatio, tilt, ...view].join("/");
+        // While held or settling, the distance changes without the view inputs changing.
+        const distanceKey = this.orbitDistance ?? (this.orbitSettle ? performance.now() : "fit");
+        const geometry = [bounds, width, height, devicePixelRatio, tilt, distanceKey, ...view].join(
+            "/",
+        );
         if (!this.projection || this.geometry !== geometry) {
             this.projection = new BoardProjection(state.bounds, {
                 ...this.owner.options,
                 rotation,
             });
-            this.projection.fit(width, height, tilt);
+            this.projection.fit(width, height, tilt, (fitted) => this.chooseOrbitDistance(fitted));
+            if (this.orbitSettle) {
+                this.invalidateHover();
+            }
             this.geometry = geometry;
             const viewKey = view.join("/");
             this.holdView =

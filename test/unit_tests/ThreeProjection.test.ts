@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 import assert from "node:assert/strict";
-import {
-    angles,
-    BoardProjection,
-    boardDimensions,
-    crownHeight,
-} from "../../src/Goban/Three/projection";
+import { angles, BoardProjection, roomLayout, crownHeight } from "../../src/Goban/Three/projection";
 
 const crops = [
     { left: 0, top: 0, right: 18, bottom: 18 },
@@ -89,11 +84,11 @@ test("perspective preserves a square overhead and converges toward the far edge"
                     assert.ok(near / far > (bounds.right - bounds.left < 8 ? 1.07 : 1.1));
                     assert.ok(near / far < 1.48);
                 }
-                for (const x of [left - 1, right + 1]) {
-                    for (const y of [top - 1, bottom + 1]) {
+                for (const x of [left - 0.5, right + 0.5]) {
+                    for (const y of [top - 0.5, bottom + 0.5]) {
                         const p = projection.project({ x, y });
-                        assert.ok(p.x > size.x * 0.04 && p.x < size.x * 0.96);
-                        assert.ok(p.y > size.y * 0.04 && p.y < size.y * 0.96);
+                        assert.ok(p.x > 0 && p.x < size.x);
+                        assert.ok(p.y > 0 && p.y < size.y);
                     }
                 }
             }
@@ -113,32 +108,75 @@ test("a visible raised edge remains selectable when it projects into the empty-c
     );
 });
 
-test("frames the floor goban's block and feet while picking on the unchanged playing surface", () => {
-    for (const bounds of crops) {
-        const projection = new BoardProjection(bounds, { boardStyle: "floor" });
-        const { width, depth, thickness, legHeight } = boardDimensions(bounds, "floor");
-        const centerX = (bounds.left + bounds.right) / 2;
-        const centerY = (bounds.top + bounds.bottom) / 2;
-        for (const size of sizes) {
-            for (const angle of angles) {
-                projection.fit(size.x, size.y, angle);
-                for (const dx of [-1, 1]) {
-                    for (const dy of [-1, 1]) {
-                        const corner = {
-                            x: centerX + (dx * width) / 2,
-                            y: centerY + (dy * depth) / 2,
-                        };
-                        for (const elevation of [0, -thickness - legHeight - 0.003]) {
-                            const point = projection.project(corner, elevation);
-                            expect(point.x).toBeGreaterThan(size.x * 0.03);
-                            expect(point.x).toBeLessThan(size.x * 0.97);
-                            expect(point.y).toBeGreaterThan(size.y * 0.03);
-                            expect(point.y).toBeLessThan(size.y * 0.97);
+/** Share of the viewport the grid plus edge stones spans along its tighter axis. */
+function gridFill(projection: BoardProjection, size: { x: number; y: number }): number {
+    const { left, top, right, bottom } = projection.bounds;
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (const x of [left - 0.5, right + 0.5]) {
+        for (const y of [top - 0.5, bottom + 0.5]) {
+            const p = projection.project({ x, y });
+            xs.push(p.x);
+            ys.push(p.y);
+        }
+    }
+    return Math.max(
+        (Math.max(...xs) - Math.min(...xs)) / size.x,
+        (Math.max(...ys) - Math.min(...ys)) / size.y,
+    );
+}
+
+test("frames the grid tightly at every style, angle and rotation, cropping the wood if needed", () => {
+    for (const boardStyle of ["tabletop", "floor"] as const) {
+        for (const rotation of [0, 45, 90, 200]) {
+            for (const bounds of crops) {
+                const projection = new BoardProjection(bounds, { boardStyle, rotation });
+                for (const size of sizes) {
+                    for (const angle of [...angles, 60, 75]) {
+                        projection.fit(size.x, size.y, angle);
+                        const { left, top, right, bottom } = bounds;
+                        for (const x of [left - 0.5, right + 0.5]) {
+                            for (const y of [top - 0.5, bottom + 0.5]) {
+                                for (const elevation of [0, crownHeight]) {
+                                    const p = projection.project({ x, y }, elevation);
+                                    expect(p.x).toBeGreaterThan(0);
+                                    expect(p.x).toBeLessThan(size.x);
+                                    expect(p.y).toBeGreaterThan(0);
+                                    expect(p.y).toBeLessThan(size.y);
+                                }
+                            }
                         }
+                        expect(gridFill(projection, size)).toBeGreaterThan(0.65);
+                        const edge = { x: right, y: bottom };
+                        expect(projection.pick(projection.project(edge))).toEqual(edge);
                     }
                 }
-                const edge = { x: bounds.right, y: bounds.bottom };
-                expect(projection.pick(projection.project(edge))).toEqual(edge);
+            }
+        }
+    }
+});
+
+test("keeps the centre of each capture lid in view with the room enabled", () => {
+    for (const boardStyle of ["tabletop", "floor"] as const) {
+        for (const rotation of [0, 45, 90, 180]) {
+            const bounds = crops[0];
+            const projection = new BoardProjection(bounds, { boardStyle, room: true, rotation });
+            const room = roomLayout(bounds, boardStyle);
+            for (const size of sizes) {
+                for (const angle of [...angles, 60, 75]) {
+                    projection.fit(size.x, size.y, angle);
+                    for (const direction of [-1, 1]) {
+                        const lid = {
+                            x: room.x + direction * room.side,
+                            y: room.z - direction * room.separation,
+                        };
+                        const p = projection.project(lid, room.surface + room.radius * 0.2);
+                        expect(p.x).toBeGreaterThan(0);
+                        expect(p.x).toBeLessThan(size.x);
+                        expect(p.y).toBeGreaterThan(0);
+                        expect(p.y).toBeLessThan(size.y);
+                    }
+                }
             }
         }
     }
