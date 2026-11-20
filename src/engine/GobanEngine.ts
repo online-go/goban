@@ -2393,6 +2393,18 @@ export class GobanEngine extends BoardState {
                             });
                         }
                         break;
+                    case "PL":
+                        {
+                            const player = val[0]?.toLowerCase() === "w" ? "white" : "black";
+                            if (!initial_player) {
+                                initial_player = self.config.initial_player = player;
+                            }
+                            instructions.push(() => {
+                                self.player = player === "black" ? 1 : 2;
+                            });
+                        }
+                        break;
+
                     case "HA":
                         {
                             instructions.push(() => {
