@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { _ } from "../../engine/translate";
 import type { JGOFClock } from "../../engine";
 import type { BoardPoint, BoardView, BoardViewState } from "../BoardView";
 import type { GobanSelectedThemes } from "../Goban";
@@ -26,6 +27,10 @@ import { BoardProjection } from "./projection";
 import { BoardScene } from "./scene";
 
 const installed = new WeakMap<SVGRenderer, ThreeController>();
+/** Free orbit may drop well below the preset angles, but stops short of edge-on. */
+const maxOrbitTilt = 75;
+/** How long the camera takes to settle on the fitted distance after an orbit drag. */
+const settleMs = 320;
 
 class ThreeBoardView implements BoardView {
     public readonly element: HTMLCanvasElement;
@@ -36,6 +41,20 @@ class ThreeBoardView implements BoardView {
     private readonly restorePosition?: () => void;
     private media?: MediaQueryList;
     private frame = 0;
+    private orbitKeyHeld = false;
+    private cameraMode = false;
+    private restoreTouchAction?: () => void;
+    private cameraButton?: HTMLButtonElement;
+    private orbitPointer?: { id: number; x: number; y: number };
+    private orbitHost?: HTMLElement;
+    private suppressOrbitClick = false;
+    private previousOrbitPress = false;
+    private orbitRotation?: number;
+    private orbitTilt?: number;
+    /** Camera distance held while an orbit drag is in progress. */
+    private orbitDistance?: number;
+    /** Easing back to the fitted distance after an orbit drag. */
+    private orbitSettle?: { from: number; start: number };
     private boardDirty = true;
     private state?: BoardViewState;
     private revision = 0;
@@ -83,12 +102,276 @@ class ThreeBoardView implements BoardView {
             const { signal } = this.listeners;
             document.addEventListener("visibilitychange", this.onVisibility, { signal });
             this.element.addEventListener("webglcontextlost", this.onContextLost, { signal });
+            this.orbitHost = host;
+            const touchInput = matchMedia("(any-pointer: coarse)");
+            touchInput.addEventListener("change", this.updateCameraButton, { signal });
+            this.updateCameraButton(touchInput);
+            window.addEventListener("keydown", this.onOrbitKeyDown, { signal });
+            window.addEventListener("keyup", this.onOrbitKeyUp, { signal });
+            window.addEventListener("blur", this.stopOrbit, { signal });
+            const capture = { capture: true, signal };
+            host.addEventListener("pointerdown", this.onOrbitStart, capture);
+            host.addEventListener("pointermove", this.onOrbitMove, capture);
+            host.addEventListener("pointerup", this.onOrbitEnd, capture);
+            host.addEventListener("pointercancel", this.onOrbitEnd, capture);
+            host.addEventListener("lostpointercapture", this.onOrbitEnd, capture);
+            host.addEventListener("mousemove", this.onOrbitMouseMove, capture);
+            host.addEventListener("mouseup", this.onOrbitClick, capture);
+            host.addEventListener("click", this.onOrbitClick, capture);
+            host.addEventListener("dblclick", this.onOrbitClick, capture);
+            const touchCapture = { ...capture, passive: false };
+            host.addEventListener("touchstart", this.onOrbitTouch, touchCapture);
+            host.addEventListener("touchmove", this.onOrbitTouch, touchCapture);
+            host.addEventListener("touchend", this.onOrbitTouch, touchCapture);
+            host.addEventListener("touchcancel", this.onOrbitTouch, touchCapture);
             this.watchPixelRatio();
             this.configure();
             this.goban.on("clock", this.onClock);
         } catch (error) {
             this.dispose();
             throw error;
+        }
+    }
+
+    private updateCameraButton = (input: MediaQueryList | MediaQueryListEvent): void => {
+        if (!input.matches || this.owner.options.fixedCoordinates) {
+            this.setCameraMode(false);
+            this.cameraButton?.remove();
+            this.cameraButton = undefined;
+            this.stopOrbit();
+            return;
+        }
+        if (this.cameraButton) {
+            return;
+        }
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "goban-three-camera";
+        button.style.cssText =
+            "position:absolute;top:6px;right:6px;z-index:2;min-width:34px;height:34px;" +
+            "margin:0;padding:0 7px;display:flex;align-items:center;justify-content:center;" +
+            "gap:5px;border:1px solid #ffffff70;border-radius:6px;background:#202027df;" +
+            "color:white;cursor:pointer;touch-action:manipulation;font:600 13px system-ui";
+        button.setAttribute("aria-label", _("Camera mode"));
+        button.setAttribute("aria-pressed", "false");
+        button.title = _("Camera mode");
+        const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        icon.setAttribute("viewBox", "0 0 24 24");
+        icon.setAttribute("width", "18");
+        icon.setAttribute("height", "18");
+        icon.setAttribute("aria-hidden", "true");
+        const path = document.createElementNS(icon.namespaceURI, "path");
+        path.setAttribute(
+            "d",
+            "M8 5l1.5-2h5L16 5h4a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2zm4 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z",
+        );
+        path.setAttribute("fill", "currentColor");
+        icon.append(path);
+        const done = document.createElement("span");
+        done.textContent = _("Done");
+        done.hidden = true;
+        button.append(icon, done);
+        button.addEventListener(
+            "click",
+            (event) => {
+                event.stopPropagation();
+                this.setCameraMode(!this.cameraMode);
+                button.setAttribute("aria-pressed", String(this.cameraMode));
+                button.title = this.cameraMode ? _("Done") : _("Camera mode");
+                button.style.background = this.cameraMode ? "#175ca8" : "#202027df";
+                done.hidden = !this.cameraMode;
+                this.invalidateHover();
+            },
+            { signal: this.listeners.signal },
+        );
+        this.cameraButton = button;
+        (this.orbitHost?.shadowRoot ?? this.orbitHost)?.append(button);
+    };
+
+    private setCameraMode(enabled: boolean): void {
+        this.cameraMode = enabled;
+        const host = this.orbitHost;
+        if (enabled && host) {
+            const previous = host.style.touchAction;
+            host.style.touchAction = "none";
+            this.restoreTouchAction = () => {
+                if (host.style.touchAction === "none") {
+                    host.style.touchAction = previous;
+                }
+            };
+        } else {
+            this.restoreTouchAction?.();
+            this.restoreTouchAction = undefined;
+            this.stopOrbit();
+        }
+    }
+
+    private onOrbitTouch = (event: TouchEvent): void => {
+        const onButton = this.cameraButton && event.composedPath().includes(this.cameraButton);
+        if (onButton || this.cameraMode) {
+            if (!onButton) {
+                event.preventDefault();
+            }
+            event.stopImmediatePropagation();
+        }
+    };
+
+    private get orbitEnabled(): boolean {
+        return !!this.owner.options.mouseOrbit && !this.owner.options.fixedCoordinates;
+    }
+
+    private onOrbitKeyDown = (event: KeyboardEvent): void => {
+        if (
+            this.orbitEnabled &&
+            event.key.toLowerCase() === "v" &&
+            !event.altKey &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.shiftKey &&
+            !event.isComposing &&
+            !event.defaultPrevented &&
+            !(
+                event.target instanceof Element &&
+                event.target.closest("input, textarea, select, [contenteditable], [role=textbox]")
+            )
+        ) {
+            this.orbitKeyHeld = true;
+        }
+    };
+
+    private onOrbitKeyUp = (event: KeyboardEvent): void => {
+        if (event.key.toLowerCase() === "v") {
+            this.orbitKeyHeld = false;
+        }
+    };
+
+    private onOrbitStart = (event: PointerEvent): void => {
+        this.previousOrbitPress = this.suppressOrbitClick;
+        this.suppressOrbitClick = false;
+        const onButton = this.cameraButton && event.composedPath().includes(this.cameraButton);
+        const canOrbit =
+            this.cameraMode ||
+            (event.pointerType === "mouse" && this.orbitEnabled && this.orbitKeyHeld);
+        if (
+            onButton ||
+            !canOrbit ||
+            !this.projection ||
+            !event.isPrimary ||
+            event.button !== 0 ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.shiftKey
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        this.orbitHost?.setPointerCapture(event.pointerId);
+        this.orbitPointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        // Hold the current distance (mid-settle included) so the board doesn't zoom while turning.
+        this.orbitDistance = this.projection.distance;
+        this.orbitSettle = undefined;
+        this.suppressOrbitClick = true;
+        this.invalidateHover();
+    };
+
+    private onOrbitMove = (event: PointerEvent): void => {
+        const pointer = this.orbitPointer;
+        if (!pointer || pointer.id !== event.pointerId) {
+            return;
+        }
+        event.stopImmediatePropagation();
+        const rotation = this.orbitRotation ?? this.owner.options.rotation ?? 0;
+        const tilt = this.orbitTilt ?? this.defaultTilt;
+        // Drag as if grabbing the board, like Blender's turntable orbit: dragging right turns
+        // the near edge right, and dragging down tips the top towards the viewer. Mouse and
+        // touch behave the same.
+        const dx = event.clientX - pointer.x;
+        const dy = event.clientY - pointer.y;
+        this.orbitRotation = (((rotation - dx * 0.4) % 360) + 360) % 360;
+        this.orbitTilt = Math.max(0, Math.min(maxOrbitTilt, tilt - dy * 0.3));
+        pointer.x = event.clientX;
+        pointer.y = event.clientY;
+        this.invalidateHover();
+    };
+
+    private onOrbitEnd = (event: PointerEvent): void => {
+        if (this.orbitPointer?.id === event.pointerId) {
+            this.orbitPointer = undefined;
+            this.releaseOrbitDistance();
+            this.invalidateHover();
+        }
+    };
+
+    /** Ease from the held orbit distance to the fitted one. */
+    private releaseOrbitDistance(): void {
+        if (this.orbitDistance !== undefined) {
+            this.orbitSettle = { from: this.orbitDistance, start: performance.now() };
+            this.orbitDistance = undefined;
+        }
+    }
+
+    /** Distance override for this frame, or undefined to use the fitted distance. */
+    private chooseOrbitDistance(fitted: number): number {
+        if (this.orbitDistance !== undefined) {
+            return this.orbitDistance;
+        }
+        const settle = this.orbitSettle;
+        if (!settle) {
+            return fitted;
+        }
+        const t = Math.min(1, (performance.now() - settle.start) / settleMs);
+        if (t >= 1) {
+            this.orbitSettle = undefined;
+            return fitted;
+        }
+        const eased = 1 - (1 - t) ** 3;
+        return settle.from + (fitted - settle.from) * eased;
+    }
+
+    private onOrbitMouseMove = (event: MouseEvent): void => {
+        if (this.orbitPointer) {
+            event.stopImmediatePropagation();
+        }
+    };
+
+    private onOrbitClick = (event: MouseEvent): void => {
+        if (
+            event.button === 0 &&
+            (event.type === "mouseup" || event.detail > 0) &&
+            (this.suppressOrbitClick || (event.type === "dblclick" && this.previousOrbitPress))
+        ) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+    };
+
+    private stopOrbit = (): void => {
+        this.orbitKeyHeld = false;
+        const id = this.orbitPointer?.id;
+        this.orbitPointer = undefined;
+        this.releaseOrbitDistance();
+        if (id !== undefined && this.orbitHost?.hasPointerCapture(id)) {
+            this.orbitHost.releasePointerCapture(id);
+        }
+    };
+
+    private get defaultTilt(): number {
+        return this.owner.options.tilt ?? (this.owner.options.boardStyle === "floor" ? 35 : 15);
+    }
+
+    public cameraSettingsChanged(previous: ThreeRendererOptions): void {
+        if (previous.rotation !== this.owner.options.rotation) {
+            this.orbitRotation = undefined;
+        }
+        if (previous.tilt !== this.owner.options.tilt) {
+            this.orbitTilt = undefined;
+        }
+        if (!this.orbitEnabled && !this.cameraMode) {
+            this.stopOrbit();
         }
     }
 
@@ -169,15 +452,27 @@ class ThreeBoardView implements BoardView {
         const style = this.owner.options.boardStyle ?? "tabletop";
         const room = this.owner.options.room ?? false;
         const bounds = JSON.stringify([state.bounds, style, room]);
-        const view = [this.owner.options.rotation ?? 0, !!this.owner.options.mirror];
-        const geometry = [bounds, width, height, devicePixelRatio, ...view].join("/");
+        const rotation = this.orbitRotation ?? this.owner.options.rotation ?? 0;
+        const view = [rotation, !!this.owner.options.mirror];
+        const tilt = this.orbitTilt ?? this.defaultTilt;
+        // While held or settling, the distance changes without the view inputs changing.
+        const distanceKey = this.orbitDistance ?? (this.orbitSettle ? performance.now() : "fit");
+        const geometry = [bounds, width, height, devicePixelRatio, tilt, distanceKey, ...view].join(
+            "/",
+        );
         if (!this.projection || this.geometry !== geometry) {
-            this.projection = new BoardProjection(state.bounds, this.owner.options);
-            const tilt = this.owner.options.tilt ?? (style === "floor" ? 35 : 15);
-            this.projection.fit(width, height, tilt);
+            this.projection = new BoardProjection(state.bounds, {
+                ...this.owner.options,
+                rotation,
+            });
+            this.projection.fit(width, height, tilt, (fitted) => this.chooseOrbitDistance(fitted));
+            if (this.orbitSettle) {
+                this.invalidateHover();
+            }
             this.geometry = geometry;
             const viewKey = view.join("/");
-            this.holdView = !!this.viewKey && viewKey !== this.viewKey;
+            this.holdView =
+                !!this.owner.options.fixedCoordinates && !!this.viewKey && viewKey !== this.viewKey;
             this.viewKey = viewKey;
             this.scene.setMirror(this.projection.mirror, this.projection.mirrorX);
             const fixed = !!this.owner.options.fixedCoordinates;
@@ -260,7 +555,7 @@ class ThreeBoardView implements BoardView {
                     });
             }
         }
-        const hover = this.goban.boardViewHover;
+        const hover = this.cameraMode || this.orbitPointer ? undefined : this.goban.boardViewHover;
         const ghost = hover
             ? updateBoard
                 ? state.ghost
@@ -334,6 +629,7 @@ class ThreeBoardView implements BoardView {
 
     private onVisibility = (): void => {
         if (document.hidden) {
+            this.stopOrbit();
             cancelAnimationFrame(this.frame);
             this.frame = 0;
         } else {
@@ -351,7 +647,9 @@ class ThreeBoardView implements BoardView {
             return;
         }
         this.disposed = true;
+        this.setCameraMode(false);
         this.listeners.abort();
+        this.cameraButton?.remove();
         this.goban.off("clock", this.onClock);
         cancelAnimationFrame(this.frame);
         this.media?.removeEventListener("change", this.watchPixelRatio);
@@ -412,7 +710,9 @@ class ThreeController implements ThreeRenderer {
         view.dispose();
     }
     public configure(options: ThreeRendererOptions): void {
+        const previous = this.options;
         this.options = { ...this.options, ...options };
+        this.view?.cameraSettingsChanged(previous);
         this.view?.configure();
     }
     public fallback(error: unknown): void {

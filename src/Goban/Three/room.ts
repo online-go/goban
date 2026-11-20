@@ -32,7 +32,16 @@ import {
 } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { ThreeBoardStyle } from "../ThreeConfig";
-import { bowlHeightRatio, floorBoardFeet, roomLayout, type Bounds } from "./projection";
+import {
+    bowlHeightRatio,
+    crownHeight,
+    floorBoardFeet,
+    roomLayout,
+    type Bounds,
+} from "./projection";
+
+/** Stones stack at their own thickness; the pile layouts were tuned for 0.25-high stones. */
+const stackScale = crownHeight / 0.25;
 import type { JGOFClock } from "../../engine";
 import { RoomClock } from "./roomClock";
 import {
@@ -65,7 +74,7 @@ function pilePositions(
 
 const capturePile = pilePositions([
     [7, 0.61, 0],
-    [5, 0.41, 0.21],
+    [5, 0.41, 0.21 * stackScale],
 ]);
 // Stagger the layers so the gaps between stones reveal more stones below.
 const bowlLayers = [
@@ -102,11 +111,17 @@ const bowlLayers = [
         [15, 0.72],
     ],
 ];
-const bowlPile = bowlLayers.flatMap((rings, layer) =>
+// Thicker stones need fewer layers to fill the bowl to the same height.
+const bowlLayerCount = Math.floor((bowlLayers.length - 1) / stackScale) + 1;
+const bowlPile = bowlLayers.slice(0, bowlLayerCount).flatMap((rings, layer) =>
     pilePositions(
         rings.map(([count, radius]) => [count, radius, 0]),
         layer * 0.71,
-    ).map(([x, y, z], index) => [x, y + layer * 0.273 + 0.022 * Math.sin(index * 2.4), z]),
+    ).map(([x, y, z], index) => [
+        x,
+        y + (layer * 0.273 + 0.022 * Math.sin(index * 2.4)) * stackScale,
+        z,
+    ]),
 );
 
 function rectangleDistance(x: number, z: number, width: number, depth: number): number {

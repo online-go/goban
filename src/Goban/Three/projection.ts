@@ -36,7 +36,7 @@ export interface CameraOptions {
     fieldOfView?: number;
     /** Minimum orbit distance in multiples of the longer visible grid span. */
     distanceScale?: number;
-    /** Camera orbit around the board in degrees; ignored with a room. */
+    /** Camera orbit around the board in degrees. */
     rotation?: number;
     /** Mirror the board left to right; ignored with a room. */
     mirror?: boolean;
@@ -45,13 +45,18 @@ export interface CameraOptions {
 }
 
 export const angles = [0, 15, 25, 35] as const;
-export const crownHeight = 0.25;
-export const stoneBase = 0.012;
+/** Stone top above the board: about 42% of the diameter, like a size 32-34 stone. */
+export const crownHeight = 0.395;
+export const stoneBase = 0.003;
 export const stoneRadius = 0.47;
 const tabletopThickness = 0.36;
 export const boardMargin = 1.17;
-const defaultFrameLimit = 0.92;
+const defaultFrameLimit = 0.94;
 const frameMargin = 1.27;
+/** Grid framing margin past the outer lines: an edge stone plus a sliver of wood. */
+const gridMargin = 0.62;
+/** Height of a lid's stone pile above the floor, in bowl radii. */
+const lidCentreHeightRatio = 0.2;
 
 export function boardDimensions(bounds: Bounds, style: ThreeBoardStyle = "tabletop") {
     const width = bounds.right - bounds.left + 2 * boardMargin;
@@ -117,7 +122,6 @@ export class BoardProjection {
     private readonly fieldOfView: number;
     private readonly distanceScale: number;
     private readonly frameLimit: number;
-    private readonly bottomElevation: number;
     private readonly room?: ReturnType<typeof roomLayout>;
     public readonly rotation: number;
     public readonly mirror: boolean;
@@ -126,17 +130,29 @@ export class BoardProjection {
     public constructor(bounds: Bounds, options: CameraOptions = {}) {
         this.bounds = bounds;
         this.room = options.room ? roomLayout(bounds, options.boardStyle) : undefined;
-        this.rotation = this.room ? 0 : (options.rotation ?? 0);
+        this.rotation = options.rotation ?? 0;
         this.mirror = !this.room && !!options.mirror;
         this.mirrorX = bounds.left + bounds.right;
         this.fieldOfView = options.fieldOfView ?? 34;
-        this.distanceScale = options.distanceScale ?? 1.65;
+        this.distanceScale = options.distanceScale ?? 1.3;
         this.frameLimit = options.frameLimit ?? defaultFrameLimit;
-        const { thickness, legHeight } = boardDimensions(bounds, options.boardStyle);
-        this.bottomElevation = -thickness - legHeight - 0.003;
     }
 
-    public fit(width: number, height: number, tilt: (typeof angles)[number]): void {
+    /** Camera distance in use after the last fit. */
+    public distance = 0;
+    /** Distance the last fit computed to frame the board, before any override. */
+    public fittedDistance = 0;
+
+    /**
+     * Frame the board. `chooseDistance` may replace the fitted distance, e.g. to hold the
+     * camera steady while orbiting; it receives the fitted value.
+     */
+    public fit(
+        width: number,
+        height: number,
+        tilt: number,
+        chooseDistance?: (fitted: number) => number,
+    ): void {
         this.width = width;
         this.height = height;
         const radians = (tilt * Math.PI) / 180;
@@ -146,12 +162,14 @@ export class BoardProjection {
         const centerX = (left + right) / 2;
         const centerY = (top + bottom) / 2;
         const room = this.room;
-        const quarter = this.rotation === 90 || this.rotation === 270;
+        const yaw = (this.rotation * Math.PI) / 180;
+        const absCosYaw = Math.abs(Math.cos(yaw));
+        const absSinYaw = Math.abs(Math.sin(yaw));
         const spanX = (right - left) / 2 + frameMargin;
         const spanY = (bottom - top) / 2 + frameMargin;
         // Seen from the side, the board's depth runs across the screen.
-        const halfX = quarter ? spanY : spanX;
-        const halfY = quarter ? spanX : spanY;
+        const halfX = spanX * absCosYaw + spanY * absSinYaw;
+        const halfY = spanX * absSinYaw + spanY * absCosYaw;
         const camera = this.camera;
         camera.fov = this.fieldOfView;
         camera.aspect = width / height;
@@ -159,32 +177,49 @@ export class BoardProjection {
         const tanY = Math.tan((camera.fov * Math.PI) / 360) / camera.zoom;
         const tanX = tanY * camera.aspect;
 
-        let distance = Math.max(halfX, halfY) * 2 * this.distanceScale;
-        const fitCorners = (x: number, y: number, base: number, top: number) => {
-            for (const row of [-y, y]) {
-                for (const elevation of [base, top]) {
-                    const forward = row * sin + elevation * cos;
-                    const vertical = elevation * sin - row * cos;
-                    distance = Math.max(
-                        distance,
-                        forward + Math.max(x / tanX, Math.abs(vertical) / tanY) / this.frameLimit,
-                    );
-                }
-            }
-        };
-        fitCorners(halfX, halfY, this.bottomElevation, crownHeight);
-        if (room) {
-            fitCorners(
-                room.side + room.radius,
-                room.separation + room.radius,
-                room.surface,
-                room.surface + room.radius * bowlHeightRatio,
+        // Frame only the playing grid and its edge stones. The wooden board, its underside,
+        // feet and the room may be cropped at some angles; the grid itself never is.
+        const gridX = (right - left) / 2 + gridMargin;
+        const gridY = (bottom - top) / 2 + gridMargin;
+        const cosYaw = Math.cos(yaw);
+        const sinYaw = Math.sin(yaw);
+        // The distance floor limits perspective distortion on a close camera.
+        let distance = Math.max(gridX, gridY) * 2 * this.distanceScale;
+        /** Keep a point (relative to the board centre) inside the frame. */
+        const keep = (dx: number, dy: number, elevation: number) => {
+            // In camera terms: across the screen, and along the view towards the camera.
+            const across = dx * cosYaw - dy * sinYaw;
+            const row = dx * sinYaw + dy * cosYaw;
+            const forward = row * sin + elevation * cos;
+            const vertical = elevation * sin - row * cos;
+            distance = Math.max(
+                distance,
+                forward +
+                    Math.max(Math.abs(across) / tanX, Math.abs(vertical) / tanY) / this.frameLimit,
             );
+        };
+        for (const dx of [-gridX, gridX]) {
+            for (const dy of [-gridY, gridY]) {
+                keep(dx, dy, 0);
+                keep(dx, dy, crownHeight);
+            }
         }
+        if (room) {
+            // Captured stones are counted in the lids, so keep each lid's centre in view: about
+            // half of every lid stays visible while the bowls themselves may be cropped.
+            const lidTop = room.surface + room.radius * lidCentreHeightRatio;
+            for (const direction of [-1, 1]) {
+                keep(direction * room.side, -direction * room.separation, lidTop);
+            }
+        }
+        this.fittedDistance = distance;
+        if (chooseDistance) {
+            distance = chooseDistance(distance);
+        }
+        this.distance = distance;
         // Keep depth precision for the closely spaced board face and slab.
         camera.near = 1;
         camera.far = distance + Math.hypot(halfX, halfY) * (room ? 5 : 2) + 10;
-        const yaw = (this.rotation * Math.PI) / 180;
         camera.position.set(
             centerX + distance * sin * Math.sin(yaw),
             distance * cos,
