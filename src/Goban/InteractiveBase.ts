@@ -129,6 +129,10 @@ export abstract class GobanInteractive extends GobanBase {
     protected abstract socket: IGobanSocket;
     /** Implemented by OGSConnectivity; declared here so tapAtImpl can use it. */
     protected abstract syncReviewMove(msg_override?: ReviewMessage, node_text?: string): void;
+    /** Sends the stone just played from `from` as a game move, when a demo
+     * board records game moves. `created` is true if the play added the node.
+     * Returns true if the stone is not a variation, and so must not be synced. */
+    protected abstract recordOfficialMove(from: MoveTree, created: boolean): boolean;
 
     public conditional_starting_color: "black" | "white" | "invalid" = "invalid";
     public conditional_tree: ConditionalMoveTree = new ConditionalMoveTree(null);
@@ -937,7 +941,14 @@ export abstract class GobanInteractive extends GobanBase {
             }
         }
         if (!keep_old_engine) {
-            this.setLastOfficialMove();
+            if (config.original_sgf) {
+                // An uploaded SGF opens on its farthest move, which can be in
+                // a variation. Its game line is the main line.
+                this.engine.last_official_move = this.engine.move_tree.getTrunkTail();
+                this.updateTitleAndStonePlacement();
+            } else {
+                this.setLastOfficialMove();
+            }
         }
 
         this.emit("update");
@@ -1425,15 +1436,22 @@ export abstract class GobanInteractive extends GobanBase {
         this.edit_color = color;
         this.updateTitleAndStonePlacement();
     }
-    protected playMovementSound(): void {
-        if (
-            this.last_sound_played_for_a_stone_placement ===
-            this.engine.cur_move.x + "," + this.engine.cur_move.y
-        ) {
+    /**
+     * Plays the sound for a move, by default the current move. A demo board
+     * that records a stone as a game move stays at the live move until the
+     * server sends the stone back, so the caller names the stone instead.
+     */
+    protected playMovementSound(
+        move: { x: number; y: number; color: "black" | "white" } = {
+            x: this.engine.cur_move.x,
+            y: this.engine.cur_move.y,
+            color: this.engine.colorNotToMove(),
+        },
+    ): void {
+        if (this.last_sound_played_for_a_stone_placement === move.x + "," + move.y) {
             return;
         }
-        this.last_sound_played_for_a_stone_placement =
-            this.engine.cur_move.x + "," + this.engine.cur_move.y;
+        this.last_sound_played_for_a_stone_placement = move.x + "," + move.y;
 
         let idx;
         do {
@@ -1445,11 +1463,11 @@ export abstract class GobanInteractive extends GobanBase {
             this.emit("audio-pass");
         } else {
             this.emit("audio-stone", {
-                x: this.engine.cur_move.x,
-                y: this.engine.cur_move.y,
+                x: move.x,
+                y: move.y,
                 width: this.engine.width,
                 height: this.engine.height,
-                color: this.engine.colorNotToMove(),
+                color: move.color,
             });
         }
     }
@@ -1942,6 +1960,8 @@ export abstract class GobanInteractive extends GobanBase {
                 this.move_selected = { x: x, y: y };
 
                 /* Place our stone */
+                let recorded = false;
+                let recorded_stone: { x: number; y: number; color: "black" | "white" } | undefined;
                 try {
                     if (
                         !(
@@ -1950,6 +1970,8 @@ export abstract class GobanInteractive extends GobanBase {
                             this.analyze_subtool !== "alternate"
                         )
                     ) {
+                        const from = this.engine.cur_move;
+                        const existed = !!from.lookupMove(x, y, this.engine.player, false);
                         removed_count = this.engine.place(
                             x,
                             y,
@@ -1960,11 +1982,16 @@ export abstract class GobanInteractive extends GobanBase {
                             undefined,
                             removed_stones,
                         );
+                        const color = this.engine.colorNotToMove();
 
                         if (this.mode === "analyze") {
                             if (this.engine.handicapMovesLeft() > 0) {
                                 this.engine.place(-1, -1);
                             }
+                        }
+                        recorded = this.recordOfficialMove(from, !existed);
+                        if (recorded) {
+                            recorded_stone = { x, y, color };
                         }
                     } else {
                         if (!this.edit_color) {
@@ -1986,25 +2013,10 @@ export abstract class GobanInteractive extends GobanBase {
                         }
                     }
 
-                    if (this.mode === "analyze" && this.analyze_tool === "stone") {
-                        let c: MoveTree | null = this.engine.cur_move;
-                        while (c && !c.trunk) {
-                            let mark: any = c.getMoveNumberDifferenceFromTrunk();
-                            if (c.edited) {
-                                mark = "triangle";
-                            }
-
-                            if (c.x >= 0 && c.y >= 0 && !this.engine.board[c.y][c.x]) {
-                                this.clearTransientMark(c.x, c.y, mark);
-                            } else {
-                                this.setTransientMark(c.x, c.y, mark, true);
-                            }
-                            c = c.parent;
-                        }
-                    }
-
                     if (this.isPlayerController()) {
-                        this.syncReviewMove();
+                        if (!recorded) {
+                            this.syncReviewMove();
+                        }
                         force_redraw = true;
                     }
                 } catch (e) {
@@ -2026,7 +2038,7 @@ export abstract class GobanInteractive extends GobanBase {
                         delete this.move_selected;
                         this.updateTitleAndStonePlacement();
                         this.emit("update");
-                        this.playMovementSound();
+                        this.playMovementSound(recorded_stone);
                         break;
                     case "conditional":
                         this.followConditionalSegment(x, y);
@@ -2091,32 +2103,6 @@ export abstract class GobanInteractive extends GobanBase {
                     this.setLetterMark(x, y, mark, !dont_draw);
                 } else {
                     this.setCustomMark(x, y, mark, !dont_draw);
-                }
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    protected setTransientMark(
-        x: number,
-        y: number,
-        mark: number | string,
-        dont_draw?: boolean,
-    ): void {
-        try {
-            if (x >= 0 && y >= 0) {
-                if (typeof mark === "number") {
-                    mark = "" + mark;
-                }
-
-                if (mark.length <= 3) {
-                    this.engine.cur_move.getMarks(x, y).transient_letter = mark;
-                } else {
-                    this.engine.cur_move.getMarks(x, y)["transient_" + mark] = true;
-                }
-
-                if (!dont_draw) {
-                    this.drawSquare(x, y);
                 }
             }
         } catch (e) {
@@ -2223,22 +2209,6 @@ export abstract class GobanInteractive extends GobanBase {
                 this.getMarks(x, y).letter = "";
             } else {
                 this.getMarks(x, y)[mark] = false;
-            }
-            this.drawSquare(x, y);
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    protected clearTransientMark(x: number, y: number, mark: string | number): void {
-        try {
-            if (typeof mark === "number") {
-                mark = "" + mark;
-            }
-
-            if (/^[a-zA-Z0-9]{1,2}$/.test(mark)) {
-                this.getMarks(x, y).transient_letter = "";
-            } else {
-                this.getMarks(x, y)["transient_" + mark] = false;
             }
             this.drawSquare(x, y);
         } catch (e) {

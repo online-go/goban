@@ -1,0 +1,223 @@
+/*
+ * Copyright (C)  Online-Go.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Clock arithmetic for review and demo board clocks. Clocks are
+ * JGOFPlayerClock (ms); time controls are JGOFTimeControl (seconds).
+ */
+
+import type { JGOFPauseState, JGOFPlayerClock, JGOFTimeControl } from "../engine/formats/JGOF";
+import type { GobanEngine } from "../engine/GobanEngine";
+import type { MoveTree } from "../engine/MoveTree";
+
+/**
+ * A review's running clock, kept from the review log. It totals the time
+ * the clock has run, and notes the total when each game move's turn began.
+ * The player on move has used the running time since their turn began, so an
+ * undo goes back to the turn before with the time it had already used.
+ * Times are server ms.
+ */
+export class ReviewClock {
+    /** True once the clock has been started */
+    public started = false;
+    /** True while the clock runs */
+    public running = false;
+    /** While stopped, why the game server said the game is paused */
+    public pause_state?: JGOFPauseState;
+    /** When the current run began */
+    private since = 0;
+    /** The time the clock ran before `since` */
+    private ran = 0;
+    /** The running total when the turn after a move began, by node id. A turn
+     * not listed began before the clock was first started. */
+    private turn_starts = new Map<number, number>();
+
+    /** Starts the clock at server time `at`, if it is stopped */
+    public start(at: number): void {
+        this.pause_state = undefined;
+        if (!this.running) {
+            this.running = true;
+            this.started = true;
+            this.since = at;
+        }
+    }
+
+    /** Stops the clock at server time `at`, if it runs, and notes why */
+    public stop(at: number, pause_state?: JGOFPauseState): void {
+        this.pause_state = pause_state;
+        if (this.running) {
+            this.ran = this.total(at);
+            this.running = false;
+        }
+    }
+
+    /** Starts the turn of the player on move after `node` */
+    public beginTurn(node: MoveTree, at: number): void {
+        this.turn_starts.set(node.id, this.total(at));
+    }
+
+    /** How much of their turn the player on move after `node` has used */
+    public elapsed(node: MoveTree, now: number): number {
+        return Math.max(0, this.total(now) - (this.turn_starts.get(node.id) ?? 0));
+    }
+
+    private total(at: number): number {
+        // A server time estimated a little behind a server timestamp must not add time
+        return this.ran + (this.running ? Math.max(0, at - this.since) : 0);
+    }
+}
+
+/** The color of the player to move after `node` */
+export function playerOnMove(node: MoveTree): "black" | "white" {
+    return node.state.player === 1 ? "black" : "white";
+}
+
+/**
+ * The time control a review's clocks run on: an uploaded SGF's own, else the
+ * review's. Undefined when there is none. The SGF reader keeps its durations
+ * in ms; this returns seconds, like every other time control.
+ */
+export function reviewTimeControl(engine: GobanEngine): JGOFTimeControl | undefined {
+    const sgf = engine.sgf_time_settings;
+    const tc = sgf ? inSeconds(sgf) : engine.time_control;
+    return tc && tc.system !== "none" ? tc : undefined;
+}
+
+const DURATIONS = [
+    "initial_time",
+    "time_increment",
+    "max_time",
+    "main_time",
+    "period_time",
+    "per_move",
+    "total_time",
+];
+
+function inSeconds(tc: JGOFTimeControl): JGOFTimeControl {
+    const ret: Record<string, unknown> = { ...tc };
+    for (const key of DURATIONS) {
+        if (typeof ret[key] === "number") {
+            ret[key] = (ret[key] as number) / 1000;
+        }
+    }
+    return ret as unknown as JGOFTimeControl;
+}
+
+/** The clock set for `color` on `node` or the nearest node before it */
+export function findClock(
+    node: MoveTree | null,
+    color: "black" | "white",
+): JGOFPlayerClock | undefined {
+    for (let cur = node; cur; cur = cur.parent) {
+        const clock = cur[`${color}_clock`];
+        if (clock) {
+            return clock;
+        }
+    }
+    return undefined;
+}
+
+/** Each player's clock before their first move, or undefined with no time control */
+export function startingClock(tc: JGOFTimeControl): JGOFPlayerClock | undefined {
+    switch (tc.system) {
+        case "fischer":
+            return { main_time: tc.initial_time * 1000 };
+        case "byoyomi":
+        case "canadian":
+            // With no main time, this is the clock at the start of overtime
+            return runClock({ main_time: tc.main_time * 1000 }, 0, tc);
+        case "simple":
+            return { main_time: tc.per_move * 1000 };
+        case "absolute":
+            return { main_time: tc.total_time * 1000 };
+        default:
+            return undefined;
+    }
+}
+
+/** `clock` after `elapsed_ms` of thinking, with no move made. Stops at zero. */
+export function runClock(
+    clock: JGOFPlayerClock,
+    elapsed_ms: number,
+    tc: JGOFTimeControl,
+): JGOFPlayerClock {
+    if (elapsed_ms < clock.main_time) {
+        return { ...clock, main_time: clock.main_time - elapsed_ms };
+    }
+    let overtime = elapsed_ms - clock.main_time;
+
+    if (tc.system === "byoyomi") {
+        const period_ms = tc.period_time * 1000;
+        let periods_left = clock.periods_left ?? tc.periods;
+        let period_left = clock.period_time_left ?? period_ms;
+        while (periods_left > 0 && overtime >= period_left) {
+            overtime -= period_left;
+            periods_left -= 1;
+            period_left = period_ms;
+        }
+        if (periods_left <= 0) {
+            return { main_time: 0, periods_left: 0, period_time_left: 0 };
+        }
+        return { main_time: 0, periods_left, period_time_left: period_left - overtime };
+    }
+
+    if (tc.system === "canadian") {
+        const block = clock.block_time_left ?? tc.period_time * 1000;
+        return {
+            main_time: 0,
+            moves_left: clock.moves_left ?? tc.stones_per_period,
+            block_time_left: Math.max(0, block - overtime),
+        };
+    }
+
+    return { main_time: 0 };
+}
+
+/** The mover's clock after a move made `elapsed_ms` into their turn */
+export function clockAfterMove(
+    clock: JGOFPlayerClock,
+    elapsed_ms: number,
+    tc: JGOFTimeControl,
+): JGOFPlayerClock {
+    const after = runClock(clock, elapsed_ms, tc);
+    switch (tc.system) {
+        case "fischer":
+            return {
+                main_time: Math.min(tc.max_time * 1000, after.main_time + tc.time_increment * 1000),
+            };
+        case "simple":
+            return { main_time: tc.per_move * 1000 };
+        case "byoyomi":
+            // A move in overtime starts the period again, unless the last one ran out
+            return after.main_time === 0 && after.periods_left
+                ? { ...after, period_time_left: tc.period_time * 1000 }
+                : after;
+        case "canadian":
+            if (after.main_time > 0) {
+                return after;
+            }
+            // A move in overtime uses one stone of the block. The last stone starts a new block.
+            return after.moves_left && after.moves_left > 1
+                ? { ...after, moves_left: after.moves_left - 1 }
+                : {
+                      main_time: 0,
+                      moves_left: tc.stones_per_period,
+                      block_time_left: tc.period_time * 1000,
+                  };
+        default:
+            return after;
+    }
+}

@@ -12,6 +12,7 @@ import {
     SCORE_ESTIMATION_TRIALS,
 } from "../../src/Goban/InteractiveBase";
 import { GobanSocket, makeMatrix } from "engine";
+import type { MoveTree } from "engine";
 import { GobanBase } from "../../src/GobanBase";
 import { callbacks } from "../../src/Goban/callbacks";
 import WS from "jest-websocket-mock";
@@ -337,6 +338,30 @@ describe("onTap", () => {
             [0, 0, 0],
             [0, 0, 0],
         ]);
+    });
+
+    test("placing variation stones in analyze mode does not add marks to the nodes", () => {
+        const goban = new SVGRenderer(basic3x3Config({ moves: [[1, 1]], mode: "analyze" }));
+        const event_layer = goban.parent;
+
+        goban.enableStonePlacement();
+        goban.setAnalyzeTool("stone", "alternate");
+        simulateMouseClick(event_layer, { x: 0, y: 0 });
+        simulateMouseClick(event_layer, { x: 2, y: 0 });
+        simulateMouseClick(event_layer, { x: 0, y: 2 });
+
+        expect(goban.engine.board).toEqual([
+            [2, 0, 1],
+            [0, 1, 0],
+            [2, 0, 0],
+        ]);
+        let node: MoveTree | null = goban.engine.cur_move;
+        expect(node.move_number).toBe(4);
+        while (node && node.move_number > 1) {
+            expect(node.trunk).toBe(false);
+            expect(node.hasMarks()).toBe(false);
+            node = node.parent;
+        }
     });
 
     test("Clicking submits a move in one-click-submit mode", async () => {
@@ -1060,6 +1085,33 @@ describe("touch on the board blurs the chat field", () => {
             textarea.remove();
             goban.destroy();
         }
+    });
+
+    test.each([
+        [
+            "a review's controller blurs a focused input, so an edit commits",
+            "input",
+            1,
+            true,
+            false,
+        ],
+        ["a review's controller leaves a comment being typed alone", "textarea", 1, true, true],
+        ["a review's viewer leaves a focused input alone", "input", 1, false, true],
+        ["a game leaves a focused input alone", "input", undefined, false, true],
+    ])("mousedown on the board as %s", (_, tag, review_id, controller, kept) => {
+        const goban = new SVGRenderer(basic3x3Config({ review_id }));
+        (goban as any).isPlayerController = () => controller;
+        const input = document.createElement(tag);
+        document.body.appendChild(input);
+
+        input.focus();
+        (goban.event_layer ?? goban.parent).dispatchEvent(
+            new MouseEvent("mousedown", { bubbles: true, clientX: 15, clientY: 15 }),
+        );
+        expect(document.activeElement === input).toBe(kept);
+
+        input.remove();
+        goban.destroy();
     });
 
     test("a touch away from the board leaves the textarea focused", () => {

@@ -34,6 +34,7 @@ export * from "./Goban/themes";
 export * from "./Goban/themes/GobanTheme";
 export * from "./Goban/Goban";
 export * from "./Goban/InteractiveBase";
+export * from "./Goban/review_clock";
 export * from "./Goban/TestGoban"; // we export this for ui tests
 
 export * as protocol from "./engine/protocol";

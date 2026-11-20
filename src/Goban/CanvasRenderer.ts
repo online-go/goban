@@ -715,6 +715,16 @@ export class GobanCanvas extends Goban implements GobanCanvasInterface {
             if (!mouse_disabled) {
                 pointerDown(ev);
             }
+            // preventDefault keeps the focus, so blur an input for a review's
+            // controller here: the review clock editor commits on blur, before
+            // the move. A comment being typed keeps the focus.
+            if (
+                this.review_id &&
+                this.isPlayerController() &&
+                document.activeElement instanceof HTMLInputElement
+            ) {
+                document.activeElement.blur();
+            }
             ev.preventDefault();
             return false;
         });
