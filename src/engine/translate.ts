@@ -41,6 +41,8 @@ export interface GobanStrings {
     "Stone Removal Phase": string;
     "Enter the label you want to add to the board": string;
     "Error": string;
+    "Camera mode": string;
+    "Done": string;
     "Self-capture is not allowed": string;
     "The game would be repeating with that move, please play somewhere else first": string;
     "Auto-scoring failed, please manually score the game": string;

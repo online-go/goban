@@ -1163,3 +1163,90 @@ describe("touch on the board blurs the chat field (touchstart)", () => {
         goban.destroy();
     });
 });
+
+test("keeps the game and review node when swapping board painters", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const goban = new SVGRenderer({
+        board_div: host,
+        interactive: true,
+        square_size: 20,
+        width: 9,
+        height: 9,
+        mode: "analyze",
+    });
+    const engine = goban.engine;
+    engine.setAsCurrentReviewMove();
+    const review = engine.cur_review_move;
+    const element = document.createElement("canvas");
+    const dispose = jest.fn();
+    const pick = jest.fn(() => ({ x: 2, y: 3 }));
+    const invalidate = jest.fn();
+    const invalidateHover = jest.fn();
+    const attached = goban.switchBoardView({
+        element,
+        invalidate,
+        invalidateHover,
+        setTheme: jest.fn(),
+        pick,
+        unproject: jest.fn(),
+        dispose,
+    });
+
+    expect(attached).toBe(true);
+    invalidate.mockClear();
+    const input = goban.event_layer ?? host;
+    input.dispatchEvent(new MouseEvent("mousemove", { clientX: 20, clientY: 20 }));
+    expect(goban.boardViewHover).toEqual({ x: 2, y: 3 });
+    input.dispatchEvent(new MouseEvent("mouseout"));
+    expect(goban.boardViewHover).toBeUndefined();
+    expect(invalidateHover).toHaveBeenCalledTimes(2);
+    expect(invalidate).not.toHaveBeenCalled();
+
+    simulateMouseClick(input, { x: 0, y: 0 });
+    expect(pick).toHaveBeenCalled();
+    expect(engine.cur_move).toMatchObject({ x: 2, y: 3, move_number: 1 });
+    expect(element.isConnected).toBe(true);
+    expect(host.hasAttribute("data-goban-board-view")).toBe(true);
+
+    goban.switchBoardView();
+    expect(dispose).toHaveBeenCalledTimes(1);
+    expect(element.isConnected).toBe(false);
+    expect(host.hasAttribute("data-goban-board-view")).toBe(false);
+    expect(goban.engine).toBe(engine);
+    expect(engine.cur_review_move).toBe(review);
+    expect(engine.cur_move.move_number).toBe(1);
+
+    goban.destroy();
+    host.remove();
+});
+
+test("restores the SVG theme after leaving a board view", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const goban = new SVGRenderer({
+        board_div: host,
+        interactive: true,
+        square_size: 20,
+        width: 9,
+        height: 9,
+    });
+    const themes = goban.themes;
+    const setTheme = jest.spyOn(goban, "setTheme");
+    goban.switchBoardView({
+        element: document.createElement("canvas"),
+        invalidate: jest.fn(),
+        invalidateHover: jest.fn(),
+        setTheme: jest.fn(),
+        pick: jest.fn(),
+        unproject: jest.fn(),
+        dispose: jest.fn(),
+    });
+    expect(setTheme).not.toHaveBeenCalled();
+
+    goban.switchBoardView();
+    expect(setTheme).toHaveBeenCalledWith(themes, false);
+
+    goban.destroy();
+    host.remove();
+});

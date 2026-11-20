@@ -42,6 +42,7 @@ describe("AIReviewData", () => {
     });
 
     afterEach(() => {
+        mock_socket.disconnect();
         WS.clean();
     });
 
