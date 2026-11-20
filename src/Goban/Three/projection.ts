@@ -219,7 +219,8 @@ export class BoardProjection {
         this.distance = distance;
         // Keep depth precision for the closely spaced board face and slab.
         camera.near = 1;
-        camera.far = distance + Math.hypot(halfX, halfY) * (room ? 5 : 2) + 10;
+        // A room reaches its enclosing walls in every direction, including far corners.
+        camera.far = distance + (room ? 320 : Math.hypot(halfX, halfY) * 2 + 10);
         camera.position.set(
             centerX + distance * sin * Math.sin(yaw),
             distance * cos,
