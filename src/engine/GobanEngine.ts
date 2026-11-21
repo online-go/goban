@@ -2237,7 +2237,7 @@ export class GobanEngine extends BoardState {
                 ++pos;
                 let value = "";
 
-                while (sgf[pos] !== "]") {
+                while (sgf[pos] !== "]" && pos < sgf.length) {
                     if (sgf[pos] === "\n") {
                         line++;
                     }
@@ -2246,11 +2246,10 @@ export class GobanEngine extends BoardState {
                     }
                     value += sgf[pos++];
                 }
-                ret.push(value);
-
                 if (sgf[pos] !== "]") {
                     throw new Error("Expecting ']' to close a PropValue");
                 }
+                ret.push(value);
                 ++pos;
                 whitespace();
             }
