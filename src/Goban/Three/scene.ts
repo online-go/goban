@@ -171,7 +171,7 @@ function footOctagon(angle: number): number {
  * A floor goban's foot: the traced profile turned on a lathe, then pressed into lobes with
  * concave grooves on the bulb and into an octagon on the block. A face points along each diagonal.
  */
-function footGeometry(radius: number, legHeight: number): LatheGeometry {
+function footGeometry(radius: number, legHeight: number, textureSpan: number): LatheGeometry {
     const profile = footProfile.map(([r, h]) => new Vector2(r * radius, h * legHeight));
     const segments = 64;
     const geometry = new LatheGeometry(profile, segments);
@@ -200,6 +200,20 @@ function footGeometry(radius: number, legHeight: number): LatheGeometry {
             .normalize();
         normals.setXYZ(i, n.x, n.y, n.z);
         normals.setXYZ(last, n.x, n.y, n.z);
+    }
+    // Map the wood at the board's own scale with the grain running up the leg; the lathe's
+    // default UVs would stretch the whole texture around one small foot.
+    const uvs = geometry.getAttribute("uv");
+    const circumference = 2 * Math.PI * radius;
+    for (let column = 0; column <= segments; column++) {
+        for (let row = 0; row < rows; row++) {
+            const i = column * rows + row;
+            uvs.setXY(
+                i,
+                positions.getY(i) / textureSpan,
+                ((column / segments) * circumference) / textureSpan,
+            );
+        }
     }
     return geometry;
 }
@@ -593,7 +607,10 @@ export class BoardScene {
         const feet = floorBoardFeet(width, depth);
         for (const dx of [-1, 1]) {
             for (const dz of [-1, 1]) {
-                const geometry = footGeometry(feet.radius, legHeight);
+                // Turn the texture seam (the lathe's +z column) in under the board.
+                const geometry = footGeometry(feet.radius, legHeight, width).rotateY(
+                    Math.atan2(-dx, -dz),
+                );
                 shadeFoot(geometry, legHeight, dx, dz);
                 const foot = new Mesh(geometry, this.edgeMaterial);
                 foot.position.set(x + dx * feet.x, -thickness - legHeight - 0.003, y + dz * feet.z);
