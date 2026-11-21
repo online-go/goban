@@ -158,6 +158,26 @@ describe("decodeMoves", () => {
         ]);
     });
 
+    test("decodes a human-entered pass", () => {
+        expect(decodeMoves("pass", 19, 19, true)).toEqual([
+            { x: -1, y: -1, color: 0, edited: false },
+        ]);
+    });
+
+    test("decodes a pass alongside coordinates", () => {
+        expect(decodeMoves("D4pass", 19, 19)).toEqual([
+            { x: 3, y: 15, color: 0, edited: false },
+            { x: -1, y: -1, color: 0, edited: false },
+        ]);
+    });
+
+    test("bare pass remains a letter-encoded record", () => {
+        expect(decodeMoves("pass", 19, 19)).toEqual([
+            { x: 15, y: 0, color: 0, edited: false },
+            { x: 18, y: 18, color: 0, edited: false },
+        ]);
+    });
+
     test("converts JGOFMove to Array<JGOFMove>", () => {
         expect(decodeMoves({ x: 2, y: 2 }, 19, 19)).toEqual([{ x: 2, y: 2 }]);
     });
