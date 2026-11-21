@@ -26,6 +26,9 @@ import {
 /**
  *  Decodes any of the various ways we express moves that we've accumulated over the years into
  * a unified `JGOFMove[]`.
+ *
+ * `human_input` allows a bare `"pass"` to be treated as a pass; without it, `"pass"` is a valid
+ * letter-encoded record of the moves `pa` and `ss`.
  */
 export function decodeMoves(
     move_obj:
@@ -38,6 +41,7 @@ export function decodeMoves(
         | undefined,
     width: number,
     height: number,
+    human_input = false,
 ): JGOFMove[] {
     const ret: Array<JGOFMove> = [];
 
@@ -91,14 +95,18 @@ export function decodeMoves(
             );
         }
 
-        if (/[a-zA-Z][0-9]/.test(move_obj)) {
+        if (/[a-zA-Z][0-9]/.test(move_obj) || (human_input && move_obj.toLowerCase() === "pass")) {
             /* coordinate form, used from human input. */
             const move_string = move_obj;
 
-            const moves = move_string.split(/([a-zA-Z][0-9]+|pass|[.][.])/);
+            const moves = move_string.split(/([a-zA-Z][0-9]+|pass|[.][.])/i);
             for (let i = 0; i < moves.length; ++i) {
                 if (i % 2) {
                     /* even are the 'splits', which should always be blank unless there is an error */
+                    if (moves[i].toLowerCase() === "pass" || moves[i] === "..") {
+                        ret.push({ x: -1, y: -1, edited: false, color: 0 });
+                        continue;
+                    }
                     let x = pretty_char2num(moves[i][0]);
                     let y = height - parseInt(moves[i].substring(1));
                     if ((width && x >= width) || x < 0) {

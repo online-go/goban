@@ -1621,12 +1621,12 @@ export abstract class GobanInteractive extends GobanBase {
         color: JGOFNumericPlayerColor,
         isTrunkMove?: boolean,
     ): void {
-        for (const mv of this.engine.decodeMoves(coordinates)) {
+        for (const mv of this.engine.decodeMoves(coordinates, true)) {
             this.engine.editPlace(mv.x, mv.y, color, isTrunkMove);
         }
     }
     public placeByPrettyCoordinates(coordinates: string): void {
-        for (const mv of this.engine.decodeMoves(coordinates)) {
+        for (const mv of this.engine.decodeMoves(coordinates, true)) {
             const removed_stones: Array<JGOFIntersection> = [];
             const removed_count = this.engine.place(
                 mv.x,
@@ -1649,7 +1649,7 @@ export abstract class GobanInteractive extends GobanBase {
         }
     }
     public tapByPrettyCoordinates(coordinates: string): void {
-        const moves = this.engine.decodeMoves(coordinates);
+        const moves = this.engine.decodeMoves(coordinates, true);
         if (moves.length === 0) {
             throw new Error("Invalid coordinates");
         }

@@ -827,8 +827,9 @@ export class GobanEngine extends BoardState {
             | JGOFMove[]
             | [object]
             | undefined,
+        human_input = false,
     ): JGOFMove[] {
-        return decodeMoves(move_obj, this.width, this.height);
+        return decodeMoves(move_obj, this.width, this.height, human_input);
     }
 
     /* Encodes a move list like `[{x: 0, y: 0}, {x:1, y:2}]` into our move string
