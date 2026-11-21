@@ -71,7 +71,7 @@ export function boardDimensions(bounds: Bounds, style: ThreeBoardStyle = "tablet
 }
 
 export function floorBoardFeet(width: number, depth: number) {
-    const radius = Math.min(width, depth) * 0.064;
+    const radius = Math.min(width, depth) * 0.058;
     return { radius, x: width / 2 - radius * 1.22, z: depth / 2 - radius * 1.22 };
 }
 
