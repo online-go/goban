@@ -240,7 +240,7 @@ function shadeFoot(geometry: BufferGeometry, legHeight: number, dx: number, dz: 
         const groove = radial > 1e-6 ? footGroove(Math.atan2(x, z)) : 0;
         const inGroove = 1 - 0.32 * footLobeWeight(y / legHeight) * groove;
         const overhang = 1 - 0.35 * Math.max(0, -normals.getY(i));
-        const light = (0.6 + 0.25 * outward) * underBoard * onFloor * inGroove * overhang;
+        const light = (0.22 + 0.63 * outward ** 1.4) * underBoard * onFloor * inGroove * overhang;
         colors.fill(light, i * 3, i * 3 + 3);
     }
     geometry.setAttribute("color", new BufferAttribute(colors, 3));
