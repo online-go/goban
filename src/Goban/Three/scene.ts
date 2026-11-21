@@ -25,6 +25,7 @@ import {
     Group,
     InstancedMesh,
     LatheGeometry,
+    MathUtils,
     Mesh,
     MeshBasicMaterial,
     MeshStandardMaterial,
@@ -116,10 +117,76 @@ function shadowTexture(): CanvasTexture {
     return texture;
 }
 
+/** Lobes around a floor goban's foot, like the ridges of a gardenia fruit. */
+const footLobes = 8;
+
 /**
- * Bakes occlusion into a floor goban's foot. Feet stand in the gap under the board, so they
- * see less sky than the board's sides: darker overall, darkest where they meet the board and
- * the floor, and darkest on the side facing in under the board. `dx`/`dz` give the corner.
+ * Side profile of a floor goban's foot, traced from photos: a squat bulb, a short neck and a
+ * collar under the board. Radii are relative to the widest point, heights to the leg height.
+ */
+const footProfile = [
+    [0, 0],
+    [0.62, 0],
+    [0.79, 0.03],
+    [0.93, 0.12],
+    [1, 0.27],
+    [0.98, 0.42],
+    [0.88, 0.56],
+    [0.72, 0.68],
+    [0.6, 0.76],
+    [0.62, 0.82],
+    [0.72, 0.86],
+    [0.74, 0.95],
+    [0.7, 1],
+    [0, 1],
+];
+
+/** How deep the grooves between lobes cut at relative height `h`: full on the bulb, gone at the collar. */
+function footGrooveDepth(h: number): number {
+    return 0.14 * MathUtils.smoothstep(h, 0, 0.1) * (1 - MathUtils.smoothstep(h, 0.62, 0.8));
+}
+
+/** 0 at a lobe's crest, 1 at the bottom of the groove between two lobes. */
+function footGroove(angle: number): number {
+    return (1 - Math.abs(Math.cos((footLobes / 2) * angle))) ** 1.5;
+}
+
+/**
+ * A floor goban's foot: the traced profile turned on a lathe, then pressed in between lobes
+ * so it gets rounded lobes with concave grooves. A lobe faces each diagonal.
+ */
+function footGeometry(radius: number, legHeight: number): LatheGeometry {
+    const profile = footProfile.map(([r, h]) => new Vector2(r * radius, h * legHeight));
+    const segments = 64;
+    const geometry = new LatheGeometry(profile, segments);
+    const positions = geometry.getAttribute("position");
+    for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const z = positions.getZ(i);
+        const scale =
+            1 - footGrooveDepth(positions.getY(i) / legHeight) * footGroove(Math.atan2(x, z));
+        positions.setXYZ(i, x * scale, positions.getY(i), z * scale);
+    }
+    geometry.computeVertexNormals();
+    // The lathe repeats its first column as its last; share their normals so no seam shows.
+    const normals = geometry.getAttribute("normal");
+    const rows = profile.length;
+    for (let i = 0; i < rows; i++) {
+        const last = segments * rows + i;
+        const n = new Vector3()
+            .fromBufferAttribute(normals, i)
+            .add(new Vector3().fromBufferAttribute(normals, last))
+            .normalize();
+        normals.setXYZ(i, n.x, n.y, n.z);
+        normals.setXYZ(last, n.x, n.y, n.z);
+    }
+    return geometry;
+}
+
+/**
+ * Bakes occlusion into a floor goban's foot. The side facing out from under the board still
+ * catches light; it darkens where the foot meets the board and the floor, on the side facing
+ * in under the board, and in the grooves between lobes. `dx`/`dz` give the corner.
  */
 function shadeFoot(geometry: BufferGeometry, legHeight: number, dx: number, dz: number): void {
     const positions = geometry.getAttribute("position");
@@ -131,9 +198,11 @@ function shadeFoot(geometry: BufferGeometry, legHeight: number, dx: number, dz: 
         const radial = Math.hypot(x, z);
         // 1 on the side facing out from under the board, 0 facing its centre.
         const outward = radial > 1e-6 ? 0.5 + (0.5 * (x * dx + z * dz)) / (radial * Math.SQRT2) : 0;
-        const underBoard = 1 - 0.45 * Math.exp(-(legHeight - y) / (0.18 * legHeight));
+        const underBoard = 1 - 0.55 * Math.exp(-(legHeight - y) / (0.18 * legHeight));
         const onFloor = 1 - 0.5 * Math.exp(-y / (0.22 * legHeight));
-        const light = (0.3 + 0.18 * outward) * underBoard * onFloor;
+        const groove = radial > 1e-6 ? footGroove(Math.atan2(x, z)) : 0;
+        const inGroove = 1 - 2 * footGrooveDepth(y / legHeight) * groove;
+        const light = (0.6 + 0.25 * outward) * underBoard * onFloor * inGroove;
         colors.fill(light, i * 3, i * 3 + 3);
     }
     geometry.setAttribute("color", new BufferAttribute(colors, 3));
@@ -498,24 +567,11 @@ export class BoardScene {
             return;
         }
         const feet = floorBoardFeet(width, depth);
-        const profile = [
-            [0, 0],
-            [0.56, 0],
-            [0.77, 0.06],
-            [0.89, 0.19],
-            [0.85, 0.38],
-            [0.67, 0.55],
-            [0.68, 0.68],
-            [0.83, 0.83],
-            [1, 0.94],
-            [1, 1],
-            [0, 1],
-        ].map(([r, h]) => new Vector2(r * feet.radius, h * legHeight));
         for (const dx of [-1, 1]) {
             for (const dz of [-1, 1]) {
-                const footGeometry = new LatheGeometry(profile, 24);
-                shadeFoot(footGeometry, legHeight, dx, dz);
-                const foot = new Mesh(footGeometry, this.edgeMaterial);
+                const geometry = footGeometry(feet.radius, legHeight);
+                shadeFoot(geometry, legHeight, dx, dz);
+                const foot = new Mesh(geometry, this.edgeMaterial);
                 foot.position.set(x + dx * feet.x, -thickness - legHeight - 0.003, y + dz * feet.z);
                 foot.castShadow = foot.receiveShadow = showRoom;
                 this.board.add(foot);
