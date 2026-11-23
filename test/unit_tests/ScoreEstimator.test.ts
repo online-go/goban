@@ -398,6 +398,31 @@ describe("ScoreEstimator", () => {
         expect(local.win_rate).toBeUndefined();
     });
 
+    test("the goban sees the new win rate when it is told of each estimate", async () => {
+        let win_rate = 0.2;
+        init_remote_ownership_estimator(async () => ({
+            ownership: OWNERSHIP,
+            score: 1.5,
+            win_rate,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
+        }));
+
+        const seen: Array<number | undefined> = [];
+        const fake_goban = {
+            updateScoreEstimation: () => seen.push(se.win_rate),
+            setForRemoval: jest.fn(),
+        };
+        const se: ScoreEstimator = new ScoreEstimator(engine, fake_goban as any, 10, 0.5, true);
+        await se.when_ready;
+
+        win_rate = 0.8;
+        await se.estimateScore(10, 0.5, false);
+
+        expect(seen).toEqual([0.2, 0.8]);
+    });
+
     test("local scorer with stones removed", async () => {
         set_local_ownership_estimator(voronoi_estimate_ownership);
         const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
