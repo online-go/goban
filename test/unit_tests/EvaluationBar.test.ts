@@ -67,6 +67,7 @@ test("the evaluation is stored and clamped", () => {
     goban.evaluation = 0.8;
     expect(goban.evaluation).toBe(0.8);
     expect(goban.evaluation_bar_div!.style.height).toBe("80%");
+    expect(goban.evaluation_bar_div!.style.top).toBe("0px");
     goban.evaluation = 1.7;
     expect(goban.evaluation).toBe(1);
     goban.destroy();

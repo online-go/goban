@@ -314,7 +314,7 @@ export abstract class Goban extends OGSConnectivity {
         bar.style.position = "absolute";
         bar.style.right = "0";
         bar.style.left = "0";
-        bar.style.bottom = "0";
+        bar.style.top = "0";
         bar.style.backgroundColor = "#112";
         bar.style.height = `${this._evaluation * 100}%`;
         bar.style.transition = "height 0.3s ease-in-out";
@@ -329,6 +329,10 @@ export abstract class Goban extends OGSConnectivity {
         (this.parent.shadowRoot ?? this.parent).appendChild(container);
     }
 
+    /**
+     * Black's share of the evaluation bar, from 0 to 1. Black fills the bar
+     * from the top, as Black is on top in the AI review chart.
+     */
     set evaluation(value: number) {
         value = Math.max(0, Math.min(1, value));
         this._evaluation = value;
