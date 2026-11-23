@@ -30,14 +30,23 @@ import { BoardState } from "./BoardState";
  * remote scoring enabled.
  */
 
+/**
+ * A position for a remote scorer. The scorer must apply `komi` and, when the
+ * rules count them, the prisoners, so that its `score` and `win_rate` are
+ * those of the game and need no correction.
+ */
 export interface ScoreEstimateRequest {
     player_to_move: "black" | "white";
     width: number;
     height: number;
     board_state: JGOFNumericPlayerColor[][];
     rules: GobanEngineRules;
+    /** Stones that Black has captured */
     black_prisoners?: number;
+    /** Stones that White has captured */
     white_prisoners?: number;
+    /** All points that White gets apart from the board: the komi of the
+     * game plus, when the rules give them, the points for handicap stones */
     komi?: number;
     jwt: string;
 
@@ -51,10 +60,12 @@ export interface ScoreEstimateResponse {
     /** Matrix of ownership estimates ranged from -1 (white) to 1 (black) */
     ownership: number[][];
 
-    /** Estimated score */
+    /** Estimated score, positive when Black leads, with the komi and the
+     * prisoners of the request applied */
     score?: number;
 
-    /** Estimated win rate */
+    /** Estimated win rate of Black, for the komi and the prisoners of the
+     * request */
     win_rate?: number;
 
     /** Board state after autoscoring logic has been run. Only defined if autoscore was true in the request. */
@@ -186,11 +197,6 @@ export class ScoreEstimator extends BoardState {
     }
 
     private estimateScoreRemote(autoscore: boolean): Promise<void> {
-        const komi = this.engine.komi;
-        const captures_delta = this.engine.score_prisoners
-            ? this.engine.getBlackPrisoners() - this.engine.getWhitePrisoners()
-            : 0;
-
         return new Promise<void>((resolve, reject) => {
             if (!remote_estimate_ownership) {
                 throw new Error("Remote scoring not setup");
@@ -211,6 +217,9 @@ export class ScoreEstimator extends BoardState {
                 height: this.engine.height,
                 rules: this.engine.rules,
                 board_state: board_state,
+                komi: this.engine.komi + this.engine.getHandicapPointAdjustmentForWhite(),
+                black_prisoners: this.engine.getBlackPrisoners(),
+                white_prisoners: this.engine.getWhitePrisoners(),
                 autoscore: autoscore,
                 jwt: "", // this gets set by the remote_scorer method
             })
@@ -222,13 +231,6 @@ export class ScoreEstimator extends BoardState {
                         }
                     }
 
-                    if (!res.score) {
-                        res.score = 0;
-                    }
-
-                    res.score += 7.5 - komi; // we always ask katago to use 7.5 komi, so correct if necessary
-                    res.score += captures_delta;
-                    res.score -= this.engine.getHandicapPointAdjustmentForWhite();
                     this.autoscored_removed = res.autoscored_removed;
                     this.autoscored_state = res.autoscored_board_state;
                     this.autoscored_needs_sealing = res.autoscored_needs_sealing;

@@ -323,7 +323,63 @@ describe("ScoreEstimator", () => {
         ]);
     });
 
-    test("remote scorers do not need to set score", async () => {
+    test("sends the komi, the handicap points and the prisoners to the remote scorer", async () => {
+        const engine = new GobanEngine({
+            komi: 0.5,
+            handicap: 3,
+            width: 4,
+            height: 2,
+            rules: "chinese",
+        });
+        engine.black_prisoners = 2;
+        engine.white_prisoners = 5;
+        const remote = jest.fn(async () => ({
+            ownership: OWNERSHIP,
+            score: 1.5,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
+        }));
+        init_remote_ownership_estimator(remote);
+
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
+        await se.when_ready;
+
+        expect(remote).toHaveBeenCalledWith(
+            expect.objectContaining({
+                rules: "chinese",
+                komi: 3.5,
+                black_prisoners: 2,
+                white_prisoners: 5,
+            }),
+        );
+    });
+
+    test("uses the remote scorer's score without a correction", async () => {
+        const engine = new GobanEngine({
+            komi: 0.5,
+            handicap: 3,
+            width: 4,
+            height: 2,
+            rules: "japanese",
+        });
+        engine.black_prisoners = 4;
+        init_remote_ownership_estimator(async () => ({
+            ownership: OWNERSHIP,
+            score: -2.5,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
+        }));
+
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
+        await se.when_ready;
+
+        expect(se.winner).toBe("White");
+        expect(se.amount).toBe(2.5);
+    });
+
+    test("counts the ownership when the remote scorer sets no score", async () => {
         const engine = new GobanEngine({ komi: 3.5, width: 4, height: 2, rules: "chinese" });
         engine.place(1, 0);
         engine.place(2, 0);
@@ -341,13 +397,9 @@ describe("ScoreEstimator", () => {
         await se.when_ready;
 
         expect(se.ownership).toEqual(OWNERSHIP);
-        expect(se.winner).toBe("Black");
-        // I'm not actually sure this is the "right" behavior when the
-        // remote scorer doesn't return a score.  I would think it would
-        // derive the score from the ownership map.  Instead, it assumes
-        // missing score means zero, and compensates for a komi of 7.5..
-        //   - bpj
-        expect(se.amount).toBe(4);
+        // The ownership is even, so White leads by the komi.
+        expect(se.winner).toBe("White");
+        expect(se.amount).toBe(3.5);
     });
 
     test("keeps the remote scorer's win rate, and has none from the local scorer", async () => {
