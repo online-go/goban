@@ -128,6 +128,8 @@ export class ScoreEstimator extends BoardState {
     winner: string = "";
     color_to_move: "black" | "white";
     estimated_hard_score: number;
+    /** Black's win rate, when the remote scorer provides one */
+    win_rate?: number;
     when_ready: Promise<void>;
     prefer_remote: boolean;
     autoscored_state?: JGOFNumericPlayerColor[][];
@@ -248,6 +250,7 @@ export class ScoreEstimator extends BoardState {
                         // be removed. - anoek 2024-06-01
                         this.updateEstimate(score_estimate, res.ownership, res.score);
                     }
+                    this.win_rate = res.win_rate;
                     resolve();
                 })
                 .catch((err: any) => {

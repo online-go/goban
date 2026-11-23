@@ -350,6 +350,25 @@ describe("ScoreEstimator", () => {
         expect(se.amount).toBe(4);
     });
 
+    test("keeps the remote scorer's win rate, and has none from the local scorer", async () => {
+        init_remote_ownership_estimator(async () => ({
+            ownership: OWNERSHIP,
+            score: -7.5,
+            win_rate: 0.63,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
+        }));
+
+        const remote = new ScoreEstimator(engine, undefined, 10, 0.5, true);
+        await remote.when_ready;
+        expect(remote.win_rate).toBe(0.63);
+
+        const local = new ScoreEstimator(engine, undefined, 10, 0.5, false);
+        await local.when_ready;
+        expect(local.win_rate).toBeUndefined();
+    });
+
     test("local scorer with stones removed", async () => {
         set_local_ownership_estimator(voronoi_estimate_ownership);
         const se = new ScoreEstimator(engine, undefined, 10, 0.5, false);
