@@ -234,6 +234,8 @@ export class ScoreEstimator extends BoardState {
                     this.autoscored_removed = res.autoscored_removed;
                     this.autoscored_state = res.autoscored_board_state;
                     this.autoscored_needs_sealing = res.autoscored_needs_sealing;
+                    // Set before updateEstimate, which notifies the goban.
+                    this.win_rate = res.win_rate;
 
                     if (this.autoscored_state) {
                         this.updateEstimate(
@@ -252,7 +254,6 @@ export class ScoreEstimator extends BoardState {
                         // be removed. - anoek 2024-06-01
                         this.updateEstimate(score_estimate, res.ownership, res.score);
                     }
-                    this.win_rate = res.win_rate;
                     resolve();
                 })
                 .catch((err: any) => {
