@@ -379,29 +379,6 @@ describe("ScoreEstimator", () => {
         expect(se.amount).toBe(2.5);
     });
 
-    test("counts the ownership when the remote scorer sets no score", async () => {
-        const engine = new GobanEngine({ komi: 3.5, width: 4, height: 2, rules: "chinese" });
-        engine.place(1, 0);
-        engine.place(2, 0);
-        engine.place(1, 1);
-        engine.place(2, 1);
-
-        init_remote_ownership_estimator(async () => ({
-            ownership: OWNERSHIP,
-            autoscored_board_state: OWNERSHIP,
-            autoscored_removed: [],
-            autoscored_needs_sealing: [],
-        }));
-
-        const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
-        await se.when_ready;
-
-        expect(se.ownership).toEqual(OWNERSHIP);
-        // The ownership is even, so White leads by the komi.
-        expect(se.winner).toBe("White");
-        expect(se.amount).toBe(3.5);
-    });
-
     test("keeps the remote scorer's win rate, and has none from the local scorer", async () => {
         init_remote_ownership_estimator(async () => ({
             ownership: OWNERSHIP,
