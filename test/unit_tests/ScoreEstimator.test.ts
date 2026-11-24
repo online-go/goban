@@ -323,15 +323,50 @@ describe("ScoreEstimator", () => {
         ]);
     });
 
-    test("remote scorers do not need to set score", async () => {
-        const engine = new GobanEngine({ komi: 3.5, width: 4, height: 2, rules: "chinese" });
-        engine.place(1, 0);
-        engine.place(2, 0);
-        engine.place(1, 1);
-        engine.place(2, 1);
+    test("sends the komi, the handicap points and the prisoners to the remote scorer", async () => {
+        const engine = new GobanEngine({
+            komi: 0.5,
+            handicap: 3,
+            width: 4,
+            height: 2,
+            rules: "chinese",
+        });
+        engine.black_prisoners = 2;
+        engine.white_prisoners = 5;
+        const remote = jest.fn(async () => ({
+            ownership: OWNERSHIP,
+            score: 1.5,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
+        }));
+        init_remote_ownership_estimator(remote);
 
+        const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
+        await se.when_ready;
+
+        expect(remote).toHaveBeenCalledWith(
+            expect.objectContaining({
+                rules: "chinese",
+                komi: 3.5,
+                black_prisoners: 2,
+                white_prisoners: 5,
+            }),
+        );
+    });
+
+    test("uses the remote scorer's score without a correction", async () => {
+        const engine = new GobanEngine({
+            komi: 0.5,
+            handicap: 3,
+            width: 4,
+            height: 2,
+            rules: "japanese",
+        });
+        engine.black_prisoners = 4;
         init_remote_ownership_estimator(async () => ({
             ownership: OWNERSHIP,
+            score: -2.5,
             autoscored_board_state: OWNERSHIP,
             autoscored_removed: [],
             autoscored_needs_sealing: [],
@@ -340,14 +375,52 @@ describe("ScoreEstimator", () => {
         const se = new ScoreEstimator(engine, undefined, 10, 0.5, true);
         await se.when_ready;
 
-        expect(se.ownership).toEqual(OWNERSHIP);
-        expect(se.winner).toBe("Black");
-        // I'm not actually sure this is the "right" behavior when the
-        // remote scorer doesn't return a score.  I would think it would
-        // derive the score from the ownership map.  Instead, it assumes
-        // missing score means zero, and compensates for a komi of 7.5..
-        //   - bpj
-        expect(se.amount).toBe(4);
+        expect(se.winner).toBe("White");
+        expect(se.amount).toBe(2.5);
+    });
+
+    test("keeps the remote scorer's win rate, and has none from the local scorer", async () => {
+        init_remote_ownership_estimator(async () => ({
+            ownership: OWNERSHIP,
+            score: -7.5,
+            win_rate: 0.63,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
+        }));
+
+        const remote = new ScoreEstimator(engine, undefined, 10, 0.5, true);
+        await remote.when_ready;
+        expect(remote.win_rate).toBe(0.63);
+
+        const local = new ScoreEstimator(engine, undefined, 10, 0.5, false);
+        await local.when_ready;
+        expect(local.win_rate).toBeUndefined();
+    });
+
+    test("the goban sees the new win rate when it is told of each estimate", async () => {
+        let win_rate = 0.2;
+        init_remote_ownership_estimator(async () => ({
+            ownership: OWNERSHIP,
+            score: 1.5,
+            win_rate,
+            autoscored_board_state: OWNERSHIP,
+            autoscored_removed: [],
+            autoscored_needs_sealing: [],
+        }));
+
+        const seen: Array<number | undefined> = [];
+        const fake_goban = {
+            updateScoreEstimation: () => seen.push(se.win_rate),
+            setForRemoval: jest.fn(),
+        };
+        const se: ScoreEstimator = new ScoreEstimator(engine, fake_goban as any, 10, 0.5, true);
+        await se.when_ready;
+
+        win_rate = 0.8;
+        await se.estimateScore(10, 0.5, false);
+
+        expect(seen).toEqual([0.2, 0.8]);
     });
 
     test("local scorer with stones removed", async () => {

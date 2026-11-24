@@ -271,38 +271,71 @@ export abstract class Goban extends OGSConnectivity {
         this.title_div = config["title_div"];
 
         if (config.evaluation_bar) {
-            this.parent.style.position = "relative";
-            this.evaluation_bar_container = document.createElement("div");
-            this.evaluation_bar_container.style.position = "absolute";
-            this.evaluation_bar_container.style.top = "0";
-            this.evaluation_bar_container.style.left = "-1rem";
-            this.evaluation_bar_container.style.bottom = "0";
-            this.evaluation_bar_container.style.width = "0.5rem";
-            this.evaluation_bar_container.style.backgroundColor = "white";
-            this.evaluation_bar_container.style.marginRight = "4px";
-            this.evaluation_bar_container.style.overflow = "hidden";
-            //this.evaluation_bar_container.style.border = "1px solid #333";
-            this.evaluation_bar_div = document.createElement("div");
-            this.evaluation_bar_div.style.position = "absolute";
-            this.evaluation_bar_div.style.right = "0";
-            this.evaluation_bar_div.style.left = "0";
-            this.evaluation_bar_div.style.bottom = "0";
-            this.evaluation_bar_div.style.backgroundColor = "#112";
-            this.evaluation_bar_div.style.height = `${this._evaluation * 100}%`;
-            this.evaluation_bar_div.style.transition = "height 0.3s ease-in-out";
-            this.evaluation_bar_div.style.zIndex = "1000";
-            this.evaluation_bar_div.style.width = "100%";
-            this.evaluation_bar_container.appendChild(this.evaluation_bar_div);
-            this.evaluation_bar_container.style.border = "1px solid #666";
-            this.parent.appendChild(this.evaluation_bar_container);
+            this.createEvaluationBar();
         }
     }
     public override destroy(): void {
         super.destroy();
     }
 
+    /**
+     * Shows or hides the evaluation bar beside the board. When the board is
+     * sized from a display width, it is sized again so that the board and
+     * the bar together fit that width.
+     */
+    public setEvaluationBar(enabled: boolean): void {
+        if (enabled === !!this.evaluation_bar_container) {
+            return;
+        }
+        if (enabled) {
+            this.createEvaluationBar();
+        } else {
+            this.evaluation_bar_container?.remove();
+            delete this.evaluation_bar_container;
+            delete this.evaluation_bar_div;
+        }
+        if (this.display_width && this.original_square_size === "auto") {
+            this.setSquareSizeBasedOnDisplayWidth(this.display_width);
+        }
+        this.emit("evaluation-bar.updated", enabled);
+    }
+
+    private createEvaluationBar(): void {
+        this.parent.style.position = "relative";
+        const container = document.createElement("div");
+        container.style.position = "absolute";
+        container.style.top = "0";
+        container.style.bottom = "0";
+        container.style.boxSizing = "border-box";
+        container.style.backgroundColor = "white";
+        container.style.overflow = "hidden";
+        container.style.border = "1px solid #666";
+        const bar = document.createElement("div");
+        bar.style.position = "absolute";
+        bar.style.right = "0";
+        bar.style.left = "0";
+        bar.style.top = "0";
+        bar.style.backgroundColor = "#112";
+        bar.style.height = `${this._evaluation * 100}%`;
+        bar.style.transition = "height 0.3s ease-in-out";
+        bar.style.zIndex = "1000";
+        bar.style.width = "100%";
+        container.appendChild(bar);
+        this.evaluation_bar_container = container;
+        this.evaluation_bar_div = bar;
+        this.evaluation_bar_width = this._evaluation_bar_width;
+        // The SVG renderer keeps its layers in a shadow root; the bar goes
+        // beside them once that exists.
+        (this.parent.shadowRoot ?? this.parent).appendChild(container);
+    }
+
+    /**
+     * Black's share of the evaluation bar, from 0 to 1. Black fills the bar
+     * from the top, as Black is on top in the AI review chart.
+     */
     set evaluation(value: number) {
         value = Math.max(0, Math.min(1, value));
+        this._evaluation = value;
         if (this.evaluation_bar_div) {
             this.evaluation_bar_div.style.height = `${value * 100}%`;
         }
@@ -595,7 +628,7 @@ export abstract class Goban extends OGSConnectivity {
         this._evaluation_bar_width = Math.max(0, Math.round(width));
         if (this.evaluation_bar_container && this.evaluation_bar_div) {
             this.evaluation_bar_container.style.width = `${this._evaluation_bar_width}px`;
-            this.evaluation_bar_container.style.left = `-${this._evaluation_bar_width + 8}px`;
+            this.evaluation_bar_container.style.left = `-${this._evaluation_bar_width + Goban.EVALUATION_BAR_GAP}px`;
             this.evaluation_bar_div.style.width = `${this._evaluation_bar_width}px`;
         }
     }
@@ -603,6 +636,9 @@ export abstract class Goban extends OGSConnectivity {
     get evaluation_bar_width(): number {
         return this._evaluation_bar_width;
     }
+
+    /** Space between the evaluation bar and the board, in pixels */
+    public static EVALUATION_BAR_GAP = 8;
 
     public static computeEvaluationBarWidth(display_width: number): number {
         return Math.max(8, Math.round(display_width * 0.03));
@@ -645,8 +681,11 @@ export abstract class Goban extends OGSConnectivity {
             return Math.floor(display_width / fallback_n_squares);
         }
 
+        // The bar and its gap sit to the left of the board; the same space is
+        // reserved on the right so a centered board leaves room for them.
         if (config.evaluation_bar) {
-            display_width -= Goban.computeEvaluationBarWidth(display_width) * 2;
+            display_width -=
+                (Goban.computeEvaluationBarWidth(display_width) + Goban.EVALUATION_BAR_GAP) * 2;
         }
 
         return Math.floor(display_width / n_squares);

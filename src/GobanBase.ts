@@ -76,6 +76,7 @@ export interface GobanConfig extends GobanEngineConfig, PuzzleConfig {
     interactive?: boolean;
     mode?: GobanModes;
     square_size?: number | ((goban: GobanBase) => number) | "auto";
+    /** Show the evaluation bar beside the board; see `Goban.setEvaluationBar` */
     evaluation_bar?: boolean;
 
     getPuzzlePlacementSetting?: () => PuzzlePlacementSetting;
@@ -195,6 +196,8 @@ export interface GobanEvents extends StateUpdateEvents {
     "gamedata": (d: any) => void;
     "chat": (d: any) => void;
     "engine.updated": (engine: GobanEngine) => void;
+    /** The evaluation bar was shown or hidden, and the board sized for it */
+    "evaluation-bar.updated": (shown: boolean) => void;
     "load": (config: GobanConfig) => void;
     "show-message": (message: {
         formatted: string;
