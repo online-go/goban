@@ -103,9 +103,7 @@ class ThreeBoardView implements BoardView {
             document.addEventListener("visibilitychange", this.onVisibility, { signal });
             this.element.addEventListener("webglcontextlost", this.onContextLost, { signal });
             this.orbitHost = host;
-            const touchInput = matchMedia("(any-pointer: coarse)");
-            touchInput.addEventListener("change", this.updateCameraButton, { signal });
-            this.updateCameraButton(touchInput);
+            this.updateCameraButton();
             window.addEventListener("keydown", this.onOrbitKeyDown, { signal });
             window.addEventListener("keyup", this.onOrbitKeyUp, { signal });
             window.addEventListener("blur", this.stopOrbit, { signal });
@@ -133,8 +131,9 @@ class ThreeBoardView implements BoardView {
         }
     }
 
-    private updateCameraButton = (input: MediaQueryList | MediaQueryListEvent): void => {
-        if (!input.matches || this.owner.options.fixedCoordinates) {
+    /** Camera mode turns any drag on the board, by touch or mouse, into an orbit. */
+    private updateCameraButton = (): void => {
+        if (this.owner.options.fixedCoordinates) {
             this.setCameraMode(false);
             this.cameraButton?.remove();
             this.cameraButton = undefined;
