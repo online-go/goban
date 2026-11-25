@@ -71,15 +71,46 @@ export async function createThreeGoban(
     return enableThreeGoban(goban, config.three);
 }
 
+let threeBackend: Promise<typeof import("./Three/backend")> | undefined;
+let threeImportStarted = false;
+
+function loadThreeBackend(): Promise<typeof import("./Three/backend")> {
+    if (!threeBackend) {
+        if (
+            !threeImportStarted &&
+            typeof performance !== "undefined" &&
+            typeof performance.mark === "function"
+        ) {
+            performance.mark("goban-three:import-start");
+        }
+        threeImportStarted = true;
+        threeBackend = import(/* webpackChunkName: "goban-three" */ "./Three/backend")
+            .then((backend) => {
+                if (typeof performance !== "undefined" && typeof performance.mark === "function") {
+                    performance.mark("goban-three:import-end");
+                }
+                return backend;
+            })
+            .catch((error: unknown) => {
+                threeBackend = undefined;
+                throw error;
+            });
+    }
+    return threeBackend;
+}
+
+/** Start loading the 3D board code. Safe to call many times; the code is loaded once. */
+export function preloadThreeGoban(): Promise<void> {
+    return loadThreeBackend().then(() => undefined);
+}
+
 /** Load browser-only code and attach it to an existing goban without changing its state. */
 export async function enableThreeGoban(
     goban: SVGRenderer,
     options: ThreeRendererOptions = {},
 ): Promise<ThreeRenderer> {
     try {
-        const { attachThree } = await import(
-            /* webpackChunkName: "goban-three" */ "./Three/backend"
-        );
+        const { attachThree } = await loadThreeBackend();
         return attachThree(goban, options);
     } catch (error) {
         options.onFallback?.(error);

@@ -58,10 +58,18 @@ import type { BoardProjection } from "./projection";
 import { lightingPresets, type LightingPreferences } from "./lighting";
 import type { Appearance } from "./appearance";
 import { RoomScene } from "./room";
+import { cachedTextureCanvas } from "./roomTextures";
 
 const initialCapacity = 25 * 25;
 
 function woodTexture(): CanvasTexture {
+    const texture = new CanvasTexture(cachedTextureCanvas("woodTexture", drawWood));
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+    return texture;
+}
+
+function drawWood(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
     canvas.height = 512;
@@ -89,13 +97,16 @@ function woodTexture(): CanvasTexture {
         }
     }
     context.putImageData(image, 0, 0);
-    const texture = new CanvasTexture(canvas);
-    texture.colorSpace = SRGBColorSpace;
-    texture.anisotropy = 4;
-    return texture;
+    return canvas;
 }
 
 function shadowTexture(): CanvasTexture {
+    const texture = new CanvasTexture(cachedTextureCanvas("shadowTexture", drawShadow));
+    texture.colorSpace = SRGBColorSpace;
+    return texture;
+}
+
+function drawShadow(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
     canvas.width = 64;
     canvas.height = 64;
@@ -112,9 +123,7 @@ function shadowTexture(): CanvasTexture {
     gradient.addColorStop(1, "rgba(255,255,255,0)");
     context.fillStyle = gradient;
     context.fillRect(0, 0, 64, 64);
-    const texture = new CanvasTexture(canvas);
-    texture.colorSpace = SRGBColorSpace;
-    return texture;
+    return canvas;
 }
 
 /** Faces on a floor goban foot's top block, and lobes on its bulb: eight, for luck. */
@@ -347,6 +356,7 @@ export class BoardScene {
     private readonly shadows = new InstancedMesh(this.plane, this.shadowMaterial, initialCapacity);
 
     public constructor(public readonly canvas: HTMLCanvasElement) {
+        canvas.dataset.roomBuilds = "0";
         const context = canvas.getContext("webgl2", { antialias: true, alpha: true });
         if (!context) {
             throw new Error("WebGL 2 unavailable");
@@ -551,6 +561,12 @@ export class BoardScene {
     }
 
     public rebuild(bounds: Bounds, style: ThreeBoardStyle, showRoom: boolean): void {
+        if (showRoom) {
+            if (typeof performance !== "undefined" && typeof performance.mark === "function") {
+                performance.mark("goban-three:room-build-start");
+            }
+            this.canvas.dataset.roomBuilds = String(+(this.canvas.dataset.roomBuilds ?? 0) + 1);
+        }
         this.room?.dispose();
         delete this.canvas.dataset.lidStones;
         delete this.canvas.dataset.roomClock;
@@ -566,6 +582,9 @@ export class BoardScene {
             : undefined;
         if (this.room) {
             this.scene.add(this.room);
+            if (typeof performance !== "undefined" && typeof performance.mark === "function") {
+                performance.mark("goban-three:room-build-end");
+            }
             const camera = this.key.shadow.camera;
             const extent = this.room.shadowExtent;
             camera.left = camera.bottom = -extent;

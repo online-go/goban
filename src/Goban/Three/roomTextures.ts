@@ -16,6 +16,25 @@
 
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from "three";
 
+const textureCanvases = new Map<string, HTMLCanvasElement>();
+const canvasCacheLimit = 32;
+const shojiPanels = 4;
+
+export function cachedTextureCanvas(key: string, draw: () => HTMLCanvasElement): HTMLCanvasElement {
+    let canvas = textureCanvases.get(key);
+    if (!canvas) {
+        canvas = draw();
+        if (textureCanvases.size >= canvasCacheLimit) {
+            const oldest = textureCanvases.keys().next();
+            if (!oldest.done) {
+                textureCanvases.delete(oldest.value);
+            }
+        }
+        textureCanvases.set(key, canvas);
+    }
+    return canvas;
+}
+
 function canvasContext(width: number, height: number): CanvasRenderingContext2D {
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -27,8 +46,8 @@ function canvasContext(width: number, height: number): CanvasRenderingContext2D 
     return context;
 }
 
-function roomTexture(context: CanvasRenderingContext2D, repeatX: number, repeatY: number) {
-    const texture = new CanvasTexture(context.canvas);
+function roomTexture(canvas: HTMLCanvasElement, repeatX: number, repeatY: number) {
+    const texture = new CanvasTexture(canvas);
     texture.colorSpace = SRGBColorSpace;
     texture.wrapS = texture.wrapT = RepeatWrapping;
     texture.repeat.set(repeatX, repeatY);
@@ -41,7 +60,20 @@ export function contactTexture(
     width: number,
     depth: number,
     ambient: (x: number, z: number) => number,
+    ambientInputs: readonly number[],
 ): CanvasTexture {
+    const key = ["contactTexture", width, depth, ...ambientInputs].join("/");
+    const canvas = cachedTextureCanvas(key, () => drawContact(width, depth, ambient));
+    const texture = new CanvasTexture(canvas);
+    texture.anisotropy = 4;
+    return texture;
+}
+
+function drawContact(
+    width: number,
+    depth: number,
+    ambient: (x: number, z: number) => number,
+): HTMLCanvasElement {
     const context = canvasContext(320, 192);
     const image = context.createImageData(context.canvas.width, context.canvas.height);
     for (let y = 0; y < image.height; y++) {
@@ -54,12 +86,14 @@ export function contactTexture(
         }
     }
     context.putImageData(image, 0, 0);
-    const texture = new CanvasTexture(context.canvas);
-    texture.anisotropy = 4;
-    return texture;
+    return context.canvas;
 }
 
 export function tatamiTexture(repeatX: number, repeatY: number): CanvasTexture {
+    return roomTexture(cachedTextureCanvas("tatamiTexture", drawTatami), repeatX, repeatY);
+}
+
+function drawTatami(): HTMLCanvasElement {
     const unit = 384;
     const floor = canvasContext(3 * unit, 3 * unit);
     const mat = canvasContext(2 * unit, unit);
@@ -102,7 +136,7 @@ export function tatamiTexture(repeatX: number, repeatY: number): CanvasTexture {
         floor.fillRect(length - 1, 0, 1, unit);
         floor.restore();
     }
-    return roomTexture(floor, repeatX, repeatY);
+    return floor.canvas;
 }
 
 /** Deterministic hash in [0, 1) for repeatable texture variation. */
@@ -162,17 +196,21 @@ function bar(
  * per-panel tone, a shaded kumiko lattice, the frame and a wooden kick panel.
  */
 export function shojiTexture(panelCount: number): CanvasTexture {
+    const canvas = cachedTextureCanvas("shojiTexture", drawShoji);
+    return roomTexture(canvas, panelCount / shojiPanels, 1);
+}
+
+function drawShoji(): HTMLCanvasElement {
     const panelWidth = 512;
     const height = 1024;
-    const panels = 4;
-    const context = canvasContext(panelWidth * panels, height);
+    const context = canvasContext(panelWidth * shojiPanels, height);
     const stile = 22;
     const topRail = 26;
     const kick = 150;
     const kumiko = 7;
     const lattice = "#a07a54";
     const frame = "#8c6a4a";
-    for (let p = 0; p < panels; p++) {
+    for (let p = 0; p < shojiPanels; p++) {
         const x0 = p * panelWidth;
         const tone = (hash(p + 3) - 0.5) * 14;
         const glow = context.createLinearGradient(0, 0, 0, height - kick);
@@ -229,11 +267,15 @@ export function shojiTexture(panelCount: number): CanvasTexture {
         context.fillRect(x0 + panelWidth - stile - 2, height * 0.5, 6, 46);
     }
     addGrain(context, 0.05, 1.3);
-    return roomTexture(context, panelCount / panels, 1);
+    return context.canvas;
 }
 
 /** Light oak-look vinyl planks for a tournament hall floor. */
 export function hallFloorTexture(repeatX: number, repeatY: number): CanvasTexture {
+    return roomTexture(cachedTextureCanvas("hallFloorTexture", drawHallFloor), repeatX, repeatY);
+}
+
+function drawHallFloor(): HTMLCanvasElement {
     const size = 1024;
     const context = canvasContext(size, size);
     const planks = 4;
@@ -267,11 +309,15 @@ export function hallFloorTexture(repeatX: number, repeatY: number): CanvasTextur
         context.fillRect(column * plankWidth, 0, 2, size);
     }
     addGrain(context, 0.04, 4.1);
-    return roomTexture(context, repeatX, repeatY);
+    return context.canvas;
 }
 
 /** A bright window: daylight sky over distant greenery, with frame and mullions. */
 export function windowTexture(): CanvasTexture {
+    return roomTexture(cachedTextureCanvas("windowTexture", drawWindow), 1, 1);
+}
+
+function drawWindow(): HTMLCanvasElement {
     const width = 512;
     const height = 640;
     const context = canvasContext(width, height);
@@ -301,11 +347,19 @@ export function windowTexture(): CanvasTexture {
     context.fillRect(width - 18, 0, 18, height);
     context.fillRect(width / 2 - 6, 0, 12, height);
     context.fillRect(0, height * 0.38, width, 10);
-    return roomTexture(context, 1, 1);
+    return context.canvas;
 }
 
 /** A small goban with a mid-game position, for background tournament tables. */
 export function miniBoardTexture(seed: number): CanvasTexture {
+    const canvas = cachedTextureCanvas(`miniBoardTexture/${seed}`, () => drawMiniBoard(seed));
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+    return texture;
+}
+
+function drawMiniBoard(seed: number): HTMLCanvasElement {
     const size = 256;
     const context = canvasContext(size, size);
     context.fillStyle = "#dcb675";
@@ -331,14 +385,15 @@ export function miniBoardTexture(seed: number): CanvasTexture {
         context.arc(margin + x * step, margin + y * step, step * 0.46, 0, Math.PI * 2);
         context.fill();
     }
-    const texture = new CanvasTexture(context.canvas);
-    texture.colorSpace = SRGBColorSpace;
-    texture.anisotropy = 4;
-    return texture;
+    return context.canvas;
 }
 
 /** Trowelled clay plaster: soft mottling, fine sand and a few straw fibres. */
 export function plasterTexture(repeatX: number, repeatY: number): CanvasTexture {
+    return roomTexture(cachedTextureCanvas("plasterTexture", drawPlaster), repeatX, repeatY);
+}
+
+function drawPlaster(): HTMLCanvasElement {
     const size = 512;
     const context = canvasContext(size, size);
     const image = context.createImageData(size, size);
@@ -373,7 +428,7 @@ export function plasterTexture(repeatX: number, repeatY: number): CanvasTexture 
         context.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
         context.stroke();
     }
-    return roomTexture(context, repeatX, repeatY);
+    return context.canvas;
 }
 
 /** Layered ink-wash mountain ridges for a sumi-e scroll, back to front. */
@@ -413,6 +468,14 @@ function inkRidges(
 
 /** A hanging scroll: brocade mounting around a sumi-e landscape with a pine and a seal. */
 export function scrollTexture(): CanvasTexture {
+    const canvas = cachedTextureCanvas("scrollTexture", drawScroll);
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+    return texture;
+}
+
+function drawScroll(): HTMLCanvasElement {
     const width = 384;
     const height = 1152;
     const context = canvasContext(width, height);
@@ -492,14 +555,15 @@ export function scrollTexture(): CanvasTexture {
     context.fillStyle = "#a8332a";
     context.fillRect(left + paperWidth - 46, top + paperHeight - 70, 20, 24);
     addGrain(context, 0.05, 2.2);
-    const texture = new CanvasTexture(context.canvas);
-    texture.colorSpace = SRGBColorSpace;
-    texture.anisotropy = 4;
-    return texture;
+    return context.canvas;
 }
 
 /** Soft round contact shadow: dark in the middle, fading to clear at the rim. */
 export function contactShadowTexture(): CanvasTexture {
+    return new CanvasTexture(cachedTextureCanvas("contactShadowTexture", drawContactShadow));
+}
+
+function drawContactShadow(): HTMLCanvasElement {
     const size = 64;
     const context = canvasContext(size, size);
     const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -509,5 +573,5 @@ export function contactShadowTexture(): CanvasTexture {
     gradient.addColorStop(1, "rgba(0,0,0,0)");
     context.fillStyle = gradient;
     context.fillRect(0, 0, size, size);
-    return new CanvasTexture(context.canvas);
+    return context.canvas;
 }

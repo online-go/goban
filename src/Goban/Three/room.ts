@@ -252,11 +252,16 @@ export class RoomScene extends Group {
             this.addTatamiRoom(furnitureWidth, furnitureDepth, width, depth, vesselAmbient, wood);
         } else {
             this.addTournamentHall(furnitureWidth, furnitureDepth, wood);
-            this.addTableContacts(furnitureWidth, furnitureDepth, (x, z) => {
-                const edge = rectangleDistance(x, z, width, depth);
-                const board = 0.18 + 0.82 * MathUtils.smoothstep(edge, -0.24, 0.72);
-                return Math.min(board, vesselAmbient(x, z));
-            });
+            this.addTableContacts(
+                furnitureWidth,
+                furnitureDepth,
+                (x, z) => {
+                    const edge = rectangleDistance(x, z, width, depth);
+                    const board = 0.18 + 0.82 * MathUtils.smoothstep(edge, -0.24, 0.72);
+                    return Math.min(board, vesselAmbient(x, z));
+                },
+                [width, depth, side, separation, radius],
+            );
             this.clock = new RoomClock(-side);
             this.add(this.clock);
         }
@@ -968,10 +973,11 @@ export class RoomScene extends Group {
         width: number,
         depth: number,
         ambient: (x: number, z: number) => number,
+        ambientInputs: readonly number[],
     ): void {
         // Keep the contact layer inside the flat part of the table's bevel.
         const inset = 0.34;
-        const map = contactTexture(width - inset, depth - inset, ambient);
+        const map = contactTexture(width - inset, depth - inset, ambient, ambientInputs);
         this.textures.push(map);
         const material = new MeshBasicMaterial({ map, transparent: true, depthWrite: false });
         this.materials.push(material);

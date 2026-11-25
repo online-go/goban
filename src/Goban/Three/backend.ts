@@ -392,7 +392,6 @@ class ThreeBoardView implements BoardView {
     public setTheme(themes: GobanSelectedThemes): void {
         this.appearance = resolveAppearance(themes);
         this.scene.applyTheme(this.appearance, this.invalidate);
-        this.boundsKey = "";
         this.invalidate();
     }
 
@@ -582,6 +581,13 @@ class ThreeBoardView implements BoardView {
             this.element.dataset.ink = "drawn";
         }
         this.element.dataset.frames = String(++this.frames);
+        if (
+            this.frames === 1 &&
+            typeof performance !== "undefined" &&
+            typeof performance.mark === "function"
+        ) {
+            performance.mark("goban-three:first-frame");
+        }
         this.element.dataset.cpu = (performance.now() - frameStart).toFixed(2);
         this.element.dataset.calls = String(this.scene.renderer.info.render.calls);
         this.element.dataset.triangles = String(this.scene.renderer.info.render.triangles);
