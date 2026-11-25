@@ -34,16 +34,8 @@ import {
 } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { ThreeBoardStyle } from "../ThreeConfig";
-import {
-    bowlHeightRatio,
-    crownHeight,
-    floorBoardFeet,
-    roomLayout,
-    type Bounds,
-} from "./projection";
+import { bowlHeightRatio, floorBoardFeet, roomLayout, type Bounds } from "./projection";
 
-/** Stones stack at their own thickness; the pile layouts were tuned for 0.25-high stones. */
-const stackScale = crownHeight / 0.25;
 import type { JGOFClock } from "../../engine";
 import { RoomClock } from "./roomClock";
 import {
@@ -57,6 +49,7 @@ import {
     tatamiTexture,
     windowTexture,
 } from "./roomTextures";
+import { bowlStonePile, lidStonePile } from "./stonePiles";
 
 // At the scale of a full-size goban, 34 units is about 74 cm.
 const tableHeight = 34;
@@ -85,71 +78,35 @@ function noise(n: number): number {
 const bowlFootRatio = 0.44;
 const lidFootRatio = 0.51;
 
-function pilePositions(
-    rings: readonly (readonly [number, number, number])[],
-    rotation = 0,
-): number[][] {
-    const positions = [[0, 0, 0]];
-    for (const [count, radius, lift] of rings) {
-        for (let i = 0; i < count; i++) {
-            const angle = rotation + ((i + (lift ? 0.5 : 0)) * Math.PI * 2) / count;
-            positions.push([radius * Math.cos(angle), lift, radius * Math.sin(angle)]);
-        }
-    }
-    return positions;
-}
-
-const capturePile = pilePositions([
-    [7, 0.61, 0],
-    [5, 0.41, 0.21 * stackScale],
-]);
-// Stagger the layers so the gaps between stones reveal more stones below.
-const bowlLayers = [
-    [
-        [6, 0.24],
-        [10, 0.46],
-    ],
-    [
-        [6, 0.26],
-        [13, 0.54],
-    ],
-    [
-        [6, 0.26],
-        [15, 0.59],
-    ],
-    [
-        [6, 0.25],
-        [8, 0.45],
-        [11, 0.64],
-    ],
-    [
-        [6, 0.25],
-        [9, 0.47],
-        [14, 0.69],
-    ],
-    [
-        [6, 0.26],
-        [11, 0.51],
-        [15, 0.72],
-    ],
-    [
-        [6, 0.25],
-        [11, 0.5],
-        [15, 0.72],
-    ],
-];
-// Thicker stones need fewer layers to fill the bowl to the same height.
-const bowlLayerCount = Math.floor((bowlLayers.length - 1) / stackScale) + 1;
-const bowlPile = bowlLayers.slice(0, bowlLayerCount).flatMap((rings, layer) =>
-    pilePositions(
-        rings.map(([count, radius]) => [count, radius, 0]),
-        layer * 0.71,
-    ).map(([x, y, z], index) => [
-        x,
-        y + (layer * 0.273 + 0.022 * Math.sin(index * 2.4)) * stackScale,
-        z,
-    ]),
-);
+export const bowlHeightScale = bowlHeightRatio / 0.78;
+export const bowlProfile = [
+    [0, 0],
+    [bowlFootRatio, 0],
+    [0.59, 0.05],
+    [0.76, 0.22],
+    [0.9, 0.42],
+    [0.99, 0.68],
+    [1, 0.75],
+    [0.97, 0.78],
+    [0.91, 0.77],
+    [0.88, 0.69],
+    [0.81, 0.51],
+    [0.72, 0.36],
+    [0.58, 0.25],
+    [0, 0.25],
+] as const;
+export const lidProfile = [
+    [0, 0],
+    [lidFootRatio, 0],
+    [0.73, 0.06],
+    [0.92, 0.18],
+    [1, 0.29],
+    [0.98, 0.33],
+    [0.89, 0.32],
+    [0.79, 0.23],
+    [0.61, 0.16],
+    [0, 0.16],
+] as const;
 
 function rectangleDistance(x: number, z: number, width: number, depth: number): number {
     const dx = Math.abs(x) - width / 2;
@@ -266,44 +223,14 @@ export class RoomScene extends Group {
             this.add(this.clock);
         }
 
-        const bowl = this.vessel(
-            radius,
-            [
-                [0, 0],
-                [bowlFootRatio, 0],
-                [0.59, 0.05],
-                [0.76, 0.22],
-                [0.9, 0.42],
-                [0.99, 0.68],
-                [1, 0.75],
-                [0.97, 0.78],
-                [0.91, 0.77],
-                [0.88, 0.69],
-                [0.81, 0.51],
-                [0.72, 0.36],
-                [0.58, 0.25],
-                [0, 0.25],
-            ],
-            bowlHeightRatio / 0.78,
-        );
-        const lid = this.vessel(radius, [
-            [0, 0],
-            [lidFootRatio, 0],
-            [0.73, 0.06],
-            [0.92, 0.18],
-            [1, 0.29],
-            [0.98, 0.33],
-            [0.89, 0.32],
-            [0.79, 0.23],
-            [0.61, 0.16],
-            [0, 0.16],
-        ]);
+        const bowl = this.vessel(radius, bowlProfile, bowlHeightScale);
+        const lid = this.vessel(radius, lidProfile);
         // Outside, light grows towards the rim. Inside, a static occlusion gradient darkens the
         // wall with depth below the rim, so the bowl reads as a deep cavity.
-        const bowlProfileLength = 14;
+        const bowlProfileLength = bowlProfile.length;
         const bowlInnerStart = 8;
-        const rimHeight = 0.78 * radius * (bowlHeightRatio / 0.78);
-        const innerFloor = 0.25 * radius * (bowlHeightRatio / 0.78);
+        const rimHeight = 0.78 * radius * bowlHeightScale;
+        const innerFloor = 0.25 * radius * bowlHeightScale;
         const bowlPositions = bowl.getAttribute("position");
         const bowlColors: number[] = [];
         for (let i = 0; i < bowlPositions.count; i++) {
@@ -327,19 +254,18 @@ export class RoomScene extends Group {
             const bowlZ = direction * separation;
             this.place(bowl, vessels, bowlX, 0, bowlZ);
             this.place(lid, vessels, bowlX, 0, -bowlZ);
-            this.pile(bowlStones, materials[color], bowlX, 0.48 * radius, bowlZ, radius, bowlPile);
+            this.pile(bowlStones, materials[color], bowlX, 0, bowlZ, bowlStonePile);
             const captures = this.pile(
                 stones,
                 materials[color === 0 ? 1 : 0],
                 bowlX,
-                0.165 * radius,
+                0,
                 -bowlZ,
-                1.65,
-                capturePile,
+                lidStonePile,
             );
             captures.count = 0;
             this.lids.push(captures);
-            const contacts = this.contactShadows(bowlX, 0.165 * radius, -bowlZ, 1.65, capturePile);
+            const contacts = this.contactShadows(bowlX, 0, -bowlZ, lidStonePile);
             contacts.count = 0;
             this.lidShadows.push(contacts);
         }
@@ -1026,8 +952,8 @@ export class RoomScene extends Group {
     }
 
     public updateCaptures(black: number, white: number): string {
-        this.lids[0].count = Math.min(black, capturePile.length);
-        this.lids[1].count = Math.min(white, capturePile.length);
+        this.lids[0].count = Math.min(black, lidStonePile.length);
+        this.lids[1].count = Math.min(white, lidStonePile.length);
         this.lidShadows[0].count = this.lids[0].count;
         this.lidShadows[1].count = this.lids[1].count;
         return this.lids.map((lid) => lid.count).join(",");
@@ -1035,13 +961,12 @@ export class RoomScene extends Group {
 
     /**
      * A soft shadow disk under each stone of a pile, in the same instance order so a shared
-     * count shows the right ones. Stones resting on other stones get none.
+     * count shows the right ones.
      */
     private contactShadows(
         x: number,
         y: number,
         z: number,
-        radius: number,
         positions: readonly (readonly number[])[],
     ): InstancedMesh {
         const map = contactShadowTexture();
@@ -1056,10 +981,9 @@ export class RoomScene extends Group {
         const disk = this.keep(new PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
         const mesh = new InstancedMesh(disk, material, positions.length);
         const transform = new Object3D();
-        positions.forEach(([dx, lift, dz], index) => {
-            const resting = lift === 0;
-            transform.position.set(x + dx * radius, y + lift + 0.02, z + dz * radius);
-            transform.scale.setScalar(resting ? 1.3 : 0.001);
+        transform.scale.setScalar(1.3);
+        positions.forEach(([dx, dy, dz], index) => {
+            transform.position.set(x + dx, y + dy + 0.02, z + dz);
             transform.updateMatrix();
             mesh.setMatrixAt(index, transform.matrix);
         });
@@ -1075,16 +999,15 @@ export class RoomScene extends Group {
         x: number,
         y: number,
         z: number,
-        radius: number,
         positions: readonly (readonly number[])[],
     ): InstancedMesh {
         const pile = new InstancedMesh(geometry, material, positions.length);
         const stone = new Object3D();
         pile.frustumCulled = false;
         pile.castShadow = pile.receiveShadow = true;
-        positions.forEach(([dx, lift, dz], index) => {
-            stone.position.set(x + dx * radius, y + lift, z + dz * radius);
-            stone.rotation.set(index % 3 === 0 ? 0.12 : 0, index * 2.4, index % 2 ? 0.06 : 0);
+        positions.forEach(([dx, dy, dz, qx, qy, qz, qw], index) => {
+            stone.position.set(x + dx, y + dy, z + dz);
+            stone.quaternion.set(qx, qy, qz, qw);
             stone.updateMatrix();
             pile.setMatrixAt(index, stone.matrix);
         });
