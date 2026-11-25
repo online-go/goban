@@ -48,6 +48,8 @@ export interface ThreeRendererOptions {
     annotationInspection?: HTMLDivElement;
     /** Called on failed activation or loss of the active WebGL surface. */
     onFallback?: (error: unknown) => void;
+    /** Called after the 3D board draws its first frame. Called again if 3D is turned off and on. */
+    onFirstFrame?: () => void;
 }
 
 export interface ThreeRenderer {

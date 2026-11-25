@@ -581,12 +581,15 @@ class ThreeBoardView implements BoardView {
             this.element.dataset.ink = "drawn";
         }
         this.element.dataset.frames = String(++this.frames);
-        if (
-            this.frames === 1 &&
-            typeof performance !== "undefined" &&
-            typeof performance.mark === "function"
-        ) {
-            performance.mark("goban-three:first-frame");
+        if (this.frames === 1) {
+            if (typeof performance !== "undefined" && typeof performance.mark === "function") {
+                performance.mark("goban-three:first-frame");
+            }
+            try {
+                this.owner.options.onFirstFrame?.();
+            } catch (error) {
+                console.error(error);
+            }
         }
         this.element.dataset.cpu = (performance.now() - frameStart).toFixed(2);
         this.element.dataset.calls = String(this.scene.renderer.info.render.calls);
