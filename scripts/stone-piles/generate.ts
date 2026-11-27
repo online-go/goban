@@ -29,6 +29,12 @@ const rimHeight = 0.78 * vesselRadius * bowlHeightScale;
 const timeStep = 1 / 240;
 const dropTimeLimit = 8;
 const maxDropAttempts = 20;
+// Lid drops that bounce out this many times in a row start the pile on the table beside it.
+const lidDropAttempts = 10;
+const lidStoneCount = 140;
+/** Centre of the overflow pile on the table, relative to the lid, on the side away from the bowl. */
+const tablePileCentre = { x: 0, z: -(vesselRadius + 1.6) };
+const tablePileRadius = 1.6;
 // Rapier's default normalized linear sleep threshold.
 const sleepSpeed = 0.05;
 const surfaceTolerance = 0.01;
@@ -136,6 +142,11 @@ function penetrationDepth(profile: Profile, { points }: ReturnType<typeof pose>)
     return Math.max(...points.map(({ x, y, z }) => surfaceHeight(profile, x, z) - y));
 }
 
+/** Where an overflow stone is dropped and how it is checked: on the table next to the lid. */
+interface Overflow {
+    outerProfile: Profile;
+}
+
 function simulate(
     name: string,
     innerProfile: Profile,
@@ -143,6 +154,7 @@ function simulate(
     count: number,
     dropRadiusRatio: number,
     maxHeight?: number,
+    overflow?: Overflow,
 ) {
     const profile = innerProfile.map(
         ([r, h]) => [r * vesselRadius, h * vesselRadius * heightScale] as const,
@@ -171,6 +183,27 @@ function simulate(
             .setRestitution(0.1),
         vessel,
     );
+    // Added only once the lid overflows, so the lid pile before it stays as it was.
+    const addTable = (overflow: Overflow) => {
+        const fixed = world.getRigidBody(vessel.handle);
+        // The table top at y = 0 and the lid's outer wall, so table stones can lean on it.
+        world.createCollider(
+            RAPIER.ColliderDesc.cuboid(4 * vesselRadius, 0.05, 4 * vesselRadius)
+                .setTranslation(0, -0.035, 0)
+                .setFriction(0.35)
+                .setRestitution(0.1),
+            fixed,
+        );
+        const outer = overflow.outerProfile.map(
+            ([r, h]) => [r * vesselRadius, h * vesselRadius] as const,
+        );
+        world.createCollider(
+            dishCollider([...outer].reverse())
+                .setFriction(0.35)
+                .setRestitution(0.1),
+            fixed,
+        );
+    };
     const stone = RAPIER.ColliderDesc.convexHull(stoneVertices);
     if (!stone) {
         throw new Error("Could not build the stone convex hull");
@@ -180,21 +213,41 @@ function simulate(
     let top = floorHeight;
     let poses: ReturnType<typeof pose>[] = [];
     let moving = 0;
+    // Awake stones slower than the sleep threshold count as resting, like the drop check.
+    const countMoving = () =>
+        bodies.filter((stone) => {
+            const { x, y, z } = stone.linvel();
+            return !stone.isSleeping() && Math.hypot(x, y, z) >= sleepSpeed * world.lengthUnit;
+        }).length;
     let timedOut = 0;
     let retries = 0;
+    /** Index of the first stone on the table, once the lid overflows. */
+    let tableStart = Infinity;
+    let tableTop = 0;
+    const attempts = overflow ? lidDropAttempts : maxDropAttempts;
     const targetTop = maxHeight === undefined ? Infinity : maxHeight - 0.35;
     for (let i = 0; i < count && top < targetTop; i++) {
         const snapshot = world.takeSnapshot();
         const handles = bodies.map(({ handle }) => handle);
-        for (let attempt = 1; attempt <= maxDropAttempts; attempt++) {
+        const onTable = i >= tableStart;
+        const tries = onTable ? maxDropAttempts : attempts;
+        for (let attempt = 1; attempt <= tries; attempt++) {
             if (attempt > 1) {
                 retries++;
             }
-            const dropRadius = maxHeight === undefined ? profile[0][0] : cavityRadius(profile, top);
-            const distance = Math.sqrt(random()) * dropRadius * dropRadiusRatio;
-            const releaseHeight =
-                maxHeight === undefined ? top + 0.4 : Math.max(top + 0.6, rimHeight + 0.001);
+            const dropRadius = onTable
+                ? tablePileRadius
+                : maxHeight === undefined
+                  ? profile[0][0]
+                  : cavityRadius(profile, top);
+            const distance = Math.sqrt(random()) * dropRadius * (onTable ? 1 : dropRadiusRatio);
+            const releaseHeight = onTable
+                ? tableTop + 0.25
+                : maxHeight === undefined
+                  ? top + 0.4
+                  : Math.max(top + 0.6, rimHeight + 0.001);
             const angle = random() * 2 * Math.PI;
+            const centre = onTable ? tablePileCentre : { x: 0, z: 0 };
             const tiltAngle = random() * 2 * Math.PI;
             const tiltAxis = new Vector3(Math.cos(tiltAngle), 0, Math.sin(tiltAngle));
             const rotation = new Quaternion()
@@ -203,9 +256,9 @@ function simulate(
             const body = world.createRigidBody(
                 RAPIER.RigidBodyDesc.dynamic()
                     .setTranslation(
-                        distance * Math.cos(angle),
+                        centre.x + distance * Math.cos(angle),
                         releaseHeight,
-                        distance * Math.sin(angle),
+                        centre.z + distance * Math.sin(angle),
                     )
                     .setRotation(rotation)
                     .setCcdEnabled(true)
@@ -223,39 +276,78 @@ function simulate(
             }
 
             const landed = pose(body);
-            const inside =
-                Math.hypot(landed.origin.x, landed.origin.z) < profile[0][0] &&
-                penetrationDepth(profile, landed) <= surfaceTolerance;
+            const inside = onTable
+                ? onTableBeside(landed)
+                : Math.hypot(landed.origin.x, landed.origin.z) < profile[0][0] &&
+                  penetrationDepth(profile, landed) <= surfaceTolerance;
             const velocity = body.linvel();
             const settled =
                 body.isSleeping() ||
                 Math.hypot(velocity.x, velocity.y, velocity.z) < sleepSpeed * world.lengthUnit;
-            if (inside && settled) {
+            // The drop must also leave every earlier stone where it belongs: a heap that slides
+            // or pushes stones through the surface counts as a bounce-off too.
+            const undisturbed =
+                !overflow ||
+                bodies.every((earlier, j) => {
+                    const stone = pose(earlier);
+                    return j >= tableStart
+                        ? onTableBeside(stone)
+                        : Math.hypot(stone.origin.x, stone.origin.z) < profile[0][0] &&
+                              penetrationDepth(profile, stone) <= surfaceTolerance;
+                });
+            if (inside && settled && undisturbed) {
                 bodies.push(body);
                 break;
             }
 
             world.removeRigidBody(body);
             world.free();
-            if (attempt === maxDropAttempts) {
-                throw new Error(
-                    `${name}: stone ${i + 1} failed all ${maxDropAttempts} attempts (${retries} retries and ${timedOut} time-limit hits so far; last attempt inside: ${inside}, settled: ${settled}).`,
-                );
-            }
             // Discard the rejected drop's effects on the previously accepted stones.
             world = RAPIER.World.restoreSnapshot(snapshot);
             bodies = handles.map((handle) => world.getRigidBody(handle));
+            if (attempt === tries && overflow && !onTable) {
+                // The lid is full: this stone and the rest go to the table beside it.
+                tableStart = i;
+                addTable(overflow);
+                i--;
+                break;
+            }
+            if (attempt === tries) {
+                throw new Error(
+                    `${name}: stone ${i + 1} failed all ${tries} attempts (${retries} retries and ${timedOut} time-limit hits so far; last attempt inside: ${inside}, settled: ${settled}).`,
+                );
+            }
         }
 
         poses = bodies.map(pose);
-        top = Math.max(...poses.map(({ points }) => Math.max(...points.map(({ y }) => y))));
-        moving = bodies.filter((stone) => !stone.isSleeping()).length;
+        const highest = (stones: ReturnType<typeof pose>[]) =>
+            Math.max(...stones.map(({ points }) => Math.max(...points.map(({ y }) => y))));
+        top = highest(poses.slice(0, Math.min(poses.length, tableStart)));
+        if (poses.length > tableStart) {
+            tableTop = highest(poses.slice(tableStart));
+        }
+        moving = countMoving();
     }
+    // Let the last slow slides finish before the final check.
+    for (let step = 0; step < dropTimeLimit / timeStep && moving > 0; step++) {
+        world.step();
+        moving = countMoving();
+    }
+    poses = bodies.map(pose);
     world.free();
-    const penetrations = poses.map((stone) => penetrationDepth(profile, stone));
+    const penetrations = poses.map((stone, i) =>
+        i >= tableStart
+            ? Math.max(...stone.points.map(({ y }) => -y))
+            : penetrationDepth(profile, stone),
+    );
     const below = penetrations.filter((depth) => depth > surfaceTolerance).length;
+    penetrations.forEach((depth, i) => {
+        if (depth > surfaceTolerance) {
+            console.log(`  stone ${i + 1} is ${depth.toFixed(4)} below the surface`);
+        }
+    });
     console.log(
-        `${name} after ${poses.length} drops: top ${top.toFixed(4)}, ${below} below surface, ${moving} awake, ${retries} retries, ${timedOut} attempts hit the time limit.`,
+        `${name} after ${poses.length} drops (${Math.min(poses.length, tableStart)} inside, ${Math.max(0, poses.length - tableStart)} on the table): top ${top.toFixed(4)}, table top ${tableTop.toFixed(4)}, ${below} below surface, ${moving} awake, ${retries} retries, ${timedOut} attempts hit the time limit.`,
     );
     if (below > 0) {
         throw new Error(
@@ -266,6 +358,16 @@ function simulate(
         throw new Error(`${name}: final pile must be asleep and fit below the rim`);
     }
     return poses;
+}
+
+/** A table stone rests on the table top beside the lid, clear of it. */
+function onTableBeside({ origin, points }: ReturnType<typeof pose>): boolean {
+    const lowest = Math.min(...points.map(({ y }) => y));
+    return (
+        lowest >= -surfaceTolerance &&
+        Math.hypot(origin.x, origin.z) > vesselRadius &&
+        Math.hypot(origin.x - tablePileCentre.x, origin.z - tablePileCentre.z) < 3.5
+    );
 }
 
 function reportLidPrefix(poses: ReturnType<typeof pose>[]) {
@@ -316,7 +418,9 @@ ${entries.map((entry) => `[${entry}],`).join("\n")}
 async function main() {
     await RAPIER.init();
     const bowl = simulate("Bowl", bowlProfile.slice(8), bowlHeightScale, 200, 0.85, rimHeight);
-    const lid = simulate("Lid", lidProfile.slice(6), 1, 30, 0.7);
+    const lid = simulate("Lid", lidProfile.slice(6), 1, lidStoneCount, 0.7, undefined, {
+        outerProfile: lidProfile.slice(1, 6),
+    });
     reportLidPrefix(lid);
 
     const license = (await readFile(__filename, "utf8")).split("import ", 1)[0];

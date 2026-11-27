@@ -108,6 +108,14 @@ export const lidProfile = [
     [0, 0.16],
 ] as const;
 
+/**
+ * A stone pile turned half way about the vertical axis, so the overflow on the table lies on the
+ * far side of the other player's lid too.
+ */
+function halfTurn(stones: readonly (readonly number[])[]): number[][] {
+    return stones.map(([x, y, z, qx, qy, qz, qw]) => [-x, y, -z, qz, qw, -qx, -qy]);
+}
+
 function rectangleDistance(x: number, z: number, width: number, depth: number): number {
     const dx = Math.abs(x) - width / 2;
     const dz = Math.abs(z) - depth / 2;
@@ -255,17 +263,18 @@ export class RoomScene extends Group {
             this.place(bowl, vessels, bowlX, 0, bowlZ);
             this.place(lid, vessels, bowlX, 0, -bowlZ);
             this.pile(bowlStones, materials[color], bowlX, 0, bowlZ, bowlStonePile);
+            const lidPile = color === 0 ? lidStonePile : halfTurn(lidStonePile);
             const captures = this.pile(
                 stones,
                 materials[color === 0 ? 1 : 0],
                 bowlX,
                 0,
                 -bowlZ,
-                lidStonePile,
+                lidPile,
             );
             captures.count = 0;
             this.lids.push(captures);
-            const contacts = this.contactShadows(bowlX, 0, -bowlZ, lidStonePile);
+            const contacts = this.contactShadows(bowlX, 0, -bowlZ, lidPile);
             contacts.count = 0;
             this.lidShadows.push(contacts);
         }

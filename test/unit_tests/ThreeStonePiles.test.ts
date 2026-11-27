@@ -60,9 +60,18 @@ test("bowl stones are inside the bowl", () => {
     }
 });
 
-test("lid stones are inside the lid", () => {
-    for (const [x, y, z] of lidStonePile) {
+test("lid stones are inside the lid, then on the table beside it", () => {
+    const inLid = lidStonePile.findIndex(([x, , z]) => Math.hypot(x, z) >= 0.89 * radius);
+    const lid = inLid === -1 ? lidStonePile : lidStonePile.slice(0, inLid);
+    assert(lid.length >= 30);
+    for (const [x, y, z] of lid) {
         assert(Math.hypot(x, z) < 0.89 * radius);
-        assert(y >= 0.16 * radius - 0.01);
+        // A tilted stone's origin, under its middle, can dip a little below the dish floor.
+        assert(y >= 0.16 * radius - 0.02);
+    }
+    for (const [x, y, z] of lidStonePile.slice(lid.length)) {
+        // Table stones can tuck under the lid's flared outer wall, but not into its foot.
+        assert(Math.hypot(x, z) > 0.73 * radius);
+        assert(y >= -0.01);
     }
 });
