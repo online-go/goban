@@ -569,6 +569,7 @@ export class BoardScene {
         }
         this.room?.dispose();
         delete this.canvas.dataset.lidStones;
+        delete this.canvas.dataset.bowlStones;
         delete this.canvas.dataset.roomClock;
         this.room = showRoom
             ? new RoomScene(
@@ -784,6 +785,17 @@ export class BoardScene {
         }
         this.canvas.dataset.roomClock = display;
         return true;
+    }
+
+    /** Stones each player has played, captured or not, to take out of their bowl. */
+    public updatePlayed(black: number, white: number): void {
+        if (this.room) {
+            const counts = this.room.updateBowls(black, white);
+            if (counts !== this.canvas.dataset.bowlStones) {
+                this.canvas.dataset.bowlStones = counts;
+                this.renderer.shadowMap.needsUpdate = true;
+            }
+        }
     }
 
     public updateCaptures(black: number, white: number): void {

@@ -143,6 +143,14 @@ export class RoomScene extends Group {
     private readonly geometries: BufferGeometry[] = [];
     private readonly materials: (MeshStandardMaterial | MeshBasicMaterial)[];
     private readonly lids: InstancedMesh[] = [];
+    /** Each player's bowl; the last stones dropped in are on top and taken first. */
+    private readonly bowls: InstancedMesh[] = [];
+    /** Each bowl's own geometry, so its inside can lighten as it empties. */
+    private readonly bowlVessels: BufferGeometry[] = [];
+    /** Per bowl vertex: the full occlusion inside a filled bowl, 0 on the outside. */
+    private bowlOcclusion: number[] = [];
+    /** Per bowl vertex: the light without occlusion. */
+    private bowlLight: number[] = [];
     /** Contact shadows under captured stones, shown in step with each lid's stone count. */
     private readonly lidShadows: InstancedMesh[] = [];
     private readonly textures: Texture[] = [];
@@ -233,25 +241,22 @@ export class RoomScene extends Group {
 
         const bowl = this.vessel(radius, bowlProfile, bowlHeightScale);
         const lid = this.vessel(radius, lidProfile);
-        // Outside, light grows towards the rim. Inside, a static occlusion gradient darkens the
-        // wall with depth below the rim, so the bowl reads as a deep cavity.
+        // Outside, light grows towards the rim. Inside, an occlusion gradient darkens the wall
+        // with depth below the rim, so the bowl reads as a deep cavity. It fades to a tenth as
+        // the bowl empties (see updateBowls).
         const bowlProfileLength = bowlProfile.length;
         const bowlInnerStart = 8;
         const rimHeight = 0.78 * radius * bowlHeightScale;
         const innerFloor = 0.25 * radius * bowlHeightScale;
         const bowlPositions = bowl.getAttribute("position");
-        const bowlColors: number[] = [];
         for (let i = 0; i < bowlPositions.count; i++) {
             const y = bowlPositions.getY(i);
             const outer = 0.5 + 0.5 * MathUtils.smoothstep(y, radius * 0.12, radius * 0.94);
             const depth = (rimHeight - y) / (rimHeight - innerFloor);
-            const light =
-                i % bowlProfileLength >= bowlInnerStart
-                    ? 0.95 - 0.9 * MathUtils.smoothstep(depth, 0.02, 0.85)
-                    : outer;
-            bowlColors.push(light, light, light);
+            const inside = i % bowlProfileLength >= bowlInnerStart;
+            this.bowlLight.push(inside ? 0.95 : outer);
+            this.bowlOcclusion.push(inside ? 0.9 * MathUtils.smoothstep(depth, 0.02, 0.85) : 0);
         }
-        bowl.setAttribute("color", new Float32BufferAttribute(bowlColors, 3));
         shadeSurface(
             lid,
             (_x, y) => 0.61 + 0.39 * MathUtils.smoothstep(y, radius * 0.07, radius * 0.29),
@@ -260,9 +265,14 @@ export class RoomScene extends Group {
             const direction = color === 0 ? 1 : -1;
             const bowlX = direction * side;
             const bowlZ = direction * separation;
-            this.place(bowl, vessels, bowlX, 0, bowlZ);
+            const bowlVessel = this.keep(bowl.clone());
+            this.bowlVessels.push(bowlVessel);
+            this.shadeBowl(bowlVessel, 1);
+            this.place(bowlVessel, vessels, bowlX, 0, bowlZ);
             this.place(lid, vessels, bowlX, 0, -bowlZ);
-            this.pile(bowlStones, materials[color], bowlX, 0, bowlZ, bowlStonePile);
+            this.bowls.push(
+                this.pile(bowlStones, materials[color], bowlX, 0, bowlZ, bowlStonePile),
+            );
             const lidPile = color === 0 ? lidStonePile : halfTurn(lidStonePile);
             const captures = this.pile(
                 stones,
@@ -966,6 +976,33 @@ export class RoomScene extends Group {
         this.lidShadows[0].count = this.lids[0].count;
         this.lidShadows[1].count = this.lids[1].count;
         return this.lids.map((lid) => lid.count).join(",");
+    }
+
+    /** Take one stone from a player's bowl for each stone they have played. */
+    public updateBowls(black: number, white: number): string {
+        [black, white].forEach((played, i) => {
+            const count = Math.max(0, bowlStonePile.length - played);
+            if (count !== this.bowls[i].count) {
+                this.bowls[i].count = count;
+                this.shadeBowl(this.bowlVessels[i], count / bowlStonePile.length);
+            }
+        });
+        return this.bowls.map((bowl) => bowl.count).join(",");
+    }
+
+    /** The cavity's occlusion scales with how full the bowl is, down to a 10% baseline. */
+    private shadeBowl(geometry: BufferGeometry, fill: number): void {
+        const strength = 0.1 + 0.9 * fill;
+        let colors = geometry.getAttribute("color");
+        if (!colors) {
+            colors = new Float32BufferAttribute(this.bowlLight.length * 3, 3);
+            geometry.setAttribute("color", colors);
+        }
+        this.bowlLight.forEach((light, i) => {
+            const value = light - this.bowlOcclusion[i] * strength;
+            colors.setXYZ(i, value, value, value);
+        });
+        colors.needsUpdate = true;
     }
 
     /**

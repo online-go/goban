@@ -567,10 +567,18 @@ class ThreeBoardView implements BoardView {
         this.scene.preview(eligible && !occupied ? hover : null, ghost?.stone);
         this.ink.preview(eligible ? hover : null, ghost, occupied, this.invalidateHover);
         this.element.dataset.hover = hover ? `${hover.x},${hover.y}` : "";
-        this.scene.updateCaptures(
-            this.goban.engine.getBlackPrisoners(),
-            this.goban.engine.getWhitePrisoners(),
-        );
+        const { engine } = this.goban;
+        const blackPrisoners = engine.getBlackPrisoners();
+        const whitePrisoners = engine.getWhitePrisoners();
+        this.scene.updateCaptures(blackPrisoners, whitePrisoners);
+        // Each prisoner came from the other player's bowl, like each stone still on the board.
+        const onBoard = [0, 0, 0];
+        for (const row of engine.board) {
+            for (const stone of row) {
+                onBoard[stone]++;
+            }
+        }
+        this.scene.updatePlayed(onBoard[1] + whitePrisoners, onBoard[2] + blackPrisoners);
         this.scene.updateClock(this.clock);
         if (this.holdView && this.element.dataset.ink === "pending") {
             return;
